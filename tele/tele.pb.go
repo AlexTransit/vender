@@ -44,7 +44,7 @@ func (x Priority) String() string {
 	return proto.EnumName(Priority_name, int32(x))
 }
 func (Priority) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{0}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{0}
 }
 
 type State int32
@@ -94,7 +94,7 @@ func (x State) String() string {
 	return proto.EnumName(State_name, int32(x))
 }
 func (State) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{1}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{1}
 }
 
 type PaymentMethod int32
@@ -126,7 +126,7 @@ func (x PaymentMethod) String() string {
 	return proto.EnumName(PaymentMethod_name, int32(x))
 }
 func (PaymentMethod) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{2}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{2}
 }
 
 type CmdReplay int32
@@ -158,7 +158,7 @@ func (x CmdReplay) String() string {
 	return proto.EnumName(CmdReplay_name, int32(x))
 }
 func (CmdReplay) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{3}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{3}
 }
 
 type CookReplay int32
@@ -196,7 +196,7 @@ func (x CookReplay) String() string {
 	return proto.EnumName(CookReplay_name, int32(x))
 }
 func (CookReplay) EnumDescriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{4}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{4}
 }
 
 type Inventory struct {
@@ -210,7 +210,7 @@ func (m *Inventory) Reset()         { *m = Inventory{} }
 func (m *Inventory) String() string { return proto.CompactTextString(m) }
 func (*Inventory) ProtoMessage()    {}
 func (*Inventory) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{0}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{0}
 }
 func (m *Inventory) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Inventory.Unmarshal(m, b)
@@ -252,7 +252,7 @@ func (m *Inventory_StockItem) Reset()         { *m = Inventory_StockItem{} }
 func (m *Inventory_StockItem) String() string { return proto.CompactTextString(m) }
 func (*Inventory_StockItem) ProtoMessage()    {}
 func (*Inventory_StockItem) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{0, 0}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{0, 0}
 }
 func (m *Inventory_StockItem) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Inventory_StockItem.Unmarshal(m, b)
@@ -329,7 +329,7 @@ func (m *Telemetry) Reset()         { *m = Telemetry{} }
 func (m *Telemetry) String() string { return proto.CompactTextString(m) }
 func (*Telemetry) ProtoMessage()    {}
 func (*Telemetry) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{1}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{1}
 }
 func (m *Telemetry) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Telemetry.Unmarshal(m, b)
@@ -432,7 +432,7 @@ func (m *Telemetry_Error) Reset()         { *m = Telemetry_Error{} }
 func (m *Telemetry_Error) String() string { return proto.CompactTextString(m) }
 func (*Telemetry_Error) ProtoMessage()    {}
 func (*Telemetry_Error) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{1, 0}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{1, 0}
 }
 func (m *Telemetry_Error) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Telemetry_Error.Unmarshal(m, b)
@@ -487,7 +487,7 @@ func (m *Telemetry_Money) Reset()         { *m = Telemetry_Money{} }
 func (m *Telemetry_Money) String() string { return proto.CompactTextString(m) }
 func (*Telemetry_Money) ProtoMessage()    {}
 func (*Telemetry_Money) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{1, 1}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{1, 1}
 }
 func (m *Telemetry_Money) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Telemetry_Money.Unmarshal(m, b)
@@ -552,7 +552,7 @@ func (m *Telemetry_Transaction) Reset()         { *m = Telemetry_Transaction{} }
 func (m *Telemetry_Transaction) String() string { return proto.CompactTextString(m) }
 func (*Telemetry_Transaction) ProtoMessage()    {}
 func (*Telemetry_Transaction) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{1, 2}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{1, 2}
 }
 func (m *Telemetry_Transaction) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Telemetry_Transaction.Unmarshal(m, b)
@@ -635,7 +635,7 @@ func (m *Telemetry_Stat) Reset()         { *m = Telemetry_Stat{} }
 func (m *Telemetry_Stat) String() string { return proto.CompactTextString(m) }
 func (*Telemetry_Stat) ProtoMessage()    {}
 func (*Telemetry_Stat) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{1, 3}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{1, 3}
 }
 func (m *Telemetry_Stat) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Telemetry_Stat.Unmarshal(m, b)
@@ -705,7 +705,7 @@ func (m *Command) Reset()         { *m = Command{} }
 func (m *Command) String() string { return proto.CompactTextString(m) }
 func (*Command) ProtoMessage()    {}
 func (*Command) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{2}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{2}
 }
 func (m *Command) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Command.Unmarshal(m, b)
@@ -1052,7 +1052,7 @@ func (m *Command_ArgReport) Reset()         { *m = Command_ArgReport{} }
 func (m *Command_ArgReport) String() string { return proto.CompactTextString(m) }
 func (*Command_ArgReport) ProtoMessage()    {}
 func (*Command_ArgReport) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{2, 0}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{2, 0}
 }
 func (m *Command_ArgReport) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Command_ArgReport.Unmarshal(m, b)
@@ -1084,7 +1084,7 @@ func (m *Command_ArgExec) Reset()         { *m = Command_ArgExec{} }
 func (m *Command_ArgExec) String() string { return proto.CompactTextString(m) }
 func (*Command_ArgExec) ProtoMessage()    {}
 func (*Command_ArgExec) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{2, 1}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{2, 1}
 }
 func (m *Command_ArgExec) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Command_ArgExec.Unmarshal(m, b)
@@ -1122,7 +1122,7 @@ func (m *Command_ArgSetInventory) Reset()         { *m = Command_ArgSetInventory
 func (m *Command_ArgSetInventory) String() string { return proto.CompactTextString(m) }
 func (*Command_ArgSetInventory) ProtoMessage()    {}
 func (*Command_ArgSetInventory) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{2, 2}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{2, 2}
 }
 func (m *Command_ArgSetInventory) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Command_ArgSetInventory.Unmarshal(m, b)
@@ -1161,7 +1161,7 @@ func (m *Command_ArgSetConfig) Reset()         { *m = Command_ArgSetConfig{} }
 func (m *Command_ArgSetConfig) String() string { return proto.CompactTextString(m) }
 func (*Command_ArgSetConfig) ProtoMessage()    {}
 func (*Command_ArgSetConfig) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{2, 3}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{2, 3}
 }
 func (m *Command_ArgSetConfig) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Command_ArgSetConfig.Unmarshal(m, b)
@@ -1205,7 +1205,7 @@ func (m *Command_ArgSendStatus) Reset()         { *m = Command_ArgSendStatus{} }
 func (m *Command_ArgSendStatus) String() string { return proto.CompactTextString(m) }
 func (*Command_ArgSendStatus) ProtoMessage()    {}
 func (*Command_ArgSendStatus) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{2, 4}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{2, 4}
 }
 func (m *Command_ArgSendStatus) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Command_ArgSendStatus.Unmarshal(m, b)
@@ -1237,7 +1237,7 @@ func (m *Command_ArgShowQR) Reset()         { *m = Command_ArgShowQR{} }
 func (m *Command_ArgShowQR) String() string { return proto.CompactTextString(m) }
 func (*Command_ArgShowQR) ProtoMessage()    {}
 func (*Command_ArgShowQR) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{2, 5}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{2, 5}
 }
 func (m *Command_ArgShowQR) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Command_ArgShowQR.Unmarshal(m, b)
@@ -1282,7 +1282,7 @@ func (m *Command_ArgValidateCode) Reset()         { *m = Command_ArgValidateCode
 func (m *Command_ArgValidateCode) String() string { return proto.CompactTextString(m) }
 func (*Command_ArgValidateCode) ProtoMessage()    {}
 func (*Command_ArgValidateCode) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{2, 6}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{2, 6}
 }
 func (m *Command_ArgValidateCode) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Command_ArgValidateCode.Unmarshal(m, b)
@@ -1324,7 +1324,7 @@ func (m *Command_ArgCook) Reset()         { *m = Command_ArgCook{} }
 func (m *Command_ArgCook) String() string { return proto.CompactTextString(m) }
 func (*Command_ArgCook) ProtoMessage()    {}
 func (*Command_ArgCook) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{2, 7}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{2, 7}
 }
 func (m *Command_ArgCook) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Command_ArgCook.Unmarshal(m, b)
@@ -1397,7 +1397,7 @@ func (m *Response) Reset()         { *m = Response{} }
 func (m *Response) String() string { return proto.CompactTextString(m) }
 func (*Response) ProtoMessage()    {}
 func (*Response) Descriptor() ([]byte, []int) {
-	return fileDescriptor_tele_06e0ec91e644d940, []int{3}
+	return fileDescriptor_tele_8f93ff6d4a5999bd, []int{3}
 }
 func (m *Response) XXX_Unmarshal(b []byte) error {
 	return xxx_messageInfo_Response.Unmarshal(m, b)
@@ -1502,9 +1502,9 @@ func init() {
 	proto.RegisterEnum("tele.CookReplay", CookReplay_name, CookReplay_value)
 }
 
-func init() { proto.RegisterFile("tele.proto", fileDescriptor_tele_06e0ec91e644d940) }
+func init() { proto.RegisterFile("tele.proto", fileDescriptor_tele_8f93ff6d4a5999bd) }
 
-var fileDescriptor_tele_06e0ec91e644d940 = []byte{
+var fileDescriptor_tele_8f93ff6d4a5999bd = []byte{
 	// 1519 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x94, 0x57, 0xdd, 0x6e, 0x1b, 0xb9,
 	0x15, 0xf6, 0x48, 0x33, 0x92, 0xe6, 0x48, 0x8a, 0x19, 0x26, 0xbb, 0x99, 0x6a, 0xb1, 0xa8, 0x37,
