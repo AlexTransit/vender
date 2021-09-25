@@ -1,6 +1,6 @@
 module github.com/AlexTransit/vender
 
-go 1.16
+go 1.17
 
 require (
 	github.com/c-bata/go-prompt v0.2.3
@@ -29,4 +29,13 @@ require (
 	golang.org/x/sys v0.0.0-20210423082822-04245dca01da
 	google.golang.org/protobuf v1.27.1 // indirect
 	periph.io/x/periph v3.6.4+incompatible
+)
+
+require (
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
+	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/syndtr/goleveldb v1.0.0 // indirect
+	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
