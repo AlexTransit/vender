@@ -1,0 +1,53 @@
+#!/bin/bash
+set -e 
+base="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+#argv="$1"
+#arglength=("$#")
+go fmt ./...
+
+main() {
+  local gopkg="./cmd/vender"
+  local name=vender
+  local version=$(build_version)
+  local target="$base/build/${name}"
+  local build_flags=(
+    -ldflags="-X 'main.BuildVersion=$version'"
+    -o "$target"
+    -trimpath
+  )
+  (
+    set -eu
+    cd "$base"
+    : ${GOARCH=arm}
+    : ${GOOS=linux}
+    # So far, GOARM=6 was useful only for Raspberry v1
+    # You can remove GOARM=6 for negligible increase in performance.
+    # http://single-boards.com/armv6-vs-armv7/
+    export -- GOARCH GOOS GOARM=6
+    go build "${build_flags[@]}" "$gopkg"
+  )
+
+  if [ -z "$1" ]; then
+    return
+  fi
+
+  case ${1} in
+    test)
+      scp ./build/vender vm-1:/var/log/0
+      ;;
+    *)
+      ;;
+  esac
+}
+
+build_version() {
+  (
+    set -eu
+    cd "$base"
+    git describe --always --dirty --tags
+  )
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]] ; then
+  main "$@"
+fi

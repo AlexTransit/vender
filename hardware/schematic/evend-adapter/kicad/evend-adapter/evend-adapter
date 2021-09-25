@@ -1,0 +1,40 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+    "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+        <title>KiCad BOM Example 5</title>
+    </head>
+    <body>
+    <h1>C:\GitHub\vender\hardware\evend-adapter\kicad\evend-adapter\evend-adapter.sch</h1>
+    <p>29/06/19 16:55:31</p>
+    <p>Eeschema (5.1.2)-1</p>
+    <p><b>Component Count:</b>43</p>
+    <table>
+    <tr><th style='width:640px'>Ref</th><th>Qnty</th><th>Value</th><th>Part</th><th>Footprint</th><th>Description</th><th>Vendor</th></tr>
+    <tr><td>D1</td><td>1</td><td>B260</td><td>Diode:B260</td><td>Diodes_SMD:D_1206</td><td>60V 2A Schottky Barrier Rectifier Diode, SMB</td><td></td></tr>
+    <tr><td>J1</td><td>1</td><td>Orange_pi_lite</td><td>evend-adapter-rescue:Orange_pi_lite</td><td>evend-adapter:Orange_pi_lite</td><td>Orange PI Lite</td><td></td></tr>
+    <tr><td>J2</td><td>1</td><td>Keyboard</td><td>Connector:Conn_01x04_Male</td><td>evend-adapter:JST_PH_B4B-PH-K_04x2.00mm_Straight</td><td>Generic connector, single row, 01x04, script generated (kicad-library-utils/schlib/autogen/connector/)</td><td></td></tr>
+    <tr><td>J3</td><td>1</td><td>Conn_02x03_Top_Bottom</td><td>Connector_Generic:Conn_02x03_Top_Bottom</td><td>evend-adapter:Molex_MiniFit-JR-5569-06A2_2x03x4.20mm_Angled</td><td>Generic connector, double row, 02x03, top/bottom pin numbering scheme (row 1: 1...pins_per_row, row2: pins_per_row+1 ... num_pins), script generated (kicad-library-utils/schlib/autogen/connector/)</td><td></td></tr>
+    <tr><td>J4, J5</td><td>2</td><td>Conn_01x01_Female</td><td>evend-adapter-rescue:Conn_01x01_Female</td><td>evend-adapter:1pin</td><td>Generic connector, single row, 01x01, script generated (kicad-library-utils/schlib/autogen/connector/)</td><td></td></tr>
+    <tr><td>Q2, Q3</td><td>2</td><td>BC807</td><td>evend-adapter-rescue:BC807-transistors</td><td>evend-adapter:SOT-23</td><td></td><td></td></tr>
+    <tr><td>Q4, Q5, Q6</td><td>3</td><td>2N7002</td><td>Transistor_FET:2N7002</td><td>evend-adapter:SOT-23</td><td>0.115A Id, 60V Vds, N-Channel MOSFET, SOT-23</td><td></td></tr>
+    <tr><td>R2</td><td>1</td><td>2K2</td><td>Device:R</td><td>evend-adapter:C_0603_HandSoldering</td><td>Resistor</td><td></td></tr>
+    <tr><td>R3</td><td>1</td><td>5R6</td><td>Device:R</td><td>evend-adapter:C_0603_HandSoldering</td><td>Resistor</td><td></td></tr>
+    <tr><td>R4, R5</td><td>2</td><td>680R</td><td>Device:R</td><td>evend-adapter:C_0603_HandSoldering</td><td>Resistor</td><td></td></tr>
+    <tr><td>R6</td><td>1</td><td>10K</td><td>Device:R</td><td>evend-adapter:C_0603_HandSoldering</td><td>Resistor</td><td></td></tr>
+    <tr><td>R8, R9</td><td>2</td><td>4K7</td><td>Device:R</td><td>evend-adapter:C_0603_HandSoldering</td><td>Resistor</td><td></td></tr>
+    <tr><td>R10, R12, R14, R18, R20, R22, R23, R24</td><td>8</td><td>10k</td><td>Device:R</td><td>evend-adapter:C_0603_HandSoldering</td><td>Resistor</td><td></td></tr>
+    <tr><td>R11, R13, R15</td><td>3</td><td>4k7</td><td>Device:R</td><td>evend-adapter:C_0603_HandSoldering</td><td>Resistor</td><td></td></tr>
+    <tr><td>R19, R21</td><td>2</td><td>15k</td><td>Device:R</td><td>evend-adapter:C_0603_HandSoldering</td><td>Resistor</td><td></td></tr>
+    <tr><td>R25</td><td>1</td><td>300</td><td>Device:R</td><td>evend-adapter:C_1206_1-HandSoldering</td><td>Resistor</td><td></td></tr>
+    <tr><td>R26</td><td>1</td><td>1.5k</td><td>Device:R</td><td>evend-adapter:C_1206_1-HandSoldering</td><td>Resistor</td><td></td></tr>
+    <tr><td>U1</td><td>1</td><td>RC1602A</td><td>Display_Character:RC1602A</td><td>evend-adapter:LCD-016N002L</td><td>LCD 16x2 Alphanumeric gray backlight, 3 or 5V VDD</td><td></td></tr>
+    <tr><td>X1</td><td>1</td><td>Arduino_Pro_Mini-1</td><td>evend-adapter-rescue:Arduino_Pro_Mini-1</td><td>evend-adapter:Arduino_Pro_Mini-1</td><td>Arduino Pro Mini module</td><td></td></tr>
+    <tr><td>o1, o2, o3, o4, o5, o6, o7</td><td>7</td><td>0</td><td>Device:R</td><td>evend-adapter:C_1206_HandSoldering</td><td>Resistor</td><td></td></tr>
+    <tr><td>psu1</td><td>1</td><td>dc24-dc5-module</td><td>evend-adapter-rescue:dc24-dc5-module</td><td>evend-adapter:PSU_24-5_копия</td><td></td><td></td></tr><!--TABLEROW-->
+    </table>
+    </body>
+</html>
+    

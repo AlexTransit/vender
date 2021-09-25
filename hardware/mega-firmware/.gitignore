@@ -1,0 +1,10 @@
+.atsuo
+.vs/
+*.elf
+*.hex
+*.lst
+*.o
+crc_test
+Debug/
+main_test
+Release/
