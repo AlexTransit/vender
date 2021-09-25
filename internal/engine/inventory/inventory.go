@@ -4,12 +4,12 @@ import (
 	"context"
 	"sync"
 
+	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/internal/engine"
+	engine_config "github.com/AlexTransit/vender/internal/engine/config"
+	"github.com/AlexTransit/vender/internal/state/persist"
+	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/helpers"
-	"github.com/temoto/vender/internal/engine"
-	engine_config "github.com/temoto/vender/internal/engine/config"
-	"github.com/temoto/vender/internal/state/persist"
-	"github.com/temoto/vender/log2"
 )
 
 var (

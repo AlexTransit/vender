@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/AlexTransit/vender/hardware/mdb"
+	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/internal/engine"
+	"github.com/AlexTransit/vender/internal/state"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/hardware/mdb"
-	"github.com/temoto/vender/helpers"
-	"github.com/temoto/vender/internal/engine"
-	"github.com/temoto/vender/internal/state"
 )
 
 const ConveyorDefaultTimeout = 30 * time.Second

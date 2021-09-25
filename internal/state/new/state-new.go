@@ -6,14 +6,14 @@ import (
 	"os"
 	"testing"
 
+	"github.com/AlexTransit/vender/hardware/mdb"
+	"github.com/AlexTransit/vender/internal/engine"
+	"github.com/AlexTransit/vender/internal/engine/inventory"
+	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/log2"
+	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
 	"github.com/temoto/alive/v2"
-	"github.com/temoto/vender/hardware/mdb"
-	"github.com/temoto/vender/internal/engine"
-	"github.com/temoto/vender/internal/engine/inventory"
-	"github.com/temoto/vender/internal/state"
-	"github.com/temoto/vender/log2"
-	tele_api "github.com/temoto/vender/tele"
 )
 
 func NewContext(log *log2.Log, teler tele_api.Teler) (context.Context, *state.Global) {

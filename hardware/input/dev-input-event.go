@@ -4,8 +4,8 @@ import (
 	"io"
 	"os"
 
+	"github.com/AlexTransit/vender/internal/types"
 	"github.com/temoto/inputevent-go"
-	"github.com/temoto/vender/internal/types"
 )
 
 const DevInputEventTag = "dev-input-event"

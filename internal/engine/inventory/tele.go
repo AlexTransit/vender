@@ -4,9 +4,9 @@ import (
 	fmt "fmt"
 	"sort"
 
+	"github.com/AlexTransit/vender/helpers"
+	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/golang/protobuf/proto"
-	"github.com/temoto/vender/helpers"
-	tele_api "github.com/temoto/vender/tele"
 )
 
 func (self *Inventory) SetTele(src *tele_api.Inventory) (*tele_api.Inventory, error) {

@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/AlexTransit/vender/internal/state"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/internal/state"
 )
 
 type Mod struct {

@@ -7,16 +7,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/hardware/mdb"
+	"github.com/AlexTransit/vender/hardware/money"
+	"github.com/AlexTransit/vender/internal/state"
+	state_new "github.com/AlexTransit/vender/internal/state/new"
+	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/temoto/vender/currency"
-	"github.com/temoto/vender/hardware/mdb"
-	"github.com/temoto/vender/hardware/money"
-	"github.com/temoto/vender/internal/state"
-	state_new "github.com/temoto/vender/internal/state/new"
-	"github.com/temoto/vender/internal/types"
-	"github.com/temoto/vender/log2"
 )
 
 type _PI = money.PollItem

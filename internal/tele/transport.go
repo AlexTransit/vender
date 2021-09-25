@@ -3,8 +3,8 @@ package tele
 import (
 	"context"
 
-	"github.com/temoto/vender/log2"
-	tele_config "github.com/temoto/vender/tele/config"
+	"github.com/AlexTransit/vender/log2"
+	tele_config "github.com/AlexTransit/vender/tele/config"
 )
 
 // Transporter  Tele transport contract:

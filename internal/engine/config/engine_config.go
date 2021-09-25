@@ -3,8 +3,8 @@ package engine_config
 import (
 	"fmt"
 
-	"github.com/temoto/vender/currency"
-	"github.com/temoto/vender/internal/engine"
+	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/internal/engine"
 )
 
 type Config struct {

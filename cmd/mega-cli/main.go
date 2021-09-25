@@ -10,11 +10,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlexTransit/vender/hardware/mega-client"
+	"github.com/AlexTransit/vender/helpers/cli"
+	"github.com/AlexTransit/vender/log2"
 	"github.com/c-bata/go-prompt"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/hardware/mega-client"
-	"github.com/temoto/vender/helpers/cli"
-	"github.com/temoto/vender/log2"
 )
 
 const usage = `syntax: commands separated by whitespace

@@ -3,7 +3,7 @@ package money
 import (
 	"fmt"
 
-	"github.com/temoto/vender/currency"
+	"github.com/AlexTransit/vender/currency"
 )
 
 //go:generate stringer -type=PollItemStatus -trimprefix=Status

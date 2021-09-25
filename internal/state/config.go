@@ -4,17 +4,17 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/hardware/hd44780"
+	mdb_config "github.com/AlexTransit/vender/hardware/mdb/config"
+	evend_config "github.com/AlexTransit/vender/hardware/mdb/evend/config"
+	"github.com/AlexTransit/vender/helpers"
+	engine_config "github.com/AlexTransit/vender/internal/engine/config"
+	ui_config "github.com/AlexTransit/vender/internal/ui/config"
+	"github.com/AlexTransit/vender/log2"
+	tele_config "github.com/AlexTransit/vender/tele/config"
 	"github.com/hashicorp/hcl"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/currency"
-	"github.com/temoto/vender/hardware/hd44780"
-	mdb_config "github.com/temoto/vender/hardware/mdb/config"
-	evend_config "github.com/temoto/vender/hardware/mdb/evend/config"
-	"github.com/temoto/vender/helpers"
-	engine_config "github.com/temoto/vender/internal/engine/config"
-	ui_config "github.com/temoto/vender/internal/ui/config"
-	"github.com/temoto/vender/log2"
-	tele_config "github.com/temoto/vender/tele/config"
 )
 
 type Config struct {

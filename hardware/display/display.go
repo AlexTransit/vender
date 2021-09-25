@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
+	"github.com/AlexTransit/vender/hardware/display/framebuffer"
 	"github.com/juju/errors"
 	"github.com/skip2/go-qrcode"
-	"github.com/temoto/vender/hardware/display/framebuffer"
 )
 
 type Display struct {

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/AlexTransit/vender/crc"
+	"github.com/AlexTransit/vender/helpers"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/crc"
-	"github.com/temoto/vender/helpers"
 )
 
 //go:generate ./generate

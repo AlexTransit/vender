@@ -9,7 +9,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	tele_api "github.com/temoto/vender/tele"
+	tele_api "github.com/AlexTransit/vender/tele"
 )
 
 const lockPoll = 300 * time.Millisecond

@@ -3,8 +3,8 @@ package input
 import (
 	"io"
 
-	"github.com/temoto/vender/hardware/mega-client"
-	"github.com/temoto/vender/internal/types"
+	"github.com/AlexTransit/vender/hardware/mega-client"
+	"github.com/AlexTransit/vender/internal/types"
 )
 
 const EvendKeyMaskUp = 0x80

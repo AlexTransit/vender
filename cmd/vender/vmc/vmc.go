@@ -4,14 +4,14 @@ package vmc
 import (
 	"context"
 
+	"github.com/AlexTransit/vender/cmd/vender/subcmd"
+	"github.com/AlexTransit/vender/hardware"
+	"github.com/AlexTransit/vender/internal/money"
+	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/internal/ui"
+	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/cmd/vender/subcmd"
-	"github.com/temoto/vender/hardware"
-	"github.com/temoto/vender/internal/money"
-	"github.com/temoto/vender/internal/state"
-	"github.com/temoto/vender/internal/ui"
-	tele_api "github.com/temoto/vender/tele"
 )
 
 var VmcMod = subcmd.Mod{Name: "vmc", Main: VmcMain}

@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/internal/ui"
+	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/golang/protobuf/proto"
 	"github.com/juju/errors"
 	"github.com/skip2/go-qrcode"
-	"github.com/temoto/vender/internal/state"
-	"github.com/temoto/vender/internal/types"
-	"github.com/temoto/vender/internal/ui"
-	tele_api "github.com/temoto/vender/tele"
 )
 
 var (

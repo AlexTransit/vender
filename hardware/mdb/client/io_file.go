@@ -10,9 +10,9 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/AlexTransit/vender/hardware/mdb"
+	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/hardware/mdb"
-	"github.com/temoto/vender/log2"
 	"golang.org/x/sys/unix"
 )
 

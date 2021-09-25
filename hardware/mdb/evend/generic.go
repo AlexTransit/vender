@@ -9,10 +9,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/AlexTransit/vender/hardware/mdb"
+	"github.com/AlexTransit/vender/internal/engine"
+	"github.com/AlexTransit/vender/internal/state"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/hardware/mdb"
-	"github.com/temoto/vender/internal/engine"
-	"github.com/temoto/vender/internal/state"
 )
 
 // Mostly affects POLL response, see doc.

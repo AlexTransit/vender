@@ -1,4 +1,4 @@
-module github.com/temoto/vender
+module github.com/AlexTransit/vender
 
 go 1.16
 

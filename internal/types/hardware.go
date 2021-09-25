@@ -2,7 +2,7 @@ package types
 
 import (
 	"fmt"
-	// "github.com/temoto/vender/internal/global"
+	// "github.com/AlexTransit/vender/internal/global"
 )
 
 type DeviceOfflineError struct {

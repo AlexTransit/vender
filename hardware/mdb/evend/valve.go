@@ -6,13 +6,13 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/AlexTransit/vender/hardware/mdb"
+	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/helpers/cacheval"
+	"github.com/AlexTransit/vender/internal/engine"
+	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/internal/types"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/hardware/mdb"
-	"github.com/temoto/vender/helpers"
-	"github.com/temoto/vender/helpers/cacheval"
-	"github.com/temoto/vender/internal/engine"
-	"github.com/temoto/vender/internal/state"
-	"github.com/temoto/vender/internal/types"
 )
 
 const (

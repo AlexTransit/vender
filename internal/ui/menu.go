@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/internal/engine"
+	"github.com/AlexTransit/vender/internal/money"
+	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/internal/types"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/currency"
-	"github.com/temoto/vender/internal/engine"
-	"github.com/temoto/vender/internal/money"
-	"github.com/temoto/vender/internal/state"
-	"github.com/temoto/vender/internal/types"
 )
 
 type Menu map[string]MenuItem

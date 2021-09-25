@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/log2"
 )
 
 const MockTimeout = 5 * time.Second

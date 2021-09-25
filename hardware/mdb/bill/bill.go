@@ -9,14 +9,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/hardware/mdb"
+	"github.com/AlexTransit/vender/hardware/money"
+	"github.com/AlexTransit/vender/internal/engine"
+	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/internal/types"
 	"github.com/juju/errors"
 	"github.com/temoto/alive/v2"
-	"github.com/temoto/vender/currency"
-	"github.com/temoto/vender/hardware/mdb"
-	"github.com/temoto/vender/hardware/money"
-	"github.com/temoto/vender/internal/engine"
-	"github.com/temoto/vender/internal/state"
-	"github.com/temoto/vender/internal/types"
 )
 
 const (

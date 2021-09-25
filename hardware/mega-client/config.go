@@ -4,9 +4,9 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/AlexTransit/vender/helpers"
 	"github.com/juju/errors"
 	gpio "github.com/temoto/gpio-cdev-go"
-	"github.com/temoto/vender/helpers"
 	"periph.io/x/periph/conn/spi"
 	"periph.io/x/periph/conn/spi/spireg"
 	"periph.io/x/periph/host"

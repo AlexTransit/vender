@@ -4,15 +4,15 @@ import (
 	"context"
 	"encoding/hex"
 
+	"github.com/AlexTransit/vender/cmd/vender/subcmd"
+	"github.com/AlexTransit/vender/hardware"
+	"github.com/AlexTransit/vender/helpers/cli"
+	"github.com/AlexTransit/vender/internal/state"
+	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/c-bata/go-prompt"
 	"github.com/golang/protobuf/proto"
 	"github.com/juju/errors"
 	"github.com/temoto/spq"
-	"github.com/temoto/vender/cmd/vender/subcmd"
-	"github.com/temoto/vender/hardware"
-	"github.com/temoto/vender/helpers/cli"
-	"github.com/temoto/vender/internal/state"
-	tele_api "github.com/temoto/vender/tele"
 )
 
 const modName = "tele"

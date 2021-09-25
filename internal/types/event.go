@@ -3,7 +3,7 @@ package types
 import (
 	"fmt"
 
-	"github.com/temoto/vender/currency"
+	"github.com/AlexTransit/vender/currency"
 )
 
 //go:generate stringer -type=EventKind -trimprefix=Event

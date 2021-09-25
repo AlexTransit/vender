@@ -4,11 +4,11 @@ import (
 	"context"
 	"sync"
 
-	"github.com/temoto/vender/hardware/mdb/bill"
-	"github.com/temoto/vender/hardware/mdb/coin"
-	"github.com/temoto/vender/hardware/mdb/evend"
-	"github.com/temoto/vender/helpers"
-	"github.com/temoto/vender/internal/state"
+	"github.com/AlexTransit/vender/hardware/mdb/bill"
+	"github.com/AlexTransit/vender/hardware/mdb/coin"
+	"github.com/AlexTransit/vender/hardware/mdb/evend"
+	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/internal/state"
 )
 
 func Enum(ctx context.Context) error {

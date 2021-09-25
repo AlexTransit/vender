@@ -4,12 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/AlexTransit/vender/log2"
+	tele_api "github.com/AlexTransit/vender/tele"
+	tele_config "github.com/AlexTransit/vender/tele/config"
 	"github.com/golang/protobuf/proto"
 	"github.com/juju/errors"
 	"github.com/temoto/spq"
-	"github.com/temoto/vender/log2"
-	tele_api "github.com/temoto/vender/tele"
-	tele_config "github.com/temoto/vender/tele/config"
 )
 
 const (

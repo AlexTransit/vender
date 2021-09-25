@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/internal/types"
-	"github.com/temoto/vender/log2"
 )
 
 func Drain(ch <-chan types.InputEvent) {

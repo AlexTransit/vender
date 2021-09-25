@@ -3,8 +3,8 @@ package engine
 import (
 	"context"
 
+	"github.com/AlexTransit/vender/helpers"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/helpers"
 )
 
 const seqBuffer uint = 8

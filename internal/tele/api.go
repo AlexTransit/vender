@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/AlexTransit/vender/internal/money"
+	"github.com/AlexTransit/vender/internal/state"
+	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/internal/money"
-	"github.com/temoto/vender/internal/state"
-	tele_api "github.com/temoto/vender/tele"
 )
 
 const logMsgDisabled = "tele disabled"

@@ -5,16 +5,16 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/hardware/mdb/bill"
+	"github.com/AlexTransit/vender/hardware/mdb/coin"
+	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/internal/engine"
+	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/log2"
+	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/golang/protobuf/proto"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/currency"
-	"github.com/temoto/vender/hardware/mdb/bill"
-	"github.com/temoto/vender/hardware/mdb/coin"
-	"github.com/temoto/vender/helpers"
-	"github.com/temoto/vender/internal/engine"
-	"github.com/temoto/vender/internal/state"
-	"github.com/temoto/vender/log2"
-	tele_api "github.com/temoto/vender/tele"
 )
 
 type MoneySystem struct { //nolint:maligned

@@ -3,7 +3,7 @@ package input
 import (
 	"testing"
 
-	"github.com/temoto/vender/log2"
+	"github.com/AlexTransit/vender/log2"
 )
 
 func TestDispatchDoubleSubscribe(t *testing.T) {

@@ -6,12 +6,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/AlexTransit/vender/hardware/input"
+	"github.com/AlexTransit/vender/hardware/text_display"
+	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/internal/ui"
 	"github.com/stretchr/testify/require"
-	"github.com/temoto/vender/hardware/input"
-	"github.com/temoto/vender/hardware/text_display"
-	"github.com/temoto/vender/internal/state"
-	"github.com/temoto/vender/internal/types"
-	"github.com/temoto/vender/internal/ui"
 )
 
 const testDisplayWidth = 16

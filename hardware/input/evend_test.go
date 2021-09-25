@@ -3,9 +3,9 @@ package input
 import (
 	"testing"
 
-	"github.com/temoto/vender/hardware/mega-client"
-	"github.com/temoto/vender/internal/types"
-	"github.com/temoto/vender/log2"
+	"github.com/AlexTransit/vender/hardware/mega-client"
+	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/log2"
 )
 
 func TestEvendKeyboard(t *testing.T) {

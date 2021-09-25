@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/hardware/input"
+	"github.com/AlexTransit/vender/hardware/mdb/evend"
+	"github.com/AlexTransit/vender/hardware/text_display"
+	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/internal/engine"
+	"github.com/AlexTransit/vender/internal/money"
+	"github.com/AlexTransit/vender/internal/types"
+	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
 	"github.com/temoto/alive/v2"
-	"github.com/temoto/vender/currency"
-	"github.com/temoto/vender/hardware/input"
-	"github.com/temoto/vender/hardware/mdb/evend"
-	"github.com/temoto/vender/hardware/text_display"
-	"github.com/temoto/vender/helpers"
-	"github.com/temoto/vender/internal/engine"
-	"github.com/temoto/vender/internal/money"
-	"github.com/temoto/vender/internal/types"
-	tele_api "github.com/temoto/vender/tele"
 )
 
 // type UIMenuResult struct {

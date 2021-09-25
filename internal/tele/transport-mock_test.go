@@ -5,9 +5,9 @@ package tele_test
 // 	"testing"
 // 	"time"
 
-// 	"github.com/temoto/vender/internal/tele"
-// 	"github.com/temoto/vender/log2"
-// 	tele_config "github.com/temoto/vender/tele/config"
+// 	"github.com/AlexTransit/vender/internal/tele"
+// 	"github.com/AlexTransit/vender/log2"
+// 	tele_config "github.com/AlexTransit/vender/tele/config"
 // )
 
 // type transportMock struct {

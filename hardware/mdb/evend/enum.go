@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/temoto/vender/helpers"
-	"github.com/temoto/vender/internal/state"
+	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/internal/state"
 )
 
 // Enum Register devices

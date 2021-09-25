@@ -5,11 +5,11 @@ import (
 	math "math"
 	"testing"
 
+	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/internal/engine"
+	state_new "github.com/AlexTransit/vender/internal/state/new"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/temoto/vender/helpers"
-	"github.com/temoto/vender/internal/engine"
-	state_new "github.com/temoto/vender/internal/state/new"
 )
 
 func TestTuneDrink(t *testing.T) {

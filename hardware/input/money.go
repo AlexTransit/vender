@@ -1,6 +1,6 @@
 package input
 
-import "github.com/temoto/vender/internal/types"
+import "github.com/AlexTransit/vender/internal/types"
 
 const MoneySourceTag = "money"
 

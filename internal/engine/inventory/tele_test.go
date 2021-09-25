@@ -3,10 +3,10 @@ package inventory_test
 import (
 	"testing"
 
+	state_new "github.com/AlexTransit/vender/internal/state/new"
+	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/require"
-	state_new "github.com/temoto/vender/internal/state/new"
-	tele_api "github.com/temoto/vender/tele"
 )
 
 func TestInventoryTele(t *testing.T) {

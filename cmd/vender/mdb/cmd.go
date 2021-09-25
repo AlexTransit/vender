@@ -6,14 +6,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlexTransit/vender/cmd/vender/subcmd"
+	"github.com/AlexTransit/vender/hardware"
+	"github.com/AlexTransit/vender/hardware/mdb"
+	"github.com/AlexTransit/vender/helpers/cli"
+	"github.com/AlexTransit/vender/internal/engine"
+	"github.com/AlexTransit/vender/internal/state"
 	prompt "github.com/c-bata/go-prompt"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/cmd/vender/subcmd"
-	"github.com/temoto/vender/hardware"
-	"github.com/temoto/vender/hardware/mdb"
-	"github.com/temoto/vender/helpers/cli"
-	"github.com/temoto/vender/internal/engine"
-	"github.com/temoto/vender/internal/state"
 )
 
 const usage = `syntax: commands separated by whitespace

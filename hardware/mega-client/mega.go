@@ -9,10 +9,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
 	"github.com/temoto/alive/v2"
 	gpio "github.com/temoto/gpio-cdev-go"
-	"github.com/temoto/vender/log2"
 	"periph.io/x/periph/conn/physic"
 )
 

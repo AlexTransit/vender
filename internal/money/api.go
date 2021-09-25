@@ -10,9 +10,9 @@ package money
 import (
 	"context"
 
+	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/internal/state"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/currency"
-	"github.com/temoto/vender/internal/state"
 )
 
 var (

@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/AlexTransit/vender/hardware/input"
+	"github.com/AlexTransit/vender/internal/money"
+	state_new "github.com/AlexTransit/vender/internal/state/new"
+	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/internal/ui"
+	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/temoto/vender/hardware/input"
-	"github.com/temoto/vender/internal/money"
-	state_new "github.com/temoto/vender/internal/state/new"
-	"github.com/temoto/vender/internal/types"
-	"github.com/temoto/vender/internal/ui"
-	tele_api "github.com/temoto/vender/tele"
 )
 
 func TestFrontTune(t *testing.T) {

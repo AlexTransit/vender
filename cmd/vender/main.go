@@ -9,16 +9,16 @@ import (
 	"regexp"
 	"strings"
 
-	cmd_engine "github.com/temoto/vender/cmd/vender/engine"
-	"github.com/temoto/vender/cmd/vender/mdb"
-	"github.com/temoto/vender/cmd/vender/subcmd"
-	cmd_tele "github.com/temoto/vender/cmd/vender/tele"
-	"github.com/temoto/vender/cmd/vender/ui"
-	"github.com/temoto/vender/cmd/vender/vmc"
-	"github.com/temoto/vender/internal/state"
-	state_new "github.com/temoto/vender/internal/state/new"
-	"github.com/temoto/vender/internal/tele"
-	"github.com/temoto/vender/log2"
+	cmd_engine "github.com/AlexTransit/vender/cmd/vender/engine"
+	"github.com/AlexTransit/vender/cmd/vender/mdb"
+	"github.com/AlexTransit/vender/cmd/vender/subcmd"
+	cmd_tele "github.com/AlexTransit/vender/cmd/vender/tele"
+	"github.com/AlexTransit/vender/cmd/vender/ui"
+	"github.com/AlexTransit/vender/cmd/vender/vmc"
+	"github.com/AlexTransit/vender/internal/state"
+	state_new "github.com/AlexTransit/vender/internal/state/new"
+	"github.com/AlexTransit/vender/internal/tele"
+	"github.com/AlexTransit/vender/log2"
 )
 
 var log = log2.NewStderr(log2.LDebug)

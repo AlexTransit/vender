@@ -8,11 +8,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/AlexTransit/vender/internal/types"
 	"github.com/juju/errors"
 	"github.com/paulrosania/go-charset/charset"
 	_ "github.com/paulrosania/go-charset/data"
 	"github.com/temoto/alive/v2"
-	"github.com/temoto/vender/internal/types"
 )
 
 const MaxWidth = 40

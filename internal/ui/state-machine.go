@@ -5,14 +5,14 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/AlexTransit/vender/helpers"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/helpers"
 
-	"github.com/temoto/vender/internal/money"
-	"github.com/temoto/vender/internal/state"
-	"github.com/temoto/vender/internal/types"
+	"github.com/AlexTransit/vender/internal/money"
+	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/internal/types"
 
-	tele_api "github.com/temoto/vender/tele"
+	tele_api "github.com/AlexTransit/vender/tele"
 )
 
 //go:generate stringer -type=State -trimprefix=State

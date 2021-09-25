@@ -4,9 +4,9 @@ import (
 	"encoding/binary"
 	"testing"
 
+	"github.com/AlexTransit/vender/hardware/mdb"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/temoto/vender/hardware/mdb"
 )
 
 func TestDeviceTx(t *testing.T) {

@@ -6,18 +6,18 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/AlexTransit/vender/hardware/display"
+	"github.com/AlexTransit/vender/hardware/hd44780"
+	"github.com/AlexTransit/vender/hardware/input"
+	"github.com/AlexTransit/vender/hardware/mdb"
+	mdb_client "github.com/AlexTransit/vender/hardware/mdb/client"
+	"github.com/AlexTransit/vender/hardware/mega-client"
+	"github.com/AlexTransit/vender/hardware/text_display"
+	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
 	"github.com/temoto/iodin/client/go-iodin"
-	"github.com/temoto/vender/hardware/display"
-	"github.com/temoto/vender/hardware/hd44780"
-	"github.com/temoto/vender/hardware/input"
-	"github.com/temoto/vender/hardware/mdb"
-	mdb_client "github.com/temoto/vender/hardware/mdb/client"
-	"github.com/temoto/vender/hardware/mega-client"
-	"github.com/temoto/vender/hardware/text_display"
-	"github.com/temoto/vender/helpers"
-	"github.com/temoto/vender/internal/types"
-	"github.com/temoto/vender/log2"
 )
 
 type hardware struct {

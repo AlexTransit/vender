@@ -7,9 +7,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
 	"github.com/temoto/extremofile"
-	"github.com/temoto/vender/log2"
 )
 
 type Stater interface {

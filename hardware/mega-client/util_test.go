@@ -7,13 +7,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	gpio "github.com/temoto/gpio-cdev-go"
 	gpio_mock "github.com/temoto/gpio-cdev-go/mock"
-	"github.com/temoto/vender/helpers"
-	"github.com/temoto/vender/log2"
 )
 
 // Helpers for testing mega package

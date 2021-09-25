@@ -8,11 +8,11 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/AlexTransit/vender/internal/engine"
+	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
 	"github.com/temoto/atomic_clock"
-	"github.com/temoto/vender/internal/engine"
-	"github.com/temoto/vender/internal/types"
-	"github.com/temoto/vender/log2"
 )
 
 const ErrCodeNone int32 = -1

@@ -1,9 +1,9 @@
 package inventory
 
 import (
+	"github.com/AlexTransit/vender/internal/state/persist"
 	"github.com/golang/protobuf/proto"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/internal/state/persist"
 )
 
 //go:generate protoc --go_out=./ state.proto

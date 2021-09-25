@@ -4,15 +4,15 @@ import (
 	"context"
 	"time"
 
+	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/hardware/input"
+	"github.com/AlexTransit/vender/hardware/text_display"
+	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/internal/types"
+	ui_config "github.com/AlexTransit/vender/internal/ui/config"
+	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/currency"
-	"github.com/temoto/vender/hardware/input"
-	"github.com/temoto/vender/hardware/text_display"
-	"github.com/temoto/vender/helpers"
-	"github.com/temoto/vender/internal/state"
-	"github.com/temoto/vender/internal/types"
-	ui_config "github.com/temoto/vender/internal/ui/config"
-	tele_api "github.com/temoto/vender/tele"
 )
 
 type UI struct { //nolint:maligned

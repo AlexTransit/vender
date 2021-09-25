@@ -4,9 +4,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AlexTransit/vender/hardware/mdb"
+	"github.com/AlexTransit/vender/hardware/mega-client"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/hardware/mdb"
-	"github.com/temoto/vender/hardware/mega-client"
 )
 
 const (

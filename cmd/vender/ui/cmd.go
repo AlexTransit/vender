@@ -5,13 +5,13 @@ import (
 	"context"
 	"time"
 
+	"github.com/AlexTransit/vender/cmd/vender/subcmd"
+	"github.com/AlexTransit/vender/hardware"
+	engine_config "github.com/AlexTransit/vender/internal/engine/config"
+	"github.com/AlexTransit/vender/internal/money"
+	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/internal/ui"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/cmd/vender/subcmd"
-	"github.com/temoto/vender/hardware"
-	engine_config "github.com/temoto/vender/internal/engine/config"
-	"github.com/temoto/vender/internal/money"
-	"github.com/temoto/vender/internal/state"
-	"github.com/temoto/vender/internal/ui"
 )
 
 var Mod = subcmd.Mod{Name: "ui", Main: Main}

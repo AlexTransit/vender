@@ -4,10 +4,10 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/AlexTransit/vender/hardware/mdb"
+	state_new "github.com/AlexTransit/vender/internal/state/new"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/temoto/vender/hardware/mdb"
-	state_new "github.com/temoto/vender/internal/state/new"
 )
 
 func TestValve(t *testing.T) {

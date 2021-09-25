@@ -7,10 +7,10 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/AlexTransit/vender/helpers/atomic_float"
+	"github.com/AlexTransit/vender/internal/engine"
+	engine_config "github.com/AlexTransit/vender/internal/engine/config"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/helpers/atomic_float"
-	"github.com/temoto/vender/internal/engine"
-	engine_config "github.com/temoto/vender/internal/engine/config"
 )
 
 const tuneKeyFormat = "run/inventory-%s-tune"

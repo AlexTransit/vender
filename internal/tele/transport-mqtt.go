@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/log2"
+	tele_config "github.com/AlexTransit/vender/tele/config"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
-	"github.com/temoto/vender/helpers"
-	"github.com/temoto/vender/log2"
-	tele_config "github.com/temoto/vender/tele/config"
 )
 
 type transportMqtt struct {

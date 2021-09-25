@@ -4,11 +4,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlexTransit/vender/hardware/mdb"
+	"github.com/AlexTransit/vender/internal/engine"
+	state_new "github.com/AlexTransit/vender/internal/state/new"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/temoto/vender/hardware/mdb"
-	"github.com/temoto/vender/internal/engine"
-	state_new "github.com/temoto/vender/internal/state/new"
 )
 
 func TestGenericProto2Error(t *testing.T) {

@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/helpers"
-	"github.com/temoto/vender/log2"
 )
 
 type ErrNotResolved struct{ msg string }

@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/internal/engine"
+	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/internal/types"
 	"github.com/juju/errors"
-	"github.com/temoto/vender/helpers"
-	"github.com/temoto/vender/internal/engine"
-	"github.com/temoto/vender/internal/state"
-	"github.com/temoto/vender/internal/types"
 )
 
 type DeviceElevator struct { //nolint:maligned

@@ -7,9 +7,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/AlexTransit/vender/log2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/temoto/vender/log2"
 )
 
 func TestArg(t *testing.T) {

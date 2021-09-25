@@ -4,10 +4,10 @@ import (
 	"context"
 	"sync"
 
+	"github.com/AlexTransit/vender/internal/types"
+	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
 	"github.com/temoto/alive/v2"
-	"github.com/temoto/vender/internal/types"
-	tele_api "github.com/temoto/vender/tele"
 )
 
 type task struct {

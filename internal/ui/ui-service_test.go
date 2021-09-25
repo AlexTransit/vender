@@ -3,12 +3,12 @@ package ui_test
 import (
 	"testing"
 
+	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/internal/money"
+	state_new "github.com/AlexTransit/vender/internal/state/new"
+	"github.com/AlexTransit/vender/internal/ui"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/temoto/vender/currency"
-	"github.com/temoto/vender/internal/money"
-	state_new "github.com/temoto/vender/internal/state/new"
-	"github.com/temoto/vender/internal/ui"
 )
 
 func TestServiceAuth(t *testing.T) {

@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/temoto/vender/currency"
-	"github.com/temoto/vender/log2"
+	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/log2"
 )
 
 var Log = *log2.NewStderr(log2.LDebug)

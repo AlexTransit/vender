@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	tele_api "github.com/temoto/vender/tele"
+	tele_api "github.com/AlexTransit/vender/tele"
 )
 
 var ErrInterrupted = fmt.Errorf("scheduler interrupted, ignore like EPIPE")
