@@ -150,6 +150,7 @@ enum CookReplay {
   cookInaccessible = 3;
   cookOverdraft = 4;
   cookError = 5;
+  vmcbusy = 6;
 }
 
 message Response {
