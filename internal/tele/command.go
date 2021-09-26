@@ -17,58 +17,58 @@ var (
 	errInvalidArg = fmt.Errorf("invalid arg")
 )
 
-func (self *tele) onCommandMessage(ctx context.Context, payload []byte) bool {
-	if self.currentState == tele_api.State_Invalid || self.currentState == tele_api.State_Boot {
+func (t *tele) onCommandMessage(ctx context.Context, payload []byte) bool {
+	if t.currentState == tele_api.State_Invalid || t.currentState == tele_api.State_Boot {
 		return true
 	}
 	cmd := new(tele_api.Command)
 	err := proto.Unmarshal(payload, cmd)
 	if err != nil {
-		self.log.Errorf("tele command parse raw=%x err=%v", payload, err)
+		t.log.Errorf("tele command parse raw=%x err=%v", payload, err)
 		// TODO reply error
 		return true
 	}
-	self.log.Debugf("tele command raw=%x task=%#v", payload, cmd.String())
+	t.log.Debugf("tele command raw=%x task=%#v", payload, cmd.String())
 
 	// now := time.Now().UnixNano()
 	// if cmd.Deadline != 0 && now > cmd.Deadline {
-	// 	self.CommandReplyErr(cmd, fmt.Errorf("deadline"))
+	// 	t.CommandReplyErr(cmd, fmt.Errorf("deadline"))
 	// } else {
 	// 	// TODO store command in persistent queue, acknowledge now, execute later
-	if err = self.dispatchCommand(ctx, cmd); err != nil {
-		self.CommandReplyErr(cmd, err)
+	if err = t.dispatchCommand(ctx, cmd); err != nil {
+		t.CommandReplyErr(cmd, err)
 		return true
 	}
 
 	return true
 }
 
-func (self *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error {
+func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error {
 	switch task := cmd.Task.(type) {
 	case *tele_api.Command_Report:
-		return self.cmdReport(ctx, cmd)
+		return t.cmdReport(ctx, cmd)
 
 	case *tele_api.Command_Exec:
-		return self.cmdExec(ctx, cmd, task.Exec)
+		return t.cmdExec(ctx, cmd, task.Exec)
 
 	case *tele_api.Command_SetInventory:
-		return self.cmdSetInventory(ctx, cmd, task.SetInventory)
+		return t.cmdSetInventory(ctx, cmd, task.SetInventory)
 
 	case *tele_api.Command_Cook:
-		return self.cmdCook(ctx, cmd, task.Cook)
+		return t.cmdCook(ctx, cmd, task.Cook)
 
 	case *tele_api.Command_Show_QR:
-		return self.cmdShowQR(ctx, cmd, task.Show_QR)
+		return t.cmdShowQR(ctx, cmd, task.Show_QR)
 
 	default:
 		err := fmt.Errorf("unknown command=%#v", cmd)
-		self.log.Error(err)
+		t.log.Error(err)
 		return err
 	}
 }
 
-func (self *tele) cmdReport(ctx context.Context, cmd *tele_api.Command) error {
-	return errors.Annotate(self.Report(ctx, false), "cmdReport")
+func (t *tele) cmdReport(ctx context.Context, cmd *tele_api.Command) error {
+	return errors.Annotate(t.Report(ctx, false), "cmdReport")
 }
 
 func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgCook) error {
@@ -128,15 +128,15 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	return nil
 }
 
-func (self *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgExec) error {
+func (t *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgExec) error {
 	if arg.Scenario[:1] == "_" { // If the command contains the "_" prefix, then you ignore the client lock flag
 		arg.Scenario = arg.Scenario[1:]
 	} else if types.VMC.Lock {
-		self.log.Infof("ignore income remove command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Scenario)
-		self.CommandReply(cmd, tele_api.CmdReplay_busy)
+		t.log.Infof("ignore income remove command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Scenario)
+		t.CommandReply(cmd, tele_api.CmdReplay_busy)
 		return errors.New("locked")
 	}
-	self.log.Infof("income remove command from: (%v) scenario: (%s)", cmd.Executer, arg.Scenario)
+	t.log.Infof("income remove command from: (%v) scenario: (%s)", cmd.Executer, arg.Scenario)
 	g := state.GetGlobal(ctx)
 	doer, err := g.Engine.ParseText("tele-exec", arg.Scenario)
 	if err != nil {
@@ -154,21 +154,21 @@ func (self *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_
 	// 	defer state.VmcUnLock(ctx)
 	// }
 	if cmd.Executer > 0 {
-		self.CommandReply(cmd, tele_api.CmdReplay_accepted)
+		t.CommandReply(cmd, tele_api.CmdReplay_accepted)
 	}
 
 	// err = g.ScheduleSync(ctx, cmd.Priority, doer.Do)
 	err = g.ScheduleSync(ctx, doer.Do)
 	if err == nil {
-		self.CommandReply(cmd, tele_api.CmdReplay_done)
+		t.CommandReply(cmd, tele_api.CmdReplay_done)
 		return nil
 	}
-	self.CommandReply(cmd, tele_api.CmdReplay_error)
+	t.CommandReply(cmd, tele_api.CmdReplay_error)
 	err = errors.Annotate(err, "schedule")
 	return err
 }
 
-func (self *tele) cmdSetInventory(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgSetInventory) error {
+func (t *tele) cmdSetInventory(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgSetInventory) error {
 	if arg == nil || arg.New == nil {
 		return errInvalidArg
 	}
@@ -178,7 +178,7 @@ func (self *tele) cmdSetInventory(ctx context.Context, cmd *tele_api.Command, ar
 	return err
 }
 
-// func (self *tele) cmdStop(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgStop) error {
+// func (t *tele) cmdStop(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgStop) error {
 // 	if arg == nil {
 // 		return errInvalidArg
 // 	}
@@ -209,7 +209,7 @@ func (self *tele) cmdSetInventory(ctx context.Context, cmd *tele_api.Command, ar
 // 	return nil
 // }
 
-func (self *tele) cmdShowQR(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgShowQR) error {
+func (t *tele) cmdShowQR(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgShowQR) error {
 	if arg == nil {
 		return errInvalidArg
 	}
@@ -224,6 +224,6 @@ func (self *tele) cmdShowQR(ctx context.Context, cmd *tele_api.Command, arg *tel
 	}
 	// TODO display.Layout(arg.Layout)
 	// TODO border,redundancy from layout/config
-	self.log.Infof("show QR:'%v'", arg.QrText)
+	t.log.Infof("show QR:'%v'", arg.QrText)
 	return display.QR(arg.QrText, true, qrcode.High)
 }

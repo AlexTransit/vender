@@ -89,7 +89,7 @@ enum PaymentMethod {
 }
 
 message Command {
-  uint64 executer = 5;
+  int64 executer = 5;
   bool lock = 6;
   oneof task {
     ArgReport report = 16;
