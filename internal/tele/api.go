@@ -12,9 +12,9 @@ import (
 
 const logMsgDisabled = "tele disabled"
 
-func (self *tele) CommandReplyErr(c *tele_api.Command, e error) {
-	if !self.config.Enabled {
-		self.log.Infof(logMsgDisabled)
+func (t *tele) CommandReplyErr(c *tele_api.Command, e error) {
+	if !t.config.Enabled {
+		t.log.Infof(logMsgDisabled)
 		return
 	}
 	errText := ""
@@ -25,9 +25,9 @@ func (self *tele) CommandReplyErr(c *tele_api.Command, e error) {
 		// CommandId: c.Id,
 		Error: errText,
 	}
-	err := self.qpushCommandResponse(c, &r)
+	err := t.qpushCommandResponse(c, &r)
 	if err != nil {
-		self.log.Error(errors.Annotatef(err, "CRITICAL command=%#v response=%#v", c, r))
+		t.log.Error(errors.Annotatef(err, "CRITICAL command=%#v response=%#v", c, r))
 	}
 }
 
@@ -70,25 +70,25 @@ func (t *tele) teleEnable() bool {
 	return false
 }
 
-func (self *tele) Error(e error) {
-	if !self.config.Enabled {
-		self.log.Infof(logMsgDisabled)
+func (t *tele) Error(e error) {
+	if !t.config.Enabled {
+		t.log.Infof(logMsgDisabled)
 		return
 	}
 
-	self.log.Debugf("tele.Error: " + errors.ErrorStack(e))
+	t.log.Debugf("tele.Error: " + errors.ErrorStack(e))
 	tm := &tele_api.Telemetry{
 		Error: &tele_api.Telemetry_Error{Message: e.Error()},
-		// BuildVersion: self.config.BuildVersion,
+		// BuildVersion: t.config.BuildVersion,
 	}
-	if err := self.qpushTelemetry(tm); err != nil {
-		self.log.Errorf("CRITICAL qpushTelemetry telemetry_error=%#v err=%v", tm.Error, err)
+	if err := t.qpushTelemetry(tm); err != nil {
+		t.log.Errorf("CRITICAL qpushTelemetry telemetry_error=%#v err=%v", tm.Error, err)
 	}
 }
 
-func (self *tele) Report(ctx context.Context, serviceTag bool) error {
-	if !self.config.Enabled {
-		self.log.Infof(logMsgDisabled)
+func (t *tele) Report(ctx context.Context, serviceTag bool) error {
+	if !t.config.Enabled {
+		t.log.Infof(logMsgDisabled)
 		return nil
 	}
 
@@ -101,38 +101,38 @@ func (self *tele) Report(ctx context.Context, serviceTag bool) error {
 		AtService:    serviceTag,
 		// BuildVersion: g.BuildVersion,
 	}
-	err := self.qpushTelemetry(tm)
+	err := t.qpushTelemetry(tm)
 	if err != nil {
-		self.log.Errorf("CRITICAL qpushTelemetry tm=%#v err=%v", tm, err)
+		t.log.Errorf("CRITICAL qpushTelemetry tm=%#v err=%v", tm, err)
 	}
 	return err
 }
 
-func (self *tele) State(s tele_api.State) {
-	if self.currentState != s {
-		self.currentState = s
-		self.transport.SendState([]byte{byte(s)})
+func (t *tele) State(s tele_api.State) {
+	if t.currentState != s {
+		t.currentState = s
+		t.transport.SendState([]byte{byte(s)})
 	}
 }
 
-func (self *tele) StatModify(fun func(s *tele_api.Stat)) {
-	if !self.config.Enabled {
-		self.log.Infof(logMsgDisabled)
+func (t *tele) StatModify(fun func(s *tele_api.Stat)) {
+	if !t.config.Enabled {
+		t.log.Infof(logMsgDisabled)
 		return
 	}
 
-	self.stat.Lock()
-	fun(&self.stat)
-	self.stat.Unlock()
+	t.stat.Lock()
+	fun(&t.stat)
+	t.stat.Unlock()
 }
 
-func (self *tele) Transaction(tx *tele_api.Telemetry_Transaction) {
-	if !self.config.Enabled {
-		self.log.Infof(logMsgDisabled)
+func (t *tele) Transaction(tx *tele_api.Telemetry_Transaction) {
+	if !t.config.Enabled {
+		t.log.Infof(logMsgDisabled)
 		return
 	}
-	err := self.qpushTelemetry(&tele_api.Telemetry{Transaction: tx})
+	err := t.qpushTelemetry(&tele_api.Telemetry{Transaction: tx})
 	if err != nil {
-		self.log.Errorf("CRITICAL transaction=%#v err=%v", tx, err)
+		t.log.Errorf("CRITICAL transaction=%#v err=%v", tx, err)
 	}
 }
