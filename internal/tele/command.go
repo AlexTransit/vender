@@ -82,7 +82,7 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	}
 	if types.VMC.Lock {
 		t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
-		t.CommandReply(cmd, tele_api.CmdReplay_busy)
+		t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
 		return errors.New("remote cook error: VMC locked")
 	}
 	state.VmcLock(ctx)

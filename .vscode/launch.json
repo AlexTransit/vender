@@ -11,6 +11,7 @@
             "mode": "auto",
             // "program": "${fileDirname}",
             "program": "${workspaceFolder}/cmd/vender/main.go",
+            "buildFlags": "-ldflags=' -X main.BuildVersion=debug'",
             "args": ["-config","/home/vmc/local.hcl","vmc"],
             // "env": {
 			// 	"DEBUG_AS_ROOT": "true",
