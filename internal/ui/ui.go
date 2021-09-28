@@ -38,61 +38,61 @@ type UI struct { //nolint:maligned
 
 var _ types.UIer = &UI{} // compile-time interface test
 
-func (self *UI) Init(ctx context.Context) error {
-	// func (self *types.UI) Init(ctx context.Context) error {
-	self.g = state.GetGlobal(ctx)
-	self.config = &self.g.Config.UI
-	self.setState(StateBoot)
+func (ui *UI) Init(ctx context.Context) error {
+	// func (ui *types.UI) Init(ctx context.Context) error {
+	ui.g = state.GetGlobal(ctx)
+	ui.config = &ui.g.Config.UI
+	ui.setState(StateBoot)
 
-	// self.menu = make(Menu)
+	// ui.menu = make(Menu)
 	types.UI.Menu = make(map[string]types.MenuItemType)
 	FillMenu(ctx)
-	// if err := self.menu.Init(ctx); err != nil {
+	// if err := ui.menu.Init(ctx); err != nil {
 	// 	err = errors.Annotate(err, "ui.menu.Init")
 	// 	return err
 	// }
-	// self.g.Log.Debugf("menu len=%d", len(self.menu))
-	self.g.Log.Debugf("menu len=%d", len(types.UI.Menu))
+	// ui.g.Log.Debugf("menu len=%d", len(ui.menu))
+	ui.g.Log.Debugf("menu len=%d", len(types.UI.Menu))
 
-	self.display = self.g.MustTextDisplay()
-	self.eventch = make(chan types.Event)
-	self.inputBuf = make([]byte, 0, 32)
-	self.inputch = self.g.Hardware.Input.SubscribeChan("ui", self.g.Alive.StopChan())
-	// TODO self.g.Hardware.Input.Unsubscribe("ui")
+	ui.display = ui.g.MustTextDisplay()
+	ui.eventch = make(chan types.Event)
+	ui.inputBuf = make([]byte, 0, 32)
+	ui.inputch = ui.g.Hardware.Input.SubscribeChan("ui", ui.g.Alive.StopChan())
+	// TODO ui.g.Hardware.Input.Unsubscribe("ui")
 
-	self.frontResetTimeout = helpers.IntSecondDefault(self.g.Config.UI.Front.ResetTimeoutSec, 0)
+	ui.frontResetTimeout = helpers.IntSecondDefault(ui.g.Config.UI.Front.ResetTimeoutSec, 0)
 
-	// self.lock.ch = make(chan struct{}, 1)
-	self.g.LockCh = make(chan struct{}, 1)
-	self.g.TimerUIStop = make(chan struct{}, 1)
-	self.Service.Init(ctx)
-	self.g.XXX_uier.Store(types.UIer(self)) // FIXME import cycle traded for pointer cycle
+	// ui.lock.ch = make(chan struct{}, 1)
+	ui.g.LockCh = make(chan struct{}, 1)
+	ui.g.TimerUIStop = make(chan struct{}, 1)
+	ui.Service.Init(ctx)
+	ui.g.XXX_uier.Store(types.UIer(ui)) // FIXME import cycle traded for pointer cycle
 	return nil
 }
 
-func (self *UI) ScheduleSync(ctx context.Context, priority tele_api.Priority, fun types.TaskFunc) error {
-	if !self.LockWait(priority) {
+func (ui *UI) ScheduleSync(ctx context.Context, priority tele_api.Priority, fun types.TaskFunc) error {
+	if !ui.LockWait(priority) {
 		return errors.Trace(types.ErrInterrupted)
 	}
-	defer self.LockDecrementWait()
+	defer ui.LockDecrementWait()
 	return fun(ctx)
 }
 
-func (self *UI) wait(timeout time.Duration) types.Event {
+func (ui *UI) wait(timeout time.Duration) types.Event {
 	tmr := time.NewTimer(timeout)
 	defer tmr.Stop()
 again:
 	select {
 
-	case <-self.g.TimerUIStop:
+	case <-ui.g.TimerUIStop:
 		return types.Event{Kind: types.EventUiTimerStop}
 
-	case e := <-self.eventch:
+	case e := <-ui.eventch:
 		// if e.Kind != types.EventInvalid {
 		// }
 		return e
 
-	case e := <-self.inputch:
+	case e := <-ui.inputch:
 		// if e.Source != "" {
 		// }
 		if e.Source == input.DevInputEventTag && e.Up {
@@ -100,12 +100,12 @@ again:
 		}
 		return types.Event{Kind: types.EventInput, Input: e}
 
-	case <-self.g.LockCh:
+	case <-ui.g.LockCh:
 		return types.Event{Kind: types.EventFrontLock}
 
-	case <-self.lock.ch:
+	case <-ui.lock.ch:
 		// chan buffer may produce false positive
-		if !self.lock.locked() {
+		if !ui.lock.locked() {
 			goto again
 		}
 		return types.Event{Kind: types.EventLock}
@@ -113,7 +113,7 @@ again:
 	case <-tmr.C:
 		return types.Event{Kind: types.EventTime}
 
-	case <-self.g.Alive.StopChan():
+	case <-ui.g.Alive.StopChan():
 		return types.Event{Kind: types.EventStop}
 	}
 }

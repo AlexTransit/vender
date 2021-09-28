@@ -24,8 +24,8 @@ type transportMqtt struct {
 	topicCommand   string
 }
 
-func (self *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.Config, onCommand CommandCallback) error {
-	self.log = log
+func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.Config, onCommand CommandCallback) error {
+	tm.log = log
 	// FIXME add loglevel to config
 	mqtt.ERROR = log
 	mqtt.CRITICAL = log
@@ -37,14 +37,14 @@ func (self *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig t
 		return mqttClientId, teleConfig.MqttPassword
 	}
 
-	self.onCommand = func(payload []byte) bool {
+	tm.onCommand = func(payload []byte) bool {
 		return onCommand(ctx, payload)
 	}
-	self.topicPrefix = mqttClientId // coincidence
-	self.topicConnect = fmt.Sprintf("%s/c", self.topicPrefix)
-	self.topicState = fmt.Sprintf("%s/w/1s", self.topicPrefix)
-	self.topicTelemetry = fmt.Sprintf("%s/w/1t", self.topicPrefix)
-	self.topicCommand = fmt.Sprintf("%s/r/c", self.topicPrefix)
+	tm.topicPrefix = mqttClientId // coincidence
+	tm.topicConnect = fmt.Sprintf("%s/c", tm.topicPrefix)
+	tm.topicState = fmt.Sprintf("%s/w/1s", tm.topicPrefix)
+	tm.topicTelemetry = fmt.Sprintf("%s/w/1t", tm.topicPrefix)
+	tm.topicCommand = fmt.Sprintf("%s/r/c", tm.topicPrefix)
 	keepAlive := helpers.IntSecondConfigDefault(teleConfig.KeepaliveSec, 60)
 	pingTimeout := helpers.IntSecondConfigDefault(teleConfig.PingTimeoutSec, 30)
 	retryInterval := helpers.IntSecondConfigDefault(teleConfig.KeepaliveSec/2, 30)
@@ -57,20 +57,20 @@ func (self *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig t
 	// 	tlsconf.RootCAs = x509.NewCertPool()
 	// 	cabytes, err := ioutil.ReadFile(teleConfig.TlsCaFile)
 	// 	if err != nil {
-	// 		self.log.Errorf("tls not possible. certivicate file - not found")
+	// 		tm.log.Errorf("tls not possible. certivicate file - not found")
 	// 	}
 	// 	tlsconf.RootCAs.AppendCertsFromPEM(cabytes)
 	// }
 	// if teleConfig.TlsPsk != "" {
 	// 	copy(tlsconf.SessionTicketKey[:], helpers.MustHex(teleConfig.TlsPsk))
 	// }
-	self.mopt = mqtt.NewClientOptions().
+	tm.mopt = mqtt.NewClientOptions().
 		AddBroker(teleConfig.MqttBroker).
-		SetBinaryWill(self.topicConnect, []byte{0x00}, 1, true).
+		SetBinaryWill(tm.topicConnect, []byte{0x00}, 1, true).
 		SetCleanSession(false).
 		SetClientID(mqttClientId).
 		SetCredentialsProvider(credFun).
-		SetDefaultPublishHandler(self.messageHandler).
+		SetDefaultPublishHandler(tm.messageHandler).
 		SetKeepAlive(keepAlive).
 		SetPingTimeout(pingTimeout).
 		SetOrderMatters(false).
@@ -78,61 +78,61 @@ func (self *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig t
 		SetResumeSubs(true).SetCleanSession(false).
 		SetStore(mqtt.NewFileStore(storePath)).
 		SetConnectRetryInterval(retryInterval).
-		SetOnConnectHandler(self.onConnectHandler).
-		SetConnectionLostHandler(self.connectLostHandler).
+		SetOnConnectHandler(tm.onConnectHandler).
+		SetConnectionLostHandler(tm.connectLostHandler).
 		SetConnectRetry(true)
-	self.m = mqtt.NewClient(self.mopt)
-	sConnToken := self.m.Connect()
+	tm.m = mqtt.NewClient(tm.mopt)
+	sConnToken := tm.m.Connect()
 	// if sConnToken.Wait() && sConnToken.Error() != nil {
 	if sConnToken.Error() != nil {
-		self.log.Errorf("token.Error\n")
+		tm.log.Errorf("token.Error\n")
 	}
 	return nil
 }
 
-func (self *transportMqtt) CloseTele() {
-	self.log.Infof("mqtt unsubscribe")
-	if token := self.m.Unsubscribe(self.topicCommand); token.Wait() && token.Error() != nil {
-		self.log.Infof("mqtt unsubscribe error")
+func (tm *transportMqtt) CloseTele() {
+	tm.log.Infof("mqtt unsubscribe")
+	if token := tm.m.Unsubscribe(tm.topicCommand); token.Wait() && token.Error() != nil {
+		tm.log.Infof("mqtt unsubscribe error")
 		// fmt.Println(token.Error())
 		// os.Exit(1)
 	}
 }
 
-func (self *transportMqtt) SendState(payload []byte) bool {
-	self.log.Infof("transport sendstate payload=%x", payload)
-	self.m.Publish(self.topicState, 1, false, payload)
+func (tm *transportMqtt) SendState(payload []byte) bool {
+	tm.log.Infof("transport sendstate payload=%x", payload)
+	tm.m.Publish(tm.topicState, 1, false, payload)
 	return true
 }
 
-func (self *transportMqtt) SendTelemetry(payload []byte) bool {
-	self.m.Publish(self.topicTelemetry, 1, false, payload)
+func (tm *transportMqtt) SendTelemetry(payload []byte) bool {
+	tm.m.Publish(tm.topicTelemetry, 1, false, payload)
 	return true
 }
 
-func (self *transportMqtt) SendCommandResponse(topicSuffix string, payload []byte) bool {
-	topic := fmt.Sprintf("%s/%s", self.topicPrefix, topicSuffix)
-	self.log.Infof("mqtt publish command response to topic=%s", topic)
-	self.m.Publish(topic, 1, false, payload)
+func (tm *transportMqtt) SendCommandResponse(topicSuffix string, payload []byte) bool {
+	topic := fmt.Sprintf("%s/%s", tm.topicPrefix, topicSuffix)
+	tm.log.Infof("mqtt publish command response to topic=%s", topic)
+	tm.m.Publish(topic, 1, false, payload)
 	return true
 }
 
-func (self *transportMqtt) messageHandler(c mqtt.Client, msg mqtt.Message) {
+func (tm *transportMqtt) messageHandler(c mqtt.Client, msg mqtt.Message) {
 	payload := msg.Payload()
-	self.log.Infof("mqtt income message (%x)", payload)
-	self.onCommand(payload)
+	tm.log.Infof("mqtt income message (%x)", payload)
+	tm.onCommand(payload)
 }
 
-func (self *transportMqtt) connectLostHandler(c mqtt.Client, err error) {
-	self.log.Infof("mqtt disconnect")
+func (tm *transportMqtt) connectLostHandler(c mqtt.Client, err error) {
+	tm.log.Infof("mqtt disconnect")
 }
 
-func (self *transportMqtt) onConnectHandler(c mqtt.Client) {
-	self.log.Infof("mqtt connect")
-	if token := c.Subscribe(self.topicCommand, 1, nil); token.Wait() && token.Error() != nil {
-		self.log.Infof("mqtt subscribe error")
+func (tm *transportMqtt) onConnectHandler(c mqtt.Client) {
+	tm.log.Infof("mqtt connect")
+	if token := c.Subscribe(tm.topicCommand, 1, nil); token.Wait() && token.Error() != nil {
+		tm.log.Infof("mqtt subscribe error")
 	} else {
-		self.log.Infof("mqtt subscribe Ok")
-		c.Publish(self.topicConnect, 1, true, []byte{0x01})
+		tm.log.Infof("mqtt subscribe Ok")
+		c.Publish(tm.topicConnect, 1, true, []byte{0x01})
 	}
 }

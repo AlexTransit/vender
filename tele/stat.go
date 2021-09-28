@@ -12,9 +12,9 @@ type Stat struct { //nolint:maligned
 	Telemetry_Stat
 }
 
-// Locked_Reset Internal for tele package. Caller must hold self.Mutex.
-func (self *Stat) Locked_Reset() {
-	self.Telemetry_Stat.Reset()
-	self.BillRejected = make(map[uint32]uint32, 16)
-	self.CoinRejected = make(map[uint32]uint32, 16)
+// Locked_Reset Internal for tele package. Caller must hold s.Mutex.
+func (s *Stat) Locked_Reset() {
+	s.Telemetry_Stat.Reset()
+	s.BillRejected = make(map[uint32]uint32, 16)
+	s.CoinRejected = make(map[uint32]uint32, 16)
 }

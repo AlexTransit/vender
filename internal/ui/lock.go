@@ -21,66 +21,66 @@ type uiLock struct {
 	next State
 }
 
-func (self *UI) LockFunc(pri tele_api.Priority, fun func()) bool {
-	if !self.LockWait(pri) {
+func (ui *UI) LockFunc(pri tele_api.Priority, fun func()) bool {
+	if !ui.LockWait(pri) {
 		return false
 	}
-	defer self.LockDecrementWait()
+	defer ui.LockDecrementWait()
 	fun()
 	return true
 }
 
-func (self *UI) LockWait(pri tele_api.Priority) bool {
-	self.g.Log.Debugf("LockWait")
-	newSem := atomic.AddInt32(&self.lock.sem, 1)
-	oldPri := self.lock.priority()
+func (ui *UI) LockWait(pri tele_api.Priority) bool {
+	ui.g.Log.Debugf("LockWait")
+	newSem := atomic.AddInt32(&ui.lock.sem, 1)
+	oldPri := ui.lock.priority()
 	if newSem == 1 || (newSem > 1 && pri != oldPri && pri == tele_api.Priority_Now) {
-		atomic.StoreUint32(&self.lock.pri, uint32(pri))
+		atomic.StoreUint32(&ui.lock.pri, uint32(pri))
 	}
 	select {
-	case self.lock.ch <- struct{}{}:
+	case ui.lock.ch <- struct{}{}:
 	default:
 	}
-	for self.g.Alive.IsRunning() {
+	for ui.g.Alive.IsRunning() {
 		time.Sleep(lockPoll)
-		if self.State() == StateLocked {
+		if ui.State() == StateLocked {
 			return true
 		}
 	}
 	return false
 }
 
-func (self *UI) LockDecrementWait() {
-	self.g.Log.Debugf("LockDecrementWait")
-	new := atomic.AddInt32(&self.lock.sem, -1)
+func (ui *UI) LockDecrementWait() {
+	ui.g.Log.Debugf("LockDecrementWait")
+	new := atomic.AddInt32(&ui.lock.sem, -1)
 	if new < 0 {
 		// Support concurrent LockEnd
-		atomic.StoreInt32(&self.lock.sem, 0)
+		atomic.StoreInt32(&ui.lock.sem, 0)
 		new = 0
 	}
 	if new == 0 {
-		for self.g.Alive.IsRunning() && (self.State() == StateLocked) {
+		for ui.g.Alive.IsRunning() && (ui.State() == StateLocked) {
 			time.Sleep(lockPoll)
 		}
 	}
 }
 
 // LockEnd Stop locked state ignoring call balance
-func (self *UI) LockEnd() {
-	self.g.Log.Debugf("LockEnd")
-	atomic.StoreInt32(&self.lock.sem, 0)
-	for self.g.Alive.IsRunning() && (self.State() == StateLocked) {
+func (ui *UI) LockEnd() {
+	ui.g.Log.Debugf("LockEnd")
+	atomic.StoreInt32(&ui.lock.sem, 0)
+	for ui.g.Alive.IsRunning() && (ui.State() == StateLocked) {
 		time.Sleep(lockPoll)
 	}
 }
 
-func (self *UI) checkInterrupt(s State) bool {
-	if !self.lock.locked() {
+func (ui *UI) checkInterrupt(s State) bool {
+	if !ui.lock.locked() {
 		return false
 	}
 
 	interrupt := true
-	if self.lock.priority()&tele_api.Priority_IdleUser != 0 {
+	if ui.lock.priority()&tele_api.Priority_IdleUser != 0 {
 		interrupt = !(s > StateFrontBegin && s < StateFrontEnd) &&
 			!(s >= StateServiceBegin && s <= StateServiceEnd)
 	}
