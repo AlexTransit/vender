@@ -71,6 +71,7 @@ message Telemetry {
     uint32 credit_bills = 5;
     uint32 credit_coins = 6;
     Inventory spent = 7;
+    int64 executer = 8;
   }
 
   message Stat {

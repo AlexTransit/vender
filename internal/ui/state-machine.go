@@ -48,56 +48,56 @@ const (
 	StateFrontLock
 )
 
-func (self *UI) State() State               { return State(atomic.LoadUint32((*uint32)(&self.state))) }
-func (self *UI) setState(new State)         { atomic.StoreUint32((*uint32)(&self.state), uint32(new)) }
-func (self *UI) XXX_testSetState(new State) { self.setState(new) }
+func (ui *UI) State() State               { return State(atomic.LoadUint32((*uint32)(&ui.state))) }
+func (ui *UI) setState(new State)         { atomic.StoreUint32((*uint32)(&ui.state), uint32(new)) }
+func (ui *UI) XXX_testSetState(new State) { ui.setState(new) }
 
-func (self *UI) Loop(ctx context.Context) {
-	self.g.Alive.Add(1)
-	defer self.g.Alive.Done()
+func (ui *UI) Loop(ctx context.Context) {
+	ui.g.Alive.Add(1)
+	defer ui.g.Alive.Done()
 	next := StateDefault
-	for next != StateStop && self.g.Alive.IsRunning() {
-		current := self.State()
+	for next != StateStop && ui.g.Alive.IsRunning() {
+		current := ui.State()
 		types.VMC.State = uint32(current)
-		next = self.enter(ctx, current)
+		next = ui.enter(ctx, current)
 		if next == StateDefault {
-			self.g.Log.Fatalf("ui state=%s next=default", current.String())
+			ui.g.Log.Fatalf("ui state=%s next=default", current.String())
 		}
-		self.exit(ctx, current, next)
+		ui.exit(ctx, current, next)
 
-		if current != StateLocked && self.checkInterrupt(next) {
-			self.lock.next = next
-			self.g.Log.Infof("ui lock interrupt")
+		if current != StateLocked && ui.checkInterrupt(next) {
+			ui.lock.next = next
+			ui.g.Log.Infof("ui lock interrupt")
 			next = StateLocked
 		}
 
-		if !self.g.Alive.IsRunning() {
-			self.g.Log.Debugf("ui Loop stopping because g.Alive")
+		if !ui.g.Alive.IsRunning() {
+			ui.g.Log.Debugf("ui Loop stopping because g.Alive")
 			next = StateStop
 		}
 
-		self.setState(next)
-		if self.XXX_testHook != nil {
-			self.XXX_testHook(next)
+		ui.setState(next)
+		if ui.XXX_testHook != nil {
+			ui.XXX_testHook(next)
 		}
 	}
-	self.g.Log.Debugf("ui loop end")
+	ui.g.Log.Debugf("ui loop end")
 }
 
-func (self *UI) enter(ctx context.Context, s State) State {
-	// self.g.Log.Debugf("ui enter %s", s.String())
+func (ui *UI) enter(ctx context.Context, s State) State {
+	// ui.g.Log.Debugf("ui enter %s", s.String())
 	switch s {
 	case StateBoot:
-		self.g.Tele.State(tele_api.State_Boot)
+		ui.g.Tele.State(tele_api.State_Boot)
 		onStartSuccess := false
 		for i := 1; i <= 3; i++ {
-			errs := self.g.Engine.ExecList(ctx, "on_boot", self.g.Config.Engine.OnBoot)
+			errs := ui.g.Engine.ExecList(ctx, "on_boot", ui.g.Config.Engine.OnBoot)
 			if err := errors.Annotate(helpers.FoldErrors(errs), "on_boot"); err != nil {
-				self.g.Tele.Error(errors.Annotatef(err, "on_boot try=%d", i))
-				self.g.Log.Error(err)
+				ui.g.Tele.Error(errors.Annotatef(err, "on_boot try=%d", i))
+				ui.g.Log.Error(err)
 			}
 			// on_boot special behavior: log, report but don't stop on errors caused by optional offline devices
-			if len(removeOptionalOffline(self.g, errs)) == 0 {
+			if len(removeOptionalOffline(ui.g, errs)) == 0 {
 				onStartSuccess = true
 				break
 			}
@@ -107,28 +107,28 @@ func (self *UI) enter(ctx context.Context, s State) State {
 		if !onStartSuccess {
 			return StateBroken
 		}
-		self.broken = false
-		self.g.Tele.State(tele_api.State_Nominal)
+		ui.broken = false
+		ui.g.Tele.State(tele_api.State_Nominal)
 		return StateFrontBegin
 
 	case StateBroken:
-		self.g.Log.Infof("state=broken")
-		if !self.broken {
-			self.g.Tele.State(tele_api.State_Problem)
-			if errs := self.g.Engine.ExecList(ctx, "on_broken", self.g.Config.Engine.OnBroken); len(errs) != 0 {
+		ui.g.Log.Infof("state=broken")
+		if !ui.broken {
+			ui.g.Tele.State(tele_api.State_Problem)
+			if errs := ui.g.Engine.ExecList(ctx, "on_broken", ui.g.Config.Engine.OnBroken); len(errs) != 0 {
 				// TODO maybe ErrorStack should be removed
-				self.g.Log.Error(errors.ErrorStack(errors.Annotate(helpers.FoldErrors(errs), "on_broken")))
+				ui.g.Log.Error(errors.ErrorStack(errors.Annotate(helpers.FoldErrors(errs), "on_broken")))
 			}
 			moneysys := money.GetGlobal(ctx)
 			_ = moneysys.SetAcceptMax(ctx, 0)
 		}
-		self.broken = true
-		self.display.SetLines(self.g.Config.UI.Front.MsgBrokenL1, self.g.Config.UI.Front.MsgBrokenL2)
-		if d, _ := self.g.Display(); d != nil {
+		ui.broken = true
+		ui.display.SetLines(ui.g.Config.UI.Front.MsgBrokenL1, ui.g.Config.UI.Front.MsgBrokenL2)
+		if d, _ := ui.g.Display(); d != nil {
 			_ = d.Clear()
 		}
-		for self.g.Alive.IsRunning() {
-			e := self.wait(time.Second)
+		for ui.g.Alive.IsRunning() {
+			e := ui.wait(time.Second)
 			// TODO receive tele command to reboot or change state
 			if e.Kind == types.EventService {
 				return StateServiceBegin
@@ -137,79 +137,79 @@ func (self *UI) enter(ctx context.Context, s State) State {
 		return StateDefault
 
 	case StateLocked:
-		self.display.SetLines(self.g.Config.UI.Front.MsgStateLocked, "")
-		// self.g.Tele.State(tele_api.State_Lock)
-		for self.g.Alive.IsRunning() {
-			e := self.wait(lockPoll)
+		ui.display.SetLines(ui.g.Config.UI.Front.MsgStateLocked, "")
+		// ui.g.Tele.State(tele_api.State_Lock)
+		for ui.g.Alive.IsRunning() {
+			e := ui.wait(lockPoll)
 			// TODO receive tele command to reboot or change state
 			if e.Kind == types.EventService {
 				return StateServiceBegin
 			}
-			if !self.lock.locked() {
-				return self.lock.next
+			if !ui.lock.locked() {
+				return ui.lock.next
 			}
 		}
 		return StateDefault
 
 	case StateFrontBegin:
-		self.inputBuf = self.inputBuf[:0]
-		self.broken = false
-		return self.onFrontBegin(ctx)
+		ui.inputBuf = ui.inputBuf[:0]
+		ui.broken = false
+		return ui.onFrontBegin(ctx)
 
 	case StateFrontSelect:
-		return self.onFrontSelect(ctx)
+		return ui.onFrontSelect(ctx)
 
 	case StateFrontTune:
-		return self.onFrontTune(ctx)
+		return ui.onFrontTune(ctx)
 
 	case StateFrontAccept:
-		return self.onFrontAccept(ctx)
+		return ui.onFrontAccept(ctx)
 
 	case StateFrontTimeout:
-		return self.onFrontTimeout(ctx)
+		return ui.onFrontTimeout(ctx)
 
 	case StateFrontEnd:
-		// self.onFrontEnd(ctx)
+		// ui.onFrontEnd(ctx)
 		return StateFrontBegin
 
 	case StateFrontLock:
-		return self.onFrontLock()
+		return ui.onFrontLock()
 
 	case StateServiceBegin:
-		return self.onServiceBegin(ctx)
+		return ui.onServiceBegin(ctx)
 	case StateServiceAuth:
-		return self.onServiceAuth()
+		return ui.onServiceAuth()
 	case StateServiceMenu:
-		return self.onServiceMenu()
+		return ui.onServiceMenu()
 	case StateServiceInventory:
-		return self.onServiceInventory()
+		return ui.onServiceInventory()
 	case StateServiceTest:
-		return self.onServiceTest(ctx)
+		return ui.onServiceTest(ctx)
 	case StateServiceReboot:
-		return self.onServiceReboot(ctx)
+		return ui.onServiceReboot(ctx)
 	case StateServiceNetwork:
-		return self.onServiceNetwork()
+		return ui.onServiceNetwork()
 	case StateServiceMoneyLoad:
-		return self.onServiceMoneyLoad(ctx)
+		return ui.onServiceMoneyLoad(ctx)
 	case StateServiceReport:
-		return self.onServiceReport(ctx)
+		return ui.onServiceReport(ctx)
 	case StateServiceEnd:
-		return replaceDefault(self.onServiceEnd(ctx), StateFrontBegin)
+		return replaceDefault(ui.onServiceEnd(ctx), StateFrontBegin)
 
 	case StateStop:
 		return StateStop
 
 	default:
-		self.g.Log.Fatalf("unhandled ui state=%s", s.String())
+		ui.g.Log.Fatalf("unhandled ui state=%s", s.String())
 		return StateDefault
 	}
 }
 
-func (self *UI) exit(ctx context.Context, current, next State) {
-	// self.g.Log.Debugf("ui exit %s -> %s", current.String(), next.String())
+func (ui *UI) exit(ctx context.Context, current, next State) {
+	// ui.g.Log.Debugf("ui exit %s -> %s", current.String(), next.String())
 
 	if next != StateBroken {
-		self.broken = false
+		ui.broken = false
 	}
 }
 

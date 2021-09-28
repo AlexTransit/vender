@@ -47,7 +47,7 @@ func (t *tele) CommandReply(c *tele_api.Command, cr tele_api.CmdReplay) {
 	}
 }
 
-func (t *tele) CookReply(c *tele_api.Command, cr tele_api.CookReplay) {
+func (t *tele) CookReply(c *tele_api.Command, cr tele_api.CookReplay, price ...uint32) {
 	if te := t.teleEnable(); te {
 		return
 	}
@@ -56,9 +56,12 @@ func (t *tele) CookReply(c *tele_api.Command, cr tele_api.CookReplay) {
 		Executer:   c.Executer,
 		CookReplay: cr,
 	}
+	if price != nil {
+		r.ValidateReplay = price[0]
+	}
 	err := t.qpushCommandResponse(c, &r)
 	if err != nil {
-		fmt.Printf("\n\033[41m error \033[0m\n\n")
+		fmt.Printf("\n\033[41m CookReply error \033[0m\n\n")
 	}
 }
 

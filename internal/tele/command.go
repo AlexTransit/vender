@@ -75,17 +75,13 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	// defer state.VmcUnLock(ctx)
 	g := state.GetGlobal(ctx)
 
-	arg = &tele_api.Command_ArgCook{
-		Menucode: "10",
-		Cream:    []byte{0x2},
-		Balance:  10,
-	}
 	if types.VMC.Lock {
 		t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
 		t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
 		return errors.New("remote cook error: VMC locked")
 	}
 	state.VmcLock(ctx)
+	defer state.VmcUnLock(ctx)
 	t.log.Infof("remote coocing (%v) (%v)", cmd, arg)
 
 	mitem, ok := types.UI.Menu[arg.Menucode]
@@ -117,13 +113,20 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	}
 
 	ui.Cook(ctx)
+	teletx := &tele_api.Telemetry_Transaction{
+		Code:                 types.UI.FrontResult.Item.Code,
+		Options:              []int32{int32(types.UI.FrontResult.Cream), int32(types.UI.FrontResult.Sugar)},
+		Price:                uint32(types.UI.FrontResult.Item.Price),
+		PaymentMethod:        arg.PaymentMethod,
+		Executer:             cmd.Executer,
+	}
+	g.Tele.Transaction(teletx)
 	// ui.Cook(ctx, "10", 4, 4, tele_api.PaymentMethod_Balance)
 	// return nil
 	// g := state.GetGlobal(ctx)
 	// selmenu.Code = cmd
 	// g.UI.Cook(ctx, cmd, arg.Cream, arg.Sugar, tele_api.PaymentMethod_Balance)
-	t.CookReply(cmd, tele_api.CookReplay_cookFinish)
-	state.VmcUnLock(ctx)
+	t.CookReply(cmd, tele_api.CookReplay_cookFinish, uint32(mitem.Price))
 
 	return nil
 }

@@ -59,17 +59,17 @@ type uiService struct { //nolint:maligned
 	testList  []engine.Doer
 }
 
-func (self *uiService) Init(ctx context.Context) {
+func (ui *uiService) Init(ctx context.Context) {
 	g := state.GetGlobal(ctx)
 	config := g.Config.UI.Service
-	self.SecretSalt = []byte{0} // FIXME read from config
-	self.resetTimeout = helpers.IntSecondDefault(config.ResetTimeoutSec, 3*time.Second)
+	ui.SecretSalt = []byte{0} // FIXME read from config
+	ui.resetTimeout = helpers.IntSecondDefault(config.ResetTimeoutSec, 3*time.Second)
 	errs := make([]error, 0, len(config.Tests))
 	for _, t := range config.Tests {
 		if d, err := g.Engine.ParseText(t.Name, t.Scenario); err != nil {
 			errs = append(errs, err)
 		} else {
-			self.testList = append(self.testList, d)
+			ui.testList = append(ui.testList, d)
 		}
 	}
 	if err := helpers.FoldErrors(errs); err != nil {
@@ -77,118 +77,118 @@ func (self *uiService) Init(ctx context.Context) {
 	}
 }
 
-func (self *UI) onServiceBegin(ctx context.Context) State {
-	self.g.Hardware.Input.Enable(true)
-	self.inputBuf = self.inputBuf[:0]
-	self.Service.askReport = false
-	self.Service.menuIdx = 0
-	self.Service.invIdx = 0
-	self.Service.invList = make([]*inventory.Stock, 0, 16)
-	self.Service.testIdx = 0
-	self.g.Inventory.Iter(func(s *inventory.Stock) {
-		self.g.Log.Debugf("ui service inventory: - %s", s.String())
-		self.Service.invList = append(self.Service.invList, s)
+func (ui *UI) onServiceBegin(ctx context.Context) State {
+	ui.g.Hardware.Input.Enable(true)
+	ui.inputBuf = ui.inputBuf[:0]
+	ui.Service.askReport = false
+	ui.Service.menuIdx = 0
+	ui.Service.invIdx = 0
+	ui.Service.invList = make([]*inventory.Stock, 0, 16)
+	ui.Service.testIdx = 0
+	ui.g.Inventory.Iter(func(s *inventory.Stock) {
+		ui.g.Log.Debugf("ui service inventory: - %s", s.String())
+		ui.Service.invList = append(ui.Service.invList, s)
 	})
-	sort.Slice(self.Service.invList, func(a, b int) bool {
-		xa := self.Service.invList[a]
-		xb := self.Service.invList[b]
+	sort.Slice(ui.Service.invList, func(a, b int) bool {
+		xa := ui.Service.invList[a]
+		xb := ui.Service.invList[b]
 		if xa.Code != xb.Code {
 			return xa.Code < xb.Code
 		}
 		return xa.Name < xb.Name
 	})
-	// self.g.Log.Debugf("invlist=%v, invidx=%d", self.Service.invList, self.Service.invIdx)
+	// ui.g.Log.Debugf("invlist=%v, invidx=%d", ui.Service.invList, ui.Service.invIdx)
 
-	if errs := self.g.Engine.ExecList(ctx, "on_service_begin", self.g.Config.Engine.OnServiceBegin); len(errs) != 0 {
-		self.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_service_begin"))
+	if errs := ui.g.Engine.ExecList(ctx, "on_service_begin", ui.g.Config.Engine.OnServiceBegin); len(errs) != 0 {
+		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_service_begin"))
 		return StateBroken
 	}
 
-	self.g.Log.Debugf("ui service begin")
-	self.g.Tele.State(tele_api.State_Service)
+	ui.g.Log.Debugf("ui service begin")
+	ui.g.Tele.State(tele_api.State_Service)
 	return StateServiceAuth
 }
 
-func (self *UI) onServiceAuth() State {
-	serviceConfig := &self.g.Config.UI.Service
+func (ui *UI) onServiceAuth() State {
+	serviceConfig := &ui.g.Config.UI.Service
 	if !serviceConfig.Auth.Enable {
 		return StateServiceMenu
 	}
 
-	passVisualHash := VisualHash(self.inputBuf, self.Service.SecretSalt)
-	self.display.SetLines(
+	passVisualHash := VisualHash(ui.inputBuf, ui.Service.SecretSalt)
+	ui.display.SetLines(
 		serviceConfig.MsgAuth,
 		fmt.Sprintf(msgServiceInputAuth, passVisualHash),
 	)
 
-	next, e := self.serviceWaitInput()
+	next, e := ui.serviceWaitInput()
 	if next != StateDefault {
 		return next
 	}
 
 	switch {
 	case e.IsDigit():
-		self.inputBuf = append(self.inputBuf, byte(e.Key))
-		if len(self.inputBuf) > 16 {
-			self.display.SetLines(MsgError, "len") // FIXME extract message string
-			self.serviceWaitInput()
+		ui.inputBuf = append(ui.inputBuf, byte(e.Key))
+		if len(ui.inputBuf) > 16 {
+			ui.display.SetLines(MsgError, "len") // FIXME extract message string
+			ui.serviceWaitInput()
 			return StateServiceEnd
 		}
-		return self.State()
+		return ui.State()
 
 	case e.IsZero() || input.IsReject(&e):
 		return StateServiceEnd
 
 	case input.IsAccept(&e):
-		if len(self.inputBuf) == 0 {
-			self.display.SetLines(MsgError, "empty") // FIXME extract message string
-			self.serviceWaitInput()
+		if len(ui.inputBuf) == 0 {
+			ui.display.SetLines(MsgError, "empty") // FIXME extract message string
+			ui.serviceWaitInput()
 			return StateServiceEnd
 		}
 
 		// FIXME fnv->secure hash for actual password comparison
-		inputHash := VisualHash(self.inputBuf, self.Service.SecretSalt)
-		for i, p := range self.g.Config.UI.Service.Auth.Passwords {
+		inputHash := VisualHash(ui.inputBuf, ui.Service.SecretSalt)
+		for i, p := range ui.g.Config.UI.Service.Auth.Passwords {
 			if inputHash == p {
-				self.g.Log.Infof("service auth ok i=%d hash=%s", i, inputHash)
+				ui.g.Log.Infof("service auth ok i=%d hash=%s", i, inputHash)
 				return StateServiceMenu
 			}
 		}
 
-		self.display.SetLines(MsgError, "sorry") // FIXME extract message string
-		self.serviceWaitInput()
+		ui.display.SetLines(MsgError, "sorry") // FIXME extract message string
+		ui.serviceWaitInput()
 		return StateServiceEnd
 	}
-	self.g.Log.Errorf("ui onServiceAuth unhandled branch")
-	self.display.SetLines(MsgError, "code error") // FIXME extract message string
-	self.serviceWaitInput()
+	ui.g.Log.Errorf("ui onServiceAuth unhandled branch")
+	ui.display.SetLines(MsgError, "code error") // FIXME extract message string
+	ui.serviceWaitInput()
 	return StateServiceEnd
 }
 
-func (self *UI) onServiceMenu() State {
-	menuName := serviceMenu[self.Service.menuIdx]
-	self.display.SetLines(
+func (ui *UI) onServiceMenu() State {
+	menuName := serviceMenu[ui.Service.menuIdx]
+	ui.display.SetLines(
 		msgServiceMenu,
-		fmt.Sprintf("%d %s", self.Service.menuIdx+1, menuName),
+		fmt.Sprintf("%d %s", ui.Service.menuIdx+1, menuName),
 	)
 
-	next, e := self.serviceWaitInput()
+	next, e := ui.serviceWaitInput()
 	if next != StateDefault {
 		return next
 	}
 
 	switch {
 	case e.Key == input.EvendKeyCreamLess:
-		self.Service.menuIdx = addWrap(self.Service.menuIdx, serviceMenuMax+1, -1)
+		ui.Service.menuIdx = addWrap(ui.Service.menuIdx, serviceMenuMax+1, -1)
 	case e.Key == input.EvendKeyCreamMore:
-		self.Service.menuIdx = addWrap(self.Service.menuIdx, serviceMenuMax+1, +1)
+		ui.Service.menuIdx = addWrap(ui.Service.menuIdx, serviceMenuMax+1, +1)
 
 	case input.IsAccept(&e):
-		if int(self.Service.menuIdx) >= len(serviceMenu) {
-			self.g.Fatal(errors.Errorf("code error service menuIdx out of range"))
+		if int(ui.Service.menuIdx) >= len(serviceMenu) {
+			ui.g.Fatal(errors.Errorf("code error service menuIdx out of range"))
 			return StateBroken
 		}
-		switch serviceMenu[self.Service.menuIdx] {
+		switch serviceMenu[ui.Service.menuIdx] {
 		case serviceMenuInventory:
 			return StateServiceInventory
 		case serviceMenuTest:
@@ -211,70 +211,70 @@ func (self *UI) onServiceMenu() State {
 	case e.IsDigit():
 		x := byte(e.Key) - byte('0')
 		if x > 0 && x <= serviceMenuMax {
-			self.Service.menuIdx = x - 1
+			ui.Service.menuIdx = x - 1
 		}
 	}
 	return StateServiceMenu
 }
 
-func (self *UI) onServiceInventory() State {
-	if len(self.Service.invList) == 0 {
-		self.display.SetLines(MsgError, "inv empty") // FIXME extract message string
-		self.serviceWaitInput()
+func (ui *UI) onServiceInventory() State {
+	if len(ui.Service.invList) == 0 {
+		ui.display.SetLines(MsgError, "inv empty") // FIXME extract message string
+		ui.serviceWaitInput()
 		return StateServiceMenu
 	}
-	invCurrent := self.Service.invList[self.Service.invIdx]
-	self.display.SetLines(
+	invCurrent := ui.Service.invList[ui.Service.invIdx]
+	ui.display.SetLines(
 		fmt.Sprintf("I%d %s", invCurrent.Code, invCurrent.Name),
-		fmt.Sprintf("%.1f %s\x00", invCurrent.Value(), string(self.inputBuf)), // TODO configurable decimal point
+		fmt.Sprintf("%.1f %s\x00", invCurrent.Value(), string(ui.inputBuf)), // TODO configurable decimal point
 	)
 
-	next, e := self.serviceWaitInput()
+	next, e := ui.serviceWaitInput()
 	if next != StateDefault {
 		return next
 	}
 
-	invIdxMax := uint8(len(self.Service.invList))
+	invIdxMax := uint8(len(ui.Service.invList))
 	switch {
 	case e.Key == input.EvendKeyCreamLess || e.Key == input.EvendKeyCreamMore:
-		if len(self.inputBuf) != 0 {
-			self.display.SetLines(MsgError, "set or clear?") // FIXME extract message string
-			self.serviceWaitInput()
+		if len(ui.inputBuf) != 0 {
+			ui.display.SetLines(MsgError, "set or clear?") // FIXME extract message string
+			ui.serviceWaitInput()
 			return StateServiceInventory
 		}
 		if e.Key == input.EvendKeyCreamLess {
-			self.Service.invIdx = addWrap(self.Service.invIdx, invIdxMax, -1)
+			ui.Service.invIdx = addWrap(ui.Service.invIdx, invIdxMax, -1)
 		} else {
-			self.Service.invIdx = addWrap(self.Service.invIdx, invIdxMax, +1)
+			ui.Service.invIdx = addWrap(ui.Service.invIdx, invIdxMax, +1)
 		}
 	case e.Key == input.EvendKeyDot || e.IsDigit():
-		self.inputBuf = append(self.inputBuf, byte(e.Key))
+		ui.inputBuf = append(ui.inputBuf, byte(e.Key))
 
 	case input.IsAccept(&e):
-		if len(self.inputBuf) == 0 {
-			self.g.Log.Errorf("ui onServiceInventory input=accept inputBuf=empty")
-			self.display.SetLines(MsgError, "empty") // FIXME extract message string
-			self.serviceWaitInput()
+		if len(ui.inputBuf) == 0 {
+			ui.g.Log.Errorf("ui onServiceInventory input=accept inputBuf=empty")
+			ui.display.SetLines(MsgError, "empty") // FIXME extract message string
+			ui.serviceWaitInput()
 			return StateServiceInventory
 		}
 
-		x, err := strconv.ParseFloat(string(self.inputBuf), 32)
-		self.inputBuf = self.inputBuf[:0]
+		x, err := strconv.ParseFloat(string(ui.inputBuf), 32)
+		ui.inputBuf = ui.inputBuf[:0]
 		if err != nil {
-			self.g.Log.Errorf("ui onServiceInventory input=accept inputBuf='%s'", string(self.inputBuf))
-			self.display.SetLines(MsgError, "number-invalid") // FIXME extract message string
-			self.serviceWaitInput()
+			ui.g.Log.Errorf("ui onServiceInventory input=accept inputBuf='%s'", string(ui.inputBuf))
+			ui.display.SetLines(MsgError, "number-invalid") // FIXME extract message string
+			ui.serviceWaitInput()
 			return StateServiceInventory
 		}
 
-		invCurrent := self.Service.invList[self.Service.invIdx]
+		invCurrent := ui.Service.invList[ui.Service.invIdx]
 		invCurrent.Set(float32(x))
-		self.Service.askReport = true
+		ui.Service.askReport = true
 
 	case input.IsReject(&e):
 		// backspace semantic
-		if len(self.inputBuf) > 0 {
-			self.inputBuf = self.inputBuf[:len(self.inputBuf)-1]
+		if len(ui.inputBuf) > 0 {
+			ui.inputBuf = ui.inputBuf[:len(ui.inputBuf)-1]
 			return StateServiceInventory
 		}
 		return StateServiceMenu
@@ -282,37 +282,37 @@ func (self *UI) onServiceInventory() State {
 	return StateServiceInventory
 }
 
-func (self *UI) onServiceTest(ctx context.Context) State {
-	self.inputBuf = self.inputBuf[:0]
-	if len(self.Service.testList) == 0 {
-		self.display.SetLines(MsgError, "no tests") // FIXME extract message string
-		self.serviceWaitInput()
+func (ui *UI) onServiceTest(ctx context.Context) State {
+	ui.inputBuf = ui.inputBuf[:0]
+	if len(ui.Service.testList) == 0 {
+		ui.display.SetLines(MsgError, "no tests") // FIXME extract message string
+		ui.serviceWaitInput()
 		return StateServiceMenu
 	}
-	testCurrent := self.Service.testList[self.Service.testIdx]
-	line1 := fmt.Sprintf("T%d %s", self.Service.testIdx+1, testCurrent.String())
-	self.display.SetLines(line1, "")
+	testCurrent := ui.Service.testList[ui.Service.testIdx]
+	line1 := fmt.Sprintf("T%d %s", ui.Service.testIdx+1, testCurrent.String())
+	ui.display.SetLines(line1, "")
 
 wait:
-	next, e := self.serviceWaitInput()
+	next, e := ui.serviceWaitInput()
 	if next != StateDefault {
 		return next
 	}
 
-	testIdxMax := uint8(len(self.Service.testList))
+	testIdxMax := uint8(len(ui.Service.testList))
 	switch {
 	case e.Key == input.EvendKeyCreamLess:
-		self.Service.testIdx = addWrap(self.Service.testIdx, testIdxMax, -1)
+		ui.Service.testIdx = addWrap(ui.Service.testIdx, testIdxMax, -1)
 	case e.Key == input.EvendKeyCreamMore:
-		self.Service.testIdx = addWrap(self.Service.testIdx, testIdxMax, +1)
+		ui.Service.testIdx = addWrap(ui.Service.testIdx, testIdxMax, +1)
 
 	case input.IsAccept(&e):
-		self.display.SetLines(line1, "in progress")
-		if err := self.g.Engine.ValidateExec(ctx, testCurrent); err == nil {
-			self.display.SetLines(line1, "OK")
+		ui.display.SetLines(line1, "in progress")
+		if err := ui.g.Engine.ValidateExec(ctx, testCurrent); err == nil {
+			ui.display.SetLines(line1, "OK")
 		} else {
-			self.g.Error(err)
-			self.display.SetLines(line1, "error")
+			ui.g.Error(err)
+			ui.display.SetLines(line1, "error")
 		}
 		goto wait
 
@@ -322,50 +322,50 @@ wait:
 	return StateServiceTest
 }
 
-func (self *UI) onServiceReboot(ctx context.Context) State {
-	self.display.SetLines("for reboot", "press 1") // FIXME extract message string
+func (ui *UI) onServiceReboot(ctx context.Context) State {
+	ui.display.SetLines("for reboot", "press 1") // FIXME extract message string
 
-	next, e := self.serviceWaitInput()
+	next, e := ui.serviceWaitInput()
 	if next != StateDefault {
 		return next
 	}
 
 	switch {
 	case e.Key == '1':
-		self.display.SetLines("reboot", "in progress") // FIXME extract message string
-		self.g.VmcStop(ctx)
+		ui.display.SetLines("reboot", "in progress") // FIXME extract message string
+		ui.g.VmcStop(ctx)
 		return StateStop
 	}
 	return StateServiceMenu
 }
 
-func (self *UI) onServiceNetwork() State {
+func (ui *UI) onServiceNetwork() State {
 
-	self.display.SetLines("for select net 0", "press 1") // FIXME extract message string
+	ui.display.SetLines("for select net 0", "press 1") // FIXME extract message string
 
-	next, e := self.serviceWaitInput()
+	next, e := ui.serviceWaitInput()
 	if next != StateDefault {
 		return next
 	}
 
 	switch {
 	case e.Key == '1':
-		self.display.SetLines("wifi restart", "in progress") // FIXME extract message string
+		ui.display.SetLines("wifi restart", "in progress") // FIXME extract message string
 
 		// lsCmd := exec.Command("bash", "-c", "wpa_cli select_network 0 && wpa_cli enable_network 1")
 		lsCmd := exec.Command("bash", "-c", "wpa_cli select_network 0")
 		bashOut, err := lsCmd.Output()
-		self.g.Log.Infof("restart wlan (%v)", bashOut)
+		ui.g.Log.Infof("restart wlan (%v)", bashOut)
 		if err != nil {
-			self.g.Log.Infof("%v", err)
+			ui.g.Log.Infof("%v", err)
 			// panic(err)
 		}
 
 		lsCmd = exec.Command("bash", "-c", "wpa_cli enable_network 1")
 		bashOut, err = lsCmd.Output()
-		self.g.Log.Infof("restart wlan (%v)", bashOut)
+		ui.g.Log.Infof("restart wlan (%v)", bashOut)
 		if err != nil {
-			self.g.Log.Infof("%v", err)
+			ui.g.Log.Infof("%v", err)
 			// panic(err)
 		}
 
@@ -379,7 +379,7 @@ func (self *UI) onServiceNetwork() State {
 	// 	for _, addr := range allAddrs {
 	// 		ip, _, err := net.ParseCIDR(addr.String())
 	// 		if err != nil {
-	// 			self.g.Log.Errorf("invalid local addr=%v", addr)
+	// 			ui.g.Log.Errorf("invalid local addr=%v", addr)
 	// 			continue addrLoop
 	// 		}
 	// 		if ip.IsLoopback() {
@@ -388,10 +388,10 @@ func (self *UI) onServiceNetwork() State {
 	// 		addrs = append(addrs, ip.String())
 	// 	}
 	// 	listString := strings.Join(addrs, " ")
-	// 	self.display.SetLines("network", listString)
+	// 	ui.display.SetLines("network", listString)
 
 	// 	for {
-	// 		next, e := self.serviceWaitInput()
+	// 		next, e := ui.serviceWaitInput()
 	// 		if next != StateDefault {
 	// 			return next
 	// 		}
@@ -401,33 +401,33 @@ func (self *UI) onServiceNetwork() State {
 	// 	}
 }
 
-func (self *UI) onServiceMoneyLoad(ctx context.Context) State {
+func (ui *UI) onServiceMoneyLoad(ctx context.Context) State {
 	moneysys := money.GetGlobal(ctx)
 
-	self.display.SetLines("money-load", "0")
+	ui.display.SetLines("money-load", "0")
 	alive := alive.NewAlive()
 	defer func() {
 		alive.Stop() // stop pending AcceptCredit
 		alive.Wait()
 	}()
 
-	self.Service.askReport = true
+	ui.Service.askReport = true
 	accept := true
 	loaded := currency.Amount(0)
 	for {
 		credit := moneysys.Credit(ctx)
 		if credit > 0 {
 			loaded += credit
-			self.display.SetLines("money-load", loaded.FormatCtx(ctx))
+			ui.display.SetLines("money-load", loaded.FormatCtx(ctx))
 			// reset loaded credit
 			_ = moneysys.WithdrawCommit(ctx, credit)
 		}
 
 		if accept {
 			accept = false
-			go moneysys.AcceptCredit(ctx, currency.MaxAmount, alive.StopChan(), self.eventch)
+			go moneysys.AcceptCredit(ctx, currency.MaxAmount, alive.StopChan(), ui.eventch)
 		}
-		switch e := self.wait(self.Service.resetTimeout); e.Kind {
+		switch e := ui.wait(ui.Service.resetTimeout); e.Kind {
 		case types.EventInput:
 			if input.IsReject(&e.Input) {
 				return StateServiceMenu
@@ -440,7 +440,7 @@ func (self *UI) onServiceMoneyLoad(ctx context.Context) State {
 			return StateLocked
 
 		case types.EventStop:
-			self.g.Log.Debugf("onServiceMoneyLoad global stop")
+			ui.g.Log.Debugf("onServiceMoneyLoad global stop")
 			return StateServiceEnd
 
 		case types.EventTime:
@@ -451,57 +451,57 @@ func (self *UI) onServiceMoneyLoad(ctx context.Context) State {
 	}
 }
 
-func (self *UI) onServiceReport(ctx context.Context) State {
-	_ = self.g.Tele.Report(ctx, true)
-	if errs := self.g.Engine.ExecList(ctx, "service-report", []string{"money.cashbox_zero"}); len(errs) != 0 {
-		self.g.Error(errors.Annotate(helpers.FoldErrors(errs), "service-report"))
+func (ui *UI) onServiceReport(ctx context.Context) State {
+	_ = ui.g.Tele.Report(ctx, true)
+	if errs := ui.g.Engine.ExecList(ctx, "service-report", []string{"money.cashbox_zero"}); len(errs) != 0 {
+		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "service-report"))
 	}
 	return StateServiceMenu
 }
 
-func (self *UI) onServiceEnd(ctx context.Context) State {
-	_ = self.g.Inventory.Persist.Store()
-	self.inputBuf = self.inputBuf[:0]
+func (ui *UI) onServiceEnd(ctx context.Context) State {
+	_ = ui.g.Inventory.Persist.Store()
+	ui.inputBuf = ui.inputBuf[:0]
 
-	if self.Service.askReport {
-		self.display.SetLines("for tele report", "press 1") // FIXME extract message string
-		if e := self.wait(self.Service.resetTimeout); e.Kind == types.EventInput && e.Input.Key == '1' {
-			self.Service.askReport = false
-			self.onServiceReport(ctx)
+	if ui.Service.askReport {
+		ui.display.SetLines("for tele report", "press 1") // FIXME extract message string
+		if e := ui.wait(ui.Service.resetTimeout); e.Kind == types.EventInput && e.Input.Key == '1' {
+			ui.Service.askReport = false
+			ui.onServiceReport(ctx)
 		}
 	}
 
-	if errs := self.g.Engine.ExecList(ctx, "on_service_end", self.g.Config.Engine.OnServiceEnd); len(errs) != 0 {
-		self.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_service_end"))
+	if errs := ui.g.Engine.ExecList(ctx, "on_service_end", ui.g.Config.Engine.OnServiceEnd); len(errs) != 0 {
+		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_service_end"))
 		return StateBroken
 	}
 	return StateDefault
 }
 
-func (self *UI) serviceWaitInput() (State, types.InputEvent) {
-	e := self.wait(self.Service.resetTimeout)
+func (ui *UI) serviceWaitInput() (State, types.InputEvent) {
+	e := ui.wait(ui.Service.resetTimeout)
 	switch e.Kind {
 	case types.EventInput:
 		return StateDefault, e.Input
 
 	case types.EventMoneyCredit:
-		self.g.Log.Debugf("serviceWaitInput event=%s", e.String())
+		ui.g.Log.Debugf("serviceWaitInput event=%s", e.String())
 		return StateDefault, types.InputEvent{}
 
 	case types.EventTime:
-		// self.g.Log.Infof("inactive=%v", inactive)
-		self.g.Log.Debugf("serviceWaitInput resetTimeout")
+		// ui.g.Log.Infof("inactive=%v", inactive)
+		ui.g.Log.Debugf("serviceWaitInput resetTimeout")
 		return StateServiceEnd, types.InputEvent{}
 
 	case types.EventLock:
 		return StateLocked, types.InputEvent{}
 
 	case types.EventService:
-		self.g.Log.Debugf("service exit")
+		ui.g.Log.Debugf("service exit")
 		return StateServiceEnd, types.InputEvent{}
 
 	case types.EventStop:
-		self.g.Log.Debugf("serviceWaitInput global stop")
+		ui.g.Log.Debugf("serviceWaitInput global stop")
 		return StateServiceEnd, types.InputEvent{}
 
 	default:
