@@ -114,11 +114,11 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 
 	ui.Cook(ctx)
 	teletx := &tele_api.Telemetry_Transaction{
-		Code:                 types.UI.FrontResult.Item.Code,
-		Options:              []int32{int32(types.UI.FrontResult.Cream), int32(types.UI.FrontResult.Sugar)},
-		Price:                uint32(types.UI.FrontResult.Item.Price),
-		PaymentMethod:        arg.PaymentMethod,
-		Executer:             cmd.Executer,
+		Code:          types.UI.FrontResult.Item.Code,
+		Options:       []int32{int32(types.UI.FrontResult.Cream), int32(types.UI.FrontResult.Sugar)},
+		Price:         uint32(types.UI.FrontResult.Item.Price),
+		PaymentMethod: arg.PaymentMethod,
+		Executer:      cmd.Executer,
 	}
 	g.Tele.Transaction(teletx)
 	// ui.Cook(ctx, "10", 4, 4, tele_api.PaymentMethod_Balance)
