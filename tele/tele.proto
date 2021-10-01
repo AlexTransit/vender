@@ -35,8 +35,6 @@ enum State {
 
 }
 
-// Optimising for rare, bulk delivery on cell network.
-// "Touching network" is expensive, while 10 or 900 bytes is about same cost.
 message Telemetry {
   int32 vm_id = 1;
   int64 time = 2;
@@ -94,7 +92,6 @@ message Command {
   bool lock = 6;
   oneof task {
     ArgReport report = 16;
-    //    ArgLock lock = 17;
     ArgExec exec = 18;
     ArgSetInventory set_inventory = 19;
     ArgSetConfig set_config = 20;
@@ -102,19 +99,11 @@ message Command {
     ArgShowQR show_QR = 22;
     ArgValidateCode validate_code = 23;
     ArgCook cook = 24;
-    
-    //  uint32 id = 1;
-    //  string reply_topic = 2;
-    //  int64 deadline = 3;
-    //  Priority priority = 4;
   }
 
 message ArgReport {}
-//  message ArgLock { int32 duration = 1; }
 message ArgExec {
     string scenario = 1;
-//    uint32 executer = 2;
-//    bool lock = 3;
   }
   message ArgSetInventory { Inventory new = 1; }
   message ArgSetConfig {
@@ -145,7 +134,7 @@ enum CmdReplay {
 }
 
 enum CookReplay {
-  hz = 0;
+  cookNothing = 0;
   cookStart = 1;
   cookFinish = 2;
   cookInaccessible = 3;

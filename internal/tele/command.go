@@ -54,6 +54,10 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 	case *tele_api.Command_SetInventory:
 		return t.cmdSetInventory(ctx, cmd, task.SetInventory)
 
+	case *tele_api.Command_ValidateCode:
+		t.cmdValidateCode(cmd, task.ValidateCode.Code)
+		return nil
+
 	case *tele_api.Command_Cook:
 		return t.cmdCook(ctx, cmd, task.Cook)
 
@@ -65,6 +69,17 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 		t.log.Error(err)
 		return err
 	}
+}
+
+func (t *tele) cmdValidateCode(cmd *tele_api.Command, code string) {
+	mitem, ok := types.UI.Menu[code]
+	if ok {
+		if err := mitem.D.Validate(); err != nil {
+			t.CookReply(cmd, tele_api.CookReplay_cookNothing, uint32(mitem.Price))
+			return
+		}
+	}
+	t.CookReply(cmd, tele_api.CookReplay_cookInaccessible)
 }
 
 func (t *tele) cmdReport(ctx context.Context, cmd *tele_api.Command) error {
@@ -89,14 +104,14 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 		t.CookReply(cmd, tele_api.CookReplay_cookInaccessible)
 		return errors.New("remote cook error: code inaccessible")
 	}
+	if err := mitem.D.Validate(); err != nil {
+		t.CookReply(cmd, tele_api.CookReplay_cookInaccessible)
+		return errors.New("remote cook error: code inaccessible")
+	}
 	credit := g.Config.ScaleU(uint32(arg.Balance))
 	if mitem.Price > credit {
 		t.CookReply(cmd, tele_api.CookReplay_cookOverdraft)
 		return errors.Errorf("remote cook error: ovedraft balance=%d price=%d", mitem.Price, credit)
-	}
-	if err := mitem.D.Validate(); err != nil {
-		t.CookReply(cmd, tele_api.CookReplay_cookInaccessible)
-		return errors.New("remote cook error: code inaccessible")
 	}
 	t.CookReply(cmd, tele_api.CookReplay_cookStart)
 	types.UI.FrontResult.Item = mitem
@@ -114,11 +129,11 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 
 	ui.Cook(ctx)
 	teletx := &tele_api.Telemetry_Transaction{
-		Code:                 types.UI.FrontResult.Item.Code,
-		Options:              []int32{int32(types.UI.FrontResult.Cream), int32(types.UI.FrontResult.Sugar)},
-		Price:                uint32(types.UI.FrontResult.Item.Price),
-		PaymentMethod:        arg.PaymentMethod,
-		Executer:             cmd.Executer,
+		Code:          types.UI.FrontResult.Item.Code,
+		Options:       []int32{int32(types.UI.FrontResult.Cream), int32(types.UI.FrontResult.Sugar)},
+		Price:         uint32(types.UI.FrontResult.Item.Price),
+		PaymentMethod: arg.PaymentMethod,
+		Executer:      cmd.Executer,
 	}
 	g.Tele.Transaction(teletx)
 	// ui.Cook(ctx, "10", 4, 4, tele_api.PaymentMethod_Balance)
