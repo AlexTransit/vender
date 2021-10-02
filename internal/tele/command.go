@@ -48,6 +48,10 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 	case *tele_api.Command_Report:
 		return t.cmdReport(ctx, cmd)
 
+	case *tele_api.Command_GetState:
+		t.State(t.currentState)
+		return nil
+
 	case *tele_api.Command_Exec:
 		return t.cmdExec(ctx, cmd, task.Exec)
 
