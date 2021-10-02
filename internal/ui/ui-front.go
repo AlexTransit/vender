@@ -325,35 +325,11 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 	}
 
 	ui.g.Log.Debugf("ui-front selected=%s begin", selected.String())
-	// executeScript(ctx, "BeginProcess", selected.String())
 	if err := moneysys.WithdrawPrepare(ctx, selected.Price); err != nil {
 		ui.g.Log.Errorf("ui-front CRITICAL error while return change")
 	}
 	err := Cook(ctx)
-	// itemCtx := money.SetCurrentPrice(ctx, selected.Price)
-	// if tuneCream := ScaleTuneRate(types.UI.FrontResult.Cream, MaxCream, DefaultCream); tuneCream != 1 {
-	// 	const name = "cream"
-	// 	var err error
-	// 	ui.g.Log.Debugf("ui-front tuning stock=%s tune=%v", name, tuneCream)
-	// 	if itemCtx, err = ui.g.Inventory.WithTuning(itemCtx, name, tuneCream); err != nil {
-	// 		ui.g.Log.Errorf("ui-front tuning stock=%s err=%v", name, err)
-	// 	}
-	// }
-	// if tuneSugar := ScaleTuneRate(types.UI.FrontResult.Sugar, MaxSugar, DefaultSugar); tuneSugar != 1 {
-	// 	const name = "sugar"
-	// 	var err error
-	// 	ui.g.Log.Debugf("ui-front tuning stock=%s tune=%v", name, tuneSugar)
-	// 	if itemCtx, err = ui.g.Inventory.WithTuning(itemCtx, name, tuneSugar); err != nil {
-	// 		ui.g.Log.Errorf("ui-front tuning stock=%s err=%v", name, err)
-	// 	}
-	// }
-	// ui.display.SetLines(ui.g.Config.UI.Front.MsgMaking1, ui.g.Config.UI.Front.MsgMaking2)
 
-	// err := ui.g.Engine.Exec(itemCtx, selected.D)
-	// if invErr := ui.g.Inventory.Persist.Store(); invErr != nil {
-	// 	ui.g.Error(errors.Annotate(invErr, "critical inventory persist"))
-	// }
-	// ui.g.Log.Debugf("ui-front selected=%s end err=%v", selected.String(), err)
 	if err == nil { // success path
 		ui.g.Tele.Transaction(teletx)
 		return StateFrontEnd
