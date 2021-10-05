@@ -92,6 +92,7 @@ message Command {
   bool lock = 6;
   oneof task {
     ArgReport report = 16;
+    ArgGetState getState = 17;
     ArgExec exec = 18;
     ArgSetInventory set_inventory = 19;
     ArgSetConfig set_config = 20;
@@ -102,6 +103,7 @@ message Command {
   }
 
 message ArgReport {}
+message ArgGetState {}
 message ArgExec {
     string scenario = 1;
   }
@@ -120,7 +122,7 @@ message ArgExec {
     string menucode  = 1;
     bytes cream = 2;
     bytes sugar = 3;
-    uint32 balance = 4;
+    int32 balance = 4;
     PaymentMethod payment_method = 5;
   }
 }
