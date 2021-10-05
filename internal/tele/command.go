@@ -49,7 +49,7 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 		return t.cmdReport(ctx, cmd)
 
 	case *tele_api.Command_GetState:
-		t.State(t.currentState)
+		t.transport.SendState([]byte{byte(t.currentState)})
 		return nil
 
 	case *tele_api.Command_Exec:
@@ -132,20 +132,15 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	}
 
 	ui.Cook(ctx)
-	teletx := &tele_api.Telemetry_Transaction{
-		Code:          types.UI.FrontResult.Item.Code,
-		Options:       []int32{int32(types.UI.FrontResult.Cream), int32(types.UI.FrontResult.Sugar)},
-		Price:         uint32(types.UI.FrontResult.Item.Price),
-		PaymentMethod: arg.PaymentMethod,
-		Executer:      cmd.Executer,
-	}
-	g.Tele.Transaction(teletx)
-	// ui.Cook(ctx, "10", 4, 4, tele_api.PaymentMethod_Balance)
-	// return nil
-	// g := state.GetGlobal(ctx)
-	// selmenu.Code = cmd
-	// g.UI.Cook(ctx, cmd, arg.Cream, arg.Sugar, tele_api.PaymentMethod_Balance)
 	t.CookReply(cmd, tele_api.CookReplay_cookFinish, uint32(mitem.Price))
+	// teletx := &tele_api.Telemetry_Transaction{
+	// 	Code:          types.UI.FrontResult.Item.Code,
+	// 	Options:       []int32{int32(types.UI.FrontResult.Cream), int32(types.UI.FrontResult.Sugar)},
+	// 	Price:         uint32(types.UI.FrontResult.Item.Price),
+	// 	PaymentMethod: arg.PaymentMethod,
+	// 	Executer:      cmd.Executer,
+	// }
+	// g.Tele.Transaction(teletx)
 
 	return nil
 }
@@ -171,15 +166,10 @@ func (t *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 		return err
 	}
 
-	// if arg.Lock {
-	// 	state.VmcLock(ctx)
-	// 	defer state.VmcUnLock(ctx)
-	// }
 	if cmd.Executer > 0 {
 		t.CommandReply(cmd, tele_api.CmdReplay_accepted)
 	}
 
-	// err = g.ScheduleSync(ctx, cmd.Priority, doer.Do)
 	err = g.ScheduleSync(ctx, doer.Do)
 	if err == nil {
 		t.CommandReply(cmd, tele_api.CmdReplay_done)

@@ -53,30 +53,30 @@ func (ms *MoneySystem) ResetMoney() {
 	ms.locked_zero()
 }
 
-func (self *MoneySystem) Start(ctx context.Context) error {
+func (ms *MoneySystem) Start(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 
-	self.lk.Lock()
-	defer self.lk.Unlock()
-	self.Log = g.Log
-	g.XXX_money.Store(self)
+	ms.lk.Lock()
+	defer ms.lk.Unlock()
+	ms.Log = g.Log
+	g.XXX_money.Store(ms)
 
 	const devNameBill = "bill"
 	const devNameCoin = "coin"
-	self.bill = bill.Stub{}
-	self.coin = coin.Stub{}
+	ms.bill = bill.Stub{}
+	ms.coin = coin.Stub{}
 	errs := make([]error, 0, 2)
 	if dev, err := g.GetDevice(devNameBill); err == nil {
-		self.bill = dev.(bill.Biller)
+		ms.bill = dev.(bill.Biller)
 	} else if errors.IsNotFound(err) {
-		self.Log.Debugf("device=%s is not enabled in config", devNameBill)
+		ms.Log.Debugf("device=%s is not enabled in config", devNameBill)
 	} else {
 		errs = append(errs, errors.Annotatef(err, "device=%s", devNameBill))
 	}
 	if dev, err := g.GetDevice(devNameCoin); err == nil {
-		self.coin = dev.(coin.Coiner)
+		ms.coin = dev.(coin.Coiner)
 	} else if errors.IsNotFound(err) {
-		self.Log.Debugf("device=%s is not enabled in config", devNameCoin)
+		ms.Log.Debugf("device=%s is not enabled in config", devNameCoin)
 	} else {
 		errs = append(errs, errors.Annotatef(err, "device=%s", devNameCoin))
 	}
@@ -84,26 +84,26 @@ func (self *MoneySystem) Start(ctx context.Context) error {
 		return e
 	}
 
-	self.billCashbox.SetValid(self.bill.SupportedNominals())
-	self.billCredit.SetValid(self.bill.SupportedNominals())
-	self.coinCashbox.SetValid(self.coin.SupportedNominals())
-	self.coinCredit.SetValid(self.coin.SupportedNominals())
+	ms.billCashbox.SetValid(ms.bill.SupportedNominals())
+	ms.billCredit.SetValid(ms.bill.SupportedNominals())
+	ms.coinCashbox.SetValid(ms.coin.SupportedNominals())
+	ms.coinCredit.SetValid(ms.coin.SupportedNominals())
 
 	g.Engine.RegisterNewFunc(
 		"money.cashbox_zero",
 		func(ctx context.Context) error {
-			self.lk.Lock()
-			defer self.lk.Unlock()
-			self.billCashbox.Clear()
-			self.coinCashbox.Clear()
+			ms.lk.Lock()
+			defer ms.lk.Unlock()
+			ms.billCashbox.Clear()
+			ms.coinCashbox.Clear()
 			return nil
 		},
 	)
 	g.Engine.RegisterNewFunc(
 		"money.consume!",
 		func(ctx context.Context) error {
-			credit := self.Credit(ctx)
-			err := self.WithdrawCommit(ctx, credit)
+			credit := ms.Credit(ctx)
+			err := ms.WithdrawCommit(ctx, credit)
 			return errors.Annotatef(err, "consume=%s", credit.FormatCtx(ctx))
 		},
 	)
@@ -111,16 +111,16 @@ func (self *MoneySystem) Start(ctx context.Context) error {
 		"money.commit",
 		func(ctx context.Context) error {
 			curPrice := GetCurrentPrice(ctx)
-			err := self.WithdrawCommit(ctx, curPrice)
+			err := ms.WithdrawCommit(ctx, curPrice)
 			return errors.Annotatef(err, "curPrice=%s", curPrice.FormatCtx(ctx))
 		},
 	)
-	g.Engine.RegisterNewFunc("money.abort", self.Abort)
+	g.Engine.RegisterNewFunc("money.abort", ms.Abort)
 
 	doAccept := engine.FuncArg{
 		Name: "money.accept(?)",
 		F: func(ctx context.Context, arg engine.Arg) error {
-			self.AcceptCredit(ctx, g.Config.ScaleU(uint32(arg)), nil, nil)
+			ms.AcceptCredit(ctx, g.Config.ScaleU(uint32(arg)), nil, nil)
 			return nil
 		},
 	}
@@ -130,9 +130,9 @@ func (self *MoneySystem) Start(ctx context.Context) error {
 		Name: "money.give(?)",
 		F: func(ctx context.Context, arg engine.Arg) error {
 			dispensed := currency.NominalGroup{}
-			d := self.coin.NewGive(g.Config.ScaleU(uint32(arg)), false, &dispensed)
+			d := ms.coin.NewGive(g.Config.ScaleU(uint32(arg)), false, &dispensed)
 			err := g.Engine.Exec(ctx, d)
-			self.Log.Infof("dispensed=%s", dispensed.String())
+			ms.Log.Infof("dispensed=%s", dispensed.String())
 			return err
 		}}
 	g.Engine.Register(doGive.Name, doGive)
@@ -142,7 +142,7 @@ func (self *MoneySystem) Start(ctx context.Context) error {
 		Name: "money.set_gift_credit(?)",
 		F: func(ctx context.Context, arg engine.Arg) error {
 			amount := g.Config.ScaleU(uint32(arg))
-			self.SetGiftCredit(ctx, amount)
+			ms.SetGiftCredit(ctx, amount)
 			return nil
 		},
 	}
@@ -151,41 +151,41 @@ func (self *MoneySystem) Start(ctx context.Context) error {
 	return nil
 }
 
-func (self *MoneySystem) Stop(ctx context.Context) error {
+func (ms *MoneySystem) Stop(ctx context.Context) error {
 	const tag = "money.Stop"
 	g := state.GetGlobal(ctx)
 	errs := make([]error, 0, 8)
-	errs = append(errs, self.Abort(ctx))
-	errs = append(errs, g.Engine.Exec(ctx, self.bill.AcceptMax(0)))
-	errs = append(errs, g.Engine.Exec(ctx, self.coin.AcceptMax(0)))
+	errs = append(errs, ms.Abort(ctx))
+	errs = append(errs, g.Engine.Exec(ctx, ms.bill.AcceptMax(0)))
+	errs = append(errs, g.Engine.Exec(ctx, ms.coin.AcceptMax(0)))
 	return errors.Annotate(helpers.FoldErrors(errs), tag)
 }
 
 // TeleCashbox Stored in one-way cashbox Telemetry_Money
-func (self *MoneySystem) TeleCashbox(ctx context.Context) *tele_api.Telemetry_Money {
+func (ms *MoneySystem) TeleCashbox(ctx context.Context) *tele_api.Telemetry_Money {
 	pb := &tele_api.Telemetry_Money{
 		Bills: make(map[uint32]uint32, bill.TypeCount),
 		Coins: make(map[uint32]uint32, coin.TypeCount),
 	}
-	self.lk.Lock()
-	defer self.lk.Unlock()
-	self.billCashbox.ToMapUint32(pb.Bills)
-	self.coinCashbox.ToMapUint32(pb.Coins)
-	self.Log.Debugf("TeleCashbox pb=%s", proto.CompactTextString(pb))
+	ms.lk.Lock()
+	defer ms.lk.Unlock()
+	ms.billCashbox.ToMapUint32(pb.Bills)
+	ms.coinCashbox.ToMapUint32(pb.Coins)
+	ms.Log.Debugf("TeleCashbox pb=%s", proto.CompactTextString(pb))
 	return pb
 }
 
 // TeleChange Dispensable Telemetry_Money
-func (self *MoneySystem) TeleChange(ctx context.Context) *tele_api.Telemetry_Money {
+func (ms *MoneySystem) TeleChange(ctx context.Context) *tele_api.Telemetry_Money {
 	pb := &tele_api.Telemetry_Money{
 		// TODO support bill recycler Bills: make(map[uint32]uint32, bill.TypeCount),
 		Coins: make(map[uint32]uint32, coin.TypeCount),
 	}
-	if err := self.coin.TubeStatus(); err != nil {
+	if err := ms.coin.TubeStatus(); err != nil {
 		state.GetGlobal(ctx).Error(errors.Annotate(err, "TeleChange"))
 	}
-	self.coin.Tubes().ToMapUint32(pb.Coins)
-	self.Log.Debugf("TeleChange pb=%s", proto.CompactTextString(pb))
+	ms.coin.Tubes().ToMapUint32(pb.Coins)
+	ms.Log.Debugf("TeleChange pb=%s", proto.CompactTextString(pb))
 	return pb
 }
 
@@ -206,11 +206,11 @@ func SetCurrentPrice(ctx context.Context, p currency.Amount) context.Context {
 	return context.WithValue(ctx, currentPriceKey, p)
 }
 
-func (self *MoneySystem) XXX_InjectCoin(n currency.Nominal) error {
-	self.lk.Lock()
-	defer self.lk.Unlock()
-	self.Log.Debugf("XXX_InjectCoin n=%d", n)
-	self.coinCredit.MustAdd(n, 1)
-	self.dirty += currency.Amount(n)
+func (ms *MoneySystem) XXX_InjectCoin(n currency.Nominal) error {
+	ms.lk.Lock()
+	defer ms.lk.Unlock()
+	ms.Log.Debugf("XXX_InjectCoin n=%d", n)
+	ms.coinCredit.MustAdd(n, 1)
+	ms.dirty += currency.Amount(n)
 	return nil
 }
