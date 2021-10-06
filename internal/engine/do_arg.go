@@ -105,25 +105,25 @@ func (seq *Seq) Apply(arg Arg) (Doer, bool, error) {
 	return result, true, nil
 }
 
-func (self *RestartError) Apply(arg Arg) (Doer, bool, error) {
-	new, applied, err := ArgApply(self.Doer, arg)
+func (rse *RestartError) Apply(arg Arg) (Doer, bool, error) {
+	new, applied, err := ArgApply(rse.Doer, arg)
 	if err != nil {
 		return nil, false, err
 	}
 	if !applied {
-		return self, false, nil
+		return rse, false, nil
 	}
 	re := &RestartError{
 		Doer:  new,
-		Check: self.Check,
-		Reset: self.Reset,
+		Check: rse.Check,
+		Reset: rse.Reset,
 	}
 	return re, true, nil
 }
 
 type IgnoreArg struct{ Doer }
 
-func (self IgnoreArg) Apply(Arg) (Doer, bool, error) { return self.Doer, true, nil }
+func (i IgnoreArg) Apply(Arg) (Doer, bool, error) { return i.Doer, true, nil }
 
 // compile-time interface checks
 var _ ArgApplier = &RestartError{}

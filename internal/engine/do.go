@@ -19,9 +19,9 @@ type Doer interface {
 
 type Nothing struct{ Name string }
 
-func (self Nothing) Do(ctx context.Context) error { return nil }
-func (self Nothing) Validate() error              { return nil }
-func (self Nothing) String() string               { return self.Name }
+func (n Nothing) Do(ctx context.Context) error { return nil }
+func (n Nothing) Validate() error              { return nil }
+func (n Nothing) String() string               { return n.Name }
 
 type Func struct {
 	Name string
@@ -29,9 +29,9 @@ type Func struct {
 	V    ValidateFunc
 }
 
-func (self Func) Validate() error              { return useValidator(self.V) }
-func (self Func) Do(ctx context.Context) error { return self.F(ctx) }
-func (self Func) String() string               { return self.Name }
+func (f Func) Validate() error              { return useValidator(f.V) }
+func (f Func) Do(ctx context.Context) error { return f.F(ctx) }
+func (f Func) String() string               { return f.Name }
 
 type Func0 struct {
 	Name string
@@ -39,34 +39,34 @@ type Func0 struct {
 	V    ValidateFunc
 }
 
-func (self Func0) Validate() error              { return useValidator(self.V) }
-func (self Func0) Do(ctx context.Context) error { return self.F() }
-func (self Func0) String() string               { return self.Name }
+func (f Func0) Validate() error              { return useValidator(f.V) }
+func (f Func0) Do(ctx context.Context) error { return f.F() }
+func (f Func0) String() string               { return f.Name }
 
 type Sleep struct{ time.Duration }
 
-func (self Sleep) Validate() error              { return nil }
-func (self Sleep) Do(ctx context.Context) error { time.Sleep(self.Duration); return nil }
-func (self Sleep) String() string               { return fmt.Sprintf("Sleep(%v)", self.Duration) }
+func (s Sleep) Validate() error              { return nil }
+func (s Sleep) Do(ctx context.Context) error { time.Sleep(s.Duration); return nil }
+func (s Sleep) String() string               { return fmt.Sprintf("Sleep(%v)", s.Duration) }
 
 type RepeatN struct {
 	N uint
 	D Doer
 }
 
-func (self RepeatN) Validate() error { return self.D.Validate() }
-func (self RepeatN) Do(ctx context.Context) error {
+func (r RepeatN) Validate() error { return r.D.Validate() }
+func (r RepeatN) Do(ctx context.Context) error {
 	// FIXME solve import cycle, use GetGlobal(ctx).Log
 	log := log2.ContextValueLogger(ctx)
 	var err error
-	for i := uint(1); i <= self.N && err == nil; i++ {
-		log.Debugf("engine loop %d/%d", i, self.N)
-		err = GetGlobal(ctx).ExecPart(ctx, self.D)
+	for i := uint(1); i <= r.N && err == nil; i++ {
+		log.Debugf("engine loop %d/%d", i, r.N)
+		err = GetGlobal(ctx).ExecPart(ctx, r.D)
 	}
 	return err
 }
-func (self RepeatN) String() string {
-	return fmt.Sprintf("RepeatN(N=%d D=%s)", self.N, self.D.String())
+func (r RepeatN) String() string {
+	return fmt.Sprintf("RepeatN(N=%d D=%s)", r.N, r.D.String())
 }
 
 type ValidateFunc func() error
@@ -80,9 +80,9 @@ func useValidator(v ValidateFunc) error {
 
 type Fail struct{ E error }
 
-func (self Fail) Validate() error              { return self.E }
-func (self Fail) Do(ctx context.Context) error { return self.E }
-func (self Fail) String() string               { return self.E.Error() }
+func (f Fail) Validate() error              { return f.E }
+func (f Fail) Do(ctx context.Context) error { return f.E }
+func (f Fail) String() string               { return f.E.Error() }
 
 type RestartError struct {
 	Doer
@@ -90,18 +90,18 @@ type RestartError struct {
 	Reset Doer
 }
 
-func (self *RestartError) Validate() error { return self.Doer.Validate() }
-func (self *RestartError) Do(ctx context.Context) error {
-	first := GetGlobal(ctx).ExecPart(ctx, self.Doer)
+func (re *RestartError) Validate() error { return re.Doer.Validate() }
+func (re *RestartError) Do(ctx context.Context) error {
+	first := GetGlobal(ctx).ExecPart(ctx, re.Doer)
 	if first != nil {
-		if self.Check(first) {
-			resetErr := GetGlobal(ctx).ExecPart(ctx, self.Reset)
+		if re.Check(first) {
+			resetErr := GetGlobal(ctx).ExecPart(ctx, re.Reset)
 			if resetErr != nil {
 				return errors.Wrap(first, resetErr)
 			}
-			return GetGlobal(ctx).ExecPart(ctx, self.Doer)
+			return GetGlobal(ctx).ExecPart(ctx, re.Doer)
 		}
 	}
 	return first
 }
-func (self *RestartError) String() string { return self.Doer.String() }
+func (re *RestartError) String() string { return re.Doer.String() }
