@@ -138,14 +138,17 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	t.CookReply(cmd, tele_api.CookReplay_cookFinish, uint32(mitem.Price))
 	return nil
 }
-func tunecook(value uint8, max uint8, def uint8) (ret uint8) {
+
+// tunecook(value uint8, maximum uint8, defined uint8) (convertedvalue uint8)
+// для робота занчения  от 0 до максимума. поэтому передаваемые значени = +1
+func tunecook(value uint8, maximum uint8, defined uint8) (convertedvalue uint8) {
 	if value == 0 {
-		return ret
+		return defined
 	}
-	if value > max {
-		return max
+	if value > maximum+1 {
+		return maximum
 	}
-	return value
+	return value - 1
 }
 
 func (t *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgExec) error {
