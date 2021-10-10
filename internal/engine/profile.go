@@ -9,27 +9,27 @@ import (
 type ProfileFunc func(Doer, time.Duration)
 
 // SetProfile re=nil or fun=nil to disable profiling.
-func (self *Engine) SetProfile(re *regexp.Regexp, min time.Duration, fun ProfileFunc) {
+func (e *Engine) SetProfile(re *regexp.Regexp, min time.Duration, fun ProfileFunc) {
 	fast := uint32(0)
 	if re != nil || fun != nil {
 		fast = 1
 	}
-	defer atomic.StoreUint32(&self.profile.fastpath, fast)
-	self.profile.Lock()
-	defer self.profile.Unlock()
-	self.profile.re = re
-	self.profile.fun = fun
-	self.profile.min = min
+	defer atomic.StoreUint32(&e.profile.fastpath, fast)
+	e.profile.Lock()
+	defer e.profile.Unlock()
+	e.profile.re = re
+	e.profile.fun = fun
+	e.profile.min = min
 }
 
-func (self *Engine) matchProfile(s string) (ProfileFunc, time.Duration) {
-	if atomic.LoadUint32(&self.profile.fastpath) != 1 {
+func (e *Engine) matchProfile(s string) (ProfileFunc, time.Duration) {
+	if atomic.LoadUint32(&e.profile.fastpath) != 1 {
 		return nil, 0
 	}
-	self.profile.Lock()
-	defer self.profile.Unlock()
-	if self.profile.re != nil && self.profile.re.MatchString(s) {
-		return self.profile.fun, self.profile.min
+	e.profile.Lock()
+	defer e.profile.Unlock()
+	if e.profile.re != nil && e.profile.re.MatchString(s) {
+		return e.profile.fun, e.profile.min
 	}
 	return nil, 0
 }

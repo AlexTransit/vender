@@ -118,7 +118,7 @@ func newTestContext(t testing.TB) (context.Context, *Engine) {
 	log := log2.NewTest(t, log2.LDebug)
 	e := NewEngine(log)
 	ctx := context.Background()
-	ctx = context.WithValue(ctx, log2.ContextKey, log)
-	ctx = context.WithValue(ctx, ContextKey, e)
+	// ctx = context.WithValue(ctx, log2.ContextKey, log)
+	// ctx = context.WithValue(ctx, ContextKey, e)
 	return ctx, e
 }

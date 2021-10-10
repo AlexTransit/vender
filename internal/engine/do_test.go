@@ -120,12 +120,12 @@ type mockdo struct {
 	v      ValidateFunc
 }
 
-func (self *mockdo) Validate() error { return useValidator(self.v) }
-func (self *mockdo) Do(ctx context.Context) error {
-	self.lk.Lock()
-	self.called += 1
-	self.last = time.Now()
-	self.lk.Unlock()
-	return self.err
+func (m *mockdo) Validate() error { return useValidator(m.v) }
+func (m *mockdo) Do(ctx context.Context) error {
+	m.lk.Lock()
+	m.called += 1
+	m.last = time.Now()
+	m.lk.Unlock()
+	return m.err
 }
-func (self *mockdo) String() string { return self.name }
+func (m *mockdo) String() string { return m.name }
