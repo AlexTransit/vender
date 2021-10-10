@@ -1,5 +1,5 @@
 # What
-Vender is free open source VMC (Vending Machine Controller). (fork https://github.com/AlexTransit/vender)
+Vender is free open source VMC (Vending Machine Controller). (fork https://github.com/temoto/vender)
 
 Status:
 - MDB adapter hardware module - works
