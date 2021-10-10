@@ -121,28 +121,31 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	types.UI.FrontResult.Item = mitem
 
 	if len(arg.Sugar) == 0 {
-		types.UI.FrontResult.Sugar = 4
+		types.UI.FrontResult.Sugar = ui.DefaultSugar
 	} else {
-		types.UI.FrontResult.Sugar = arg.Sugar[0]
+		types.UI.FrontResult.Sugar = tunecook(arg.Sugar[0], ui.MaxSugar, ui.DefaultSugar)
 	}
 	if len(arg.Cream) == 0 {
-		types.UI.FrontResult.Cream = 4
+		types.UI.FrontResult.Cream = ui.DefaultCream
 	} else {
-		types.UI.FrontResult.Sugar = arg.Cream[0]
+		types.UI.FrontResult.Cream = tunecook(arg.Cream[0], ui.MaxCream, ui.DefaultCream)
 	}
 
-	ui.Cook(ctx)
+	if err := ui.Cook(ctx); err != nil {
+		t.CookReply(cmd, tele_api.CookReplay_cookError)
+		return errors.Errorf("remote cook make error: (%v)", err)
+	}
 	t.CookReply(cmd, tele_api.CookReplay_cookFinish, uint32(mitem.Price))
-	// teletx := &tele_api.Telemetry_Transaction{
-	// 	Code:          types.UI.FrontResult.Item.Code,
-	// 	Options:       []int32{int32(types.UI.FrontResult.Cream), int32(types.UI.FrontResult.Sugar)},
-	// 	Price:         uint32(types.UI.FrontResult.Item.Price),
-	// 	PaymentMethod: arg.PaymentMethod,
-	// 	Executer:      cmd.Executer,
-	// }
-	// g.Tele.Transaction(teletx)
-
 	return nil
+}
+func tunecook(value uint8, max uint8, def uint8) (ret uint8) {
+	if value == 0 {
+		return ret
+	}
+	if value > max {
+		return max
+	}
+	return value
 }
 
 func (t *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgExec) error {
