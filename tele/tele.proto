@@ -32,7 +32,7 @@ enum State {
   TempProblem = 8;
   Shutdown = 9;
   RemoteControl = 10;
-
+  WaitingForExternalPayment = 11;
 }
 
 message Telemetry {
