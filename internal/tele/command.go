@@ -196,7 +196,6 @@ func (t *tele) cmdSetInventory(ctx context.Context, cmd *tele_api.Command, arg *
 	return err
 }
 
-
 func (t *tele) cmdShowQR(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgShowQR) error {
 	if arg == nil {
 		return errInvalidArg
