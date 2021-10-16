@@ -196,36 +196,6 @@ func (t *tele) cmdSetInventory(ctx context.Context, cmd *tele_api.Command, arg *
 	return err
 }
 
-// func (t *tele) cmdStop(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgStop) error {
-// 	if arg == nil {
-// 		return errInvalidArg
-// 	}
-
-// 	g := state.GetGlobal(ctx)
-// 	// go+delay to send transport ack before process exits
-// 	// TODO store command in persistent queue, send MQTT ack, execute later
-// 	go func() {
-// 		delay := helpers.IntSecondDefault(g.Config.Tele.FIXME_stopDelaySec, 7*time.Second)
-// 		g.Log.Debugf("cmdStop arg=%s crutch delay=%v", proto.MarshalTextString(arg), delay)
-// 		time.Sleep(delay)
-
-// 		g.ScheduleSync(ctx, cmd.Priority, func(context.Context) error {
-// 			g.Stop()
-
-// 			if arg.Timeout > 0 {
-// 				timeout := time.Duration(arg.Timeout) * time.Second
-// 				time.AfterFunc(timeout, func() {
-// 					if !g.StopWait(timeout) {
-// 						g.Log.Errorf("cmdStop timeout")
-// 						os.Exit(1)
-// 					}
-// 				})
-// 			}
-// 			return nil
-// 		})
-// 	}()
-// 	return nil
-// }
 
 func (t *tele) cmdShowQR(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgShowQR) error {
 	if arg == nil {
