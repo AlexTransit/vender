@@ -37,6 +37,7 @@ func (t *tele) onCommandMessage(ctx context.Context, payload []byte) bool {
 	// 	// TODO store command in persistent queue, acknowledge now, execute later
 	if err = t.dispatchCommand(ctx, cmd); err != nil {
 		t.CommandReplyErr(cmd, err)
+		t.log.Errorf("command message error (%v)", err)
 		return true
 	}
 
@@ -91,13 +92,10 @@ func (t *tele) cmdReport(ctx context.Context, cmd *tele_api.Command) error {
 }
 
 func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgCook) error {
-	// defer state.VmcUnLock(ctx)
-	g := state.GetGlobal(ctx)
-
 	if types.VMC.Lock {
 		t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
 		t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
-		return errors.New("remote cook error: VMC locked")
+		return nil
 	}
 	state.VmcLock(ctx)
 	defer state.VmcUnLock(ctx)
@@ -106,16 +104,18 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	mitem, ok := types.UI.Menu[arg.Menucode]
 	if !ok {
 		t.CookReply(cmd, tele_api.CookReplay_cookInaccessible)
-		return errors.New("remote cook error: code inaccessible")
+		t.log.Infof("remote cook error: code not founf")
+		return nil
 	}
 	if err := mitem.D.Validate(); err != nil {
 		t.CookReply(cmd, tele_api.CookReplay_cookInaccessible)
-		return errors.New("remote cook error: code inaccessible")
+		t.log.Infof("remote cook error: code not valid")
+		return nil
 	}
-	credit := g.Config.ScaleU(uint32(arg.Balance))
-	if mitem.Price > credit {
-		t.CookReply(cmd, tele_api.CookReplay_cookOverdraft)
-		return errors.Errorf("remote cook error: ovedraft balance=%d price=%d", mitem.Price, credit)
+	if arg.Balance < int32(mitem.Price) {
+		t.CookReply(cmd, tele_api.CookReplay_cookOverdraft, uint32(mitem.Price))
+		t.log.Infof("remote cook inposible. ovedraft. balance=%d price=%d", arg.Balance, mitem.Price)
+		return nil
 	}
 	t.CookReply(cmd, tele_api.CookReplay_cookStart)
 	types.UI.FrontResult.Item = mitem
@@ -130,12 +130,14 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	} else {
 		types.UI.FrontResult.Cream = tunecook(arg.Cream[0], ui.MaxCream, ui.DefaultCream)
 	}
-
+	t.State(tele_api.State_RemoteControl)
 	if err := ui.Cook(ctx); err != nil {
 		t.CookReply(cmd, tele_api.CookReplay_cookError)
+		t.State(tele_api.State_Problem)
 		return errors.Errorf("remote cook make error: (%v)", err)
 	}
 	t.CookReply(cmd, tele_api.CookReplay_cookFinish, uint32(mitem.Price))
+	t.State(tele_api.State_Nominal)
 	return nil
 }
 
