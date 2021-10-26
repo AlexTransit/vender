@@ -147,13 +147,11 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				// could skip state machine transition and just State=StateFrontTune; goto refresh
 				return ui.onFrontTuneInput(e.Input)
 			}
-
+			if ui.State() == StateFrontTune {
+				ui.state = StateFrontSelect
+			}
 			switch {
-			case e.Input.IsDigit():
-				ui.inputBuf = append(ui.inputBuf, byte(e.Input.Key))
-				goto refresh
-
-			case e.Input.IsDot():
+			case e.Input.IsDigit(), e.Input.IsDot():
 				ui.inputBuf = append(ui.inputBuf, byte(e.Input.Key))
 				goto refresh
 
@@ -161,8 +159,12 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				// backspace semantic
 				if len(ui.inputBuf) > 0 {
 					ui.inputBuf = ui.inputBuf[:len(ui.inputBuf)-1]
+					goto refresh
 				}
-				goto refresh
+				if moneysys.Credit(ctx) != 0 {
+					goto refresh
+				}
+				return StateFrontTimeout
 
 			case input.IsAccept(&e.Input):
 				if len(ui.inputBuf) == 0 {
@@ -177,18 +179,18 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 					goto wait
 				}
 				credit := moneysys.Credit(ctx)
+				ui.g.Log.Debugf("mitem=%s validate", mitem.String())
+				if err := mitem.D.Validate(); err != nil {
+					ui.g.Log.Errorf("ui-front selected=%s Validate err=%v", mitem.String(), err)
+					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuNotAvailable)
+					goto wait
+				}
 				ui.g.Log.Debugf("compare price=%v credit=%v", mitem.Price, credit)
 				if mitem.Price > credit {
 					// ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuInsufficientCredit)
 					// ALexM-FIX (вынести в конфиг текст. сделать scale )
 					dl2 := fmt.Sprintf("credit=%v price(%v)=%v р.", credit, mitem.Code, (mitem.Price / 100))
 					ui.display.SetLines(ui.g.Config.UI.Front.MsgMenuInsufficientCredit, dl2)
-					goto wait
-				}
-				ui.g.Log.Debugf("mitem=%s validate", mitem.String())
-				if err := mitem.D.Validate(); err != nil {
-					ui.g.Log.Errorf("ui-front selected=%s Validate err=%v", mitem.String(), err)
-					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuNotAvailable)
 					goto wait
 				}
 

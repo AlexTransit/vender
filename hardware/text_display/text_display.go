@@ -50,94 +50,94 @@ func NewTextDisplay(opt *TextDisplayConfig) (*TextDisplay, error) {
 	if opt == nil {
 		panic("code error TODO make default TextDisplayConfig")
 	}
-	self := &TextDisplay{
+	td := &TextDisplay{
 		alive: alive.NewAlive(),
 		tickd: opt.ScrollDelay,
 		width: uint32(opt.Width),
 	}
 
 	if opt.Codepage != "" {
-		if err := self.SetCodepage(opt.Codepage); err != nil {
+		if err := td.SetCodepage(opt.Codepage); err != nil {
 			return nil, errors.Trace(err)
 		}
 	}
 
-	return self, nil
+	return td, nil
 }
 
-func (self *TextDisplay) SetCodepage(cp string) error {
-	self.mu.Lock()
-	defer self.mu.Unlock()
+func (td *TextDisplay) SetCodepage(cp string) error {
+	td.mu.Lock()
+	defer td.mu.Unlock()
 
 	tr, err := charset.TranslatorTo(cp)
 	if err != nil {
 		return err
 	}
-	self.tr.Store(tr)
+	td.tr.Store(tr)
 	return nil
 }
-func (self *TextDisplay) SetDevice(dev Devicer) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
+func (td *TextDisplay) SetDevice(dev Devicer) {
+	td.mu.Lock()
+	defer td.mu.Unlock()
 
-	self.dev = dev
+	td.dev = dev
 }
-func (self *TextDisplay) SetScrollDelay(d time.Duration) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
+func (td *TextDisplay) SetScrollDelay(d time.Duration) {
+	td.mu.Lock()
+	defer td.mu.Unlock()
 
-	self.tickd = d
-}
-
-func (self *TextDisplay) Clear() {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-
-	self.state.Clear()
-	self.flush()
+	td.tickd = d
 }
 
-func (self *TextDisplay) Message(s1, s2 string, wait func()) {
+func (td *TextDisplay) Clear() {
+	td.mu.Lock()
+	defer td.mu.Unlock()
+
+	td.state.Clear()
+	td.flush()
+}
+
+func (td *TextDisplay) Message(s1, s2 string, wait func()) {
 	next := State{
-		L1: self.Translate(s1),
-		L2: self.Translate(s2),
+		L1: td.Translate(s1),
+		L2: td.Translate(s2),
 	}
 
-	self.mu.Lock()
-	prev := self.state
-	self.state = next
-	// atomic.StoreUint32(&self.tick, 0)
-	self.flush()
-	self.mu.Unlock()
+	td.mu.Lock()
+	prev := td.state
+	td.state = next
+	// atomic.StoreUint32(&td.tick, 0)
+	td.flush()
+	td.mu.Unlock()
 
 	wait()
 
-	self.mu.Lock()
-	self.state = prev
-	self.flush()
-	self.mu.Unlock()
+	td.mu.Lock()
+	td.state = prev
+	td.flush()
+	td.mu.Unlock()
 }
 
 // nil: don't change
 // len=0: set empty
-func (self *TextDisplay) SetLinesBytes(b1, b2 []byte) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
+func (td *TextDisplay) SetLinesBytes(b1, b2 []byte) {
+	td.mu.Lock()
+	defer td.mu.Unlock()
 
 	if b1 != nil {
-		self.state.L1 = b1
+		td.state.L1 = b1
 	}
 	if b2 != nil {
-		self.state.L2 = b2
+		td.state.L2 = b2
 	}
-	atomic.StoreUint32(&self.tick, 0)
-	self.flush()
+	atomic.StoreUint32(&td.tick, 0)
+	td.flush()
 }
 
-func (self *TextDisplay) SetLines(line1, line2 string) {
-	self.SetLinesBytes(
-		self.Translate(line1),
-		self.Translate(line2))
+func (td *TextDisplay) SetLines(line1, line2 string) {
+	td.SetLinesBytes(
+		td.Translate(line1),
+		td.Translate(line2))
 	if types.VMC.HW.Display.L1 != line1 {
 		types.VMC.HW.Display.L1 = line1
 		types.Log.Infof("Display.L1=%s", line1)
@@ -148,28 +148,28 @@ func (self *TextDisplay) SetLines(line1, line2 string) {
 	}
 }
 
-func (self *TextDisplay) Tick() {
-	self.mu.Lock()
-	defer self.mu.Unlock()
+func (td *TextDisplay) Tick() {
+	td.mu.Lock()
+	defer td.mu.Unlock()
 
-	atomic.AddUint32(&self.tick, 1)
-	self.flush()
+	atomic.AddUint32(&td.tick, 1)
+	td.flush()
 }
 
-func (self *TextDisplay) Run() {
-	self.mu.Lock()
-	delay := self.tickd
-	self.mu.Unlock()
+func (td *TextDisplay) Run() {
+	td.mu.Lock()
+	delay := td.tickd
+	td.mu.Unlock()
 	if delay == 0 {
 		return
 	}
 	tmr := time.NewTicker(delay)
-	stopch := self.alive.StopChan()
+	stopch := td.alive.StopChan()
 
-	for self.alive.IsRunning() {
+	for td.alive.IsRunning() {
 		select {
 		case <-tmr.C:
-			self.Tick()
+			td.Tick()
 		case <-stopch:
 			tmr.Stop()
 			return
@@ -180,9 +180,9 @@ func (self *TextDisplay) Run() {
 // sometimes returns slice into shared spaceBytes
 // sometimes returns `b` (len>=width-1)
 // sometimes allocates new buffer
-func (self *TextDisplay) JustCenter(b []byte) []byte {
+func (td *TextDisplay) JustCenter(b []byte) []byte {
 	l := len(b)
-	w := int(atomic.LoadUint32(&self.width))
+	w := int(atomic.LoadUint32(&td.width))
 
 	// optimize short paths
 	if l == 0 {
@@ -202,11 +202,11 @@ func (self *TextDisplay) JustCenter(b []byte) []byte {
 
 // returns `b` when len>=width
 // otherwise pads with spaces
-func (self *TextDisplay) PadRight(b []byte) []byte {
-	return PadSpace(b, self.width)
+func (td *TextDisplay) PadRight(b []byte) []byte {
+	return PadSpace(b, td.width)
 }
 
-func (self *TextDisplay) Translate(s string) []byte {
+func (td *TextDisplay) Translate(s string) []byte {
 	if len(s) == 0 {
 		return spaceBytes[:0]
 	}
@@ -219,7 +219,7 @@ func (self *TextDisplay) Translate(s string) []byte {
 	}
 
 	result := []byte(s)
-	tr, ok := self.tr.Load().(charset.Translator)
+	tr, ok := td.tr.Load().(charset.Translator)
 	if ok && tr != nil {
 		_, tb, err := tr.Translate(result, true)
 		if err != nil {
@@ -230,54 +230,54 @@ func (self *TextDisplay) Translate(s string) []byte {
 	}
 
 	if pad {
-		result = self.PadRight(result)
+		result = td.PadRight(result)
 	}
 	return result
 }
 
-func (self *TextDisplay) SetUpdateChan(ch chan<- State) {
-	self.upd = ch
+func (td *TextDisplay) SetUpdateChan(ch chan<- State) {
+	td.upd = ch
 }
 
-func (self *TextDisplay) State() State { return self.state.Copy() }
+func (td *TextDisplay) State() State { return td.state.Copy() }
 
-func (self *TextDisplay) flush() {
+func (td *TextDisplay) flush() {
 	var buf1 [MaxWidth]byte
 	var buf2 [MaxWidth]byte
-	b1 := buf1[:self.width]
-	b2 := buf2[:self.width]
-	tick := atomic.LoadUint32(&self.tick)
-	n1 := scrollWrap(b1, self.state.L1, tick)
-	n2 := scrollWrap(b2, self.state.L2, tick)
+	b1 := buf1[:td.width]
+	b2 := buf2[:td.width]
+	tick := atomic.LoadUint32(&td.tick)
+	n1 := scrollWrap(b1, td.state.L1, tick)
+	n2 := scrollWrap(b2, td.state.L2, tick)
 
 	// === Option 1: clear
-	// self.dev.Clear()
-	// self.dev.Write(b1[:n1])
-	// self.dev.CursorYX(2, 1)
-	// self.dev.Write(b2[:n2])
+	// td.dev.Clear()
+	// td.dev.Write(b1[:n1])
+	// td.dev.CursorYX(2, 1)
+	// td.dev.Write(b2[:n2])
 
 	// === Option 2: rewrite without clear, looks smoother
 	// no padding: "erase" modified area, for now - whole line
-	if n1 < self.width {
-		self.dev.CursorYX(1, 1)
-		self.dev.Write(spaceBytes[:self.width])
+	if n1 < td.width {
+		td.dev.CursorYX(1, 1)
+		td.dev.Write(spaceBytes[:td.width])
 	}
-	if len(self.state.L1) > 0 {
-		self.dev.CursorYX(1, 1)
-		self.dev.Write(b1[:n1])
+	if len(td.state.L1) > 0 {
+		td.dev.CursorYX(1, 1)
+		td.dev.Write(b1[:n1])
 	}
 	// no padding: "erase" modified area, for now - whole line
-	if n2 < self.width {
-		self.dev.CursorYX(2, 1)
-		self.dev.Write(spaceBytes[:self.width])
+	if n2 < td.width {
+		td.dev.CursorYX(2, 1)
+		td.dev.Write(spaceBytes[:td.width])
 	}
-	if len(self.state.L2) > 0 {
-		self.dev.CursorYX(2, 1)
-		self.dev.Write(b2[:n2])
+	if len(td.state.L2) > 0 {
+		td.dev.CursorYX(2, 1)
+		td.dev.Write(b2[:n2])
 	}
 
-	if self.upd != nil {
-		self.upd <- self.state.Copy()
+	if td.upd != nil {
+		td.upd <- td.state.Copy()
 	}
 }
 
