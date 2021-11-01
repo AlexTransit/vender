@@ -15,11 +15,11 @@ import (
 	"github.com/temoto/alive/v2"
 )
 
-func (self *MoneySystem) SetAcceptMax(ctx context.Context, limit currency.Amount) error {
+func (ms *MoneySystem) SetAcceptMax(ctx context.Context, limit currency.Amount) error {
 	g := state.GetGlobal(ctx)
 	errs := []error{
-		g.Engine.Exec(ctx, self.bill.AcceptMax(limit)),
-		g.Engine.Exec(ctx, self.coin.AcceptMax(limit)),
+		g.Engine.Exec(ctx, ms.bill.AcceptMax(limit)),
+		g.Engine.Exec(ctx, ms.coin.AcceptMax(limit)),
 	}
 	err := helpers.FoldErrors(errs)
 	if err != nil {
@@ -28,19 +28,20 @@ func (self *MoneySystem) SetAcceptMax(ctx context.Context, limit currency.Amount
 	return err
 }
 
-func (self *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amount, stopAccept <-chan struct{}, out chan<- types.Event) error {
+func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amount, stopAccept <-chan struct{}, out chan<- types.Event) error {
 	const tag = "money.accept-credit"
 
 	g := state.GetGlobal(ctx)
+
 	maxConfig := currency.Amount(g.Config.Money.CreditMax)
 	// Accept limit = lesser of: configured max credit or highest menu price.
 	limit := maxConfig
 	billmax := maxConfig
 	coinmax := currency.Amount(1000)
 
-	self.lk.Lock()
-	available := self.locked_credit(creditCash | creditEscrow)
-	self.lk.Unlock()
+	ms.lk.Lock()
+	available := ms.locked_credit(creditCash | creditEscrow)
+	ms.lk.Unlock()
 	if available != 0 && limit >= available {
 		limit -= available
 	}
@@ -48,16 +49,16 @@ func (self *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amo
 		limit = 0
 		billmax = 0
 		coinmax = 0
-		self.Log.Debugf("%s bill input disable", tag)
+		ms.Log.Debugf("%s bill input disable", tag)
 	}
-	if self.Credit(ctx) != 0 {
-		self.Log.Debugf("%s maxConfig=%s maxPrice=%s available=%s -> limit=%s",
+	if ms.Credit(ctx) != 0 {
+		ms.Log.Debugf("%s maxConfig=%s maxPrice=%s available=%s -> limit=%s",
 			tag, maxConfig.FormatCtx(ctx), maxPrice.FormatCtx(ctx), available.FormatCtx(ctx), limit.FormatCtx(ctx))
 	}
 
-	g.Engine.Exec(ctx, self.bill.AcceptMax(billmax))
-	g.Engine.Exec(ctx, self.coin.AcceptMax(coinmax))
-	// err := self.SetAcceptMax(ctx, limit)
+	g.Engine.Exec(ctx, ms.bill.AcceptMax(billmax))
+	g.Engine.Exec(ctx, ms.coin.AcceptMax(coinmax))
+	// err := ms.SetAcceptMax(ctx, limit)
 	// if err != nil {
 	// 	return err
 	// }
@@ -65,53 +66,56 @@ func (self *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amo
 	alive := alive.NewAlive()
 	alive.Add(2)
 	if billmax != 0 {
-		go self.bill.Run(ctx, alive, func(pi money.PollItem) bool {
+		go ms.bill.Run(ctx, alive, func(pi money.PollItem) bool {
 			g.ClientBegin()
 			switch pi.Status {
 			case money.StatusEscrow:
-				if err := g.Engine.Exec(ctx, self.bill.EscrowAccept()); err != nil {
+				err := g.Engine.Exec(ctx, ms.bill.EscrowAccept())
+				if err != nil {
 					g.Error(errors.Annotatef(err, "money.bill escrow accept n=%s", currency.Amount(pi.DataNominal).FormatCtx(ctx)))
 				}
 			case money.StatusCredit:
-				self.lk.Lock()
-				defer self.lk.Unlock()
+				ms.lk.Lock()
+				defer ms.lk.Unlock()
 
 				if pi.DataCashbox {
-					if err := self.billCashbox.Add(pi.DataNominal, uint(pi.DataCount)); err != nil {
+					if err := ms.billCashbox.Add(pi.DataNominal, uint(pi.DataCount)); err != nil {
 						g.Error(errors.Annotatef(err, "money.bill cashbox.Add n=%v c=%d", pi.DataNominal, pi.DataCount))
 						break
 					}
 				}
-				if err := self.billCredit.Add(pi.DataNominal, uint(pi.DataCount)); err != nil {
+				if err := ms.billCredit.Add(pi.DataNominal, uint(pi.DataCount)); err != nil {
 					g.Error(errors.Annotatef(err, "money.bill credit.Add n=%v c=%d", pi.DataNominal, pi.DataCount))
 					break
 				}
-				self.Log.Debugf("money.bill credit amount=%s bill=%s cash=%s total=%s",
-					pi.Amount().FormatCtx(ctx), self.billCredit.Total().FormatCtx(ctx),
-					self.locked_credit(creditCash|creditEscrow).FormatCtx(ctx),
-					self.locked_credit(creditAll).FormatCtx(ctx))
-				// self.dirty += pi.Amount()
-				self.AddDirty(pi.Amount())
+				ms.Log.Debugf("money.bill credit amount=%s bill=%s cash=%s total=%s",
+					pi.Amount().FormatCtx(ctx), ms.billCredit.Total().FormatCtx(ctx),
+					ms.locked_credit(creditCash|creditEscrow).FormatCtx(ctx),
+					ms.locked_credit(creditAll).FormatCtx(ctx))
+				// ms.dirty += pi.Amount()
+				ms.AddDirty(pi.Amount())
 				alive.Stop()
-				g.Engine.Exec(ctx, self.bill.AcceptMax(0))
+				g.Engine.Exec(ctx, ms.bill.AcceptMax(0))
 				if out != nil {
 					event := types.Event{Kind: types.EventMoneyCredit, Amount: pi.Amount()}
 					// async channel send to avoid deadlock lk.Lock vs <-out
 					go func() { out <- event }()
 				}
+			default:
+				ms.Log.Debugf("money.bill poll unknown.")
 			}
 			return false
 		})
 	}
-	go self.coin.Run(ctx, alive, func(pi money.PollItem) bool {
-		self.lk.Lock()
-		defer self.lk.Unlock()
+	go ms.coin.Run(ctx, alive, func(pi money.PollItem) bool {
+		ms.lk.Lock()
+		defer ms.lk.Unlock()
 
 		switch pi.Status {
 		case money.StatusDispensed:
-			self.Log.Debugf("%s manual dispense: %s", tag, pi.String())
-			_ = self.coin.TubeStatus()
-			_ = self.coin.ExpansionDiagStatus(nil)
+			ms.Log.Debugf("%s manual dispense: %s", tag, pi.String())
+			_ = ms.coin.TubeStatus()
+			_ = ms.coin.ExpansionDiagStatus(nil)
 
 		case money.StatusReturnRequest:
 			// XXX maybe this should be in coin driver
@@ -125,19 +129,20 @@ func (self *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amo
 		case money.StatusCredit:
 			g.ClientBegin()
 			if pi.DataCashbox {
-				if err := self.coinCashbox.Add(pi.DataNominal, uint(pi.DataCount)); err != nil {
+				if err := ms.coinCashbox.Add(pi.DataNominal, uint(pi.DataCount)); err != nil {
 					g.Error(errors.Annotatef(err, "%s cashbox.Add n=%v c=%d", tag, pi.DataNominal, pi.DataCount))
 					break
 				}
 			}
-			if err := self.coinCredit.Add(pi.DataNominal, uint(pi.DataCount)); err != nil {
+			err := ms.coinCredit.Add(pi.DataNominal, uint(pi.DataCount))
+			if err != nil {
 				g.Error(errors.Annotatef(err, "%s credit.Add n=%v c=%d", tag, pi.DataNominal, pi.DataCount))
 				break
 			}
-			_ = self.coin.TubeStatus()
-			_ = self.coin.ExpansionDiagStatus(nil)
-			// self.dirty += pi.Amount()
-			self.AddDirty(pi.Amount())
+			_ = ms.coin.TubeStatus()
+			_ = ms.coin.ExpansionDiagStatus(nil)
+			// ms.dirty += pi.Amount()
+			ms.AddDirty(pi.Amount())
 			alive.Stop()
 			if out != nil {
 				event := types.Event{Kind: types.EventMoneyCredit, Amount: pi.Amount()}
@@ -157,6 +162,6 @@ func (self *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amo
 	case <-stopAccept:
 		alive.Stop()
 		alive.Wait()
-		return self.SetAcceptMax(ctx, 0)
+		return ms.SetAcceptMax(ctx, 0)
 	}
 }

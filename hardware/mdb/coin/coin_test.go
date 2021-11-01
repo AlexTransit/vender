@@ -139,16 +139,16 @@ func TestCoinPoll(t *testing.T) {
 		expect []_PI
 	}
 	cases := []Case{
-		Case{"empty", "", []_PI{}},
+		{"empty", "", []_PI{}},
 		// TODO Case{"reset", "0b", []_PI{{Status: money.StatusWasReset}}},
-		Case{"reset", "0b", []_PI{}},
+		{"reset", "0b", []_PI{}},
 		// TODO Case{"slugs", "21", []_PI{_PI{Status: money.StatusInfo, Error: ErrSlugs, DataCount: 1}}},
-		Case{"slugs", "21", []_PI{}},
-		Case{"deposited-cashbox", "4109", []_PI{{Status: money.StatusCredit, DataNominal: 2 * testScalingFactor, DataCount: 1, DataCashbox: true}}},
-		Case{"return-request", "01", []_PI{{Status: money.StatusReturnRequest}}},
-		Case{"deposited-tube", "521e", []_PI{{Status: money.StatusCredit, DataNominal: 5 * testScalingFactor, DataCount: 1}}},
-		Case{"deposited-reject", "7300", []_PI{{Status: money.StatusRejected, DataNominal: 10 * testScalingFactor, DataCount: 1}}},
-		Case{"dispensed", "9251", []_PI{{Status: money.StatusDispensed, DataNominal: 5 * testScalingFactor, DataCount: 1}}},
+		{"slugs", "21", []_PI{}},
+		{"deposited-cashbox", "4109", []_PI{{Status: money.StatusCredit, DataNominal: 2 * testScalingFactor, DataCount: 1, DataCashbox: true}}},
+		{"return-request", "01", []_PI{{Status: money.StatusReturnRequest}}},
+		{"deposited-tube", "521e", []_PI{{Status: money.StatusCredit, DataNominal: 5 * testScalingFactor, DataCount: 1}}},
+		{"deposited-reject", "7300", []_PI{{Status: money.StatusRejected, DataNominal: 10 * testScalingFactor, DataCount: 1}}},
+		{"dispensed", "9251", []_PI{{Status: money.StatusDispensed, DataNominal: 5 * testScalingFactor, DataCount: 1}}},
 	}
 	rand.New(rand.NewSource(time.Now().UnixNano())).Shuffle(len(cases), func(i int, j int) { cases[i], cases[j] = cases[j], cases[i] })
 	for _, c := range cases {
@@ -237,11 +237,11 @@ func TestCoinDiag(t *testing.T) {
 		expect DiagResult
 	}
 	cases := []Case{
-		Case{"empty", "", DiagResult{}},
-		Case{"start", "01000600", DiagResult{DiagPoweringUp, DiagInhibited}},
-		Case{"ok", "0300", DiagResult{DiagOK}},
-		Case{"general-error", "1000", DiagResult{DiagGeneralError}},
-		Case{"dispenser-error", "1400", DiagResult{DiagDispenserError}},
+		{"empty", "", DiagResult{}},
+		{"start", "01000600", DiagResult{DiagPoweringUp, DiagInhibited}},
+		{"ok", "0300", DiagResult{DiagOK}},
+		{"general-error", "1000", DiagResult{DiagGeneralError}},
+		{"dispenser-error", "1400", DiagResult{DiagDispenserError}},
 	}
 	rand.New(rand.NewSource(time.Now().UnixNano())).Shuffle(len(cases), func(i int, j int) { cases[i], cases[j] = cases[j], cases[i] })
 	for _, c := range cases {

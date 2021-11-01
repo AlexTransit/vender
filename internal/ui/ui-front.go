@@ -189,8 +189,14 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				if mitem.Price > credit {
 					// ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuInsufficientCredit)
 					// ALexM-FIX (вынести в конфиг текст. сделать scale )
-					dl2 := fmt.Sprintf("credit=%v price(%v)=%v р.", credit, mitem.Code, (mitem.Price / 100))
-					ui.display.SetLines(ui.g.Config.UI.Front.MsgMenuInsufficientCredit, dl2)
+					var dl2 string
+					if credit == 0 {
+						dl2 = fmt.Sprintf("k oplate :%v", (mitem.Price / 100))
+						ui.display.SetLines("oplata po QR", dl2)
+					} else {
+						dl2 = fmt.Sprintf("dali:%v nuno:%v", credit/100, (mitem.Price / 100))
+						ui.display.SetLines(ui.g.Config.UI.Front.MsgMenuInsufficientCredit, dl2)
+					}
 					goto wait
 				}
 

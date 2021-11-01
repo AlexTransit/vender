@@ -28,8 +28,8 @@ type InvalidChecksum struct {
 	Actual   byte
 }
 
-func (self InvalidChecksum) Error() string {
-	return fmt.Sprintf("Invalid checksum received=%02x actual=%02x", self.Received, self.Actual)
+func (ic InvalidChecksum) Error() string {
+	return fmt.Sprintf("Invalid checksum received=%02x actual=%02x", ic.Received, ic.Actual)
 }
 
 type Packet struct {
@@ -71,20 +71,20 @@ func MustPacketFromHex(s string, readonly bool) Packet {
 	return p
 }
 
-func (self *Packet) Bytes() []byte {
-	return self.b[:self.l]
+func (p *Packet) Bytes() []byte {
+	return p.b[:p.l]
 }
 
-func (self *Packet) Equal(p2 *Packet) bool {
-	return self.l == p2.l && bytes.Equal(self.Bytes(), p2.Bytes())
+func (p *Packet) Equal(p2 *Packet) bool {
+	return p.l == p2.l && bytes.Equal(p.Bytes(), p2.Bytes())
 }
 
-func (self *Packet) write(p []byte) {
-	self.l = copy(self.b[:], p)
+func (pl *Packet) write(p []byte) {
+	pl.l = copy(pl.b[:], p)
 }
 
-func (self *Packet) Write(p []byte) (n int, err error) {
-	if self.readonly {
+func (sp *Packet) Write(p []byte) (n int, err error) {
+	if sp.readonly {
 		return 0, ErrPacketReadonly
 	}
 	pl := len(p)
@@ -94,14 +94,14 @@ func (self *Packet) Write(p []byte) (n int, err error) {
 	case pl > PacketMaxLength:
 		return 0, ErrPacketOverflow
 	}
-	self.write(p)
-	return self.l, nil
+	sp.write(p)
+	return sp.l, nil
 }
 
-func (self *Packet) Len() int { return self.l }
+func (p *Packet) Len() int { return p.l }
 
-func (self *Packet) Format() string {
-	b := self.Bytes()
+func (p *Packet) Format() string {
+	b := p.Bytes()
 	h := hex.EncodeToString(b)
 	hlen := len(h)
 	ss := make([]string, (hlen/8)+1)
@@ -116,11 +116,11 @@ func (self *Packet) Format() string {
 	return line
 }
 
-func (self *Packet) Wire(ffDance bool) []byte {
+func (p *Packet) Wire(ffDance bool) []byte {
 	chk := byte(0)
 	j := 0
-	w := make([]byte, (self.l+2)*2)
-	for _, b := range self.b[:self.l] {
+	w := make([]byte, (p.l+2)*2)
+	for _, b := range p.b[:p.l] {
 		if ffDance && b == 0xff {
 			w[j] = 0xff
 			j++
@@ -140,11 +140,11 @@ func (self *Packet) Wire(ffDance bool) []byte {
 }
 
 // Without checksum
-func (self *Packet) TestHex(t testing.TB, expect string) {
+func (p *Packet) TestHex(t testing.TB, expect string) {
 	if _, err := hex.DecodeString(expect); err != nil {
 		t.Fatalf("invalid expect=%s err=%s", expect, err)
 	}
-	actual := hex.EncodeToString(self.Bytes())
+	actual := hex.EncodeToString(p.Bytes())
 	if actual != expect {
 		t.Fatalf("Packet=%s expected=%s", actual, expect)
 	}

@@ -16,10 +16,10 @@ type Amount uint32
 
 const MaxAmount = Amount(math.MaxUint32)
 
-func (self Amount) Format100I() string { return fmt.Sprint(float32(self) / 100) }
-func (self Amount) FormatCtx(ctx context.Context) string {
+func (ng Amount) Format100I() string { return fmt.Sprint(float32(ng) / 100) }
+func (ng Amount) FormatCtx(ctx context.Context) string {
 	// XXX FIXME
-	return self.Format100I()
+	return ng.Format100I()
 }
 
 // Nominal is value of one coin or bill
@@ -39,63 +39,63 @@ type NominalGroup struct {
 	values map[Nominal]uint
 }
 
-func (self *NominalGroup) Copy() *NominalGroup {
+func (ng *NominalGroup) Copy() *NominalGroup {
 	ng2 := &NominalGroup{
-		values: make(map[Nominal]uint, len(self.values)),
+		values: make(map[Nominal]uint, len(ng.values)),
 	}
-	for k, v := range self.values {
+	for k, v := range ng.values {
 		ng2.values[k] = v
 	}
 	return ng2
 }
 
-func (self *NominalGroup) SetValid(valid []Nominal) {
-	self.values = make(map[Nominal]uint, len(valid))
+func (ng *NominalGroup) SetValid(valid []Nominal) {
+	ng.values = make(map[Nominal]uint, len(valid))
 	for _, n := range valid {
 		if n != 0 {
-			self.values[n] = 0
+			ng.values[n] = 0
 		}
 	}
 }
 
-func (self *NominalGroup) Add(n Nominal, count uint) error {
-	if _, ok := self.values[n]; !ok {
+func (ng *NominalGroup) Add(n Nominal, count uint) error {
+	if _, ok := ng.values[n]; !ok {
 		return errors.Annotatef(ErrNominalInvalid, "Add(n=%s, c=%d)", Amount(n).Format100I(), count)
 	}
-	self.MustAdd(n, count)
+	ng.MustAdd(n, count)
 	return nil
 }
 
-func (self *NominalGroup) AddFrom(source *NominalGroup) {
-	if self.values == nil {
-		self.values = make(map[Nominal]uint, len(source.values))
+func (ng *NominalGroup) AddFrom(source *NominalGroup) {
+	if ng.values == nil {
+		ng.values = make(map[Nominal]uint, len(source.values))
 	}
 	for k, v := range source.values {
-		self.values[k] += v
+		ng.values[k] += v
 	}
 }
 
 // MustAdd just adds count ignoring valid nominals.
-func (self *NominalGroup) MustAdd(n Nominal, count uint) {
-	self.values[n] += count
+func (ng *NominalGroup) MustAdd(n Nominal, count uint) {
+	ng.values[n] += count
 }
 
-func (self *NominalGroup) Clear() {
-	for n := range self.values {
-		self.values[n] = 0
+func (ng *NominalGroup) Clear() {
+	for n := range ng.values {
+		ng.values[n] = 0
 	}
 }
 
-func (self *NominalGroup) Get(n Nominal) (uint, error) {
-	if stored, ok := self.values[n]; !ok {
+func (ng *NominalGroup) Get(n Nominal) (uint, error) {
+	if stored, ok := ng.values[n]; !ok {
 		return 0, ErrNominalInvalid
 	} else {
 		return stored, nil
 	}
 }
 
-func (self *NominalGroup) Iter(f func(nominal Nominal, count uint) error) error {
-	for nominal, count := range self.values {
+func (ng *NominalGroup) Iter(f func(nominal Nominal, count uint) error) error {
+	for nominal, count := range ng.values {
 		if err := f(nominal, count); err != nil {
 			return err
 		}
@@ -103,41 +103,41 @@ func (self *NominalGroup) Iter(f func(nominal Nominal, count uint) error) error 
 	return nil
 }
 
-func (self *NominalGroup) ToMapUint32(m map[uint32]uint32) {
-	for nominal, count := range self.values {
+func (ng *NominalGroup) ToMapUint32(m map[uint32]uint32) {
+	for nominal, count := range ng.values {
 		m[uint32(nominal)] = uint32(count)
 	}
 }
 
-func (self *NominalGroup) Total() Amount {
+func (ng *NominalGroup) Total() Amount {
 	sum := Amount(0)
-	for nominal, count := range self.values {
+	for nominal, count := range ng.values {
 		sum += Amount(nominal) * Amount(count)
 	}
 	return sum
 }
 
-func (self *NominalGroup) Diff(other *NominalGroup) Amount {
+func (ng *NominalGroup) Diff(other *NominalGroup) Amount {
 	result := Amount(0)
-	for n, c := range self.values {
+	for n, c := range ng.values {
 		result += Amount(n)*Amount(c) - Amount(n)*Amount(other.values[n])
 	}
 	return result
 }
-func (self *NominalGroup) Sub(other *NominalGroup) {
-	for nominal := range self.values {
-		self.values[nominal] -= other.values[nominal]
+func (ng *NominalGroup) Sub(other *NominalGroup) {
+	for nominal := range ng.values {
+		ng.values[nominal] -= other.values[nominal]
 	}
 }
 
-func (self *NominalGroup) Withdraw(to *NominalGroup, a Amount, strategy ExpendStrategy) error {
-	return self.expendLoop(to, a, strategy)
+func (ng *NominalGroup) Withdraw(to *NominalGroup, a Amount, strategy ExpendStrategy) error {
+	return ng.expendLoop(to, a, strategy)
 }
 
-func (self *NominalGroup) String() string {
-	parts := make([]string, 0, len(self.values)+1)
+func (ng *NominalGroup) String() string {
+	parts := make([]string, 0, len(ng.values)+1)
 	sum := Amount(0)
-	for nominal, count := range self.values {
+	for nominal, count := range ng.values {
 		if count > 0 {
 			parts = append(parts, fmt.Sprintf("%s:%d", Amount(nominal).Format100I(), count))
 			sum += Amount(nominal) * Amount(count)
@@ -148,10 +148,10 @@ func (self *NominalGroup) String() string {
 	return strings.Join(parts, ",")
 }
 
-func (self *NominalGroup) expendLoop(to *NominalGroup, amount Amount, strategy ExpendStrategy) error {
-	strategy.Reset(self)
+func (ng *NominalGroup) expendLoop(to *NominalGroup, amount Amount, strategy ExpendStrategy) error {
+	strategy.Reset(ng)
 	for amount > 0 {
-		nominal, err := strategy.ExpendOne(self, amount)
+		nominal, err := strategy.ExpendOne(ng, amount)
 		if err != nil {
 			return err
 		}
@@ -185,14 +185,14 @@ func expendOneOrdered(from *NominalGroup, order []Nominal, max Amount) (Nominal,
 
 type ngOrderSortElemFunc func(Nominal, uint) Nominal
 
-func (self *NominalGroup) order(sortElemFunc ngOrderSortElemFunc) []Nominal {
-	order := make([]Nominal, 0, len(self.values))
-	for n := range self.values {
+func (ng *NominalGroup) order(sortElemFunc ngOrderSortElemFunc) []Nominal {
+	order := make([]Nominal, 0, len(ng.values))
+	for n := range ng.values {
 		order = append(order, n)
 	}
 	sort.Slice(order, func(i, j int) bool {
 		ni, nj := order[i], order[j]
-		return sortElemFunc(ni, self.values[ni]) > sortElemFunc(nj, self.values[nj])
+		return sortElemFunc(ni, ng.values[ni]) > sortElemFunc(nj, ng.values[nj])
 	})
 	return order
 }
@@ -211,13 +211,13 @@ type ExpendGenericOrder struct {
 	SortElemFunc ngOrderSortElemFunc
 }
 
-func (self *ExpendGenericOrder) Reset(from *NominalGroup) {
-	self.order = from.order(self.SortElemFunc)
+func (ego *ExpendGenericOrder) Reset(from *NominalGroup) {
+	ego.order = from.order(ego.SortElemFunc)
 }
-func (self *ExpendGenericOrder) ExpendOne(from *NominalGroup, max Amount) (Nominal, error) {
-	return expendOneOrdered(from, self.order, max)
+func (ego *ExpendGenericOrder) ExpendOne(from *NominalGroup, max Amount) (Nominal, error) {
+	return expendOneOrdered(from, ego.order, max)
 }
-func (self *ExpendGenericOrder) Validate() bool { return true }
+func (ego *ExpendGenericOrder) Validate() bool { return true }
 
 func NewExpendLeastCount() ExpendStrategy {
 	return &ExpendGenericOrder{SortElemFunc: ngOrderSortElemNominal}
@@ -231,14 +231,14 @@ type ExpendStatistical struct {
 	Stat  *NominalGroup
 }
 
-func (self *ExpendStatistical) Reset(from *NominalGroup) {
-	self.order = self.Stat.order(ngOrderSortElemCount)
+func (es *ExpendStatistical) Reset(from *NominalGroup) {
+	es.order = es.Stat.order(ngOrderSortElemCount)
 }
-func (self *ExpendStatistical) ExpendOne(from *NominalGroup, max Amount) (Nominal, error) {
-	return expendOneOrdered(from, self.order, max)
+func (es *ExpendStatistical) ExpendOne(from *NominalGroup, max Amount) (Nominal, error) {
+	return expendOneOrdered(from, es.order, max)
 }
-func (self *ExpendStatistical) Validate() bool {
-	return self.Stat.Total() > 0
+func (es *ExpendStatistical) Validate() bool {
+	return es.Stat.Total() > 0
 }
 
 type ExpendCombine struct {
@@ -248,17 +248,17 @@ type ExpendCombine struct {
 	Ratio float32
 }
 
-func (self *ExpendCombine) Reset(from *NominalGroup) {
-	self.rnd = rand.New(rand.NewSource(int64(from.Total())))
-	self.S1.Reset(from)
-	self.S2.Reset(from)
+func (ec *ExpendCombine) Reset(from *NominalGroup) {
+	ec.rnd = rand.New(rand.NewSource(int64(from.Total())))
+	ec.S1.Reset(from)
+	ec.S2.Reset(from)
 }
-func (self *ExpendCombine) ExpendOne(from *NominalGroup, max Amount) (Nominal, error) {
-	if self.rnd.Float32() < self.Ratio {
-		return self.S1.ExpendOne(from, max)
+func (ec *ExpendCombine) ExpendOne(from *NominalGroup, max Amount) (Nominal, error) {
+	if ec.rnd.Float32() < ec.Ratio {
+		return ec.S1.ExpendOne(from, max)
 	}
-	return self.S2.ExpendOne(from, max)
+	return ec.S2.ExpendOne(from, max)
 }
-func (self *ExpendCombine) Validate() bool {
-	return self.S1 != nil && self.S2 != nil && self.S1.Validate() && self.S2.Validate()
+func (ec *ExpendCombine) Validate() bool {
+	return ec.S1 != nil && ec.S2 != nil && ec.S1.Validate() && ec.S2.Validate()
 }
