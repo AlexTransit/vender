@@ -18,38 +18,38 @@ type DeviceHopper struct {
 	Generic
 }
 
-func (self *DeviceHopper) init(ctx context.Context, addr uint8, nameSuffix string) error {
+func (devHop *DeviceHopper) init(ctx context.Context, addr uint8, nameSuffix string) error {
 	name := "hopper" + nameSuffix
 	g := state.GetGlobal(ctx)
-	self.Generic.Init(ctx, addr, name, proto2)
+	devHop.Generic.Init(ctx, addr, name, proto2)
 
-	do := newHopperRun(&self.Generic, fmt.Sprintf("%s.run", self.name), nil)
-	g.Engine.Register(fmt.Sprintf("%s.run(?)", self.name), do)
+	do := newHopperRun(&devHop.Generic, fmt.Sprintf("%s.run", devHop.name), nil)
+	g.Engine.Register(fmt.Sprintf("%s.run(?)", devHop.name), do)
 
-	err := self.Generic.FIXME_initIO(ctx)
-	return errors.Annotate(err, self.name+".init")
+	err := devHop.Generic.FIXME_initIO(ctx)
+	return errors.Annotate(err, devHop.name+".init")
 }
 
 type DeviceMultiHopper struct {
 	Generic
 }
 
-func (self *DeviceMultiHopper) init(ctx context.Context) error {
+func (devHop *DeviceMultiHopper) init(ctx context.Context) error {
 	const addr = 0xb8
 	g := state.GetGlobal(ctx)
-	self.Generic.Init(ctx, addr, "multihopper", proto1)
+	devHop.Generic.Init(ctx, addr, "multihopper", proto1)
 
 	for i := uint8(1); i <= 8; i++ {
 		do := newHopperRun(
-			&self.Generic,
-			fmt.Sprintf("%s%d.run", self.name, i),
+			&devHop.Generic,
+			fmt.Sprintf("%s%d.run", devHop.name, i),
 			[]byte{i},
 		)
-		g.Engine.Register(fmt.Sprintf("%s%d.run(?)", self.name, i), do)
+		g.Engine.Register(fmt.Sprintf("%s%d.run(?)", devHop.name, i), do)
 	}
 
-	err := self.Generic.FIXME_initIO(ctx)
-	return errors.Annotate(err, self.name+".init")
+	err := devHop.Generic.FIXME_initIO(ctx)
+	return errors.Annotate(err, devHop.name+".init")
 }
 
 func newHopperRun(gen *Generic, tag string, argsPrefix []byte) engine.FuncArg {

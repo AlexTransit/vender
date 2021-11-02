@@ -24,90 +24,90 @@ type DeviceConveyor struct { //nolint:maligned
 	currentPos int16 // estimated
 }
 
-func (self *DeviceConveyor) init(ctx context.Context) error {
-	self.currentPos = -1
+func (devConv *DeviceConveyor) init(ctx context.Context) error {
+	devConv.currentPos = -1
 	g := state.GetGlobal(ctx)
 	devConfig := &g.Config.Hardware.Evend.Conveyor
 	keepaliveInterval := helpers.IntMillisecondDefault(devConfig.KeepaliveMs, 0)
-	self.minSpeed = uint16(devConfig.MinSpeed)
-	if self.minSpeed == 0 {
-		self.minSpeed = 200
+	devConv.minSpeed = uint16(devConfig.MinSpeed)
+	if devConv.minSpeed == 0 {
+		devConv.minSpeed = 200
 	}
-	self.maxTimeout = speedDistanceDuration(float32(self.minSpeed), uint(devConfig.PositionMax))
-	if self.maxTimeout == 0 {
-		self.maxTimeout = ConveyorDefaultTimeout
+	devConv.maxTimeout = speedDistanceDuration(float32(devConv.minSpeed), uint(devConfig.PositionMax))
+	if devConv.maxTimeout == 0 {
+		devConv.maxTimeout = ConveyorDefaultTimeout
 	}
-	g.Log.Debugf("evend.conveyor minSpeed=%d maxTimeout=%v keepalive=%v", self.minSpeed, self.maxTimeout, keepaliveInterval)
-	self.dev.DelayNext = 245 * time.Millisecond // empirically found lower total WaitReady
-	self.Generic.Init(ctx, 0xd8, "conveyor", proto2)
-	self.DoSetSpeed = self.newSetSpeed()
+	g.Log.Debugf("evend.conveyor minSpeed=%d maxTimeout=%v keepalive=%v", devConv.minSpeed, devConv.maxTimeout, keepaliveInterval)
+	devConv.dev.DelayNext = 245 * time.Millisecond // empirically found lower total WaitReady
+	devConv.Generic.Init(ctx, 0xd8, "conveyor", proto2)
+	devConv.DoSetSpeed = devConv.newSetSpeed()
 
-	doCalibrate := engine.Func{Name: self.name + ".calibrate", F: self.calibrate}
+	doCalibrate := engine.Func{Name: devConv.name + ".calibrate", F: devConv.calibrate}
 	doMove := engine.FuncArg{
-		Name: self.name + ".move",
+		Name: devConv.name + ".move",
 		F: func(ctx context.Context, arg engine.Arg) error {
-			return self.move(ctx, uint16(arg))
+			return devConv.move(ctx, uint16(arg))
 		}}
-	moveSeq := engine.NewSeq(self.name + ".move(?)").Append(doCalibrate).Append(doMove)
-	g.Engine.Register(moveSeq.String(), self.Generic.WithRestart(moveSeq))
-	g.Engine.Register(self.name+".set_speed(?)", self.DoSetSpeed)
+	moveSeq := engine.NewSeq(devConv.name + ".move(?)").Append(doCalibrate).Append(doMove)
+	g.Engine.Register(moveSeq.String(), devConv.Generic.WithRestart(moveSeq))
+	g.Engine.Register(devConv.name+".set_speed(?)", devConv.DoSetSpeed)
 
 	doShake := engine.FuncArg{
-		Name: self.name + ".shake",
+		Name: devConv.name + ".shake",
 		F: func(ctx context.Context, arg engine.Arg) error {
-			return self.shake(ctx, uint8(arg))
+			return devConv.shake(ctx, uint8(arg))
 		}}
-	g.Engine.RegisterNewSeq(self.name+".shake(?)", doCalibrate, doShake)
+	g.Engine.RegisterNewSeq(devConv.name+".shake(?)", doCalibrate, doShake)
 
-	err := self.Generic.FIXME_initIO(ctx)
+	err := devConv.Generic.FIXME_initIO(ctx)
 	if keepaliveInterval > 0 {
-		go self.Generic.dev.Keepalive(keepaliveInterval, g.Alive.StopChan())
+		go devConv.Generic.dev.Keepalive(keepaliveInterval, g.Alive.StopChan())
 	}
-	return errors.Annotate(err, self.name+".init")
+	return errors.Annotate(err, devConv.name+".init")
 }
 
-func (self *DeviceConveyor) calibrate(ctx context.Context) error {
-	// self.dev.Log.Debugf("%s calibrate ready=%t current=%d", self.name, self.dev.Ready(), self.currentPos)
-	if self.currentPos >= 0 {
+func (devConv *DeviceConveyor) calibrate(ctx context.Context) error {
+	// devConv.dev.Log.Debugf("%s calibrate ready=%t current=%d", devConv.name, devConv.dev.Ready(), devConv.currentPos)
+	if devConv.currentPos >= 0 {
 		return nil
 	}
-	// self.dev.Log.Debugf("%s calibrate begin", self.name)
-	err := self.move(ctx, 0)
+	// devConv.dev.Log.Debugf("%s calibrate begin", devConv.name)
+	err := devConv.move(ctx, 0)
 	if err == nil {
-		self.dev.Log.Debugf("%s calibrate success", self.name)
+		devConv.dev.Log.Debugf("%s calibrate success", devConv.name)
 	}
-	return errors.Annotate(err, self.name+".calibrate")
+	return errors.Annotate(err, devConv.name+".calibrate")
 }
 
-func (self *DeviceConveyor) move(ctx context.Context, position uint16) error {
+func (devConv *DeviceConveyor) move(ctx context.Context, position uint16) error {
 	g := state.GetGlobal(ctx)
-	tag := fmt.Sprintf("%s.move:%d", self.name, position)
+	tag := fmt.Sprintf("%s.move:%d", devConv.name, position)
 	tbegin := time.Now()
 	if g.Config.Hardware.Evend.Conveyor.LogDebug {
-		self.dev.Log.Debugf("%s begin", tag)
+		devConv.dev.Log.Debugf("%s begin", tag)
 	}
 
 	doWaitDone := engine.Func{F: func(ctx context.Context) error {
-		timeout := self.maxTimeout
-		if self.dev.Ready() && self.currentPos >= 0 {
-			distance := absDiffU16(uint16(self.currentPos), position)
-			eta := speedDistanceDuration(float32(self.minSpeed), uint(distance))
+		timeout := devConv.maxTimeout
+		if devConv.dev.Ready() && devConv.currentPos >= 0 {
+			distance := absDiffU16(uint16(devConv.currentPos), position)
+			eta := speedDistanceDuration(float32(devConv.minSpeed), uint(distance))
 			timeout = eta * 2
 		}
 		if timeout < ConveyorMinTimeout {
 			timeout = ConveyorMinTimeout
 		}
-		self.dev.Log.Debugf("%s position current=%d target=%d timeout=%v maxtimeout=%v", tag, self.currentPos, position, timeout, self.maxTimeout)
+		devConv.dev.Log.Debugf("%s position current=%d target=%d timeout=%v maxtimeout=%v", tag, devConv.currentPos, position, timeout, devConv.maxTimeout)
 
-		err := g.Engine.Exec(ctx, self.Generic.NewWaitDone(tag, timeout))
+		err := g.Engine.Exec(ctx, devConv.Generic.NewWaitDone(tag, timeout))
 		if err != nil {
-			self.currentPos = -1
+			devConv.currentPos = -1
 			// TODO check SetReady(false)
 		} else {
-			self.currentPos = int16(position)
-			self.dev.SetReady()
+			devConv.currentPos = int16(position)
+			devConv.dev.SetReady()
 			if g.Config.Hardware.Evend.Conveyor.LogDebug {
-				self.dev.Log.Debugf("%s duration=%s", tag, time.Since(tbegin))
+				devConv.dev.Log.Debugf("%s duration=%s", tag, time.Since(tbegin))
 			}
 		}
 		return err
@@ -115,21 +115,21 @@ func (self *DeviceConveyor) move(ctx context.Context, position uint16) error {
 
 	// TODO engine InlineSeq
 	seq := engine.NewSeq(tag).
-		Append(self.Generic.NewWaitReady(tag)).
-		Append(self.Generic.NewAction(tag, 0x01, byte(position&0xff), byte(position>>8))).
+		Append(devConv.Generic.NewWaitReady(tag)).
+		Append(devConv.Generic.NewAction(tag, 0x01, byte(position&0xff), byte(position>>8))).
 		Append(doWaitDone)
 	err := g.Engine.Exec(ctx, seq)
 	return errors.Annotate(err, tag)
 }
 
-func (self *DeviceConveyor) shake(ctx context.Context, arg uint8) error {
+func (devConv *DeviceConveyor) shake(ctx context.Context, arg uint8) error {
 	g := state.GetGlobal(ctx)
-	tag := fmt.Sprintf("%s.shake:%d", self.name, arg)
+	tag := fmt.Sprintf("%s.shake:%d", devConv.name, arg)
 
 	doWaitDone := engine.Func{F: func(ctx context.Context) error {
-		err := g.Engine.Exec(ctx, self.Generic.NewWaitDone(tag, self.maxTimeout))
+		err := g.Engine.Exec(ctx, devConv.Generic.NewWaitDone(tag, devConv.maxTimeout))
 		if err != nil {
-			self.currentPos = -1
+			devConv.currentPos = -1
 			// TODO check SetReady(false)
 		}
 		return err
@@ -137,26 +137,26 @@ func (self *DeviceConveyor) shake(ctx context.Context, arg uint8) error {
 
 	// TODO engine InlineSeq
 	seq := engine.NewSeq(tag).
-		Append(self.Generic.NewWaitReady(tag)).
-		Append(self.Generic.NewAction(tag, 0x03, byte(arg), 0)).
+		Append(devConv.Generic.NewWaitReady(tag)).
+		Append(devConv.Generic.NewAction(tag, 0x03, byte(arg), 0)).
 		Append(doWaitDone)
 	err := g.Engine.Exec(ctx, seq)
 	return errors.Annotate(err, tag)
 }
 
-func (self *DeviceConveyor) newSetSpeed() engine.FuncArg {
-	tag := self.name + ".set_speed"
+func (devConv *DeviceConveyor) newSetSpeed() engine.FuncArg {
+	tag := devConv.name + ".set_speed"
 
 	return engine.FuncArg{Name: tag, F: func(ctx context.Context, arg engine.Arg) error {
 		speed := uint8(arg)
-		bs := []byte{self.dev.Address + 5, 0x10, speed}
+		bs := []byte{devConv.dev.Address + 5, 0x10, speed}
 		request := mdb.MustPacketFromBytes(bs, true)
 		response := mdb.Packet{}
-		err := self.dev.TxCustom(request, &response, mdb.TxOpt{})
+		err := devConv.dev.TxCustom(request, &response, mdb.TxOpt{})
 		if err != nil {
 			return errors.Annotatef(err, "%s target=%d request=%x", tag, speed, request.Bytes())
 		}
-		self.dev.Log.Debugf("%s target=%d request=%x response=%x", tag, speed, request.Bytes(), response.Bytes())
+		devConv.dev.Log.Debugf("%s target=%d request=%x response=%x", tag, speed, request.Bytes(), response.Bytes())
 		return nil
 	}}
 }
