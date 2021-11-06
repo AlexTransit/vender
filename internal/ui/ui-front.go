@@ -377,6 +377,9 @@ func (ui *UI) onFrontLock() State {
 		}
 		return StateFrontTimeout
 	case types.EventFrontLock:
+		if types.VMC.State == 2 { // broken. fix this
+			return StateBroken
+		}
 		types.VMC.Lock = false
 		return StateFrontEnd
 	}

@@ -131,12 +131,17 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 		types.UI.FrontResult.Cream = tunecook(arg.Cream[0], ui.MaxCream, ui.DefaultCream)
 	}
 	t.State(tele_api.State_RemoteControl)
-	if err := ui.Cook(ctx); err != nil {
+	types.VMC.MonSys.Dirty = mitem.Price
+	err := ui.Cook(ctx)
+	if types.VMC.MonSys.Dirty == 0 {
+		t.CookReply(cmd, tele_api.CookReplay_cookFinish, uint32(mitem.Price))
+	}
+	if err != nil {
 		t.CookReply(cmd, tele_api.CookReplay_cookError)
 		t.State(tele_api.State_Problem)
+		types.VMC.State = uint32(ui.StateBroken)
 		return errors.Errorf("remote cook make error: (%v)", err)
 	}
-	t.CookReply(cmd, tele_api.CookReplay_cookFinish, uint32(mitem.Price))
 	t.State(tele_api.State_Nominal)
 	return nil
 }

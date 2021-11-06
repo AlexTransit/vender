@@ -11,6 +11,7 @@ import (
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/log2"
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/golang/protobuf/proto"
@@ -39,10 +40,12 @@ func GetGlobal(ctx context.Context) *MoneySystem {
 
 func (ms *MoneySystem) AddDirty(dirty currency.Amount) {
 	ms.dirty += dirty
+	types.VMC.MonSys.Dirty = ms.dirty
 }
 
 func (ms *MoneySystem) SetDirty(dirty currency.Amount) {
 	ms.dirty = dirty
+	types.VMC.MonSys.Dirty = ms.dirty
 }
 
 func (ms *MoneySystem) GetDirty() currency.Amount {
