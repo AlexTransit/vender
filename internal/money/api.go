@@ -34,9 +34,9 @@ func (cf creditFlag) Contains(sub creditFlag) bool { return cf&sub != 0 }
 
 func (ms *MoneySystem) locked_credit(flag creditFlag) currency.Amount {
 	result := currency.Amount(0)
-	if flag.Contains(creditEscrow) {
-		result += ms.bill.EscrowAmount()
-	}
+	// if flag.Contains(creditEscrow) {
+	// 	result += ms.bill.EscrowAmount()
+	// }
 	if flag.Contains(creditCash) {
 		// result += ms.dirty
 		result += ms.GetDirty()

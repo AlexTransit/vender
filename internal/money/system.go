@@ -11,10 +11,11 @@ import (
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
-	"github.com/AlexTransit/vender/internal/types"
+
+	// "github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/log2"
 	tele_api "github.com/AlexTransit/vender/tele"
-	"github.com/golang/protobuf/proto"
+	// "github.com/golang/protobuf/proto"
 	"github.com/juju/errors"
 )
 
@@ -36,24 +37,6 @@ type MoneySystem struct { //nolint:maligned
 
 func GetGlobal(ctx context.Context) *MoneySystem {
 	return state.GetGlobal(ctx).XXX_money.Load().(*MoneySystem)
-}
-
-func (ms *MoneySystem) AddDirty(dirty currency.Amount) {
-	ms.dirty += dirty
-	types.VMC.MonSys.Dirty = ms.dirty
-}
-
-func (ms *MoneySystem) SetDirty(dirty currency.Amount) {
-	ms.dirty = dirty
-	types.VMC.MonSys.Dirty = ms.dirty
-}
-
-func (ms *MoneySystem) GetDirty() currency.Amount {
-	return ms.dirty
-}
-
-func (ms *MoneySystem) ResetMoney() {
-	ms.locked_zero()
 }
 
 func (ms *MoneySystem) Start(ctx context.Context) error {
@@ -174,7 +157,8 @@ func (ms *MoneySystem) TeleCashbox(ctx context.Context) *tele_api.Telemetry_Mone
 	defer ms.lk.Unlock()
 	ms.billCashbox.ToMapUint32(pb.Bills)
 	ms.coinCashbox.ToMapUint32(pb.Coins)
-	ms.Log.Debugf("TeleCashbox pb=%s", proto.CompactTextString(pb))
+	// ms.Log.Debugf("TeleCashbox pb=%s", proto.CompactTextString(pb))
+	ms.Log.Debugf("TeleCashbox pb=%v", pb)
 	return pb
 }
 
@@ -188,7 +172,8 @@ func (ms *MoneySystem) TeleChange(ctx context.Context) *tele_api.Telemetry_Money
 		state.GetGlobal(ctx).Error(errors.Annotate(err, "TeleChange"))
 	}
 	ms.coin.Tubes().ToMapUint32(pb.Coins)
-	ms.Log.Debugf("TeleChange pb=%s", proto.CompactTextString(pb))
+	// ms.Log.Debugf("TeleChange pb=%s", proto.CompactTextString(pb))
+	ms.Log.Debugf("TeleChange pb=%v", pb)
 	return pb
 }
 
@@ -216,4 +201,22 @@ func (ms *MoneySystem) XXX_InjectCoin(n currency.Nominal) error {
 	ms.coinCredit.MustAdd(n, 1)
 	ms.dirty += currency.Amount(n)
 	return nil
+}
+
+func (ms *MoneySystem) AddDirty(dirty currency.Amount) {
+	ms.dirty += dirty
+	// types.VMC.MonSys.Dirty = ms.dirty
+}
+
+func (ms *MoneySystem) SetDirty(dirty currency.Amount) {
+	ms.dirty = dirty
+	// types.VMC.MonSys.Dirty = ms.dirty
+}
+
+func (ms *MoneySystem) GetDirty() currency.Amount {
+	return ms.dirty
+}
+
+func (ms *MoneySystem) ResetMoney() {
+	ms.locked_zero()
 }

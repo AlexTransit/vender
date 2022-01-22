@@ -10,4 +10,5 @@ var (
 	ErrFraud       = fmt.Errorf("Possible Credited Money Removal")
 	ErrFishingOK   = fmt.Errorf("ALERT !!!! Credited Money Removal. good fishing.")
 	ErrFishingFail = fmt.Errorf("maybe alert !!!! Bill money fishing fail.")
+	ErrBillReject  = fmt.Errorf("Bill rejected.")
 )

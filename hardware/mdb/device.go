@@ -377,10 +377,11 @@ type PollDelay struct {
 }
 
 func (pd *PollDelay) Delay(dev *Device, active bool, err bool, stopch <-chan struct{}) bool {
-	delay := dev.DelayNext
-
+	// delay := dev.DelayNext
+	delay := dev.DelayIdle
 	if err {
-		delay = dev.DelayIdle
+		// delay = dev.DelayIdle
+		delay = dev.DelayNext
 	} else if active {
 		pd.lastActive = time.Now()
 	} else if pd.lastDelay != dev.DelayIdle { // save time syscall while idle continues
