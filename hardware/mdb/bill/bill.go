@@ -154,12 +154,7 @@ func (bv *BillValidator) Run(ctx context.Context, alive *alive.Alive, fun func(m
 			active, err = parse(response)
 			types.VMC.MonSys.BillRun = !active
 		}
-		// AlexM разобраться.
-		// сейчас пул идет 0.2с 0.7с 0.2с 0.7с
-		// после собития (подсунуть и забрать купюру) пул идет каждые 0.2с
-		pdv := pd.Delay(&bv.Device, active, err != nil, stopch)
-		// again = (alive != nil) && (alive.IsRunning()) && pd.Delay(&bv.Device, active, err != nil, stopch)
-		again = (alive != nil) && (alive.IsRunning()) && pdv
+		again = (alive != nil) && (alive.IsRunning()) && pd.Delay(&bv.Device, active, err != nil, stopch)
 	}
 	bv.setEscrowBill(0)
 	types.VMC.MonSys.BillOn = false
