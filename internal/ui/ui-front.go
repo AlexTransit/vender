@@ -41,7 +41,8 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 	// FIXME special handling of separate graphic display
 	// Currently used to clear QR.
 	if d, _ := ui.g.Display(); d != nil {
-		_ = d.Clear()
+		_ = d.ShowPic()
+		// _ = d.Clear()
 	}
 	// executeScript(ctx, "FrontBegin", "")
 

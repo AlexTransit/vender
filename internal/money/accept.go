@@ -70,6 +70,9 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 			g.ClientBegin()
 			switch pi.Status {
 			case money.StatusEscrow:
+				if ms.bill.EscrowAmount() == 0 {
+					g.Log.Error("ERR status escrow when there is no money in escrow!")
+				}
 				err := g.Engine.Exec(ctx, ms.bill.EscrowAccept())
 				if err != nil {
 					g.Error(errors.Annotatef(err, "money.bill escrow accept n=%s", currency.Amount(pi.DataNominal).FormatCtx(ctx)))
@@ -93,7 +96,7 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 					ms.locked_credit(creditCash|creditEscrow).FormatCtx(ctx),
 					ms.locked_credit(creditAll).FormatCtx(ctx))
 				// ms.dirty += pi.Amount()
-				ms.AddDirty(pi.Amount())
+        ms.AddDirty(pi.Amount())
 				alive.Stop()
 				g.Engine.Exec(ctx, ms.bill.AcceptMax(0))
 				if out != nil {
