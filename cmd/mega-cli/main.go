@@ -96,17 +96,17 @@ func main() {
 
 func newCompleter() func(d prompt.Document) []prompt.Suggest {
 	suggests := []prompt.Suggest{
-	{Text: "status", Description: "get status (@01)"},
-	{Text: "reset_soft", Description: "soft reset, zero variables (@0301)"},
-	{Text: "reset_hard", Description: "hard reset, full reboot (@03ff)"},
-	{Text: "debug", Description: "get debug buffer (@04)"},
-	{Text: "mdb_bus_reset", Description: "MDB bus reset (@07)"},
-	{Text: "mdb=", Description: "MDB transaction (@08XX...)"},
-	{Text: "help"},
-	{Text: "lN", Description: "repeat line N times"},
-	{Text: "tXX", Description: "send packet"},
-	{Text: "r70", Description: "read response"},
-	{Text: "pXX", Description: "parse packet without IO"},
+		{Text: "status", Description: "get status (@01)"},
+		{Text: "reset_soft", Description: "soft reset, zero variables (@0301)"},
+		{Text: "reset_hard", Description: "hard reset, full reboot (@03ff)"},
+		{Text: "debug", Description: "get debug buffer (@04)"},
+		{Text: "mdb_bus_reset", Description: "MDB bus reset (@07)"},
+		{Text: "mdb=", Description: "MDB transaction (@08XX...)"},
+		{Text: "help"},
+		{Text: "lN", Description: "repeat line N times"},
+		{Text: "tXX", Description: "send packet"},
+		{Text: "r70", Description: "read response"},
+		{Text: "pXX", Description: "parse packet without IO"},
 	}
 
 	return func(d prompt.Document) []prompt.Suggest {

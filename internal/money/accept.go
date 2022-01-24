@@ -96,7 +96,7 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 					ms.locked_credit(creditCash|creditEscrow).FormatCtx(ctx),
 					ms.locked_credit(creditAll).FormatCtx(ctx))
 				// ms.dirty += pi.Amount()
-        ms.AddDirty(pi.Amount())
+				ms.AddDirty(pi.Amount())
 				alive.Stop()
 				g.Engine.Exec(ctx, ms.bill.AcceptMax(0))
 				if out != nil {
