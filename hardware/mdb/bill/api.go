@@ -32,8 +32,8 @@ type Biller interface {
 var _ Biller = &BillValidator{}
 var _ Biller = Stub{}
 
-func (self *BillValidator) EscrowAccept() engine.Doer { return self.DoEscrowAccept }
-func (self *BillValidator) EscrowReject() engine.Doer { return self.DoEscrowReject }
+func (bv *BillValidator) EscrowAccept() engine.Doer { return bv.DoEscrowAccept }
+func (bv *BillValidator) EscrowReject() engine.Doer { return bv.DoEscrowReject }
 
 type Stub struct{}
 

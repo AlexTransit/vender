@@ -35,20 +35,20 @@ type PollItem struct {
 	HardwareCode byte
 }
 
-func (self *PollItem) String() string {
+func (pi *PollItem) String() string {
 	return fmt.Sprintf("status=%s cashbox=%v nominal=%s count=%d hwcode=%02x err=%v",
-		self.Status.String(),
-		self.DataCashbox,
-		currency.Amount(self.DataNominal).Format100I(),
-		self.DataCount,
-		self.HardwareCode,
-		self.Error,
+		pi.Status.String(),
+		pi.DataCashbox,
+		currency.Amount(pi.DataNominal).Format100I(),
+		pi.DataCount,
+		pi.HardwareCode,
+		pi.Error,
 	)
 }
 
-func (self *PollItem) Amount() currency.Amount {
-	if self.DataCount == 0 {
+func (pi *PollItem) Amount() currency.Amount {
+	if pi.DataCount == 0 {
 		panic("code error PollItem.DataCount=0")
 	}
-	return currency.Amount(self.DataNominal) * currency.Amount(self.DataCount)
+	return currency.Amount(pi.DataNominal) * currency.Amount(pi.DataCount)
 }

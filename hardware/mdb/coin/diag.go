@@ -47,11 +47,11 @@ const (
 
 type DiagResult []DiagStatus
 
-func (self DiagResult) OK() bool {
-	if len(self) == 0 {
+func (dr DiagResult) OK() bool {
+	if len(dr) == 0 {
 		return true
 	}
-	for _, ds := range self {
+	for _, ds := range dr {
 		switch ds {
 		case DiagOK, DiagPoweringUp, DiagInhibited:
 		default:
@@ -61,9 +61,9 @@ func (self DiagResult) OK() bool {
 	return true
 }
 
-func (self DiagResult) Error() string {
-	ss := make([]string, len(self))
-	for i, ds := range self {
+func (dr DiagResult) Error() string {
+	ss := make([]string, len(dr))
+	for i, ds := range dr {
 		ss[i] = ds.String()
 	}
 	return strings.Join(ss, ",")

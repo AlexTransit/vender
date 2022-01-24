@@ -20,16 +20,16 @@ type DeviceElevator struct { //nolint:maligned
 	moveTimeout time.Duration
 }
 
-func (self *DeviceElevator) init(ctx context.Context) error {
+func (devElv *DeviceElevator) init(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	config := &g.Config.Hardware.Evend.Elevator
 	keepaliveInterval := helpers.IntMillisecondDefault(config.KeepaliveMs, 0)
-	self.moveTimeout = helpers.IntSecondDefault(config.MoveTimeoutSec, 10*time.Second)
-	self.Generic.Init(ctx, 0xd0, "elevator", proto1)
+	devElv.moveTimeout = helpers.IntSecondDefault(config.MoveTimeoutSec, 10*time.Second)
+	devElv.Generic.Init(ctx, 0xd0, "elevator", proto1)
 
-	g.Engine.Register(self.name+".move(?)",
-		engine.FuncArg{Name: self.name + ".move", F: func(ctx context.Context, arg engine.Arg) error {
-			return g.Engine.Exec(ctx, self.move(uint8(arg)))
+	g.Engine.Register(devElv.name+".move(?)",
+		engine.FuncArg{Name: devElv.name + ".move", F: func(ctx context.Context, arg engine.Arg) error {
+			return g.Engine.Exec(ctx, devElv.move(uint8(arg)))
 		}})
 
 	// g.Engine.RegisterNewFunc(
@@ -40,23 +40,23 @@ func (self *DeviceElevator) init(ctx context.Context) error {
 	// 	},
 	// )
 
-	err := self.Generic.FIXME_initIO(ctx)
+	err := devElv.Generic.FIXME_initIO(ctx)
 	if keepaliveInterval > 0 {
-		go self.Generic.dev.Keepalive(keepaliveInterval, g.Alive.StopChan())
+		go devElv.Generic.dev.Keepalive(keepaliveInterval, g.Alive.StopChan())
 	}
-	return errors.Annotate(err, self.name+".init")
+	return errors.Annotate(err, devElv.name+".init")
 }
 
-func (self *DeviceElevator) move(position uint8) engine.Doer {
-	// cp := global.GetEnv(self.name + ".position")
+func (devElv *DeviceElevator) move(position uint8) engine.Doer {
+	// cp := global.GetEnv(devElv.name + ".position")
 	cp := types.VMC.HW.Elevator.Position
 	types.VMC.HW.Elevator.Position = 255
 	mp := fmt.Sprintf("%d->%d", cp, position)
-	types.Log.Infof(self.name+".position = %s", mp)
-	tag := fmt.Sprintf("%s.move:%s", self.name, mp)
+	types.Log.Infof(devElv.name+".position = %s", mp)
+	tag := fmt.Sprintf("%s.move:%s", devElv.name, mp)
 	return engine.NewSeq(tag).
-		Append(self.NewWaitReady(tag)).
-		Append(self.Generic.NewAction(tag, 0x03, position, 0x64)).
-		Append(self.NewWaitDone(tag, self.moveTimeout)).
+		Append(devElv.NewWaitReady(tag)).
+		Append(devElv.Generic.NewAction(tag, 0x03, position, 0x64)).
+		Append(devElv.NewWaitDone(tag, devElv.moveTimeout)).
 		Append(engine.Func0{F: func() error { types.VMC.HW.Elevator.Position = position; return nil }})
 }

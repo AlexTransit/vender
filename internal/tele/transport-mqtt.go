@@ -11,6 +11,7 @@ import (
 )
 
 type transportMqtt struct {
+	enabled   bool
 	log       *log2.Log
 	onCommand func([]byte) bool
 	m         mqtt.Client
@@ -25,13 +26,16 @@ type transportMqtt struct {
 }
 
 func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.Config, onCommand CommandCallback) error {
+	if !teleConfig.Enabled {
+		return nil
+	}
+	tm.enabled = true
 	tm.log = log
 	// FIXME add loglevel to config
 	mqtt.ERROR = log
 	mqtt.CRITICAL = log
 	mqtt.WARN = log
 	//	mqtt.DEBUG = log
-
 	mqttClientId := fmt.Sprintf("vm%d", teleConfig.VmId)
 	credFun := func() (string, string) {
 		return mqttClientId, teleConfig.MqttPassword
@@ -99,21 +103,31 @@ func (tm *transportMqtt) CloseTele() {
 	}
 }
 
+func (tm *transportMqtt) publish2Telemetry(topic string, qos byte, retained bool, payload interface{}) {
+	if !tm.enabled {
+		return
+	}
+	tm.m.Publish(topic, qos, retained, payload)
+}
+
 func (tm *transportMqtt) SendState(payload []byte) bool {
+	if !tm.enabled {
+		return false
+	}
 	tm.log.Infof("transport sendstate payload=%x", payload)
-	tm.m.Publish(tm.topicState, 1, false, payload)
+	tm.publish2Telemetry(tm.topicState, 1, false, payload)
 	return true
 }
 
 func (tm *transportMqtt) SendTelemetry(payload []byte) bool {
-	tm.m.Publish(tm.topicTelemetry, 1, false, payload)
+	tm.publish2Telemetry(tm.topicTelemetry, 1, false, payload)
 	return true
 }
 
 func (tm *transportMqtt) SendCommandResponse(topicSuffix string, payload []byte) bool {
 	topic := fmt.Sprintf("%s/%s", tm.topicPrefix, topicSuffix)
 	tm.log.Infof("mqtt publish command response to topic=%s", topic)
-	tm.m.Publish(topic, 1, false, payload)
+	tm.publish2Telemetry(topic, 1, false, payload)
 	return true
 }
 

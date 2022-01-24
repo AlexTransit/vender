@@ -15,16 +15,16 @@ type MockDevicer struct {
 	// c uint32
 }
 
-func (self *MockDevicer) Clear() {}
+func (m *MockDevicer) Clear() {}
 
-// func (self *MockDevicer) Control() Control {
-// 	return Control(atomic.LoadUint32(&self.c))
+// func (m *MockDevicer) Control() Control {
+// 	return Control(atomic.LoadUint32(&m.c))
 // }
 
-func (self *MockDevicer) CursorYX(y, x uint8) bool { return true }
+func (m *MockDevicer) CursorYX(y, x uint8) bool { return true }
 
-// func (self *MockDevicer) SetControl(c Control) Control {
-// 	return Control(atomic.SwapUint32(&self.c, uint32(c)))
+// func (m *MockDevicer) SetControl(c Control) Control {
+// 	return Control(atomic.SwapUint32(&m.c, uint32(c)))
 // }
 
-func (self *MockDevicer) Write(b []byte) {}
+func (m *MockDevicer) Write(b []byte) {}

@@ -96,17 +96,17 @@ func main() {
 
 func newCompleter() func(d prompt.Document) []prompt.Suggest {
 	suggests := []prompt.Suggest{
-		prompt.Suggest{Text: "status", Description: "get status (@01)"},
-		prompt.Suggest{Text: "reset_soft", Description: "soft reset, zero variables (@0301)"},
-		prompt.Suggest{Text: "reset_hard", Description: "hard reset, full reboot (@03ff)"},
-		prompt.Suggest{Text: "debug", Description: "get debug buffer (@04)"},
-		prompt.Suggest{Text: "mdb_bus_reset", Description: "MDB bus reset (@07)"},
-		prompt.Suggest{Text: "mdb=", Description: "MDB transaction (@08XX...)"},
-		prompt.Suggest{Text: "help"},
-		prompt.Suggest{Text: "lN", Description: "repeat line N times"},
-		prompt.Suggest{Text: "tXX", Description: "send packet"},
-		prompt.Suggest{Text: "r70", Description: "read response"},
-		prompt.Suggest{Text: "pXX", Description: "parse packet without IO"},
+	{Text: "status", Description: "get status (@01)"},
+	{Text: "reset_soft", Description: "soft reset, zero variables (@0301)"},
+	{Text: "reset_hard", Description: "hard reset, full reboot (@03ff)"},
+	{Text: "debug", Description: "get debug buffer (@04)"},
+	{Text: "mdb_bus_reset", Description: "MDB bus reset (@07)"},
+	{Text: "mdb=", Description: "MDB transaction (@08XX...)"},
+	{Text: "help"},
+	{Text: "lN", Description: "repeat line N times"},
+	{Text: "tXX", Description: "send packet"},
+	{Text: "r70", Description: "read response"},
+	{Text: "pXX", Description: "parse packet without IO"},
 	}
 
 	return func(d prompt.Document) []prompt.Suggest {

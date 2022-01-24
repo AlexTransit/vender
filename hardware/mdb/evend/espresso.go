@@ -19,54 +19,54 @@ type DeviceEspresso struct {
 	timeout time.Duration
 }
 
-func (self *DeviceEspresso) init(ctx context.Context) error {
+func (devEspr *DeviceEspresso) init(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	espressoConfig := &g.Config.Hardware.Evend.Espresso
-	self.timeout = helpers.IntSecondDefault(espressoConfig.TimeoutSec, DefaultEspressoTimeout)
-	self.Generic.Init(ctx, 0xe8, "espresso", proto2)
+	devEspr.timeout = helpers.IntSecondDefault(espressoConfig.TimeoutSec, DefaultEspressoTimeout)
+	devEspr.Generic.Init(ctx, 0xe8, "espresso", proto2)
 
-	g.Engine.Register(self.name+".grind", self.Generic.WithRestart(self.NewGrind()))
-	g.Engine.Register(self.name+".press", self.NewPress())
-	g.Engine.Register(self.name+".dispose", self.Generic.WithRestart(self.NewRelease()))
-	g.Engine.Register(self.name+".heat_on", self.NewHeat(true))
-	g.Engine.Register(self.name+".heat_off", self.NewHeat(false))
+	g.Engine.Register(devEspr.name+".grind", devEspr.Generic.WithRestart(devEspr.NewGrind()))
+	g.Engine.Register(devEspr.name+".press", devEspr.NewPress())
+	g.Engine.Register(devEspr.name+".dispose", devEspr.Generic.WithRestart(devEspr.NewRelease()))
+	g.Engine.Register(devEspr.name+".heat_on", devEspr.NewHeat(true))
+	g.Engine.Register(devEspr.name+".heat_off", devEspr.NewHeat(false))
 
-	err := self.Generic.FIXME_initIO(ctx)
-	return errors.Annotate(err, self.name+".init")
+	err := devEspr.Generic.FIXME_initIO(ctx)
+	return errors.Annotate(err, devEspr.name+".init")
 }
 
-func (self *DeviceEspresso) NewGrind() engine.Doer {
-	tag := self.name + ".grind"
+func (devEspr *DeviceEspresso) NewGrind() engine.Doer {
+	tag := devEspr.name + ".grind"
 	return engine.NewSeq(tag).
-		Append(self.Generic.NewWaitReady(tag)).
-		Append(self.Generic.NewAction(tag, 0x01)).
+		Append(devEspr.Generic.NewWaitReady(tag)).
+		Append(devEspr.Generic.NewAction(tag, 0x01)).
 		// TODO expect delay like in cup dispense, ignore immediate error, retry
-		Append(self.Generic.NewWaitDone(tag, self.timeout))
+		Append(devEspr.Generic.NewWaitDone(tag, devEspr.timeout))
 }
 
-func (self *DeviceEspresso) NewPress() engine.Doer {
-	tag := self.name + ".press"
+func (devEspr *DeviceEspresso) NewPress() engine.Doer {
+	tag := devEspr.name + ".press"
 	return engine.NewSeq(tag).
-		Append(self.Generic.NewWaitReady(tag)).
-		Append(self.Generic.NewAction(tag, 0x02)).
-		Append(self.Generic.NewWaitDone(tag, self.timeout))
+		Append(devEspr.Generic.NewWaitReady(tag)).
+		Append(devEspr.Generic.NewAction(tag, 0x02)).
+		Append(devEspr.Generic.NewWaitDone(tag, devEspr.timeout))
 }
 
-func (self *DeviceEspresso) NewRelease() engine.Doer {
-	tag := self.name + ".release"
+func (devEspr *DeviceEspresso) NewRelease() engine.Doer {
+	tag := devEspr.name + ".release"
 	return engine.NewSeq(tag).
-		Append(self.Generic.NewWaitReady(tag)).
-		Append(self.Generic.NewAction(tag, 0x03)).
-		Append(self.Generic.NewWaitDone(tag, self.timeout))
+		Append(devEspr.Generic.NewWaitReady(tag)).
+		Append(devEspr.Generic.NewAction(tag, 0x03)).
+		Append(devEspr.Generic.NewWaitDone(tag, devEspr.timeout))
 }
 
-func (self *DeviceEspresso) NewHeat(on bool) engine.Doer {
-	tag := fmt.Sprintf("%s.heat:%t", self.name, on)
+func (devEspr *DeviceEspresso) NewHeat(on bool) engine.Doer {
+	tag := fmt.Sprintf("%s.heat:%t", devEspr.name, on)
 	arg := byte(0x05)
 	if !on {
 		arg = 0x06
 	}
 	return engine.NewSeq(tag).
-		Append(self.Generic.NewWaitReady(tag)).
-		Append(self.Generic.NewAction(tag, arg))
+		Append(devEspr.Generic.NewWaitReady(tag)).
+		Append(devEspr.Generic.NewAction(tag, arg))
 }

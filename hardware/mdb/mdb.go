@@ -28,7 +28,7 @@ type Uarter interface {
 
 type FeatureNotSupported string
 
-func (self FeatureNotSupported) Error() string { return string(self) }
+func (fns FeatureNotSupported) Error() string { return string(fns) }
 
 type Bus struct {
 	Error func(error)

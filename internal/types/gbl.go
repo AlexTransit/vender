@@ -33,10 +33,12 @@ type VMCType struct {
 		}
 		Temperature int
 	}
-	MonSys struct {
-		BillOn  bool
-		BillRun bool
-	}
+	MonSys MonSysStruct
+}
+type MonSysStruct struct {
+	Dirty   currency.Amount
+	BillOn  bool
+	BillRun bool
 }
 
 type UItype struct { //nolint:maligned
