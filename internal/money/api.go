@@ -89,38 +89,38 @@ func (ms *MoneySystem) WithdrawPrepare(ctx context.Context, amount currency.Amou
 		return ErrNeedMoreMoney
 	}
 
-	// change := currency.Amount(0)
-	// // Don't give change from gift money.
-	// if cash := ms.locked_credit(creditCash | creditEscrow); cash > amount {
-	// 	change = cash - amount
-	// }
+	change := currency.Amount(0)
+	// Don't give change from gift money.
+	if cash := ms.locked_credit(creditCash | creditEscrow); cash > amount {
+		change = cash - amount
+	}
 
-	// go func() {
-	// 	ms.lk.Lock()
-	// 	defer ms.lk.Unlock()
+	go func() {
+		ms.lk.Lock()
+		defer ms.lk.Unlock()
 
-	// 	if err := ms.locked_payout(ctx, change); err != nil {
-	// 		err = errors.Annotate(err, tag)
-	// 		ms.Log.Errorf("%s CRITICAL change err=%v", tag, err)
-	// 		state.GetGlobal(ctx).Tele.Error(err)
-	// 	}
+		if err := ms.locked_payout(ctx, change); err != nil {
+			err = errors.Annotate(err, tag)
+			ms.Log.Errorf("%s CRITICAL change err=%v", tag, err)
+			state.GetGlobal(ctx).Tele.Error(err)
+		}
 
-	// 	billEscrowAmount := ms.bill.EscrowAmount()
-	// 	if billEscrowAmount != 0 {
-	// 		if err := g.Engine.Exec(ctx, ms.bill.EscrowAccept()); err != nil {
-	// 			err = errors.Annotate(err, tag+"CRITICAL EscrowAccept")
-	// 			ms.Log.Error(err)
-	// 		} else {
-	// 			// ms.dirty += billEscrowAmount
-	// 			ms.AddDirty(billEscrowAmount)
-	// 		}
-	// 	}
+		// billEscrowAmount := ms.bill.EscrowAmount()
+		// if billEscrowAmount != 0 {
+		// 	if err := g.Engine.Exec(ctx, ms.bill.EscrowAccept()); err != nil {
+		// 		err = errors.Annotate(err, tag+"CRITICAL EscrowAccept")
+		// 		ms.Log.Error(err)
+		// 	} else {
+		// 		// ms.dirty += billEscrowAmount
+		// 		ms.AddDirty(billEscrowAmount)
+		// 	}
+		// }
 
-	// 	// if ms.dirty != amount {
-	// 	if ms.GetDirty() != amount {
-	// 		ms.Log.Errorf("%s (WithdrawPrepare) CRITICAL amount=%s dirty=%s", tag, amount.FormatCtx(ctx), ms.dirty.FormatCtx(ctx))
-	// 	}
-	// }()
+		// if ms.dirty != amount {
+		if ms.GetDirty() != amount {
+			ms.Log.Errorf("%s (WithdrawPrepare) CRITICAL amount=%s dirty=%s", tag, amount.FormatCtx(ctx), ms.dirty.FormatCtx(ctx))
+		}
+	}()
 
 	return nil
 }
