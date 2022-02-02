@@ -21,14 +21,14 @@ type megaUart struct {
 func NewMegaUart(client *mega.Client) mdb.Uarter {
 	return &megaUart{c: client}
 }
-func (self *megaUart) Open(_ string) error {
-	self.c.IncRef("mdb-uart")
+func (mu *megaUart) Open(_ string) error {
+	mu.c.IncRef("mdb-uart")
 	return nil
-	// _, err := self.c.DoTimeout(mega.COMMAND_STATUS, nil, 5*time.Second)
+	// _, err := mu.c.DoTimeout(mega.COMMAND_STATUS, nil, 5*time.Second)
 	// return err
 }
-func (self *megaUart) Close() error {
-	return self.c.DecRef("mdb-uart")
+func (mu *megaUart) Close() error {
+	return mu.c.DecRef("mdb-uart")
 }
 
 func responseError(r mega.Mdb_result_t, arg byte) error {
@@ -49,14 +49,14 @@ func responseError(r mega.Mdb_result_t, arg byte) error {
 	}
 }
 
-func (self *megaUart) Break(d, sleep time.Duration) error {
-	self.lk.Lock()
-	defer self.lk.Unlock()
+func (mu *megaUart) Break(d, sleep time.Duration) error {
+	mu.lk.Lock()
+	defer mu.lk.Unlock()
 
 	var f mega.Frame
 	var err error
 	for retry := 1; retry <= 3; retry++ {
-		f, err = self.c.DoMdbBusReset(d)
+		f, err = mu.c.DoMdbBusReset(d)
 		switch errors.Cause(err) {
 		case nil: // success path
 			err = responseError(f.Fields.MdbResult, f.Fields.MdbError)
@@ -67,7 +67,7 @@ func (self *megaUart) Break(d, sleep time.Duration) error {
 			time.Sleep(DelayErr)
 
 		case mega.ErrCriticalProtocol:
-			self.c.Log.Fatal(errors.ErrorStack(err))
+			mu.c.Log.Fatal(errors.ErrorStack(err))
 
 		default:
 			return err
@@ -76,21 +76,21 @@ func (self *megaUart) Break(d, sleep time.Duration) error {
 	return err
 }
 
-func (self *megaUart) Tx(request, response []byte) (int, error) {
+func (mu *megaUart) Tx(request, response []byte) (int, error) {
 	const tag = "mdb.mega.Tx"
-	self.lk.Lock()
-	defer self.lk.Unlock()
+	mu.lk.Lock()
+	defer mu.lk.Unlock()
 
 	var f mega.Frame
 	var err error
 	for retry := 1; retry <= 3; retry++ {
 		// FIXME should not be here, but fixes MDB busy/uart_unexpected race
-		time.Sleep(1 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 
-		f, err = self.c.DoMdbTxSimple(request)
+		f, err = mu.c.DoMdbTxSimple(request)
 		switch errors.Cause(err) {
 		case nil: // success path
-			self.c.Log.Debugf("%s request=%x f=%s", tag, request, f.ResponseString())
+			mu.c.Log.Debugf("%s request=%x f=%s", tag, request, f.ResponseString())
 			err = responseError(f.Fields.MdbResult, f.Fields.MdbError)
 			if err == nil {
 				n := copy(response, f.Fields.MdbData)
@@ -101,12 +101,12 @@ func (self *megaUart) Tx(request, response []byte) (int, error) {
 		case mega.ErrCriticalProtocol:
 			// Alexm - падает все. бабло не возвращает.
 			err = errors.Annotatef(err, "%s CRITICAL request=%x", tag, request)
-			self.c.Log.Fatal(err)
+			mu.c.Log.Fatal(err)
 			return 0, err
 
 		default:
 			err = errors.Annotatef(err, "%s request=%x", tag, request)
-			self.c.Log.Error(err)
+			mu.c.Log.Error(err)
 			return 0, err
 		}
 	}

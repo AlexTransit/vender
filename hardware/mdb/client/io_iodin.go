@@ -18,19 +18,19 @@ func NewIodinUart(c *iodin.Client) *iodinUart {
 	return &iodinUart{c: c}
 }
 
-func (self *iodinUart) Close() error {
-	err := self.c.DecRef("mdb")
-	self.c = nil
+func (iu *iodinUart) Close() error {
+	err := iu.c.DecRef("mdb")
+	iu.c = nil
 	return err
 }
 
-func (self *iodinUart) Break(d, sleep time.Duration) error {
-	self.lk.Lock()
-	defer self.lk.Unlock()
+func (iu *iodinUart) Break(d, sleep time.Duration) error {
+	iu.lk.Lock()
+	defer iu.lk.Unlock()
 
 	ms := int(d / time.Millisecond)
 	var r iodin.Response
-	err := self.c.Do(&iodin.Request{Command: iodin.Request_MDB_RESET, ArgUint: uint32(ms)}, &r)
+	err := iu.c.Do(&iodin.Request{Command: iodin.Request_MDB_RESET, ArgUint: uint32(ms)}, &r)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -38,18 +38,18 @@ func (self *iodinUart) Break(d, sleep time.Duration) error {
 	return nil
 }
 
-func (self *iodinUart) Open(path string) error {
+func (iu *iodinUart) Open(path string) error {
 	var r iodin.Response
-	err := self.c.Do(&iodin.Request{Command: iodin.Request_MDB_OPEN, ArgBytes: []byte(path)}, &r)
+	err := iu.c.Do(&iodin.Request{Command: iodin.Request_MDB_OPEN, ArgBytes: []byte(path)}, &r)
 	return errors.Trace(err)
 }
 
-func (self *iodinUart) Tx(request, response []byte) (n int, err error) {
-	self.lk.Lock()
-	defer self.lk.Unlock()
+func (iu *iodinUart) Tx(request, response []byte) (n int, err error) {
+	iu.lk.Lock()
+	defer iu.lk.Unlock()
 
 	var r iodin.Response
-	err = self.c.Do(&iodin.Request{Command: iodin.Request_MDB_TX, ArgBytes: request}, &r)
+	err = iu.c.Do(&iodin.Request{Command: iodin.Request_MDB_TX, ArgBytes: request}, &r)
 	n = copy(response, r.DataBytes)
 	return n, errors.Trace(err)
 }

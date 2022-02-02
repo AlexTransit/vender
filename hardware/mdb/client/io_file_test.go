@@ -27,22 +27,22 @@ type mockReader struct {
 	vs  []mockReadEffect
 }
 
-func (self *mockReader) Read(p []byte) (int, error) {
-	max := uint(len(self.vs))
+func (mr *mockReader) Read(p []byte) (int, error) {
+	max := uint(len(mr.vs))
 	for {
-		if self.pos >= max {
+		if mr.pos >= max {
 			return 0, io.EOF
 		}
-		mre := self.vs[self.pos]
-		self.pos++
+		mre := mr.vs[mr.pos]
+		mr.pos++
 		time.Sleep(mre.delay)
 		if mre.err != nil {
-			self.Log.Errorf("mr.Read ret=err mre=%+v", mre)
+			mr.Log.Errorf("mr.Read ret=err mre=%+v", mre)
 			return 0, mre.err
 		}
 		if mre.b != nil {
 			n := copy(p, mre.b)
-			self.Log.Debugf("mr.Read ret=%d,%x mre=%+v", n, p[:n], mre)
+			mr.Log.Debugf("mr.Read ret=%d,%x mre=%+v", n, p[:n], mre)
 			return n, nil
 		}
 	}
