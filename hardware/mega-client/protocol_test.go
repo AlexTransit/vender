@@ -115,7 +115,7 @@ func TestParseFields(t *testing.T) {
 		expect string
 	}
 	cases := []Case{
-		Case{"status", "4409010204d40101050302d70001010101", "clock10u=12360us,firmware=0105,reset=+EXT"},
+		{"status", "4409010204d40101050302d70001010101", "clock10u=12360us,firmware=0105,reset=+EXT"},
 		// Case{"mdb-e0", "4409010a01000c015a0b00a600010101010101", "mdb_result=SUCCESS:00,mdb_duration=3460us,mdb_data="},
 	}
 	for _, c := range cases {
@@ -178,9 +178,9 @@ func BenchmarkParse(b *testing.B) {
 		input string
 	}
 	cases := []Case{
-		Case{"reset", "4409020200000101050302f90001010101"},
-		Case{"status", "4409010204d40101050302d70001010101"},
-		Case{"mdb-long", "441c0102141b1001001208a2111006000b0100010a06d807362800000701080001010101"},
+		{"reset", "4409020200000101050302f90001010101"},
+		{"status", "4409010204d40101050302d70001010101"},
+		{"mdb-long", "441c0102141b1001001208a2111006000b0100010a06d807362800000701080001010101"},
 	}
 
 	mkBench := func(input []byte) func(b *testing.B) {

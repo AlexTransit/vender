@@ -82,51 +82,51 @@ func NewCommand(cmd Command_t, data ...byte) Frame {
 	return f
 }
 
-func (self *Frame) Bytes() []byte {
-	return self.buf[:frameOverhead+self.plen]
+func (f *Frame) Bytes() []byte {
+	return f.buf[:frameOverhead+f.plen]
 }
 
-func (self *Frame) Payload() []byte {
-	if self.plen == 0 {
+func (f *Frame) Payload() []byte {
+	if f.plen == 0 {
 		return nil
 	}
-	return self.buf[2 : 2+self.plen]
+	return f.buf[2 : 2+f.plen]
 }
 
-func (self *Frame) ResponseKind() Response_t {
-	if (self.Flag&PROTOCOL_FLAG_PAYLOAD == 0) || (self.plen == 0) {
+func (f *Frame) ResponseKind() Response_t {
+	if (f.Flag&PROTOCOL_FLAG_PAYLOAD == 0) || (f.plen == 0) {
 		return 0
 	}
-	return Response_t(self.buf[2])
+	return Response_t(f.buf[2])
 }
 
-func (self *Frame) HeaderString() string {
-	return fmt.Sprintf("%02x", self.buf[0])
+func (f *Frame) HeaderString() string {
+	return fmt.Sprintf("%02x", f.buf[0])
 }
 
-func (self *Frame) CommandString() string {
-	if self == nil {
+func (f *Frame) CommandString() string {
+	if f == nil {
 		return ""
 	}
-	cmd := Command_t(self.buf[2])
-	return fmt.Sprintf("%s %x debug=%x", cmd.String(), self.Payload(), self.Bytes())
+	cmd := Command_t(f.buf[2])
+	return fmt.Sprintf("%s %x debug=%x", cmd.String(), f.Payload(), f.Bytes())
 }
 
-func (self *Frame) ResponseString() string {
-	kind := self.ResponseKind()
-	fields := self.Fields.String()
-	return fmt.Sprintf("%s %s debug=%x", kind.String(), fields, self.Bytes())
+func (f *Frame) ResponseString() string {
+	kind := f.ResponseKind()
+	fields := f.Fields.String()
+	return fmt.Sprintf("%s %s debug=%x", kind.String(), fields, f.Bytes())
 }
 
 // Overwrites frame state
-func (self *Frame) Parse(b []byte) error {
+func (f *Frame) Parse(b []byte) error {
 	if len(b) < totalOverheads {
 		return errors.NotValidf("input length too small")
 	}
 
 	var padStart int
 	var err error
-	padStart, self.Errcode, err = parsePadding(b, true)
+	padStart, f.Errcode, err = parsePadding(b, true)
 	if err != nil {
 		return err
 	}
@@ -136,39 +136,39 @@ func (self *Frame) Parse(b []byte) error {
 		return errors.NotValidf("frame=%x before padding is too short min=%d", b, frameOverhead)
 	}
 
-	if self.Flag, self.Version, self.plen, err = parseHeader(b); err != nil {
+	if f.Flag, f.Version, f.plen, err = parseHeader(b); err != nil {
 		return err
 	}
-	if int(self.plen) > len(b)-frameOverhead {
-		return errors.NotValidf("frame=%x claims length=%d > input-overhead=%d", b, self.plen, len(b)-frameOverhead)
+	if int(f.plen) > len(b)-frameOverhead {
+		return errors.NotValidf("frame=%x claims length=%d > input-overhead=%d", b, f.plen, len(b)-frameOverhead)
 	}
 
-	crcInput := b[2+self.plen]
-	crcLocal := crc.CRC8_p93_n(0, b[1:2+self.plen])
+	crcInput := b[2+f.plen]
+	crcLocal := crc.CRC8_p93_n(0, b[1:2+f.plen])
 	if crcInput != crcLocal {
 		return errors.NotValidf("frame=%x crc=%02x actual=%02x", b, crcInput, crcLocal)
 	}
-	self.crc = crcLocal
+	f.crc = crcLocal
 
-	copy(self.buf[:], b[:frameOverhead+self.plen])
-	if (self.Flag&PROTOCOL_FLAG_PAYLOAD == 0) && (self.plen > 0) {
-		return errors.NotValidf("frame=%x FLAG_PAYLOAD=no payload len=%d", b, self.plen)
+	copy(f.buf[:], b[:frameOverhead+f.plen])
+	if (f.Flag&PROTOCOL_FLAG_PAYLOAD == 0) && (f.plen > 0) {
+		return errors.NotValidf("frame=%x FLAG_PAYLOAD=no payload len=%d", b, f.plen)
 	}
 
 	return nil
 }
 
-func (self *Frame) ParseFields() error {
-	self.Fields = Fields{}
-	if self.plen == 0 {
+func (f *Frame) ParseFields() error {
+	f.Fields = Fields{}
+	if f.plen == 0 {
 		return nil
 	}
-	switch self.ResponseKind() {
+	switch f.ResponseKind() {
 	case RESPONSE_OK, RESPONSE_RESET, RESPONSE_TWI_LISTEN, RESPONSE_ERROR:
 	default:
-		return errors.NotValidf("frame=%x response=%s", self.Bytes(), self.ResponseKind())
+		return errors.NotValidf("frame=%x response=%s", f.Bytes(), f.ResponseKind())
 	}
-	return self.Fields.Parse(self.Payload()[1:])
+	return f.Fields.Parse(f.Payload()[1:])
 }
 
 type ResetFlag uint8
@@ -198,8 +198,8 @@ type Fields struct {
 	TwiAddr         byte
 }
 
-func (self *Fields) Parse(b []byte) error {
-	*self = Fields{}
+func (f *Fields) Parse(b []byte) error {
+	*f = Fields{}
 	if len(b) == 0 {
 		return nil
 	}
@@ -207,14 +207,14 @@ func (self *Fields) Parse(b []byte) error {
 	var flen uint8
 	var tag Field_t
 	for int(bi) < len(b) {
-		tag, flen = self.parseNext(b[bi:])
+		tag, flen = f.parseNext(b[bi:])
 		if flen == 0 {
 			// bi++ // try to parse rest
 			return fmt.Errorf("mega Fields.Parse data=%x tag=%02x(%s) at=%x", b, byte(tag), tag.String(), b[bi:])
 		} else {
-			if !((tag == FIELD_ERROR2 && len(self.Error2s) == 0) || (tag == FIELD_ERRORN && len(self.ErrorNs) == 0)) {
-				self.tagOrder[self.Len] = tag
-				self.Len++
+			if !((tag == FIELD_ERROR2 && len(f.Error2s) == 0) || (tag == FIELD_ERRORN && len(f.ErrorNs) == 0)) {
+				f.tagOrder[f.Len] = tag
+				f.Len++
 			}
 			bi += flen
 		}
@@ -222,25 +222,25 @@ func (self *Fields) Parse(b []byte) error {
 	return nil
 }
 
-func (self Fields) String() string {
+func (f Fields) String() string {
 	buf := make([]byte, 0, 128)
-	for i := uint8(0); i < self.Len; i++ {
-		tag := self.tagOrder[i]
+	for i := uint8(0); i < f.Len; i++ {
+		tag := f.tagOrder[i]
 		if i > 0 {
 			buf = append(buf, ',')
 		}
-		buf = append(buf, self.FieldString(tag)...)
+		buf = append(buf, f.FieldString(tag)...)
 	}
 	return string(buf)
 }
-func (self Fields) FieldString(tag Field_t) string {
+func (f Fields) FieldString(tag Field_t) string {
 	switch tag {
 	case FIELD_FIRMWARE_VERSION:
 		// TODO check/ensure byte order
-		return fmt.Sprintf("firmware=%04x", self.FirmwareVersion)
+		return fmt.Sprintf("firmware=%04x", f.FirmwareVersion)
 	case FIELD_ERROR2:
 		es := []string{}
-		for _, e16 := range self.Error2s {
+		for _, e16 := range f.Error2s {
 			code := Errcode_t(e16 >> 8)
 			arg := e16 & 0xff
 			es = append(es, fmt.Sprintf("%s:%02x", code.String(), arg))
@@ -248,81 +248,81 @@ func (self Fields) FieldString(tag Field_t) string {
 		return fmt.Sprintf("error2=%s", strings.Join(es, "|"))
 	case FIELD_ERRORN:
 		es := []string{}
-		for _, e := range self.ErrorNs {
+		for _, e := range f.ErrorNs {
 			es = append(es, helpers.HexSpecialBytes(e))
 		}
 		return fmt.Sprintf("errorn=%s", strings.Join(es, "|"))
 	case FIELD_MCUSR:
-		return "reset=" + mcusrString(self.Mcusr)
+		return "reset=" + mcusrString(f.Mcusr)
 	case FIELD_MDB_RESULT:
-		return fmt.Sprintf("mdb_result=%s:%02x", self.MdbResult.String(), self.MdbError)
+		return fmt.Sprintf("mdb_result=%s:%02x", f.MdbResult.String(), f.MdbError)
 	case FIELD_MDB_DATA:
-		return fmt.Sprintf("mdb_data=%x", self.MdbData)
+		return fmt.Sprintf("mdb_data=%x", f.MdbData)
 	case FIELD_MDB_DURATION10U:
-		return fmt.Sprintf("mdb_duration=%dus", self.MdbDuration)
+		return fmt.Sprintf("mdb_duration=%dus", f.MdbDuration)
 	case FIELD_TWI_DATA:
-		return fmt.Sprintf("twi_data=%x", self.TwiData)
+		return fmt.Sprintf("twi_data=%x", f.TwiData)
 	case FIELD_TWI_ADDR:
-		return fmt.Sprintf("twi_addr=%d", self.TwiAddr)
+		return fmt.Sprintf("twi_addr=%d", f.TwiAddr)
 	case FIELD_CLOCK10U:
-		return fmt.Sprintf("clock10u=%dus", self.Clock10u)
+		return fmt.Sprintf("clock10u=%dus", f.Clock10u)
 	default:
 		return fmt.Sprintf("!ERROR:invalid-tag:%02x", tag)
 	}
 }
 
-func (self *Fields) parseNext(b []byte) (Field_t, uint8) {
+func (f *Fields) parseNext(b []byte) (Field_t, uint8) {
 	tag := Field_t(b[0])
 	arg := b[1:]
 	switch tag {
 	case FIELD_ERROR2:
 		// TODO assert len(arg)>=2
 		e16 := binary.BigEndian.Uint16(arg)
-		self.Error2s = append(self.Error2s, e16)
+		f.Error2s = append(f.Error2s, e16)
 		return tag, 1 + 2
 	case FIELD_ERRORN:
 		// TODO assert len(arg)>=1
 		n := arg[0]
 		// TODO assert len(arg)>=1+n
 		es := arg[1 : 1+n]
-		self.ErrorNs = append(self.ErrorNs, es)
+		f.ErrorNs = append(f.ErrorNs, es)
 		return tag, 1 + 1 + n
 	case FIELD_FIRMWARE_VERSION:
 		// TODO assert len(arg)>=2
-		self.FirmwareVersion = binary.BigEndian.Uint16(arg)
+		f.FirmwareVersion = binary.BigEndian.Uint16(arg)
 		return tag, 1 + 2
 	case FIELD_MCUSR:
 		// TODO assert len(arg)>=1
-		self.Mcusr = arg[0]
+		f.Mcusr = arg[0]
 		return tag, 1 + 1
 	case FIELD_MDB_RESULT:
 		// TODO assert len(arg)>=4
-		self.MdbResult = Mdb_result_t(arg[0])
-		self.MdbError = arg[1]
+		f.MdbResult = Mdb_result_t(arg[0])
+		f.MdbError = arg[1]
 		return tag, 1 + 2
 	case FIELD_MDB_DATA:
 		// TODO assert len(arg)>=1
 		n := arg[0]
 		// TODO assert len(arg)>=1+n
-		self.MdbData = arg[1 : 1+n]
+		f.MdbData = arg[1 : 1+n]
 		return tag, 1 + 1 + n
 	case FIELD_MDB_DURATION10U:
 		// TODO assert len(arg)>=2
-		self.MdbDuration = uint32(binary.BigEndian.Uint16(arg)) * 10
+		f.MdbDuration = uint32(binary.BigEndian.Uint16(arg)) * 10
 		return tag, 1 + 2
 	case FIELD_TWI_DATA:
 		// TODO assert len(arg)>=1
 		n := arg[0]
 		// TODO assert len(arg)>=1+n
-		self.TwiData = arg[1 : 1+n]
+		f.TwiData = arg[1 : 1+n]
 		return tag, 1 + 1 + n
 	case FIELD_TWI_ADDR:
 		// TODO assert len(arg)>=1
-		self.TwiAddr = arg[0]
+		f.TwiAddr = arg[0]
 		return tag, 1 + 1
 	case FIELD_CLOCK10U:
 		// TODO assert len(arg)>=2
-		self.Clock10u = uint32(binary.BigEndian.Uint16(arg)) * 10
+		f.Clock10u = uint32(binary.BigEndian.Uint16(arg)) * 10
 		return tag, 1 + 2
 	default:
 		return FIELD_INVALID, 0
