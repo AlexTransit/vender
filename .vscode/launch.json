@@ -17,7 +17,7 @@
             "env": {
 				"DEBUG_AS_ROOT": "true",
 			},
-            "debugAdapter": "dlv-dap"
+            // "debugAdapter": "dlv"
         }
     ]
 }
