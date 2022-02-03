@@ -162,7 +162,7 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		sig := <-sigs
-		g.Log.Infof("system signal - %v",sig)
+		g.Log.Infof("system signal - %v", sig)
 		g.VmcStop(ctx)
 	}()
 

@@ -39,7 +39,7 @@ func (i Field_t) String() string {
 	switch {
 	// case 0 <= i && i <= 3:
 	case i <= 3:
-	// case i >= 0 && i <= 3:
+		// case i >= 0 && i <= 3:
 		return _Field_t_name_0[_Field_t_index_0[i]:_Field_t_index_0[i+1]]
 	case 8 <= i && i <= 9:
 		i -= 8
