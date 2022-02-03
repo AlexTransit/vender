@@ -101,7 +101,8 @@ func (mu *megaUart) Tx(request, response []byte) (int, error) {
 		case mega.ErrCriticalProtocol:
 			// Alexm - падает все. бабло не возвращает.
 			err = errors.Annotatef(err, "%s CRITICAL request=%x", tag, request)
-			mu.c.Log.Fatal(err)
+			// mu.c.Log.Fatal(err)
+			mu.c.Log.Error(err)
 			return 0, err
 
 		default:
