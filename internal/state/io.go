@@ -23,27 +23,27 @@ func NewOsFullReader() *OsFullReader {
 	return &OsFullReader{}
 }
 
-func (self *OsFullReader) SetBase(path string) {
+func (ofr *OsFullReader) SetBase(path string) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
 		err = errors.Annotatef(err, "filepath.Abs() path=%s", path)
 		log.Fatal(errors.ErrorStack(err))
 	}
-	self.base = filepath.Clean(abs)
+	ofr.base = filepath.Clean(abs)
 }
 
-func (self OsFullReader) Normalize(path string) string {
-	if self.base == "" {
+func (ofr OsFullReader) Normalize(path string) string {
+	if ofr.base == "" {
 		log.Fatal("config.OsFullReader base is not set")
 	}
 	if !filepath.IsAbs(path) {
-		path = filepath.Join(self.base, path)
+		path = filepath.Join(ofr.base, path)
 	}
 	return filepath.Clean(path)
 }
 
-func (self *OsFullReader) ReadAll(path string) ([]byte, error) {
-	if self.base == "" {
+func (ofr *OsFullReader) ReadAll(path string) ([]byte, error) {
+	if ofr.base == "" {
 		log.Fatal("config.OsFullReader base is not set")
 	}
 	if !filepath.IsAbs(path) {
@@ -70,12 +70,12 @@ func NewMockFullReader(sources map[string]string) *MockFullReader {
 	return &MockFullReader{Map: sources}
 }
 
-func (self *MockFullReader) Normalize(name string) string {
+func (ofr *MockFullReader) Normalize(name string) string {
 	return filepath.Clean(name)
 }
 
-func (self *MockFullReader) ReadAll(name string) ([]byte, error) {
-	if s, ok := self.Map[name]; ok {
+func (ofr *MockFullReader) ReadAll(name string) ([]byte, error) {
+	if s, ok := ofr.Map[name]; ok {
 		return []byte(s), nil
 	}
 	return nil, nil
