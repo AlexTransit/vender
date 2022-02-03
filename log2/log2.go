@@ -78,111 +78,111 @@ type FmtFunc func(format string, args ...interface{})
 type FmtFuncWriter struct{ FmtFunc }
 
 func NewFunc(f FmtFunc, level Level) *Log { return NewWriter(FmtFuncWriter{f}, level) }
-func (self FmtFuncWriter) Write(b []byte) (int, error) {
-	self.FmtFunc(string(b))
+func (ffw FmtFuncWriter) Write(b []byte) (int, error) {
+	ffw.FmtFunc(string(b))
 	return len(b), nil
 }
 
 func NewTest(t testing.TB, level Level) *Log {
-	self := NewFunc(t.Logf, level)
-	self.fatalf = t.Fatalf
-	return self
+	lg := NewFunc(t.Logf, level)
+	lg.fatalf = t.Fatalf
+	return lg
 }
 
-func (self *Log) Clone(level Level) *Log {
-	if self == nil {
+func (lg *Log) Clone(level Level) *Log {
+	if lg == nil {
 		return nil
 	}
-	new := NewWriter(self.l.Writer(), level)
-	new.fatalf = self.fatalf
-	new.storeErrorFunc(self.loadErrorFunc())
-	new.SetFlags(self.l.Flags())
+	new := NewWriter(lg.l.Writer(), level)
+	new.fatalf = lg.fatalf
+	new.storeErrorFunc(lg.loadErrorFunc())
+	new.SetFlags(lg.l.Flags())
 	return new
 }
 
-func (self *Log) SetErrorFunc(f ErrorFunc) {
-	if self == nil {
+func (lg *Log) SetErrorFunc(f ErrorFunc) {
+	if lg == nil {
 		return
 	}
-	self.storeErrorFunc(f)
+	lg.storeErrorFunc(f)
 }
 
-func (self *Log) SetLevel(l Level) {
-	if self == nil {
+func (lg *Log) SetLevel(l Level) {
+	if lg == nil {
 		return
 	}
-	atomic.StoreInt32((*int32)(&self.level), int32(l))
+	atomic.StoreInt32((*int32)(&lg.level), int32(l))
 }
 
-func (self *Log) SetFlags(f int) {
-	if self == nil {
+func (lg *Log) SetFlags(f int) {
+	if lg == nil {
 		return
 	}
-	self.l.SetFlags(f)
+	lg.l.SetFlags(f)
 }
 
-func (self *Log) Stdlib() *log.Logger {
-	if self == nil {
+func (lg *Log) Stdlib() *log.Logger {
+	if lg == nil {
 		return nil
 	}
-	return self.l
+	return lg.l
 }
 
-func (self *Log) SetOutput(w io.Writer) {
-	if self == nil {
+func (lg *Log) SetOutput(w io.Writer) {
+	if lg == nil {
 		return
 	}
-	self.l.SetOutput(w)
+	lg.l.SetOutput(w)
 }
 
-func (self *Log) SetPrefix(prefix string) {
-	if self == nil {
+func (lg *Log) SetPrefix(prefix string) {
+	if lg == nil {
 		return
 	}
-	self.l.SetPrefix(prefix)
+	lg.l.SetPrefix(prefix)
 }
 
-func (self *Log) Enabled(level Level) bool {
-	if self == nil {
+func (lg *Log) Enabled(level Level) bool {
+	if lg == nil {
 		return false
 	}
-	return atomic.LoadInt32((*int32)(&self.level)) >= int32(level)
+	return atomic.LoadInt32((*int32)(&lg.level)) >= int32(level)
 }
 
-func (self *Log) Log(level Level, s string) {
-	if self.Enabled(level) {
-		_ = self.l.Output(3, s)
+func (lg *Log) Log(level Level, s string) {
+	if lg.Enabled(level) {
+		_ = lg.l.Output(3, s)
 	}
 }
-func (self *Log) Logf(level Level, format string, args ...interface{}) {
-	if self.Enabled(level) {
-		_ = self.l.Output(3, fmt.Sprintf(format, args...))
+func (lg *Log) Logf(level Level, format string, args ...interface{}) {
+	if lg.Enabled(level) {
+		_ = lg.l.Output(3, fmt.Sprintf(format, args...))
 	}
 }
 
 // compatibility with eclipse.paho.mqtt
-func (self *Log) Printf(format string, args ...interface{}) { self.Logf(LInfo, format, args...) }
-func (self *Log) Println(args ...interface{})               { self.Log(LInfo, fmt.Sprint(args...)) }
+func (lg *Log) Printf(format string, args ...interface{}) { lg.Logf(LInfo, format, args...) }
+func (lg *Log) Println(args ...interface{})               { lg.Log(LInfo, fmt.Sprint(args...)) }
 
-func (self *Log) Info(args ...interface{}) {
-	self.Log(LInfo, fmt.Sprint(args...))
+func (lg *Log) Info(args ...interface{}) {
+	lg.Log(LInfo, fmt.Sprint(args...))
 }
-func (self *Log) Infof(format string, args ...interface{}) {
-	self.Logf(LInfo, format, args...)
+func (lg *Log) Infof(format string, args ...interface{}) {
+	lg.Logf(LInfo, format, args...)
 }
-func (self *Log) Debug(args ...interface{}) {
-	self.Log(LDebug, "debug: "+fmt.Sprint(args...))
+func (lg *Log) Debug(args ...interface{}) {
+	lg.Log(LDebug, "debug: "+fmt.Sprint(args...))
 }
-func (self *Log) Debugf(format string, args ...interface{}) {
-	self.Logf(LDebug, "debug: "+format, args...)
+func (lg *Log) Debugf(format string, args ...interface{}) {
+	lg.Logf(LDebug, "debug: "+format, args...)
 }
 
-func (self *Log) Error(args ...interface{}) {
-	self.Log(LError, "error: "+fmt.Sprint(args...))
-	if self == nil {
+func (lg *Log) Error(args ...interface{}) {
+	lg.Log(LError, "error: "+fmt.Sprint(args...))
+	if lg == nil {
 		return
 	}
-	if errfun := self.loadErrorFunc(); errfun != nil {
+	if errfun := lg.loadErrorFunc(); errfun != nil {
 		var e error
 		if len(args) >= 1 {
 			e, _ = args[0].(error)
@@ -197,31 +197,31 @@ func (self *Log) Error(args ...interface{}) {
 		}
 	}
 }
-func (self *Log) Errorf(format string, args ...interface{}) {
-	self.Logf(LError, "error: "+format, args...)
-	if self == nil {
+func (lg *Log) Errorf(format string, args ...interface{}) {
+	lg.Logf(LError, "error: "+format, args...)
+	if lg == nil {
 		return
 	}
-	if errfun := self.loadErrorFunc(); errfun != nil {
+	if errfun := lg.loadErrorFunc(); errfun != nil {
 		e := fmt.Errorf(fmt.Sprintf(format, args...))
 		errfun(e)
 	}
 }
 
-func (self *Log) Fatalf(format string, args ...interface{}) {
-	if self.fatalf != nil {
-		self.fatalf(format, args...)
+func (lg *Log) Fatalf(format string, args ...interface{}) {
+	if lg.fatalf != nil {
+		lg.fatalf(format, args...)
 	} else {
-		self.Logf(LError, "fatal: "+format, args...)
+		lg.Logf(LError, "fatal: "+format, args...)
 		os.Exit(1)
 	}
 }
-func (self *Log) Fatal(args ...interface{}) {
+func (lg *Log) Fatal(args ...interface{}) {
 	s := fmt.Sprint(args...)
-	if self.fatalf != nil {
-		self.fatalf(s)
+	if lg.fatalf != nil {
+		lg.fatalf(s)
 	} else {
-		self.Logf(LError, "fatal: "+s)
+		lg.Logf(LError, "fatal: "+s)
 		os.Exit(1)
 	}
 }
@@ -229,14 +229,14 @@ func (self *Log) Fatal(args ...interface{}) {
 // workaround for atomic.Value with nil
 type wrapErrorFunc struct{ ErrorFunc }
 
-func (self *Log) loadErrorFunc() ErrorFunc {
-	if x := self.onError.Load(); x != nil {
+func (lg *Log) loadErrorFunc() ErrorFunc {
+	if x := lg.onError.Load(); x != nil {
 		return x.(wrapErrorFunc).ErrorFunc
 	} else {
 		return nil
 	}
 }
 
-func (self *Log) storeErrorFunc(new ErrorFunc) {
-	self.onError.Store(wrapErrorFunc{new})
+func (lg *Log) storeErrorFunc(new ErrorFunc) {
+	lg.onError.Store(wrapErrorFunc{new})
 }
