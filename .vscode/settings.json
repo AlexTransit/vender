@@ -1,6 +1,7 @@
 {
     "go.alternateTools": {
-        "dlv-dap": "${workspaceFolder}/.vscode/dlv-override.sh"
+        // "dlv-dap": "${workspaceFolder}/.vscode/dlv-override.sh"
+        "dlv": "${workspaceFolder}/.vscode/dlv-override.sh"
         // "dlv": "${workspaceFolder}/.vscode/dlv-sudo.sh"
     }
 }

@@ -93,9 +93,9 @@ func BenchmarkLog2(b *testing.B) {
 		prepare func(w io.Writer) FmtFunc
 	}
 	cases := []Case{
-		Case{"me-skiplevel", prepareMeSkipLevel},
-		Case{"me", prepareMe},
-		Case{"stdlib", prepareStd},
+		{"me-skiplevel", prepareMeSkipLevel},
+		{"me", prepareMe},
+		{"stdlib", prepareStd},
 	}
 	for _, c := range cases {
 		for _, dest := range []string{"buffer", "discard"} {

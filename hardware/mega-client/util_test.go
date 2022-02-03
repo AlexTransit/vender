@@ -1,7 +1,7 @@
 package mega
 
 import (
-	"fmt"
+	// "fmt"
 	"math/rand"
 	"sync"
 	"testing"
@@ -93,11 +93,11 @@ func (m *spiMock) PushOk(sendHex, recvHex string) {
 	m.expects = append(m.expects, spiTxCall{s: helpers.MustHex(sendHex), r: helpers.MustHex(recvHex)})
 }
 
-func mockGet(m *mock.Mock, method string) *mock.Call {
-	for _, c := range m.ExpectedCalls {
-		if c.Method == method {
-			return c
-		}
-	}
-	panic(fmt.Sprintf("call not found mock=%v method=%s", m, method))
-}
+// func mockGet(m *mock.Mock, method string) *mock.Call {
+// 	for _, c := range m.ExpectedCalls {
+// 		if c.Method == method {
+// 			return c
+// 		}
+// 	}
+// 	panic(fmt.Sprintf("call not found mock=%v method=%s", m, method))
+// }

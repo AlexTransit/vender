@@ -39,10 +39,57 @@ type Global struct {
 	XXX_money atomic.Value // *money.MoneySystem crutch to import cycle
 	XXX_uier  atomic.Value // UIer crutch to import/init cycle
 
-	_copy_guard sync.Mutex //nolint:unused
+	// _copy_guard sync.Mutex //nolint:unused
 }
 
 const ContextKey = "run/state-global"
+
+func GetGlobal(ctx context.Context) *Global {
+	v := ctx.Value(ContextKey)
+	if v == nil {
+		panic(fmt.Sprintf("context['%s'] is nil", ContextKey))
+	}
+	if g, ok := v.(*Global); ok {
+		return g
+	}
+	panic(fmt.Sprintf("context['%s'] expected type *Global actual=%#v", ContextKey, v))
+}
+
+// func VmcStopNew() {
+// 	g := &Global{
+// 		Alive:        &alive.Alive{},
+// 		Engine:       &engine.Engine{},
+// 		Hardware:     hardware{},
+// 		Log:          &log2.Log{},
+// 		LockCh:       make(chan struct{}),
+// 		TimerUIStop:  make(chan struct{}),
+// 	}
+// 	// g.LockCh <- struct{}{}
+// 	ctx := context.Background()
+// 	ctx = context.WithValue(ctx, engine.ContextKey, g.Engine)
+// 	ctx = context.WithValue(ctx, log2.ContextKey, g.Log)
+// 	ctx = context.WithValue(ctx, ContextKey, g)
+// 	g.VmcStop(ctx)
+// }
+
+func (g *Global) VmcStop(ctx context.Context) {
+	g.Log.Infof("--- event vmc stop ---")
+	go func() {
+		time.Sleep(10 * time.Second)
+		g.Log.Infof("--- vmc timeout EXIT ---")
+		os.Exit(1)
+	}()
+
+	g.LockCh <- struct{}{}
+	_ = g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken)
+	td := g.MustTextDisplay()
+	td.SetLines(g.Config.UI.Front.MsgBrokenL1, g.Config.UI.Front.MsgBrokenL2)
+	g.Tele.State(tele_api.State_Shutdown)
+	g.Tele.Close()
+	time.Sleep(2 * time.Second)
+	g.Log.Infof("--- vmc stop ---")
+	g.Stop()
+}
 
 func (g *Global) ClientBegin() {
 	if !types.VMC.Lock {
@@ -62,36 +109,6 @@ func (g *Global) ClientEnd() {
 		g.Log.Infof("--- client activity end ---")
 		// g.Tele.State(tele_api.State_Nominal)
 	}
-}
-
-func (g *Global) VmcStop(ctx context.Context) {
-	g.Log.Infof("--- vmc stop command---")
-	go func() {
-		time.Sleep(10 * time.Second)
-		g.Log.Infof("--- vmc EXIT ---")
-		os.Exit(1)
-	}()
-
-	g.LockCh <- struct{}{}
-	_ = g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken)
-	td := g.MustTextDisplay()
-	td.SetLines(g.Config.UI.Front.MsgBrokenL1, g.Config.UI.Front.MsgBrokenL2)
-	g.Tele.State(tele_api.State_Shutdown)
-	g.Tele.Close()
-	time.Sleep(2 * time.Second)
-	g.Log.Infof("--- vmc stop ---")
-	g.Stop()
-}
-
-func GetGlobal(ctx context.Context) *Global {
-	v := ctx.Value(ContextKey)
-	if v == nil {
-		panic(fmt.Sprintf("context['%s'] is nil", ContextKey))
-	}
-	if g, ok := v.(*Global); ok {
-		return g
-	}
-	panic(fmt.Sprintf("context['%s'] expected type *Global actual=%#v", ContextKey, v))
 }
 
 // If `Init` fails, consider `Global` is in broken state.
@@ -144,7 +161,8 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		_ = <-sigs
+		sig := <-sigs
+		g.Log.Infof("system signal - %v", sig)
 		g.VmcStop(ctx)
 	}()
 

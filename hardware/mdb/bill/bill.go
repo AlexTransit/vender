@@ -89,7 +89,7 @@ func (bv *BillValidator) init(ctx context.Context) error {
 	bv.DoStacker = bv.newStacker()
 	g.Engine.Register(bv.DoEscrowAccept.Name, bv.DoEscrowAccept)
 	g.Engine.Register(bv.DoEscrowReject.Name, bv.DoEscrowReject)
-
+	g.Engine.Register("bill.reset", bv.billReset())
 	bv.Device.DoInit = bv.newIniter()
 
 	// TODO remove IO from Init()
@@ -196,6 +196,20 @@ func (bv *BillValidator) pollFun(fun func(money.PollItem) bool) mdb.PollRequestF
 		}
 		return true, nil
 	}
+}
+
+func (bv *BillValidator) billReset() engine.Doer {
+	const tag = deviceName + ".reset"
+	return engine.NewSeq(tag).
+		Append(bv.Device.DoReset).
+		Append(engine.Func{Name: tag + "/poll", F: func(ctx context.Context) error {
+			bv.Run(ctx, nil, func(money.PollItem) bool {
+				return false
+			})
+			// POLL until it settles on empty response
+			return nil
+		}}).
+		Append(bv.DoStacker)
 }
 
 func (bv *BillValidator) newIniter() engine.Doer {

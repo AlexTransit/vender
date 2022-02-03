@@ -2,7 +2,7 @@ package state
 
 import (
 	"path/filepath"
-	"sync"
+	// "sync"
 
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/hardware/hd44780"
@@ -78,7 +78,7 @@ type Config struct {
 	Tele tele_config.Config
 	UI   ui_config.Config
 
-	_copy_guard sync.Mutex //nolint:unused
+	// _copy_guard sync.Mutex //nolint:unused
 }
 
 type DeviceConfig struct {

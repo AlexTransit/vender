@@ -72,6 +72,7 @@ func (t *tele) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.C
 	}
 	var err error
 	t.q, err = spq.Open(t.config.PersistPath)
+	// t.q, _ = spq.Open(t.config.PersistPath)
 	if err != nil {
 		return errors.Annotate(err, "tele queue")
 	}

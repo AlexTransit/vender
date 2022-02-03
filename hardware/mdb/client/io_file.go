@@ -34,121 +34,121 @@ func NewFileUart(l *log2.Log) *fileUart {
 	}
 }
 
-func (self *fileUart) set9(b bool) error {
-	last_parodd := (self.t2.c_cflag & syscall.PARODD) == syscall.PARODD
+func (fu *fileUart) set9(b bool) error {
+	last_parodd := (fu.t2.c_cflag & syscall.PARODD) == syscall.PARODD
 	if b == last_parodd {
 		return nil
 	}
 	if b {
-		self.t2.c_cflag |= syscall.PARODD
+		fu.t2.c_cflag |= syscall.PARODD
 	} else {
-		self.t2.c_cflag &= ^tcflag_t(syscall.PARODD)
+		fu.t2.c_cflag &= ^tcflag_t(syscall.PARODD)
 	}
-	if self.f == nil { // used in tests
+	if fu.f == nil { // used in tests
 		return nil
 	}
 	// must use ioctl with drain - cTCSETSW2?
 	// but it makes 9bit switch very slow
-	err := ioctl(self.fd, uintptr(cTCSETS2), uintptr(unsafe.Pointer(&self.t2)))
+	err := ioctl(fu.fd, uintptr(cTCSETS2), uintptr(unsafe.Pointer(&fu.t2)))
 	return errors.Trace(err)
 }
 
-func (self *fileUart) write9(p []byte, start9 bool) (n int, err error) {
-	// self.Log.Debugf("mdb.write9 p=%x start9=%t", p, start9)
+func (fu *fileUart) write9(p []byte, start9 bool) (n int, err error) {
+	// fu.Log.Debugf("mdb.write9 p=%x start9=%t", p, start9)
 	var n2 int
 	switch len(p) {
 	case 0:
 		return 0, nil
 	case 1:
-		if err = self.set9(start9); err != nil {
+		if err = fu.set9(start9); err != nil {
 			return 0, errors.Trace(err)
 		}
-		if n, err = self.w.Write(p[:1]); err != nil {
+		if n, err = fu.w.Write(p[:1]); err != nil {
 			return 0, errors.Trace(err)
 		}
 		fallthrough
 	default:
-		if err = self.set9(false); err != nil {
+		if err = fu.set9(false); err != nil {
 			return n, errors.Trace(err)
 		}
-		if n2, err = self.w.Write(p[1:]); err != nil {
+		if n2, err = fu.w.Write(p[1:]); err != nil {
 			return n, errors.Trace(err)
 		}
 	}
 	return n + n2, nil
 }
 
-func (self *fileUart) Break(d, sleep time.Duration) (err error) {
+func (fu *fileUart) Break(d, sleep time.Duration) (err error) {
 	const tag = "fileUart.Break"
 	ms := int(d / time.Millisecond)
-	self.lk.Lock()
-	defer self.lk.Unlock()
-	if err = self.resetRead(); err != nil {
+	fu.lk.Lock()
+	defer fu.lk.Unlock()
+	if err = fu.resetRead(); err != nil {
 		return errors.Annotate(err, tag)
 	}
-	if err = ioctl(self.fd, uintptr(cTCSBRKP), uintptr(ms/100)); err != nil {
+	if err = ioctl(fu.fd, uintptr(cTCSBRKP), uintptr(ms/100)); err != nil {
 		return errors.Annotate(err, tag)
 	}
 	time.Sleep(sleep)
 	return nil
 }
 
-func (self *fileUart) Close() error {
-	self.f = nil
-	self.r = nil
-	self.w = nil
-	return errors.Trace(self.f.Close())
+func (fu *fileUart) Close() error {
+	fu.f = nil
+	fu.r = nil
+	fu.w = nil
+	return errors.Trace(fu.f.Close())
 }
 
-func (self *fileUart) Open(path string) (err error) {
-	if self.f != nil {
-		self.Close() // skip error
+func (fu *fileUart) Open(path string) (err error) {
+	if fu.f != nil {
+		fu.Close() // skip error
 	}
-	self.f, err = os.OpenFile(path, syscall.O_RDWR|syscall.O_NOCTTY|syscall.O_NDELAY, 0600)
+	fu.f, err = os.OpenFile(path, syscall.O_RDWR|syscall.O_NOCTTY|syscall.O_NDELAY, 0600)
 	if err != nil {
 		return errors.Annotate(err, "fileUart.Open:OpenFile")
 	}
-	self.fd = self.f.Fd()
-	self.r = fdReader{fd: self.fd, timeout: 20 * time.Millisecond}
-	self.br.Reset(self.r)
-	self.w = self.f
+	fu.fd = fu.f.Fd()
+	fu.r = fdReader{fd: fu.fd, timeout: 20 * time.Millisecond}
+	fu.br.Reset(fu.r)
+	fu.w = fu.f
 
-	self.t2 = termios2{
+	fu.t2 = termios2{
 		c_iflag:  unix.IGNBRK | unix.INPCK | unix.PARMRK,
 		c_lflag:  0,
 		c_cflag:  cCMSPAR | syscall.CLOCAL | syscall.CREAD | unix.CSTART | syscall.CS8 | unix.PARENB | unix.PARMRK | unix.IGNPAR,
 		c_ispeed: speed_t(unix.B9600),
 		c_ospeed: speed_t(unix.B9600),
 	}
-	self.t2.c_cc[syscall.VMIN] = cc_t(0)
-	err = ioctl(self.fd, uintptr(cTCSETSF2), uintptr(unsafe.Pointer(&self.t2)))
+	fu.t2.c_cc[syscall.VMIN] = cc_t(0)
+	err = ioctl(fu.fd, uintptr(cTCSETSF2), uintptr(unsafe.Pointer(&fu.t2)))
 	if err != nil {
-		self.Close()
+		fu.Close()
 		return errors.Annotate(err, "fileUart.Open:ioctl")
 	}
 	var ser serial_info
-	err = ioctl(self.fd, uintptr(cTIOCGSERIAL), uintptr(unsafe.Pointer(&ser)))
+	err = ioctl(fu.fd, uintptr(cTIOCGSERIAL), uintptr(unsafe.Pointer(&ser)))
 	if err != nil {
-		self.Log.Errorf("get serial fail err=%v", err)
+		fu.Log.Errorf("get serial fail err=%v", err)
 	} else {
 		ser.flags |= cASYNC_LOW_LATENCY
-		err = ioctl(self.fd, uintptr(cTIOCSSERIAL), uintptr(unsafe.Pointer(&ser)))
+		err = ioctl(fu.fd, uintptr(cTIOCSSERIAL), uintptr(unsafe.Pointer(&ser)))
 		if err != nil {
-			self.Log.Errorf("set serial fail err=%v", err)
+			fu.Log.Errorf("set serial fail err=%v", err)
 		}
 	}
 	return nil
 }
 
-func (self *fileUart) Tx(request, response []byte) (n int, err error) {
+func (fu *fileUart) Tx(request, response []byte) (n int, err error) {
 	if len(request) == 0 {
 		return 0, errors.New("Tx request empty")
 	}
 
 	// TODO feed IO operations to loop in always running goroutine
 	// that would also eliminate lock
-	self.lk.Lock()
-	defer self.lk.Unlock()
+	fu.lk.Lock()
+	defer fu.lk.Unlock()
 
 	saveGCPercent := debug.SetGCPercent(-1)
 	defer debug.SetGCPercent(saveGCPercent)
@@ -156,23 +156,23 @@ func (self *fileUart) Tx(request, response []byte) (n int, err error) {
 	// FIXME crutch to avoid slow set9 with drain
 	time.Sleep(20 * time.Millisecond)
 	// TODO
-	// self.f.SetDeadline(time.Now().Add(time.Second))
-	// defer self.f.SetDeadline(time.Time{})
+	// fu.f.SetDeadline(time.Now().Add(time.Second))
+	// defer fu.f.SetDeadline(time.Time{})
 
 	chkoutb := []byte{checksum(request)}
-	if _, err = self.write9(request, true); err != nil {
+	if _, err = fu.write9(request, true); err != nil {
 		return 0, errors.Trace(err)
 	}
-	if _, err = self.write9(chkoutb, false); err != nil {
+	if _, err = fu.write9(chkoutb, false); err != nil {
 		return 0, errors.Trace(err)
 	}
 
 	// ack must arrive <5ms after recv
 	// begin critical path
-	if err = self.resetRead(); err != nil {
+	if err = fu.resetRead(); err != nil {
 		return 0, errors.Trace(err)
 	}
-	n, err = bufferReadPacket(self.br, response)
+	n, err = bufferReadPacket(fu.br, response)
 	if err != nil {
 		return 0, errors.Trace(err)
 	}
@@ -180,11 +180,11 @@ func (self *fileUart) Tx(request, response []byte) (n int, err error) {
 	n--
 	chkcomp := checksum(response[:n])
 	if chkin != chkcomp {
-		// self.Log.Debugf("mdb.fileUart.Tx InvalidChecksum frompacket=%x actual=%x", chkin, chkcomp)
+		// fu.Log.Debugf("mdb.fileUart.Tx InvalidChecksum frompacket=%x actual=%x", chkin, chkcomp)
 		return n, errors.Trace(mdb.InvalidChecksum{Received: chkin, Actual: chkcomp})
 	}
 	if n > 0 {
-		_, err = self.write9(mdb.PacketAck.Bytes(), false)
+		_, err = fu.write9(mdb.PacketAck.Bytes(), false)
 	}
 	// end critical path
 	return n, errors.Trace(err)
@@ -199,29 +199,29 @@ func bufferReadPacket(src *bufio.Reader, dst []byte) (n int, err error) {
 		if (err == io.EOF && len(part) == 0) || err != nil {
 			return n, errors.Trace(err)
 		}
-		// self.Log.Debugf("bufferReadPacket readFF=%x", part)
+		// fu.Log.Debugf("bufferReadPacket readFF=%x", part)
 		pl := len(part)
 		// TODO check n+pl overflow
 		n += copy(dst[n:], part[:pl-1])
-		// self.Log.Debugf("bufferReadPacket append %02d dst=%x", pl-1, dst[:n])
+		// fu.Log.Debugf("bufferReadPacket append %02d dst=%x", pl-1, dst[:n])
 		if b, err = src.ReadByte(); err != nil {
 			return n, errors.Trace(err)
 		}
-		// self.Log.Debugf("bufferReadPacket readByte=%02x", b)
+		// fu.Log.Debugf("bufferReadPacket readByte=%02x", b)
 		switch b {
 		case 0x00:
 			if b, err = src.ReadByte(); err != nil {
 				return n, errors.Trace(err)
 			}
-			// self.Log.Debugf("bufferReadPacket seq=ff00 chk=%02x", b)
+			// fu.Log.Debugf("bufferReadPacket seq=ff00 chk=%02x", b)
 			dst[n] = b
 			n++
-			// self.Log.Debugf("bufferReadPacket dst=%x next=copy,return", dst[:n])
+			// fu.Log.Debugf("bufferReadPacket dst=%x next=copy,return", dst[:n])
 			return n, nil
 		case 0xff:
 			dst[n] = b
 			n++
-			// self.Log.Debugf("bufferReadPacket seq=ffff dst=%x", dst[:n])
+			// fu.Log.Debugf("bufferReadPacket seq=ffff dst=%x", dst[:n])
 		default:
 			err = errors.NotValidf("bufferReadPacket unknown sequence ff %x", b)
 			return n, err
@@ -229,9 +229,9 @@ func bufferReadPacket(src *bufio.Reader, dst []byte) (n int, err error) {
 	}
 }
 
-func (self *fileUart) resetRead() (err error) {
-	self.br.Reset(self.r)
-	if err = self.set9(false); err != nil {
+func (fu *fileUart) resetRead() (err error) {
+	fu.br.Reset(fu.r)
+	if err = fu.set9(false); err != nil {
 		return errors.Trace(err)
 	}
 	return nil
@@ -285,13 +285,13 @@ type fdReader struct {
 	timeout time.Duration
 }
 
-func (self fdReader) Read(p []byte) (n int, err error) {
-	err = io_wait_read(self.fd, 1, self.timeout)
+func (fu fdReader) Read(p []byte) (n int, err error) {
+	err = io_wait_read(fu.fd, 1, fu.timeout)
 	if err != nil {
 		return 0, errors.Trace(err)
 	}
 	// TODO bench optimist read, then io_wait if needed
-	n, err = syscall.Read(int(self.fd), p)
+	n, err = syscall.Read(int(fu.fd), p)
 	if err != nil {
 		err = errors.Trace(err)
 	}
