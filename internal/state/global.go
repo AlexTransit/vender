@@ -161,7 +161,8 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
-		_ = <-sigs
+		sig := <-sigs
+		g.Log.Infof("system signal - %v",sig)
 		g.VmcStop(ctx)
 	}()
 

@@ -167,9 +167,9 @@ engine { inventory {
 				Tele:      tele_api.NewStub(),
 			}
 			ctx := context.Background()
-			ctx = context.WithValue(ctx, log2.ContextKey, log)
-			ctx = context.WithValue(ctx, engine.ContextKey, g.Engine)
-			ctx = context.WithValue(ctx, ContextKey, g)
+			// ctx = context.WithValue(ctx, log2.ContextKey, log)
+			// ctx = context.WithValue(ctx, engine.ContextKey, g.Engine)
+			// ctx = context.WithValue(ctx, ContextKey, g)
 
 			fs := NewMockFullReader(map[string]string{
 				"test-inline":   c.input,
