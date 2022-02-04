@@ -84,9 +84,27 @@ func (d *Display) QR(text string, border bool, level qrcode.RecoveryLevel) error
 	return d.Flush()
 }
 
-func (d *Display) ShowPic() error {
+type Pic uint32
+
+const (
+	PictureBoot Pic = iota
+	PictureMake
+	PictureIdle
+	PictureBroken
+)
+
+func (d *Display) ShowPic(pict Pic) error {
 	// AlexM fixMe. move to config
-	p, _ := os.ReadFile("/home/vmc/coffe-pic")
+	var file string
+	switch {
+	case pict == PictureMake:
+		file = "/home/vmc/make-pic"
+	case pict == PictureBroken:
+		file = "/home/vmc/broken-pic"
+	default:
+		file = "/home/vmc/coffe-pic"
+	}
+	p, _ := os.ReadFile(file)
 	if len(p) == 0 {
 		d.ClearFB()
 	} else {

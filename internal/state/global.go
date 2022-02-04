@@ -13,6 +13,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/AlexTransit/vender/hardware/display"
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
@@ -73,6 +74,7 @@ func GetGlobal(ctx context.Context) *Global {
 // }
 
 func (g *Global) VmcStop(ctx context.Context) {
+	g.DisplayPicture(display.PictureBroken)
 	g.Log.Infof("--- event vmc stop ---")
 	go func() {
 		time.Sleep(10 * time.Second)
@@ -261,7 +263,16 @@ func (g *Global) initDisplay() error {
 	d, err := g.Display()
 	if d != nil {
 		// d.Clear()
-		_ = d.ShowPic()
+		_ = d.ShowPic(display.PictureBoot)
+	}
+	return err
+}
+
+func (g *Global) DisplayPicture(dp display.Pic) error {
+	d, err := g.Display()
+	if d != nil {
+		// d.Clear()
+		_ = d.ShowPic(dp)
 	}
 	return err
 }

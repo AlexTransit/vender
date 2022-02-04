@@ -24,9 +24,9 @@ const (
 // - Telemetry/Response messages delivered at least once
 // - Status messages may be lost
 type tele struct { //nolint:maligned
-	config    tele_config.Config
-	log       *log2.Log
-	transport Transporter
+	config       tele_config.Config
+	log          *log2.Log
+	transport    Transporter
 	vmId         int32
 	stat         tele_api.Stat
 	currentState tele_api.State
@@ -68,11 +68,11 @@ func (t *tele) Close() {
 	t.transport.CloseTele()
 }
 
-func (t *tele) CommandResponse( r *tele_api.Response)  {
+func (t *tele) CommandResponse(r *tele_api.Response) {
 	payload, err := proto.Marshal(r)
 	if err != nil {
 		t.log.Errorf("CRITICAL command response Marshal tm=%#v err=%v", r, err)
-		return 
+		return
 	}
 	r.INTERNALTopic = "cr"
 	t.transport.SendCommandResponse(r.INTERNALTopic, payload)
@@ -82,7 +82,7 @@ func (t *tele) Telemetry(tm *tele_api.Telemetry) {
 	payload, err := proto.Marshal(tm)
 	if err != nil {
 		t.log.Errorf("CRITICAL telemetry Marshal tm=%#v err=%v", tm, err)
-		return 
+		return
 	}
 	t.transport.SendTelemetry(payload)
 }
