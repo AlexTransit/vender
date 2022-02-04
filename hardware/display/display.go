@@ -85,6 +85,7 @@ func (d *Display) QR(text string, border bool, level qrcode.RecoveryLevel) error
 }
 
 func (d *Display) ShowPic() error {
+	// AlexM fixMe. move to config
 	p, _ := os.ReadFile("/home/vmc/coffe-pic")
 	if len(p) == 0 {
 		d.ClearFB()
