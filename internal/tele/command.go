@@ -30,11 +30,6 @@ func (t *tele) onCommandMessage(ctx context.Context, payload []byte) bool {
 	}
 	t.log.Debugf("tele command raw=%x task=%#v", payload, cmd.String())
 
-	// now := time.Now().UnixNano()
-	// if cmd.Deadline != 0 && now > cmd.Deadline {
-	// 	t.CommandReplyErr(cmd, fmt.Errorf("deadline"))
-	// } else {
-	// 	// TODO store command in persistent queue, acknowledge now, execute later
 	if err = t.dispatchCommand(ctx, cmd); err != nil {
 		t.CommandReplyErr(cmd, err)
 		t.log.Errorf("command message error (%v)", err)

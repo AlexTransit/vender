@@ -31,7 +31,7 @@ func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tel
 	}
 	tm.enabled = true
 	tm.log = log
-	// FIXME add loglevel to config
+	// AlexM FIXME add loglevel to config
 	mqtt.ERROR = log
 	mqtt.CRITICAL = log
 	mqtt.WARN = log
@@ -98,8 +98,6 @@ func (tm *transportMqtt) CloseTele() {
 	tm.log.Infof("mqtt unsubscribe")
 	if token := tm.m.Unsubscribe(tm.topicCommand); token.Wait() && token.Error() != nil {
 		tm.log.Infof("mqtt unsubscribe error")
-		// fmt.Println(token.Error())
-		// os.Exit(1)
 	}
 }
 

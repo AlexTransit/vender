@@ -1,8 +1,3 @@
-debug {
-  // pprof server allows to peek into running process
-  pprof_listen = "127.0.0.1:6060"
-}
-
 script {
     on_boot = ""
     on_broken = ""

@@ -5,6 +5,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/AlexTransit/vender/hardware/display"
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/juju/errors"
 
@@ -113,6 +114,9 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 
 	case StateBroken:
 		ui.g.Log.Infof("state=broken")
+		if d, _ := ui.g.Display(); d != nil {
+			_ = d.ShowPic(display.PictureBroken)
+		}
 		if !ui.broken {
 			ui.g.Tele.State(tele_api.State_Problem)
 			if errs := ui.g.Engine.ExecList(ctx, "on_broken", ui.g.Config.Engine.OnBroken); len(errs) != 0 {
@@ -124,9 +128,6 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 		}
 		ui.broken = true
 		ui.display.SetLines(ui.g.Config.UI.Front.MsgBrokenL1, ui.g.Config.UI.Front.MsgBrokenL2)
-		if d, _ := ui.g.Display(); d != nil {
-			_ = d.Clear()
-		}
 		for ui.g.Alive.IsRunning() {
 			e := ui.wait(time.Second)
 			// TODO receive tele command to reboot or change state

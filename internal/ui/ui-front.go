@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/hardware/display"
 	"github.com/AlexTransit/vender/hardware/input"
 	"github.com/AlexTransit/vender/hardware/mdb/evend"
 	"github.com/AlexTransit/vender/hardware/text_display"
@@ -41,7 +42,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 	// FIXME special handling of separate graphic display
 	// Currently used to clear QR.
 	if d, _ := ui.g.Display(); d != nil {
-		_ = d.ShowPic()
+		_ = d.ShowPic(display.PictureIdle)
 		// _ = d.Clear()
 	}
 	// executeScript(ctx, "FrontBegin", "")
