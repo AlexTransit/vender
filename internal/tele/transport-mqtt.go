@@ -98,8 +98,6 @@ func (tm *transportMqtt) CloseTele() {
 	tm.log.Infof("mqtt unsubscribe")
 	if token := tm.m.Unsubscribe(tm.topicCommand); token.Wait() && token.Error() != nil {
 		tm.log.Infof("mqtt unsubscribe error")
-		// fmt.Println(token.Error())
-		// os.Exit(1)
 	}
 }
 

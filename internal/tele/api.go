@@ -2,7 +2,6 @@ package tele
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
@@ -22,13 +21,9 @@ func (t *tele) CommandReplyErr(c *tele_api.Command, e error) {
 		errText = e.Error()
 	}
 	r := tele_api.Response{
-		// CommandId: c.Id,
 		Error: errText,
 	}
-	err := t.qpushCommandResponse(c, &r)
-	if err != nil {
-		t.log.Error(errors.Annotatef(err, "CRITICAL command=%#v response=%#v", c, r))
-	}
+	t.CommandResponse(&r)
 }
 
 func (t *tele) CommandReply(c *tele_api.Command, cr tele_api.CmdReplay) {
@@ -40,11 +35,7 @@ func (t *tele) CommandReply(c *tele_api.Command, cr tele_api.CmdReplay) {
 		Executer:  c.Executer,
 		CmdReplay: cr,
 	}
-	err := t.qpushCommandResponse(c, &r)
-	if err != nil {
-		// s.log.Error(errors.Annotatef(err, "CRITICAL command=%#v response=%#v", c, r))
-		fmt.Printf("\n\033[41m error \033[0m\n\n")
-	}
+	t.CommandResponse(&r)
 }
 
 func (t *tele) CookReply(c *tele_api.Command, cr tele_api.CookReplay, price ...uint32) {
@@ -59,10 +50,7 @@ func (t *tele) CookReply(c *tele_api.Command, cr tele_api.CookReplay, price ...u
 	if price != nil {
 		r.ValidateReplay = price[0]
 	}
-	err := t.qpushCommandResponse(c, &r)
-	if err != nil {
-		fmt.Printf("\n\033[41m CookReply error \033[0m\n\n")
-	}
+	t.CommandResponse(&r)
 }
 
 func (t *tele) teleEnable() bool {
@@ -82,11 +70,8 @@ func (t *tele) Error(e error) {
 	t.log.Debugf("tele.Error: " + errors.ErrorStack(e))
 	tm := &tele_api.Telemetry{
 		Error: &tele_api.Telemetry_Error{Message: e.Error()},
-		// BuildVersion: t.config.BuildVersion,
 	}
-	if err := t.qpushTelemetry(tm); err != nil {
-		t.log.Errorf("CRITICAL qpushTelemetry telemetry_error=%#v err=%v", tm.Error, err)
-	}
+	t.Telemetry(tm)
 }
 
 func (t *tele) Report(ctx context.Context, serviceTag bool) error {
@@ -102,13 +87,9 @@ func (t *tele) Report(ctx context.Context, serviceTag bool) error {
 		MoneyCashbox: moneysys.TeleCashbox(ctx),
 		MoneyChange:  moneysys.TeleChange(ctx),
 		AtService:    serviceTag,
-		// BuildVersion: g.BuildVersion,
 	}
-	err := t.qpushTelemetry(tm)
-	if err != nil {
-		t.log.Errorf("CRITICAL qpushTelemetry tm=%#v err=%v", tm, err)
-	}
-	return err
+	t.Telemetry(tm)
+	return nil
 }
 
 func (t *tele) State(s tele_api.State) {
@@ -134,8 +115,5 @@ func (t *tele) Transaction(tx *tele_api.Telemetry_Transaction) {
 		t.log.Infof(logMsgDisabled)
 		return
 	}
-	err := t.qpushTelemetry(&tele_api.Telemetry{Transaction: tx})
-	if err != nil {
-		t.log.Errorf("CRITICAL transaction=%#v err=%v", tx, err)
-	}
+	t.Telemetry(&tele_api.Telemetry{Transaction: tx})
 }
