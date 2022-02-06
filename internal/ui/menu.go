@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/AlexTransit/vender/currency"
-	"github.com/AlexTransit/vender/hardware/display"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
@@ -75,7 +74,7 @@ func Cook(ctx context.Context) error {
 	}
 	// AlexM FixMe наверно переделать вывод на текстовый экран
 	g.MustTextDisplay().SetLines(g.Config.UI.Front.MsgMaking1, g.Config.UI.Front.MsgMaking2)
-	g.DisplayPicture(display.PictureMake)
+	g.ShowPicture(state.PictureMake)
 
 	err := g.Engine.Exec(itemCtx, types.UI.FrontResult.Item.D)
 	if invErr := g.Inventory.Persist.Store(); invErr != nil {

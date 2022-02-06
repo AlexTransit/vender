@@ -13,7 +13,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/AlexTransit/vender/hardware/display"
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
@@ -56,6 +55,35 @@ func GetGlobal(ctx context.Context) *Global {
 	panic(fmt.Sprintf("context['%s'] expected type *Global actual=%#v", ContextKey, v))
 }
 
+type Pic uint32
+
+const (
+	PictureBoot Pic = iota
+	PictureMake
+	PictureIdle
+	PictureBroken
+)
+
+func (g *Global) ShowPicture(pict Pic) {
+	var file string
+	switch {
+	case pict == PictureBoot:
+		file = g.Config.UI.Front.PicBoot
+		types.VMC.HW.Display.Gdisplay = "PictureBoot"
+	case pict == PictureMake:
+		file = g.Config.UI.Front.PicMake
+		types.VMC.HW.Display.Gdisplay = "PictureMake"
+	case pict == PictureBroken:
+		file = g.Config.UI.Front.PicBroken
+		types.VMC.HW.Display.Gdisplay = "PictureBroken"
+	default:
+		file = g.Config.UI.Front.PicIdle
+		types.VMC.HW.Display.Gdisplay = "PictureDefault"
+	}
+	g.Hardware.Display.d.CopyFile2FB(file)
+
+}
+
 // func VmcStopNew() {
 // 	g := &Global{
 // 		Alive:        &alive.Alive{},
@@ -74,7 +102,7 @@ func GetGlobal(ctx context.Context) *Global {
 // }
 
 func (g *Global) VmcStop(ctx context.Context) {
-	g.DisplayPicture(display.PictureBroken)
+	g.ShowPicture(PictureBroken)
 	g.Log.Infof("--- event vmc stop ---")
 	go func() {
 		time.Sleep(10 * time.Second)
@@ -262,17 +290,8 @@ func (g *Global) UI() types.UIer {
 func (g *Global) initDisplay() error {
 	d, err := g.Display()
 	if d != nil {
-		// d.Clear()
-		_ = d.ShowPic(display.PictureBoot)
-	}
-	return err
-}
-
-func (g *Global) DisplayPicture(dp display.Pic) error {
-	d, err := g.Display()
-	if d != nil {
-		// d.Clear()
-		_ = d.ShowPic(dp)
+		types.VMC.HW.Display.GdisplayValid = true
+		g.ShowPicture(PictureBoot)
 	}
 	return err
 }

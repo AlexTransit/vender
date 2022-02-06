@@ -25,8 +25,10 @@ type VMCType struct {
 	HW struct {
 		Input   bool
 		Display struct {
-			L1 string
-			L2 string
+			L1            string
+			L2            string
+			GdisplayValid bool
+			Gdisplay      string
 		}
 		Elevator struct {
 			Position uint8
