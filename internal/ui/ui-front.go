@@ -39,19 +39,14 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 		Sugar: DefaultSugar,
 	}
 
-	// FIXME special handling of separate graphic display
-	// Currently used to clear QR.
-	if d, _ := ui.g.Display(); d != nil {
-		_ = d.ShowPic(display.PictureIdle)
-		// _ = d.Clear()
-	}
-	// executeScript(ctx, "FrontBegin", "")
-
 	// XXX FIXME custom business logic creeped into code TODO move to config
 	if doCheckTempHot := ui.g.Engine.Resolve("evend.valve.check_temp_hot"); doCheckTempHot != nil && !engine.IsNotResolved(doCheckTempHot) {
 		err := doCheckTempHot.Validate()
 		if errtemp, ok := err.(*evend.ErrWaterTemperature); ok {
 			line1 := fmt.Sprintf(ui.g.Config.UI.Front.MsgWaterTemp, errtemp.Current)
+			if d, _ := ui.g.Display(); d != nil {
+				_ = d.ShowPic(display.PictureBroken)
+			}
 			if types.VMC.Client.Light {
 				_ = ui.g.Engine.ExecList(ctx, "water-temp", []string{"evend.cup.light_off"})
 			}
@@ -68,6 +63,10 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 			return StateBroken
 		}
 	}
+	if d, _ := ui.g.Display(); d != nil {
+		_ = d.ShowPic(display.PictureIdle)
+	}
+
 	if errs := ui.g.Engine.ExecList(ctx, "on_front_begin", ui.g.Config.Engine.OnFrontBegin); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_front_begin"))
 		return StateBroken
