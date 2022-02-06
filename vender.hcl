@@ -225,8 +225,11 @@ ui {
     msg_making2                  = "Making text line2"
     msg_input_code               = "Code:%s\x00"
 
-    pic_idle    = "/home/idle-picture"
-    pic_broken  = "/home/broken-picture"
+    pic_boot    = "/path/boot-picture"
+    pic_idle    = "/path/idle-picture"
+    pic_make    = "/path/make-picture"
+    pic_broken  = "/path/broken-picture"
+
 
     reset_sec = 180
   }

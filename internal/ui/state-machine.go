@@ -5,7 +5,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/AlexTransit/vender/hardware/display"
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/juju/errors"
 
@@ -90,6 +89,8 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 	switch s {
 	case StateBoot:
 		ui.g.Tele.State(tele_api.State_Boot)
+		ui.g.ShowPicture(state.PictureBoot)
+
 		onStartSuccess := false
 		for i := 1; i <= 3; i++ {
 			errs := ui.g.Engine.ExecList(ctx, "on_boot", ui.g.Config.Engine.OnBoot)
@@ -114,9 +115,7 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 
 	case StateBroken:
 		ui.g.Log.Infof("state=broken")
-		if d, _ := ui.g.Display(); d != nil {
-			_ = d.ShowPic(display.PictureBroken)
-		}
+		ui.g.ShowPicture(state.PictureBroken)
 		if !ui.broken {
 			ui.g.Tele.State(tele_api.State_Problem)
 			if errs := ui.g.Engine.ExecList(ctx, "on_broken", ui.g.Config.Engine.OnBroken); len(errs) != 0 {
