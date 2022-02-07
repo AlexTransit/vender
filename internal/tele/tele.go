@@ -79,6 +79,13 @@ func (t *tele) CommandResponse(r *tele_api.Response) {
 }
 
 func (t *tele) Telemetry(tm *tele_api.Telemetry) {
+	if tm.VmId == 0 {
+		tm.VmId = t.vmId
+	}
+	if tm.Time == 0 {
+		tm.Time = time.Now().UnixNano()
+	}
+
 	payload, err := proto.Marshal(tm)
 	if err != nil {
 		t.log.Errorf("CRITICAL telemetry Marshal tm=%#v err=%v", tm, err)
