@@ -184,16 +184,17 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				}
 				ui.g.Log.Debugf("compare price=%v credit=%v", mitem.Price, credit)
 				if mitem.Price > credit {
-					// ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuInsufficientCredit)
-					// ALexM-FIX (вынести в конфиг текст. сделать scale )
-					var dl2 string
+					var l1, l2 string
 					if credit == 0 {
-						dl2 = fmt.Sprintf("k oplate :%v", (mitem.Price / 100))
-						ui.display.SetLines("oplata po QR", dl2)
+						// remote payment (QR pay)
+						l1 = ui.g.Config.UI.Front.MsgRemotePayL1
+						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgRemotePayL2, mitem.Price.Format100I())
+						ui.qrPrepare()
 					} else {
-						dl2 = fmt.Sprintf("dali:%v nuno:%v", credit/100, (mitem.Price / 100))
-						ui.display.SetLines(ui.g.Config.UI.Front.MsgMenuInsufficientCredit, dl2)
+						l1 = ui.g.Config.UI.Front.MsgMenuInsufficientCreditL1
+						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgMenuInsufficientCreditL2, (credit / 100), mitem.Price.Format100I())
 					}
+					ui.display.SetLines(l1, l2)
 					goto wait
 				}
 
@@ -234,6 +235,10 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 	}
 }
 
+func (ui *UI) qrPrepare() {
+	ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
+	ui.g.ShowQR("тут текст ссылки на оплату")
+}
 func (ui *UI) frontSelectShow(ctx context.Context, credit currency.Amount) {
 	config := ui.g.Config.UI.Front
 	l1 := config.MsgStateIntro

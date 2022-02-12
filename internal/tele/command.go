@@ -10,7 +10,6 @@ import (
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/golang/protobuf/proto"
 	"github.com/juju/errors"
-	"github.com/skip2/go-qrcode"
 )
 
 var (
@@ -204,16 +203,18 @@ func (t *tele) cmdShowQR(ctx context.Context, cmd *tele_api.Command, arg *tele_a
 	}
 
 	g := state.GetGlobal(ctx)
-	display, err := g.Display()
-	if err != nil {
-		return errors.Annotate(err, "display")
-	}
-	if display == nil {
-		return fmt.Errorf("display is not configured")
-	}
-	// TODO display.Layout(arg.Layout)
-	// TODO border,redundancy from layout/config
-	t.log.Infof("show QR:'%v'", arg.QrText)
-	types.VMC.HW.Display.Gdisplay = arg.QrText
-	return display.QR(arg.QrText, true, qrcode.High)
+	g.ShowQR(arg.QrText)
+	// display, err := g.Display()
+	// if err != nil {
+	// 	return errors.Annotate(err, "display")
+	// }
+	// if display == nil {
+	// 	return fmt.Errorf("display is not configured")
+	// }
+	// // TODO display.Layout(arg.Layout)
+	// // TODO border,redundancy from layout/config
+	// t.log.Infof("show QR:'%v'", arg.QrText)
+	// types.VMC.HW.Display.Gdisplay = arg.QrText
+	// return display.QR(arg.QrText, true, qrcode.High)
+	return nil
 }

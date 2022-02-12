@@ -13,10 +13,11 @@ type Config struct { //nolint:maligned
 		MsgWait        string `hcl:"msg_wait"`
 		MsgWaterTemp   string `hcl:"msg_water_temp"`
 
-		MsgMenuCodeEmpty          string `hcl:"msg_menu_code_empty"`
-		MsgMenuCodeInvalid        string `hcl:"msg_menu_code_invalid"`
-		MsgMenuInsufficientCredit string `hcl:"msg_menu_insufficient_credit"`
-		MsgMenuNotAvailable       string `hcl:"msg_menu_not_available"`
+		MsgMenuCodeEmpty            string `hcl:"msg_menu_code_empty"`
+		MsgMenuCodeInvalid          string `hcl:"msg_menu_code_invalid"`
+		MsgMenuInsufficientCreditL1 string `hcl:"msg_menu_insufficient_credit_l1"`
+		MsgMenuInsufficientCreditL2 string `hcl:"msg_menu_insufficient_credit_l2"`
+		MsgMenuNotAvailable         string `hcl:"msg_menu_not_available"`
 
 		MsgCream   string `hcl:"msg_cream"`
 		MsgSugar   string `hcl:"msg_sugar"`
@@ -25,6 +26,9 @@ type Config struct { //nolint:maligned
 		MsgMaking2 string `hcl:"msg_making2"`
 
 		MsgInputCode string `hcl:"msg_input_code"`
+
+		MsgRemotePayL1 string `hcl:"msg_remote_pay_l1"`
+		MsgRemotePayL2 string `hcl:"msg_remote_pay_l2"`
 
 		ResetTimeoutSec int    `hcl:"reset_sec"`
 		PicBoot         string `hcl:"pic_boot"`

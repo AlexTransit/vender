@@ -296,6 +296,24 @@ func (g *Global) initDisplay() error {
 	return err
 }
 
+func (g *Global) ShowQR(QrText string) {
+	display, err := g.Display()
+	if err != nil {
+		g.Log.Error(err, "display")
+		return
+	}
+	if display == nil {
+		g.Log.Error("display is not configured")
+		return
+	}
+	g.Log.Infof("show QR:'%v'", QrText)
+	err = display.QR(QrText, true, 2)
+	if err != nil {
+		g.Log.Error(err, "QR show error")
+	}
+	types.VMC.HW.Display.Gdisplay = QrText
+}
+
 func (g *Global) initEngine() error {
 	errs := make([]error, 0)
 
