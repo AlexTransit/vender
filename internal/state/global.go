@@ -224,7 +224,8 @@ func (g *Global) Error(err error, args ...interface{}) {
 			args = args[1:]
 			err = errors.Annotatef(err, msg, args...)
 		}
-		g.Tele.Error(err)
+		// g.Tele.Error(err)
+		// эта бабуйня еще и в телеметрию отсылает
 		g.Log.Error(err)
 	}
 }
