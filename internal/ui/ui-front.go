@@ -237,6 +237,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 
 func (ui *UI) qrPrepare() {
 	ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
+	// AlexM QR
 	ui.g.ShowQR("тут текст ссылки на оплату")
 }
 func (ui *UI) frontSelectShow(ctx context.Context, credit currency.Amount) {
