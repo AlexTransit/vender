@@ -224,7 +224,8 @@ func (g *Global) Error(err error, args ...interface{}) {
 			args = args[1:]
 			err = errors.Annotatef(err, msg, args...)
 		}
-		g.Tele.Error(err)
+		// g.Tele.Error(err)
+		// эта бабуйня еще и в телеметрию отсылает
 		g.Log.Error(err)
 	}
 }
@@ -294,6 +295,24 @@ func (g *Global) initDisplay() error {
 		g.ShowPicture(PictureBoot)
 	}
 	return err
+}
+
+func (g *Global) ShowQR(QrText string) {
+	display, err := g.Display()
+	if err != nil {
+		g.Log.Error(err, "display")
+		return
+	}
+	if display == nil {
+		g.Log.Error("display is not configured")
+		return
+	}
+	g.Log.Infof("show QR:'%v'", QrText)
+	err = display.QR(QrText, true, 2)
+	if err != nil {
+		g.Log.Error(err, "QR show error")
+	}
+	types.VMC.HW.Display.Gdisplay = QrText
 }
 
 func (g *Global) initEngine() error {

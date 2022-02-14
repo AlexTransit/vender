@@ -10,7 +10,6 @@ import (
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/golang/protobuf/proto"
 	"github.com/juju/errors"
-	"github.com/skip2/go-qrcode"
 )
 
 var (
@@ -88,9 +87,11 @@ func (t *tele) cmdReport(ctx context.Context, cmd *tele_api.Command) error {
 
 func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgCook) error {
 	if types.VMC.Lock {
+		// if types.VMC.State != uint32(tele_api.State_WaitingForExternalPayment) {
 		t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
 		t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
 		return nil
+		// }
 	}
 	state.VmcLock(ctx)
 	defer state.VmcUnLock(ctx)
@@ -204,16 +205,18 @@ func (t *tele) cmdShowQR(ctx context.Context, cmd *tele_api.Command, arg *tele_a
 	}
 
 	g := state.GetGlobal(ctx)
-	display, err := g.Display()
-	if err != nil {
-		return errors.Annotate(err, "display")
-	}
-	if display == nil {
-		return fmt.Errorf("display is not configured")
-	}
-	// TODO display.Layout(arg.Layout)
-	// TODO border,redundancy from layout/config
-	t.log.Infof("show QR:'%v'", arg.QrText)
-	types.VMC.HW.Display.Gdisplay = arg.QrText
-	return display.QR(arg.QrText, true, qrcode.High)
+	g.ShowQR(arg.QrText)
+	// display, err := g.Display()
+	// if err != nil {
+	// 	return errors.Annotate(err, "display")
+	// }
+	// if display == nil {
+	// 	return fmt.Errorf("display is not configured")
+	// }
+	// // TODO display.Layout(arg.Layout)
+	// // TODO border,redundancy from layout/config
+	// t.log.Infof("show QR:'%v'", arg.QrText)
+	// types.VMC.HW.Display.Gdisplay = arg.QrText
+	// return display.QR(arg.QrText, true, qrcode.High)
+	return nil
 }
