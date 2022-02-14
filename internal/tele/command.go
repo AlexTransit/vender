@@ -88,9 +88,9 @@ func (t *tele) cmdReport(ctx context.Context, cmd *tele_api.Command) error {
 func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgCook) error {
 	if types.VMC.Lock {
 		// if types.VMC.State != uint32(tele_api.State_WaitingForExternalPayment) {
-			t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
-			t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
-			return nil
+		t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
+		t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
+		return nil
 		// }
 	}
 	state.VmcLock(ctx)
