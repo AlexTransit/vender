@@ -86,72 +86,79 @@ func (t *tele) cmdReport(ctx context.Context, cmd *tele_api.Command) error {
 }
 
 func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgCook) error {
-	if types.VMC.Lock {
-		// if types.VMC.State != uint32(tele_api.State_WaitingForExternalPayment) {
-		t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
-		t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
-		return nil
-		// }
+	if types.VMC.State != int32(tele_api.State_WaitingForExternalPayment) && arg.Menucode != "-" {
+		if types.VMC.Lock {
+			t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
+			t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
+			return nil
+		}
+		var checkVal bool
+		types.UI.FrontResult.Item, checkVal = types.UI.Menu[arg.Menucode]
+		if !checkVal {
+			t.CookReply(cmd, tele_api.CookReplay_cookInaccessible)
+			t.log.Infof("remote cook error: code not founf")
+			return nil
+		}
+		if err := types.UI.FrontResult.Item.D.Validate(); err != nil {
+			t.CookReply(cmd, tele_api.CookReplay_cookInaccessible)
+			t.log.Infof("remote cook error: code not valid")
+			return nil
+		}
+		if arg.Balance < int32(types.UI.FrontResult.Item.Price) {
+			t.CookReply(cmd, tele_api.CookReplay_cookOverdraft, uint32(types.UI.FrontResult.Item.Price))
+			t.log.Infof("remote cook inposible. ovedraft. balance=%d price=%d", arg.Balance, types.UI.FrontResult.Item.Price)
+			return nil
+		}
+		types.UI.FrontResult.Sugar = tuneCook(arg.Sugar, ui.DefaultSugar, ui.MaxSugar)
+		types.UI.FrontResult.Cream = tuneCook(arg.Cream, ui.DefaultCream, ui.MaxCream)
+		types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
+
+		t.CookReply(cmd, tele_api.CookReplay_cookStart)
+		t.log.Infof("remote coocing (%v) (%v)", cmd, arg)
+		t.State(tele_api.State_RemoteControl)
 	}
+	types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
 	state.VmcLock(ctx)
 	defer state.VmcUnLock(ctx)
-	t.log.Infof("remote coocing (%v) (%v)", cmd, arg)
-
-	mitem, ok := types.UI.Menu[arg.Menucode]
-	if !ok {
-		t.CookReply(cmd, tele_api.CookReplay_cookInaccessible)
-		t.log.Infof("remote cook error: code not founf")
-		return nil
-	}
-	if err := mitem.D.Validate(); err != nil {
-		t.CookReply(cmd, tele_api.CookReplay_cookInaccessible)
-		t.log.Infof("remote cook error: code not valid")
-		return nil
-	}
-	if arg.Balance < int32(mitem.Price) {
-		t.CookReply(cmd, tele_api.CookReplay_cookOverdraft, uint32(mitem.Price))
-		t.log.Infof("remote cook inposible. ovedraft. balance=%d price=%d", arg.Balance, mitem.Price)
-		return nil
-	}
-	t.CookReply(cmd, tele_api.CookReplay_cookStart)
-	types.UI.FrontResult.Item = mitem
-
-	if len(arg.Sugar) == 0 {
-		types.UI.FrontResult.Sugar = ui.DefaultSugar
-	} else {
-		types.UI.FrontResult.Sugar = tunecook(arg.Sugar[0], ui.MaxSugar, ui.DefaultSugar)
-	}
-	if len(arg.Cream) == 0 {
-		types.UI.FrontResult.Cream = ui.DefaultCream
-	} else {
-		types.UI.FrontResult.Cream = tunecook(arg.Cream[0], ui.MaxCream, ui.DefaultCream)
-	}
-	t.State(tele_api.State_RemoteControl)
-	types.VMC.MonSys.Dirty = mitem.Price
 	err := ui.Cook(ctx)
 	if types.VMC.MonSys.Dirty == 0 {
-		t.CookReply(cmd, tele_api.CookReplay_cookFinish, uint32(mitem.Price))
+		// t.CookReply(cmd, tele_api.CookReplay_cookFinish, uint32(types.UI.FrontResult.Item.Price))
+		// r.ValidateReplay = price[0]
+		rm := tele_api.Response{
+			Executer:       cmd.Executer,
+			CookReplay:     tele_api.CookReplay_cookFinish,
+			ValidateReplay: uint32(types.UI.FrontResult.Item.Price),
+		}
+		if arg.Menucode != types.UI.FrontResult.Item.Code {
+			rm.Data = types.UI.FrontResult.Item.Code
+		}
+		t.CommandResponse(&rm)
 	}
 	if err != nil {
 		t.CookReply(cmd, tele_api.CookReplay_cookError)
 		t.State(tele_api.State_Problem)
-		types.VMC.State = uint32(ui.StateBroken)
+		types.VMC.State = int32(ui.StateBroken)
 		return errors.Errorf("remote cook make error: (%v)", err)
 	}
 	t.State(tele_api.State_Nominal)
 	return nil
 }
 
-// tunecook(value uint8, maximum uint8, defined uint8) (convertedvalue uint8)
-// для робота занчения  от 0 до максимума. поэтому передаваемые значени = +1
-func tunecook(value uint8, maximum uint8, defined uint8) (convertedvalue uint8) {
-	if value == 0 {
-		return defined
+func tuneCook(b []byte, def uint8, max uint8) uint8 {
+	// tunecook(value uint8, maximum uint8, defined uint8) (convertedvalue uint8)
+	// для робота занчения  от 0 (0=not change) до максимума. поэтому передаваемые значени = +1
+	if len(b) == 0 {
+		return def
+	} else {
+		v := b[0]
+		if v == 0 {
+			return def
+		}
+		if v > max+1 {
+			return max
+		}
+		return v - 1
 	}
-	if value > maximum+1 {
-		return maximum
-	}
-	return value - 1
 }
 
 func (t *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgExec) error {
