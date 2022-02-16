@@ -86,7 +86,7 @@ func (t *tele) cmdReport(ctx context.Context, cmd *tele_api.Command) error {
 }
 
 func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgCook) error {
-	if types.VMC.State != int32(tele_api.State_WaitingForExternalPayment) && arg.Menucode != "-" {
+	if types.VMC.State != int32(tele_api.State_WaitingForExternalPayment) {
 		if types.VMC.Lock {
 			t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
 			t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
@@ -96,7 +96,7 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 		types.UI.FrontResult.Item, checkVal = types.UI.Menu[arg.Menucode]
 		if !checkVal {
 			t.CookReply(cmd, tele_api.CookReplay_cookInaccessible)
-			t.log.Infof("remote cook error: code not founf")
+			t.log.Infof("remote cook error: code not found")
 			return nil
 		}
 		if err := types.UI.FrontResult.Item.D.Validate(); err != nil {
@@ -116,6 +116,10 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 		t.CookReply(cmd, tele_api.CookReplay_cookStart)
 		t.log.Infof("remote coocing (%v) (%v)", cmd, arg)
 		t.State(tele_api.State_RemoteControl)
+	} else if arg.Menucode != "-" {
+		t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
+		t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
+		return nil
 	}
 	types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
 	state.VmcLock(ctx)
