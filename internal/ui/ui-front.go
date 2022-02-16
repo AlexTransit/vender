@@ -32,9 +32,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 		ui.g.Error(errors.Errorf("money timeout lost (%v)", credit))
 	}
 	ms.ResetMoney()
-	// ui.FrontResult = UIMenuResult{
 	types.UI.FrontResult = types.UIMenuResult{
-		// TODO read config
 		Cream: DefaultCream,
 		Sugar: DefaultSugar,
 	}
@@ -168,38 +166,36 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuCodeEmpty)
 					goto wait
 				}
-
-				// mitem, ok := ui.menu[string(ui.inputBuf)]
-				mitem, ok := types.UI.Menu[string(ui.inputBuf)]
-				if !ok {
+				var checkVal bool
+				types.UI.FrontResult.Item, checkVal = types.UI.Menu[string(ui.inputBuf)]
+				if !checkVal {
 					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuCodeInvalid)
 					goto wait
 				}
 				credit := moneysys.Credit(ctx)
-				ui.g.Log.Debugf("mitem=%s validate", mitem.String())
-				if err := mitem.D.Validate(); err != nil {
-					ui.g.Log.Errorf("ui-front selected=%s Validate err=%v", mitem.String(), err)
+				mitemString := types.UI.FrontResult.Item.String()
+				ui.g.Log.Debugf("mitem=%s validate", mitemString)
+				if err := types.UI.FrontResult.Item.D.Validate(); err != nil {
+					ui.g.Log.Errorf("ui-front selected=%s Validate err=%v", mitemString, err)
 					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuNotAvailable)
 					goto wait
 				}
-				ui.g.Log.Debugf("compare price=%v credit=%v", mitem.Price, credit)
-				if mitem.Price > credit {
+				ui.g.Log.Debugf("compare price=%v credit=%v", types.UI.FrontResult.Item.Price, credit)
+				if types.UI.FrontResult.Item.Price > credit {
 					var l1, l2 string
 					if credit == 0 {
 						// remote payment (QR pay)
 						l1 = ui.g.Config.UI.Front.MsgRemotePayL1
-						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgRemotePayL2, mitem.Price.Format100I())
+						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgRemotePayL2, types.UI.FrontResult.Item.Price.Format100I())
 						ui.qrPrepare()
 					} else {
 						l1 = ui.g.Config.UI.Front.MsgMenuInsufficientCreditL1
-						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgMenuInsufficientCreditL2, (credit / 100), mitem.Price.Format100I())
+						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgMenuInsufficientCreditL2, (credit / 100), types.UI.FrontResult.Item.Price.Format100I())
 					}
 					ui.display.SetLines(l1, l2)
 					goto wait
 				}
 
-				// ui.FrontResult.Item = mitem
-				types.UI.FrontResult.Item = mitem
 				return StateFrontAccept // success path
 
 			default:
@@ -236,7 +232,8 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 }
 
 func (ui *UI) qrPrepare() {
-	ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
+	// ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
+	ui.g.SetStateTele(tele_api.State_WaitingForExternalPayment)
 	// AlexM QR
 	ui.g.ShowQR("тут текст ссылки на оплату")
 }

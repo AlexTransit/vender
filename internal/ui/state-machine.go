@@ -58,7 +58,7 @@ func (ui *UI) Loop(ctx context.Context) {
 	next := StateDefault
 	for next != StateStop && ui.g.Alive.IsRunning() {
 		current := ui.State()
-		types.VMC.State = uint32(current)
+		types.VMC.State = int32(current)
 		next = ui.enter(ctx, current)
 		if next == StateDefault {
 			ui.g.Log.Fatalf("ui state=%s next=default", current.String())
