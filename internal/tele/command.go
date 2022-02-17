@@ -86,7 +86,7 @@ func (t *tele) cmdReport(ctx context.Context, cmd *tele_api.Command) error {
 }
 
 func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgCook) error {
-	if types.VMC.State != int32(tele_api.State_WaitingForExternalPayment) {
+	if types.VMC.State != int32(ui.StatePrepare) {
 		if types.VMC.Lock {
 			t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
 			t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
@@ -122,8 +122,9 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 		return nil
 	}
 	types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
-	state.VmcLock(ctx)
-	defer state.VmcUnLock(ctx)
+	// state.VmcLock(ctx)
+	fmt.Printf("\n\033[41m должно быть залочено \033[0m\n\n")
+	// defer state.VmcUnLock(ctx)
 	err := ui.Cook(ctx)
 	if types.VMC.MonSys.Dirty == 0 {
 		// t.CookReply(cmd, tele_api.CookReplay_cookFinish, uint32(types.UI.FrontResult.Item.Price))
@@ -145,6 +146,7 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 		return errors.Errorf("remote cook make error: (%v)", err)
 	}
 	t.State(tele_api.State_Nominal)
+	fmt.Printf("\n\033[41m после этого разлочено \033[0m\n\n")
 	return nil
 }
 

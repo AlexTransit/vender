@@ -21,19 +21,20 @@ type State uint32
 const (
 	StateDefault State = iota
 
-	StateBoot   // t=onstart +onstartOk=FrontHello +onstartError+retry=Boot +retryMax=Broken
-	StateBroken // t=tele/input +inputService=ServiceBegin
-	StateLocked // t=tele
+	StateBoot   // 1 t=onstart +onstartOk=FrontHello +onstartError+retry=Boot +retryMax=Broken
+	StateBroken // 2 t=tele/input +inputService=ServiceBegin
+	StateLocked // 3 t=tele
 
-	StateFrontBegin   // t=checkVariables +=FrontHello
-	StateFrontSelect  // t=input/money/timeout +inputService=ServiceBegin +input=... +money=... +inputAccept=FrontAccept +timeout=FrontTimeout
-	StateFrontTune    // t=input/money/timeout +inputTune=FrontTune ->FrontSelect
-	StateFrontAccept  // t=engine.Exec(Item) +OK=FrontEnd +err=Broken
-	StateFrontTimeout // t=saveMoney ->FrontEnd
-	StateFrontEnd     // ->FrontBegin
+	StateFrontBegin   // 4 t=checkVariables +=FrontHello
+	StateFrontSelect  // 5 t=input/money/timeout +inputService=ServiceBegin +input=... +money=... +inputAccept=FrontAccept +timeout=FrontTimeout
+	StatePrepare      // 6
+	StateFrontTune    // 7 t=input/money/timeout +inputTune=FrontTune ->FrontSelect
+	StateFrontAccept  // 8 t=engine.Exec(Item) +OK=FrontEnd +err=Broken
+	StateFrontTimeout // 9 t=saveMoney ->FrontEnd
+	StateFrontEnd     // 10 ->FrontBegin
 
-	StateServiceBegin // t=input/timeout ->ServiceAuth
-	StateServiceAuth  // +inputAccept+OK=ServiceMenu
+	StateServiceBegin // 11 t=input/timeout ->ServiceAuth
+	StateServiceAuth  // 12 +inputAccept+OK=ServiceMenu
 	StateServiceMenu
 	StateServiceInventory
 	StateServiceTest
@@ -61,7 +62,7 @@ func (ui *UI) Loop(ctx context.Context) {
 		types.VMC.State = int32(current)
 		next = ui.enter(ctx, current)
 		if next == StateDefault {
-			ui.g.Log.Fatalf("ui state=%s next=default", current.String())
+			ui.g.Log.Fatalf("ui state=%v next=default", current)
 		}
 		ui.exit(ctx, current, next)
 
@@ -200,7 +201,7 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 		return StateStop
 
 	default:
-		ui.g.Log.Fatalf("unhandled ui state=%s", s.String())
+		ui.g.Log.Fatalf("unhandled ui state=%v", s)
 		return StateDefault
 	}
 }
