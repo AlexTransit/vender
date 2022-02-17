@@ -102,7 +102,7 @@ func (g *Global) ShowPicture(pict Pic) {
 // }
 
 func (g *Global) SetStateTele(s tele_api.State) {
-	types.VMC.State = int32(s)
+	// types.VMC.State = int32(s)
 	g.Tele.State(s)
 }
 
@@ -375,15 +375,21 @@ func (g *Global) initInventory(ctx context.Context) error {
 }
 
 func VmcLock(ctx context.Context) {
-	if !types.VMC.Lock {
-		g := GetGlobal(ctx)
+	g := GetGlobal(ctx)
+	g.Log.Info("Vmc Locked")
+	g.Hardware.Input.Enable(false)
+	types.VMC.Lock = true
+	if types.VMC.State == 5 || types.VMC.State == 6 {
 		g.LockCh <- struct{}{}
 	}
 }
 
 func VmcUnLock(ctx context.Context) {
-	if types.VMC.Lock {
-		g := GetGlobal(ctx)
+	g := GetGlobal(ctx)
+	g.Log.Info("Vmc UnLocked")
+	g.Hardware.Input.Enable(true)
+	types.VMC.Lock = false
+	if types.VMC.State == 22 {
 		g.LockCh <- struct{}{}
 	}
 }
@@ -392,7 +398,9 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 	g.Engine.RegisterNewFunc(
 		"vmc.lock!",
 		func(ctx context.Context) error {
-			VmcLock(ctx)
+			if !types.VMC.Lock {
+				VmcLock(ctx)
+			}
 			return nil
 		},
 	)
@@ -401,7 +409,8 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		"vmc.unlock!",
 		func(ctx context.Context) error {
 			if types.VMC.Lock {
-				g.LockCh <- struct{}{}
+				VmcUnLock(ctx)
+				// g.LockCh <- struct{}{}
 			}
 			return nil
 		},

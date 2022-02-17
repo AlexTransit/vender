@@ -233,6 +233,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 
 func (ui *UI) qrPrepare() {
 	// ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
+	types.VMC.State = int32(StatePrepare)
 	ui.g.SetStateTele(tele_api.State_WaitingForExternalPayment)
 	// AlexM QR
 	ui.g.ShowQR("тут текст ссылки на оплату")
@@ -315,7 +316,7 @@ func (ui *UI) onFrontTuneInput(e types.InputEvent) State {
 }
 
 func (ui *UI) onFrontAccept(ctx context.Context) State {
-	ui.g.Hardware.Input.Enable(false)
+	// ui.g.Hardware.Input.Enable(false)
 	moneysys := money.GetGlobal(ctx)
 	uiConfig := &ui.g.Config.UI
 	// selected := &types.UI.FrontResult.Item
@@ -363,9 +364,9 @@ func (ui *UI) onFrontTimeout(ctx context.Context) State {
 }
 
 func (ui *UI) onFrontLock() State {
-	ui.g.Hardware.Input.Enable(false)
-	types.VMC.Lock = true
-	ui.display.SetLines(ui.g.Config.UI.Front.MsgStateLocked, "")
+	// ui.g.Hardware.Input.Enable(false)
+	// types.VMC.Lock = true
+	// ui.display.SetLines(ui.g.Config.UI.Front.MsgStateLocked, "")
 	timeout := ui.frontResetTimeout
 	e := ui.wait(timeout)
 	switch e.Kind {

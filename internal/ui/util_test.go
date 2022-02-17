@@ -46,12 +46,12 @@ func uiTestSetup(t testing.TB, env *tenv, initState, endState ui.State) {
 	env.g.Hardware.HD44780.Display = env.display
 	env.ui = &ui.UI{
 		XXX_testHook: func(s ui.State) {
-			t.Logf("testHook %s", s.String())
+			t.Logf("testHook %v", s)
 			if env.uiState != nil {
 				select {
 				case env.uiState <- s:
 				default:
-					t.Fatalf("add requireState(%s)", s.String())
+					t.Fatalf("add requireState(%v)", s)
 				}
 			}
 			switch s {
@@ -141,5 +141,5 @@ func (env *tenv) requireDisplay(t testing.TB, line1, line2 string) {
 func (env *tenv) requireState(t testing.TB, expect ui.State) {
 	require.NotNil(t, env.uiState)
 	current := <-env.uiState
-	require.Equal(t, expect.String(), current.String())
+	require.Equal(t, expect, current)
 }
