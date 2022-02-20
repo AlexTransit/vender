@@ -190,7 +190,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 						ui.qrPrepare()
 					} else {
 						l1 = ui.g.Config.UI.Front.MsgMenuInsufficientCreditL1
-						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgMenuInsufficientCreditL2, (credit / 100), types.UI.FrontResult.Item.Price.Format100I())
+						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgMenuInsufficientCreditL2, credit.Format100I(), types.UI.FrontResult.Item.Price.Format100I())
 					}
 					ui.display.SetLines(l1, l2)
 					goto wait
