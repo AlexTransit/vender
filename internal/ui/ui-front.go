@@ -127,11 +127,11 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 		switch e.Kind {
 		case types.EventInput:
 			if input.IsMoneyAbort(&e.Input) {
+				ui.g.Hardware.Input.Enable(false)
 				ui.g.Log.Infof("money abort event.")
 				credit := moneysys.Credit(ctx) / 100
 				if credit > 0 {
 					ui.display.SetLines("  :-(", fmt.Sprintf(" -%v", credit))
-					ui.g.Hardware.Input.Enable(false)
 					ui.g.Error(errors.Trace(moneysys.Abort(ctx)))
 				}
 				return StateFrontEnd
