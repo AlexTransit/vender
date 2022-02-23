@@ -185,6 +185,13 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 					var l1, l2 string
 					if credit == 0 {
 						// remote payment (QR pay)
+						// add bank persent
+						pr := ui.g.Config.Money.BankPersent
+						if pr == 0 {
+							pr = 1
+						}
+						types.UI.FrontResult.Item.Price = types.UI.FrontResult.Item.Price.AddPersent(pr)
+						// types.UI.FrontResult.Item.Price = uint32(math.Round(pr))
 						l1 = ui.g.Config.UI.Front.MsgRemotePayL1
 						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgRemotePayL2, types.UI.FrontResult.Item.Price.Format100I())
 						ui.qrPrepare()

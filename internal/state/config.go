@@ -68,9 +68,10 @@ type Config struct {
 
 	Engine engine_config.Config
 	Money  struct {
-		Scale                int `hcl:"scale"`
-		CreditMax            int `hcl:"credit_max"`
-		ChangeOverCompensate int `hcl:"change_over_compensate"`
+		Scale                int     `hcl:"scale"`
+		CreditMax            int     `hcl:"credit_max"`
+		ChangeOverCompensate int     `hcl:"change_over_compensate"`
+		BankPersent          float64 `hcl:"bank_persent"`
 	}
 	Persist struct {
 		Root string `hcl:"root"`
