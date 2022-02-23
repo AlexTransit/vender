@@ -127,11 +127,11 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 		switch e.Kind {
 		case types.EventInput:
 			if input.IsMoneyAbort(&e.Input) {
+				ui.g.Hardware.Input.Enable(false)
 				ui.g.Log.Infof("money abort event.")
 				credit := moneysys.Credit(ctx) / 100
 				if credit > 0 {
 					ui.display.SetLines("  :-(", fmt.Sprintf(" -%v", credit))
-					ui.g.Hardware.Input.Enable(false)
 					ui.g.Error(errors.Trace(moneysys.Abort(ctx)))
 				}
 				return StateFrontEnd
@@ -185,12 +185,19 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 					var l1, l2 string
 					if credit == 0 {
 						// remote payment (QR pay)
+						// add bank persent
+						pr := ui.g.Config.Money.BankPersent
+						if pr == 0 {
+							pr = 1
+						}
+						types.UI.FrontResult.Item.Price = types.UI.FrontResult.Item.Price.AddPersent(pr)
+						// types.UI.FrontResult.Item.Price = uint32(math.Round(pr))
 						l1 = ui.g.Config.UI.Front.MsgRemotePayL1
 						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgRemotePayL2, types.UI.FrontResult.Item.Price.Format100I())
 						ui.qrPrepare()
 					} else {
 						l1 = ui.g.Config.UI.Front.MsgMenuInsufficientCreditL1
-						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgMenuInsufficientCreditL2, (credit / 100), types.UI.FrontResult.Item.Price.Format100I())
+						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgMenuInsufficientCreditL2, credit.Format100I(), types.UI.FrontResult.Item.Price.Format100I())
 					}
 					ui.display.SetLines(l1, l2)
 					goto wait

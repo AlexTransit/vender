@@ -17,6 +17,11 @@ type Amount uint32
 const MaxAmount = Amount(math.MaxUint32)
 
 func (ng Amount) Format100I() string { return fmt.Sprint(float32(ng) / 100) }
+func (ng Amount) AddPersent(persent float64) Amount {
+	vf := float64(ng) * persent
+	vi := int32(math.Round(vf))
+	return Amount(vi)
+}
 func (ng Amount) FormatCtx(ctx context.Context) string {
 	// XXX FIXME
 	return ng.Format100I()

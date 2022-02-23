@@ -104,11 +104,6 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 			t.log.Infof("remote cook error: code not valid")
 			return nil
 		}
-		if arg.Balance < int32(types.UI.FrontResult.Item.Price) {
-			t.CookReply(cmd, tele_api.CookReplay_cookOverdraft, uint32(types.UI.FrontResult.Item.Price))
-			t.log.Infof("remote cook inposible. ovedraft. balance=%d price=%d", arg.Balance, types.UI.FrontResult.Item.Price)
-			return nil
-		}
 		types.UI.FrontResult.Sugar = tuneCook(arg.Sugar, ui.DefaultSugar, ui.MaxSugar)
 		types.UI.FrontResult.Cream = tuneCook(arg.Cream, ui.DefaultCream, ui.MaxCream)
 		types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
@@ -121,10 +116,13 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 		t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
 		return nil
 	}
+
+	if arg.Balance < int32(types.UI.FrontResult.Item.Price) {
+		t.CookReply(cmd, tele_api.CookReplay_cookOverdraft, uint32(types.UI.FrontResult.Item.Price))
+		t.log.Infof("remote cook inposible. ovedraft. balance=%d price=%d", arg.Balance, types.UI.FrontResult.Item.Price)
+		return nil
+	}
 	types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
-	// state.VmcLock(ctx)
-	fmt.Printf("\n\033[41m должно быть залочено \033[0m\n\n")
-	// defer state.VmcUnLock(ctx)
 	err := ui.Cook(ctx)
 	if types.VMC.MonSys.Dirty == 0 {
 		// t.CookReply(cmd, tele_api.CookReplay_cookFinish, uint32(types.UI.FrontResult.Item.Price))
@@ -146,7 +144,7 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 		return errors.Errorf("remote cook make error: (%v)", err)
 	}
 	t.State(tele_api.State_Nominal)
-	fmt.Printf("\n\033[41m после этого разлочено \033[0m\n\n")
+	state.VmcUnLock(ctx)
 	return nil
 }
 

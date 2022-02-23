@@ -182,7 +182,11 @@ money {
   scale = 100
 
   credit_max = 200
-
+  
+  // добавление процента банка при облате по безналу
+  // adding the percentage of the bank when oblating by cashless
+  bank_persent = 1.075
+  
   // limit to over-compensate change return when exact amount is not available
   change_over_compensate = 10
 }
