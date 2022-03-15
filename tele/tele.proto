@@ -143,10 +143,11 @@ enum CookReplay {
   cookOverdraft = 4;
   cookError = 5;
   vmcbusy = 6;
+  waitPay = 7;
 }
 
 message Response {
-  uint32 command_id = 1;
+  // uint32 command_id = 1;
   string error = 2;
   string data = 3;
   int64 executer = 4;

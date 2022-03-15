@@ -24,6 +24,7 @@ type Teler interface {
 	StatModify(func(*Stat))
 	Report(ctx context.Context, serviceTag bool) error
 	Transaction(*Telemetry_Transaction)
+	CommandResponse(*Response)
 }
 
 type stub struct{}
@@ -37,5 +38,6 @@ func (stub) Error(error)                                       {}
 func (stub) StatModify(func(*Stat))                            {}
 func (stub) Report(ctx context.Context, serviceTag bool) error { return nil }
 func (stub) Transaction(*Telemetry_Transaction)                {}
+func (stub) CommandResponse(*Response)                         {}
 
 func NewStub() Teler { return stub{} }
