@@ -241,9 +241,17 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 func (ui *UI) qrPrepare() {
 	// ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
 	types.VMC.State = int32(StatePrepare)
-	ui.g.SetStateTele(tele_api.State_WaitingForExternalPayment)
+	// ui.g.SetStateTele(tele_api.State_WaitingForExternalPayment)
+	ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
+	rm := tele_api.Response{
+		CookReplay:     tele_api.CookReplay_waitPay,
+		ValidateReplay: uint32(types.UI.FrontResult.Item.Price),
+	}
+	ui.g.Tele.CommandResponse(&rm)
+	// t. CommandResponse(&rm)
+
 	// AlexM QR
-	ui.g.ShowQR("тут текст ссылки на оплату")
+	// ui.g.ShowQR("тут текст ссылки на оплату")
 }
 func (ui *UI) frontSelectShow(ctx context.Context, credit currency.Amount) {
 	config := ui.g.Config.UI.Front
