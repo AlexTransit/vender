@@ -14,11 +14,14 @@ import (
 // - application may start without network available
 // - assume worst network quality: packet loss, reorder, duplicates, corruption
 type Transporter interface {
-	Init(ctx context.Context, log *log2.Log, teleConfig tele_config.Config, onCommand CommandCallback) error
+	Init(ctx context.Context, log *log2.Log, teleConfig tele_config.Config, onCommand CommandCallback, messageForRobot CommandCallback) error
 	SendState(payload []byte) bool
 	SendTelemetry(payload []byte) bool
 	SendCommandResponse(topicSuffix string, payload []byte) bool
+	SendFromRobot(payload []byte)
 	CloseTele()
 }
 
 type CommandCallback func(context.Context, []byte) bool
+
+// type ForRobot func(context.Context, []byte) bool

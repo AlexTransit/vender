@@ -16,6 +16,7 @@ var (
 	errInvalidArg = fmt.Errorf("invalid arg")
 )
 
+// AlexM old tele
 func (t *tele) onCommandMessage(ctx context.Context, payload []byte) bool {
 	if t.currentState == tele_api.State_Invalid || t.currentState == tele_api.State_Boot {
 		return true
@@ -35,6 +36,20 @@ func (t *tele) onCommandMessage(ctx context.Context, payload []byte) bool {
 		return true
 	}
 
+	return true
+}
+
+func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
+	inMessage := new(tele_api.ToRoboMessage)
+	err := proto.Unmarshal(payload, inMessage)
+	if err != nil {
+		t.log.Errorf("tele command parse raw=%x err=%v", payload, err)
+		// TODO reply error
+		return true
+	}
+	if inMessage.MakeOrder != nil {
+		fmt.Printf("\n\033[41m aa \033[0m\n\n")
+	}
 	return true
 }
 
@@ -230,4 +245,9 @@ func (t *tele) cmdShowQR(ctx context.Context, cmd *tele_api.Command, arg *tele_a
 	// types.VMC.HW.Display.Gdisplay = arg.QrText
 	// return display.QR(arg.QrText, true, qrcode.High)
 	return nil
+}
+
+// -------------------
+func (t *tele) inputRoboMessage(ctx context.Context, payload []byte) {
+	t.log.Infof("\n\033[41m sdf \033[0m\n\n")
 }

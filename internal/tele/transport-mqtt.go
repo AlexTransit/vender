@@ -14,6 +14,7 @@ type transportMqtt struct {
 	enabled   bool
 	log       *log2.Log
 	onCommand func([]byte) bool
+	inRobo    func([]byte) bool
 	m         mqtt.Client
 	mopt      *mqtt.ClientOptions
 	// stopCh    chan struct{}
@@ -23,9 +24,11 @@ type transportMqtt struct {
 	topicState     string
 	topicTelemetry string
 	topicCommand   string
+	topicRoboIn    string
+	topicRoboOut   string
 }
 
-func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.Config, onCommand CommandCallback) error {
+func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.Config, onCommand CommandCallback, inRobo CommandCallback) error {
 	if !teleConfig.Enabled {
 		return nil
 	}
@@ -44,11 +47,16 @@ func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tel
 	tm.onCommand = func(payload []byte) bool {
 		return onCommand(ctx, payload)
 	}
+
+	tm.inRobo = func(payload []byte) bool {
+		return inRobo(ctx, payload)
+	}
 	tm.topicPrefix = mqttClientId // coincidence
 	tm.topicConnect = fmt.Sprintf("%s/c", tm.topicPrefix)
 	tm.topicState = fmt.Sprintf("%s/w/1s", tm.topicPrefix)
 	tm.topicTelemetry = fmt.Sprintf("%s/w/1t", tm.topicPrefix)
 	tm.topicCommand = fmt.Sprintf("%s/r/c", tm.topicPrefix)
+	tm.topicRoboIn = fmt.Sprintf("%s/ri", tm.topicPrefix)
 	keepAlive := helpers.IntSecondConfigDefault(teleConfig.KeepaliveSec, 60)
 	pingTimeout := helpers.IntSecondConfigDefault(teleConfig.PingTimeoutSec, 30)
 	retryInterval := helpers.IntSecondConfigDefault(teleConfig.KeepaliveSec/2, 30)
@@ -128,11 +136,22 @@ func (tm *transportMqtt) SendCommandResponse(topicSuffix string, payload []byte)
 	tm.publish2Telemetry(topic, 1, false, payload)
 	return true
 }
+func (tm *transportMqtt) SendFromRobot(payload []byte) {
+	topic := fmt.Sprintf("%s/%s", tm.topicPrefix, tm.topicRoboOut)
+	tm.log.Infof("mqtt publish message from robot to topic=%s", topic)
+	tm.publish2Telemetry(topic, 1, false, payload)
+
+}
 
 func (tm *transportMqtt) messageHandler(c mqtt.Client, msg mqtt.Message) {
 	payload := msg.Payload()
+	// ALexM rewrite  onCommand = old 
 	tm.log.Infof("mqtt income message (%x)", payload)
-	tm.onCommand(payload)
+	if msg.Topic() == tm.topicRoboIn {
+		tm.inRobo(payload)
+	} else {
+		tm.onCommand(payload)
+	}
 }
 
 func (tm *transportMqtt) connectLostHandler(c mqtt.Client, err error) {
@@ -147,4 +166,9 @@ func (tm *transportMqtt) onConnectHandler(c mqtt.Client) {
 		tm.log.Infof("mqtt subscribe Ok")
 		c.Publish(tm.topicConnect, 1, true, []byte{0x01})
 	}
+
+	if token1 := c.Subscribe(tm.topicRoboIn, 1, nil); token1.Wait() && token1.Error() != nil {
+		tm.log.Infof("mqtt subscribe error")
+	}
+
 }
