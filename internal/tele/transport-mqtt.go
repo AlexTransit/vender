@@ -57,6 +57,7 @@ func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tel
 	tm.topicTelemetry = fmt.Sprintf("%s/w/1t", tm.topicPrefix)
 	tm.topicCommand = fmt.Sprintf("%s/r/c", tm.topicPrefix)
 	tm.topicRoboIn = fmt.Sprintf("%s/ri", tm.topicPrefix)
+	tm.topicRoboOut = fmt.Sprintf("%s/ro", tm.topicPrefix)
 	keepAlive := helpers.IntSecondConfigDefault(teleConfig.KeepaliveSec, 60)
 	pingTimeout := helpers.IntSecondConfigDefault(teleConfig.PingTimeoutSec, 30)
 	retryInterval := helpers.IntSecondConfigDefault(teleConfig.KeepaliveSec/2, 30)
@@ -137,15 +138,14 @@ func (tm *transportMqtt) SendCommandResponse(topicSuffix string, payload []byte)
 	return true
 }
 func (tm *transportMqtt) SendFromRobot(payload []byte) {
-	topic := fmt.Sprintf("%s/%s", tm.topicPrefix, tm.topicRoboOut)
-	tm.log.Infof("mqtt publish message from robot to topic=%s", topic)
-	tm.publish2Telemetry(topic, 1, false, payload)
+	tm.log.Infof("mqtt publish message from robot to topic=%s", tm.topicRoboOut)
+	tm.publish2Telemetry(tm.topicRoboOut, 1, false, payload)
 
 }
 
 func (tm *transportMqtt) messageHandler(c mqtt.Client, msg mqtt.Message) {
 	payload := msg.Payload()
-	// ALexM rewrite  onCommand = old 
+	// ALexM rewrite  onCommand = old
 	tm.log.Infof("mqtt income message (%x)", payload)
 	if msg.Topic() == tm.topicRoboIn {
 		tm.inRobo(payload)
