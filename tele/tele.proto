@@ -1,4 +1,5 @@
 // go:generate protoc --go_out=./ tele.proto
+
 syntax = "proto3";
 package tele;
 
@@ -79,13 +80,6 @@ message Telemetry {
     uint32 coin_slug = 18;
   }
 }
-enum PaymentMethod {
-  Nothing = 0;
-  Cash = 1;
-  Cashless = 2;
-  Gift = 3;
-  Balance = 4;
-}
 
 message Command {
   int64 executer = 5;
@@ -101,10 +95,10 @@ message Command {
     ArgValidateCode validate_code = 23;
     ArgCook cook = 24;
   }
-
-message ArgReport {}
-message ArgGetState {}
-message ArgExec {
+  
+  message ArgReport {}
+  message ArgGetState {}
+  message ArgExec {
     string scenario = 1;
   }
   message ArgSetInventory { Inventory new = 1; }
@@ -155,4 +149,83 @@ message Response {
   CookReplay cook_replay = 6;
   uint32 validateReplay = 7;
   string INTERNAL_topic = 2048; // convenience
+}
+
+message WaitingForRemotePayment {
+  string menucode  = 1;
+  bytes cream = 2;
+  bytes sugar = 3;
+  uint32 amount = 4;
+}
+
+// ----------
+enum CurrentState {
+  InvalidState = 0;
+  
+  BootState = 1;
+  BrokenState = 2;
+  TemperatureProblemState = 3;
+  ShutdownState = 4;
+  
+  NominalState = 8;
+  
+  ProccessState = 9;
+  RemoteControlState = 10;
+  ServiceState = 11;
+  WaitingForExternalPaymentState = 12;
+}
+
+enum PaymentMethod {
+  Nothing = 0;
+  Cash = 1;
+  Cashless = 2;
+  Gift = 3;
+  Balance = 4;
+}
+
+enum OwnerType {
+  noOwnerType = 0;
+  telegramUser = 1;
+  qrCashLessUser = 2;
+}
+
+enum OrderStatus {
+  noStatus = 0;
+  executionStart = 1;
+  orderComplete = 2;
+  executionInaccessible = 3;
+  executionError = 5;
+  robotIsBusy = 6;
+  waitingForPayment = 7;
+
+  doSelected = 64;
+  doTransferred = 65;
+}
+
+message FromRoboMessage {
+  CurrentState state = 1;
+  Order order = 3;
+  HardwareState hardwareState = 4;
+}
+
+message ToRoboMessage {
+  Order makeOrder = 1;
+}
+
+message Order {
+  string menuCode = 1;
+  bytes cream = 2;         // default = 0
+  bytes sugar = 3;             // default = 0
+  uint32 amount = 4;           // цена в копейках
+  OrderStatus orderStatus = 6;
+  PaymentMethod paymentMethod = 7;
+  int64 ownerInt = 8;          // id клиента
+  string ownerStr = 9;  //  
+  OwnerType ownerType = 10;
+  int64 redirectDueDate = 11;
+}
+
+message HardwareState {
+  int64 robotTime = 1;
+  int32 temperature = 2;
 }

@@ -26,3 +26,5 @@ func (Noop) Report(ctx context.Context, serviceTag bool) error { return nil }
 func (Noop) Transaction(*Telemetry_Transaction) {}
 
 func (Noop) CommandResponse(*Response) {}
+
+func (Noop) RoboSend(*FromRoboMessage) {}

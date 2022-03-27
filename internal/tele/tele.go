@@ -52,7 +52,7 @@ func (t *tele) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.C
 	if t.transport == nil { // production path
 		t.transport = &transportMqtt{}
 	}
-	if err := t.transport.Init(ctx, log, teleConfig, t.onCommandMessage); err != nil {
+	if err := t.transport.Init(ctx, log, teleConfig, t.onCommandMessage, t.messageForRobot); err != nil {
 		return errors.Annotate(err, "tele transport")
 	}
 	if !t.config.Enabled {
@@ -92,4 +92,13 @@ func (t *tele) Telemetry(tm *tele_api.Telemetry) {
 		return
 	}
 	t.transport.SendTelemetry(payload)
+}
+
+func (t *tele) RoboSend(sm *tele_api.FromRoboMessage) {
+	payload, err := proto.Marshal(sm)
+	if err != nil {
+		t.log.Errorf("CRITICAL telemetry Marshal message(%#v) err=%v", sm, err)
+		return
+	}
+	t.transport.SendFromRobot(payload)
 }

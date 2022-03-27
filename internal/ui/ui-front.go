@@ -186,15 +186,9 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 					if credit == 0 {
 						// remote payment (QR pay)
 						// add bank persent
-						pr := ui.g.Config.Money.BankPersent
-						if pr == 0 {
-							pr = 1
-						}
-						types.UI.FrontResult.Item.Price = types.UI.FrontResult.Item.Price.AddPersent(pr)
-						// types.UI.FrontResult.Item.Price = uint32(math.Round(pr))
 						l1 = ui.g.Config.UI.Front.MsgRemotePayL1
 						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgRemotePayL2, types.UI.FrontResult.Item.Price.Format100I())
-						ui.qrPrepare()
+						ui.sendRequestForQrPayment()
 					} else {
 						l1 = ui.g.Config.UI.Front.MsgMenuInsufficientCreditL1
 						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgMenuInsufficientCreditL2, credit.Format100I(), types.UI.FrontResult.Item.Price.Format100I())
@@ -238,20 +232,34 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 	}
 }
 
-func (ui *UI) qrPrepare() {
-	// ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
+func (ui *UI) sendRequestForQrPayment() {
 	types.VMC.State = int32(StatePrepare)
-	// ui.g.SetStateTele(tele_api.State_WaitingForExternalPayment)
-	ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
-	rm := tele_api.Response{
-		CookReplay:     tele_api.CookReplay_waitPay,
-		ValidateReplay: uint32(types.UI.FrontResult.Item.Price),
-	}
-	ui.g.Tele.CommandResponse(&rm)
-	// t. CommandResponse(&rm)
 
-	// AlexM QR
-	// ui.g.ShowQR("тут текст ссылки на оплату")
+	rm := tele_api.FromRoboMessage{
+		State: tele_api.CurrentState_WaitingForExternalPaymentState,
+		Order: &tele_api.Order{
+			MenuCode: types.UI.FrontResult.Item.Code,
+			Amount:   uint32(types.UI.FrontResult.Item.Price),
+		},
+	}
+	ui.g.Tele.RoboSend(&rm)
+}
+
+func (ui *UI) qrPrepare() {
+	// // ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
+	// // AlexM remove this
+	// ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
+
+	// // rm := tele_api.Response{
+	// // 	CookReplay:     tele_api.CookReplay_waitPay,
+	// // 	ValidateReplay: uint32(types.UI.FrontResult.Item.Price),
+	// // }
+	// // ui.g.Tele.CommandResponse(&rm)
+
+	// // t. CommandResponse(&rm)
+
+	// // AlexM QR
+	// // ui.g.ShowQR("тут текст ссылки на оплату")
 }
 func (ui *UI) frontSelectShow(ctx context.Context, credit currency.Amount) {
 	config := ui.g.Config.UI.Front
