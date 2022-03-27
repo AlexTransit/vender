@@ -203,13 +203,16 @@ enum OrderStatus {
 }
 
 message FromRoboMessage {
-  CurrentState state = 1;
+  CurrentRobotState robotState = 1;
   Order order = 3;
   HardwareState hardwareState = 4;
 }
 
 message ToRoboMessage {
   Order makeOrder = 1;
+}
+message CurrentRobotState { 
+  CurrentState state = 1;
 }
 
 message Order {

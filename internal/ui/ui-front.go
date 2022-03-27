@@ -236,7 +236,7 @@ func (ui *UI) sendRequestForQrPayment() {
 	types.VMC.State = int32(StatePrepare)
 
 	rm := tele_api.FromRoboMessage{
-		State: tele_api.CurrentState_WaitingForExternalPaymentState,
+		RobotState: &tele_api.CurrentRobotState{State: tele_api.CurrentState_WaitingForExternalPaymentState},
 		Order: &tele_api.Order{
 			MenuCode: types.UI.FrontResult.Item.Code,
 			Amount:   uint32(types.UI.FrontResult.Item.Price),
