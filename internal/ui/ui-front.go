@@ -385,7 +385,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 	err := Cook(ctx)
 
 	if err == nil { // success path
-		rm.Order.OrderStatus = tele_api.OrderStatus_orderComplete
+		rm.Order.OrderStatus = tele_api.OrderStatus_complete
 		rm.RobotState.State = tele_api.CurrentState_NominalState
 		// ui.g.Tele.Transaction(teletx)
 		ui.g.Tele.RoboSend(&rm)

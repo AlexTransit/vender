@@ -192,9 +192,10 @@ enum OwnerType {
 enum OrderStatus {
   noStatus = 0;
   executionStart = 1;
-  orderComplete = 2;
-  executionInaccessible = 3;
-  executionError = 5;
+  complete = 2;
+  overdraft = 3;
+  rxecutionInaccessible = 4;
+  orderError = 5;
   robotIsBusy = 6;
   waitingForPayment = 7;
 
