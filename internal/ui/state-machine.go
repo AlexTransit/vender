@@ -89,7 +89,7 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 	// ui.g.Log.Debugf("ui enter %s", s.String())
 	switch s {
 	case StateBoot:
-		ui.g.Tele.State(tele_api.State_Boot)
+		ui.g.RoboSendState(tele_api.CurrentState_BootState)
 		ui.g.ShowPicture(state.PictureBoot)
 
 		onStartSuccess := false
@@ -111,14 +111,14 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 			return StateBroken
 		}
 		ui.broken = false
-		ui.g.Tele.State(tele_api.State_Nominal)
+		ui.g.RoboSendState(tele_api.CurrentState_NominalState)
 		return StateFrontBegin
 
 	case StateBroken:
 		ui.g.Log.Infof("state=broken")
 		ui.g.ShowPicture(state.PictureBroken)
 		if !ui.broken {
-			ui.g.Tele.State(tele_api.State_Problem)
+			ui.g.RoboSendState(tele_api.CurrentState_BrokenState)
 			if errs := ui.g.Engine.ExecList(ctx, "on_broken", ui.g.Config.Engine.OnBroken); len(errs) != 0 {
 				// TODO maybe ErrorStack should be removed
 				ui.g.Log.Error(errors.ErrorStack(errors.Annotate(helpers.FoldErrors(errs), "on_broken")))

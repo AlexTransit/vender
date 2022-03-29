@@ -48,7 +48,13 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 			}
 			if types.VMC.HW.Display.L1 != line1 {
 				ui.display.SetLines(line1, ui.g.Config.UI.Front.MsgWait)
-				ui.g.Tele.State(tele_api.State_TempProblem)
+				rm := tele_api.FromRoboMessage{
+					RobotState: &tele_api.CurrentRobotState{
+						State:       tele_api.CurrentState_TemperatureProblemState,
+						Temperature: int32(errtemp.Current),
+					},
+				}
+				ui.g.Tele.RoboSend(&rm)
 			}
 			if e := ui.wait(5 * time.Second); e.Kind == types.EventService {
 				return StateServiceBegin
@@ -73,7 +79,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 		ui.g.Error(err)
 		return StateBroken
 	}
-	ui.g.Tele.State(tele_api.State_Nominal)
+	ui.g.RoboSendState(tele_api.CurrentState_NominalState)
 	return StateFrontSelect
 }
 
@@ -246,6 +252,14 @@ func (ui *UI) sendRequestForQrPayment() {
 }
 
 func (ui *UI) qrPrepare() {
+	// rm := tele_api.FromRoboMessage{
+	// 	RobotState: &tele_api.CurrentRobotState{
+	// 		State:       tele_api.CurrentState_TemperatureProblemState,
+	// 		Temperature: int32(errtemp.Current),
+	// 	},
+	// }
+	// ui.g.Tele.RoboSend(&rm)
+
 	// // ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
 	// // AlexM remove this
 	// ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
@@ -344,16 +358,24 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 	uiConfig := &ui.g.Config.UI
 	// selected := &types.UI.FrontResult.Item
 	selected := types.UI.FrontResult.Item
-	teletx := &tele_api.Telemetry_Transaction{
-		Code:    selected.Code,
-		Price:   uint32(selected.Price),
-		Options: []int32{int32(types.UI.FrontResult.Cream), int32(types.UI.FrontResult.Sugar)},
+	// teletx := &tele_api.Telemetry_Transaction{
+	// 	Code:    selected.Code,
+	// 	Price:   uint32(selected.Price),
+	// 	Options: []int32{int32(types.UI.FrontResult.Cream), int32(types.UI.FrontResult.Sugar)},
+	// }
+	rm := tele_api.FromRoboMessage{
+		RobotState: &tele_api.CurrentRobotState{},
+		Order:      &tele_api.Order{MenuCode: selected.Code, Amount: uint32(selected.Price)},
 	}
-
+	rm.Order.Cream = types.TuneValueToByte(types.UI.FrontResult.Cream, DefaultCream)
+	rm.Order.Sugar = types.TuneValueToByte(types.UI.FrontResult.Sugar, DefaultSugar)
+	rm.Order.PaymentMethod = tele_api.PaymentMethod_Cash
 	if moneysys.GetGiftCredit() == 0 {
-		teletx.PaymentMethod = tele_api.PaymentMethod_Cash
+		// teletx.PaymentMethod = tele_api.PaymentMethod_Cash
+		rm.Order.PaymentMethod = tele_api.PaymentMethod_Cash
 	} else {
-		teletx.PaymentMethod = tele_api.PaymentMethod_Gift
+		// teletx.PaymentMethod = tele_api.PaymentMethod_Gift
+		rm.Order.PaymentMethod = tele_api.PaymentMethod_Gift
 	}
 
 	ui.g.Log.Debugf("ui-front selected=%s begin", selected.String())
@@ -363,7 +385,10 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 	err := Cook(ctx)
 
 	if err == nil { // success path
-		ui.g.Tele.Transaction(teletx)
+		rm.Order.OrderStatus = tele_api.OrderStatus_orderComplete
+		rm.RobotState.State = tele_api.CurrentState_NominalState
+		// ui.g.Tele.Transaction(teletx)
+		ui.g.Tele.RoboSend(&rm)
 		return StateFrontEnd
 	}
 

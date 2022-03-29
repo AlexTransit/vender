@@ -18,7 +18,7 @@ var (
 
 // AlexM old tele
 func (t *tele) onCommandMessage(ctx context.Context, payload []byte) bool {
-	if t.currentState == tele_api.State_Invalid || t.currentState == tele_api.State_Boot {
+	if t.currentState == tele_api.CurrentState_InvalidState || t.currentState == tele_api.CurrentState_BootState {
 		return true
 	}
 	cmd := new(tele_api.Command)
@@ -40,15 +40,33 @@ func (t *tele) onCommandMessage(ctx context.Context, payload []byte) bool {
 }
 
 func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
-	inMessage := new(tele_api.ToRoboMessage)
-	err := proto.Unmarshal(payload, inMessage)
+	im := new(tele_api.ToRoboMessage) // input message
+	err := proto.Unmarshal(payload, im)
 	if err != nil {
 		t.log.Errorf("tele command parse raw=%x err=%v", payload, err)
 		// TODO reply error
 		return true
 	}
-	if inMessage.MakeOrder != nil {
-		fmt.Printf("\n\033[41m aa \033[0m\n\n")
+	g := state.GetGlobal(ctx)
+
+	if im.MakeOrder != nil {
+		// проверить время валидности QR и цену
+		om := tele_api.FromRoboMessage{
+			RobotState: &tele_api.CurrentRobotState{
+				State: tele_api.CurrentState_ProccessState,
+			},
+			Order: &tele_api.Order{
+				OrderStatus: tele_api.OrderStatus_executionStart,
+				OwnerInt:    im.MakeOrder.OwnerInt,
+			},
+		}
+		t.RoboSend(&om)
+
+	}
+
+	if im.ShowQR != nil {
+		t.log.Infof("input meggase ShowQr. type:%v message:%s", im.ShowQR.QrType, im.ShowQR.QrText)
+		g.ShowQR(im.ShowQR.QrText)
 	}
 	return true
 }
@@ -58,9 +76,9 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 	case *tele_api.Command_Report:
 		return t.cmdReport(ctx, cmd)
 
-	case *tele_api.Command_GetState:
-		t.transport.SendState([]byte{byte(t.currentState)})
-		return nil
+	// case *tele_api.Command_GetState:
+	// 	t.transport.SendState([]byte{byte(t.currentState)})
+	// 	return nil
 
 	case *tele_api.Command_Exec:
 		return t.cmdExec(ctx, cmd, task.Exec)
@@ -125,7 +143,7 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 
 		t.CookReply(cmd, tele_api.CookReplay_cookStart)
 		t.log.Infof("remote coocing (%v) (%v)", cmd, arg)
-		t.State(tele_api.State_RemoteControl)
+		t.State(tele_api.CurrentState_RemoteControlState)
 	} else if arg.Menucode != "-" {
 		t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
 		t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
@@ -154,11 +172,11 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	}
 	if err != nil {
 		t.CookReply(cmd, tele_api.CookReplay_cookError)
-		t.State(tele_api.State_Problem)
+		t.State(tele_api.CurrentState_BrokenState)
 		types.VMC.State = int32(ui.StateBroken)
 		return errors.Errorf("remote cook make error: (%v)", err)
 	}
-	t.State(tele_api.State_Nominal)
+	t.State(tele_api.CurrentState_NominalState)
 	state.VmcUnLock(ctx)
 	return nil
 }

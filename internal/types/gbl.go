@@ -54,8 +54,8 @@ type UIMenuResult struct {
 	Sugar uint8
 }
 
-func (self *MenuItemType) String() string {
-	return fmt.Sprintf("menu code=%s price=%d(raw) name='%s'", self.Code, self.Price, self.Name)
+func (mit *MenuItemType) String() string {
+	return fmt.Sprintf("menu code=%s price=%d(raw) name='%s'", mit.Code, mit.Price, mit.Name)
 }
 
 type MenuItemType struct {
@@ -89,4 +89,15 @@ func ShowEnvs() string {
 	s := fmt.Sprintf("GBL=%+v", VMC)
 	Log.Info(s)
 	return s
+}
+
+// преобразование тюнинга в байт
+// 0 = дефолтные значение. если менялось то +1 для телеметрии
+// convert tuning to byte
+// 0 = default value. if changed then +1 for telemetry
+func TuneValueToByte(currentValue uint8, defaultValue int) []byte {
+	if currentValue == uint8(defaultValue) {
+		return nil
+	}
+	return []byte{currentValue + 1}
 }

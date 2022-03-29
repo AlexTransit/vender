@@ -138,7 +138,7 @@ func (tm *transportMqtt) SendCommandResponse(topicSuffix string, payload []byte)
 	return true
 }
 func (tm *transportMqtt) SendFromRobot(payload []byte) {
-	tm.log.Infof("mqtt publish message from robot to topic=%s", tm.topicRoboOut)
+	// tm.log.Infof("mqtt publish message from robot to topic=%s", tm.topicRoboOut)
 	tm.publish2Telemetry(tm.topicRoboOut, 1, false, payload)
 
 }

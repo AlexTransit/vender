@@ -29,7 +29,7 @@ type tele struct { //nolint:maligned
 	transport    Transporter
 	vmId         int32
 	stat         tele_api.Stat
-	currentState tele_api.State
+	currentState tele_api.CurrentState
 }
 
 func New() tele_api.Teler {
@@ -59,7 +59,7 @@ func (t *tele) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.C
 		return nil
 	}
 
-	t.State(tele_api.State_Boot)
+	t.State(tele_api.CurrentState_BootState)
 
 	return nil
 }
@@ -100,5 +100,6 @@ func (t *tele) RoboSend(sm *tele_api.FromRoboMessage) {
 		t.log.Errorf("CRITICAL telemetry Marshal message(%#v) err=%v", sm, err)
 		return
 	}
+	t.log.Infof("telemetry messga: %v", sm)
 	t.transport.SendFromRobot(payload)
 }

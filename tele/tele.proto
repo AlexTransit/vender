@@ -86,7 +86,7 @@ message Command {
   bool lock = 6;
   oneof task {
     ArgReport report = 16;
-    ArgGetState getState = 17;
+    // ArgGetState getState = 17;
     ArgExec exec = 18;
     ArgSetInventory set_inventory = 19;
     ArgSetConfig set_config = 20;
@@ -202,17 +202,36 @@ enum OrderStatus {
   doTransferred = 65;
 }
 
+enum QrType {
+  noType = 0;
+  receipt = 1;
+  payQr = 2;
+}
+
 message FromRoboMessage {
   CurrentRobotState robotState = 1;
-  Order order = 3;
-  HardwareState hardwareState = 4;
+  Order order = 2;
+  Err err = 3;
+}
+
+message Err {
+  uint32 code = 1;
+  string message = 2;
+}
+
+message ShowQR {
+  string qr_text = 1;
+  QrType qr_type = 2;
 }
 
 message ToRoboMessage {
   Order makeOrder = 1;
+  ShowQR showQR = 2;
 }
 message CurrentRobotState { 
   CurrentState state = 1;
+  int64 robotTime = 2;
+  int32 temperature = 3;
 }
 
 message Order {
@@ -226,9 +245,4 @@ message Order {
   string ownerStr = 9;  //  
   OwnerType ownerType = 10;
   int64 redirectDueDate = 11;
-}
-
-message HardwareState {
-  int64 robotTime = 1;
-  int32 temperature = 2;
 }
