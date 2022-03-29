@@ -17,7 +17,7 @@ func (Noop) Close() {}
 
 func (Noop) Error(error) {}
 
-func (Noop) State(State) {}
+// func (Noop) State(State) {}
 
 func (Noop) StatModify(func(*Stat)) {}
 
