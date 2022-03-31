@@ -86,7 +86,7 @@ message Command {
   bool lock = 6;
   oneof task {
     ArgReport report = 16;
-    // ArgGetState getState = 17;
+    ArgGetState getState = 17;
     ArgExec exec = 18;
     ArgSetInventory set_inventory = 19;
     ArgSetConfig set_config = 20;
