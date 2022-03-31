@@ -29,4 +29,4 @@ func (Noop) CommandResponse(*Response) {}
 
 func (Noop) RoboSend(*FromRoboMessage) {}
 
-func (Noop) RoboSendState(s CurrentState) {}
+func (Noop) RoboSendState(s State) {}

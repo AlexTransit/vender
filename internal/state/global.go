@@ -97,7 +97,7 @@ func (g *Global) VmcStop(ctx context.Context) {
 	_ = g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken)
 	td := g.MustTextDisplay()
 	td.SetLines(g.Config.UI.Front.MsgBrokenL1, g.Config.UI.Front.MsgBrokenL2)
-	g.Tele.RoboSendState(tele_api.CurrentState_ShutdownState)
+	g.Tele.RoboSendState(tele_api.State_Shutdown)
 	g.Tele.Close()
 	time.Sleep(2 * time.Second)
 	g.Log.Infof("--- vmc stop ---")
@@ -110,7 +110,7 @@ func (g *Global) ClientBegin() {
 		types.VMC.Lock = true
 		types.VMC.Client.WorkTime = time.Now()
 		g.Log.Infof("--- client activity begin ---")
-		g.Tele.RoboSendState(tele_api.CurrentState_ProccessState)
+		g.Tele.RoboSendState(tele_api.State_Process)
 	}
 }
 

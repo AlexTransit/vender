@@ -92,7 +92,7 @@ func (t *tele) Report(ctx context.Context, serviceTag bool) error {
 	return nil
 }
 
-func (t *tele) State(s tele_api.CurrentState) {
+func (t *tele) State(s tele_api.State) {
 	if t.currentState != s {
 		t.currentState = s
 		m := tele_api.FromRoboMessage{

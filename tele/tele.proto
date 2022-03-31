@@ -21,21 +21,6 @@ enum Priority {
   IdleUser = 4;
 }
 
-enum State {
-  Invalid = 0;
-  Boot = 1;
-  Nominal = 2;
-  Disconnected = 3;
-  Problem = 4;
-  Service = 5;
-  Lock = 6;
-  Client = 7;
-  TempProblem = 8;
-  Shutdown = 9;
-  RemoteControl = 10;
-  WaitingForExternalPayment = 11;
-}
-
 message Telemetry {
   int32 vm_id = 1;
   int64 time = 2;
@@ -159,22 +144,21 @@ message WaitingForRemotePayment {
 }
 
 // ----------
-enum CurrentState {
-  InvalidState = 0;
+enum State {
+  Invalid = 0;
+  Boot = 1;
+  Nominal = 2;
+  Disconnected = 3;
+  Broken = 4;
+  Service = 5;
+  Lock = 6;
+  Process = 7;
+  TemperatureProblem = 8;
+  Shutdown = 9;
+  RemoteControl = 10;
+  WaitingForExternalPayment = 11;
   
-  BootState = 1;
-  BrokenState = 2;
-  TemperatureProblemState = 3;
-  ShutdownState = 4;
-  
-  NominalState = 8;
-  
-  ProccessState = 9;
-  RemoteControlState = 10;
-  ServiceState = 11;
-  WaitingForExternalPaymentState = 12;
-
-  RequestState = 13;
+  RequestState = 64;
 }
 
 enum PaymentMethod {
@@ -235,7 +219,7 @@ message ToRoboMessage {
 }
 
 message RobotState { 
-  CurrentState state = 1;
+  State state = 1;
   int64 robotTime = 2;
   int32 temperature = 3;
 }

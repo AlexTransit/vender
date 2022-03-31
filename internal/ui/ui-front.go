@@ -50,7 +50,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 				ui.display.SetLines(line1, ui.g.Config.UI.Front.MsgWait)
 				rm := tele_api.FromRoboMessage{
 					RobotState: &tele_api.RobotState{
-						State:       tele_api.CurrentState_TemperatureProblemState,
+						State:       tele_api.State_TemperatureProblem,
 						Temperature: int32(errtemp.Current),
 					},
 				}
@@ -79,7 +79,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 		ui.g.Error(err)
 		return StateBroken
 	}
-	ui.g.Tele.RoboSendState(tele_api.CurrentState_NominalState)
+	ui.g.Tele.RoboSendState(tele_api.State_Nominal)
 	return StateFrontSelect
 }
 
@@ -242,7 +242,7 @@ func (ui *UI) sendRequestForQrPayment() {
 	types.VMC.State = int32(StatePrepare)
 
 	rm := tele_api.FromRoboMessage{
-		RobotState: &tele_api.RobotState{State: tele_api.CurrentState_WaitingForExternalPaymentState},
+		RobotState: &tele_api.RobotState{State: tele_api.State_WaitingForExternalPayment},
 		Order: &tele_api.Order{
 			MenuCode: types.UI.FrontResult.Item.Code,
 			Amount:   uint32(types.UI.FrontResult.Item.Price),
@@ -386,7 +386,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 
 	if err == nil { // success path
 		rm.Order.OrderStatus = tele_api.OrderStatus_complete
-		rm.RobotState.State = tele_api.CurrentState_NominalState
+		rm.RobotState.State = tele_api.State_Nominal
 		// ui.g.Tele.Transaction(teletx)
 		ui.g.Tele.RoboSend(&rm)
 		return StateFrontEnd

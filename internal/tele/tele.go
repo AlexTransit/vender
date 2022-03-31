@@ -29,7 +29,7 @@ type tele struct { //nolint:maligned
 	transport    Transporter
 	vmId         int32
 	stat         tele_api.Stat
-	currentState tele_api.CurrentState
+	currentState tele_api.State
 }
 
 func New() tele_api.Teler {
@@ -59,7 +59,7 @@ func (t *tele) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.C
 		return nil
 	}
 
-	t.State(tele_api.CurrentState_BootState)
+	t.State(tele_api.State_Boot)
 
 	return nil
 }
@@ -95,15 +95,28 @@ func (t *tele) Telemetry(tm *tele_api.Telemetry) {
 }
 
 func (t *tele) RoboSend(sm *tele_api.FromRoboMessage) {
-	payload, err := proto.Marshal(sm)
-	if err != nil {
-		t.log.Errorf("CRITICAL telemetry Marshal message(%#v) err=%v", sm, err)
-		return
-	}
-	t.log.Infof("telemetry messga: %v", sm)
-	t.transport.SendFromRobot(payload)
+	t.marshalAndSendMessage(sm)
 }
 
-func (t *tele) RoboSendState(s tele_api.CurrentState) {
-	t.log.Infof("\n\033[41m send-Robo-State %v \033[0m\n\n", s)
+func (t *tele) RoboSendState(s tele_api.State) {
+	if t.currentState == s {
+		return
+	}
+	t.currentState = s
+	rm := tele_api.FromRoboMessage{
+		RobotState: &tele_api.RobotState{
+			State: s,
+		},
+	}
+	t.marshalAndSendMessage(&rm)
+}
+
+func (t *tele) marshalAndSendMessage(m proto.Message) {
+	payload, err := proto.Marshal(m)
+	if err != nil {
+		t.log.Errorf("CRITICAL telemetry Marshal message(%#v) err=%v", m, err)
+		return
+	}
+	t.log.Infof("telemetry messga: %v", m)
+	t.transport.SendFromRobot(payload)
 }

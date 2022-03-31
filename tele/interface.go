@@ -26,7 +26,7 @@ type Teler interface {
 	Transaction(*Telemetry_Transaction)
 	CommandResponse(*Response)
 	RoboSend(*FromRoboMessage)
-	RoboSendState(s CurrentState)
+	RoboSendState(s State)
 }
 
 type stub struct{}
@@ -43,5 +43,5 @@ func (stub) Report(ctx context.Context, serviceTag bool) error { return nil }
 func (stub) Transaction(*Telemetry_Transaction)                {}
 func (stub) CommandResponse(*Response)                         {}
 func (stub) RoboSend(*FromRoboMessage)                         {}
-func (stub) RoboSendState(s CurrentState)                      {}
+func (stub) RoboSendState(s State)                             {}
 func NewStub() Teler                                           { return stub{} }
