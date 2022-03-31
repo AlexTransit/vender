@@ -173,6 +173,8 @@ enum CurrentState {
   RemoteControlState = 10;
   ServiceState = 11;
   WaitingForExternalPaymentState = 12;
+
+  RequestState = 13;
 }
 
 enum PaymentMethod {
@@ -229,7 +231,9 @@ message ShowQR {
 message ToRoboMessage {
   Order makeOrder = 1;
   ShowQR showQR = 2;
+  CurrentRobotState setRoboState = 3;
 }
+
 message CurrentRobotState { 
   CurrentState state = 1;
   int64 robotTime = 2;
