@@ -49,7 +49,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 			if types.VMC.HW.Display.L1 != line1 {
 				ui.display.SetLines(line1, ui.g.Config.UI.Front.MsgWait)
 				rm := tele_api.FromRoboMessage{
-					RobotState: &tele_api.CurrentRobotState{
+					RobotState: &tele_api.RobotState{
 						State:       tele_api.CurrentState_TemperatureProblemState,
 						Temperature: int32(errtemp.Current),
 					},
@@ -79,7 +79,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 		ui.g.Error(err)
 		return StateBroken
 	}
-	ui.g.RoboSendState(tele_api.CurrentState_NominalState)
+	ui.g.Tele.RoboSendState(tele_api.CurrentState_NominalState)
 	return StateFrontSelect
 }
 
@@ -242,7 +242,7 @@ func (ui *UI) sendRequestForQrPayment() {
 	types.VMC.State = int32(StatePrepare)
 
 	rm := tele_api.FromRoboMessage{
-		RobotState: &tele_api.CurrentRobotState{State: tele_api.CurrentState_WaitingForExternalPaymentState},
+		RobotState: &tele_api.RobotState{State: tele_api.CurrentState_WaitingForExternalPaymentState},
 		Order: &tele_api.Order{
 			MenuCode: types.UI.FrontResult.Item.Code,
 			Amount:   uint32(types.UI.FrontResult.Item.Price),
@@ -364,7 +364,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 	// 	Options: []int32{int32(types.UI.FrontResult.Cream), int32(types.UI.FrontResult.Sugar)},
 	// }
 	rm := tele_api.FromRoboMessage{
-		RobotState: &tele_api.CurrentRobotState{},
+		RobotState: &tele_api.RobotState{},
 		Order:      &tele_api.Order{MenuCode: selected.Code, Amount: uint32(selected.Price)},
 	}
 	rm.Order.Cream = types.TuneValueToByte(types.UI.FrontResult.Cream, DefaultCream)

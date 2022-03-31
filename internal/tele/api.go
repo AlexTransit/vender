@@ -96,7 +96,7 @@ func (t *tele) State(s tele_api.CurrentState) {
 	if t.currentState != s {
 		t.currentState = s
 		m := tele_api.FromRoboMessage{
-			RobotState: &tele_api.CurrentRobotState{
+			RobotState: &tele_api.RobotState{
 				State: s,
 			},
 		}

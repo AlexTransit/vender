@@ -18,7 +18,6 @@ import (
 	"github.com/AlexTransit/vender/internal/engine/inventory"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/log2"
-	"github.com/AlexTransit/vender/tele"
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
 	"github.com/temoto/alive/v2"
@@ -85,37 +84,6 @@ func (g *Global) ShowPicture(pict Pic) {
 
 }
 
-// func VmcStopNew() {
-// 	g := &Global{
-// 		Alive:        &alive.Alive{},
-// 		Engine:       &engine.Engine{},
-// 		Hardware:     hardware{},
-// 		Log:          &log2.Log{},
-// 		LockCh:       make(chan struct{}),
-// 		TimerUIStop:  make(chan struct{}),
-// 	}
-// 	// g.LockCh <- struct{}{}
-// 	ctx := context.Background()
-// 	ctx = context.WithValue(ctx, engine.ContextKey, g.Engine)
-// 	ctx = context.WithValue(ctx, log2.ContextKey, g.Log)
-// 	ctx = context.WithValue(ctx, ContextKey, g)
-// 	g.VmcStop(ctx)
-// }
-
-// func (g *Global) SetStateTele(s tele_api.State) {
-// 	// types.VMC.State = int32(s)
-// 	g.Tele.State(s)
-// }
-
-func (g *Global) RoboSendState(s tele_api.CurrentState) {
-	rm := tele.FromRoboMessage{
-		RobotState: &tele_api.CurrentRobotState{
-			State: s,
-		},
-	}
-	g.Tele.RoboSend(&rm)
-}
-
 func (g *Global) VmcStop(ctx context.Context) {
 	g.ShowPicture(PictureBroken)
 	g.Log.Infof("--- event vmc stop ---")
@@ -129,7 +97,7 @@ func (g *Global) VmcStop(ctx context.Context) {
 	_ = g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken)
 	td := g.MustTextDisplay()
 	td.SetLines(g.Config.UI.Front.MsgBrokenL1, g.Config.UI.Front.MsgBrokenL2)
-	g.RoboSendState(tele_api.CurrentState_ShutdownState)
+	g.Tele.RoboSendState(tele_api.CurrentState_ShutdownState)
 	g.Tele.Close()
 	time.Sleep(2 * time.Second)
 	g.Log.Infof("--- vmc stop ---")
@@ -142,7 +110,7 @@ func (g *Global) ClientBegin() {
 		types.VMC.Lock = true
 		types.VMC.Client.WorkTime = time.Now()
 		g.Log.Infof("--- client activity begin ---")
-		g.RoboSendState(tele_api.CurrentState_ProccessState)
+		g.Tele.RoboSendState(tele_api.CurrentState_ProccessState)
 	}
 }
 

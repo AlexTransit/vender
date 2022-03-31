@@ -52,7 +52,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	if im.MakeOrder != nil {
 		// проверить время валидности QR и цену
 		om := tele_api.FromRoboMessage{
-			RobotState: &tele_api.CurrentRobotState{
+			RobotState: &tele_api.RobotState{
 				State: tele_api.CurrentState_ProccessState,
 			},
 			Order: &tele_api.Order{

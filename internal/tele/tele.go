@@ -103,3 +103,7 @@ func (t *tele) RoboSend(sm *tele_api.FromRoboMessage) {
 	t.log.Infof("telemetry messga: %v", sm)
 	t.transport.SendFromRobot(payload)
 }
+
+func (t *tele) RoboSendState(s tele_api.CurrentState) {
+	t.log.Infof("\n\033[41m send-Robo-State %v \033[0m\n\n", s)
+}

@@ -23,5 +23,3 @@ type Transporter interface {
 }
 
 type CommandCallback func(context.Context, []byte) bool
-
-// type ForRobot func(context.Context, []byte) bool

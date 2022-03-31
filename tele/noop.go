@@ -28,3 +28,5 @@ func (Noop) Transaction(*Telemetry_Transaction) {}
 func (Noop) CommandResponse(*Response) {}
 
 func (Noop) RoboSend(*FromRoboMessage) {}
+
+func (Noop) RoboSendState(s CurrentState) {}

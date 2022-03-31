@@ -213,7 +213,7 @@ enum QrType {
 }
 
 message FromRoboMessage {
-  CurrentRobotState robotState = 1;
+  RobotState robotState = 1;
   Order order = 2;
   Err err = 3;
 }
@@ -231,10 +231,10 @@ message ShowQR {
 message ToRoboMessage {
   Order makeOrder = 1;
   ShowQR showQR = 2;
-  CurrentRobotState setRoboState = 3;
+  RobotState setRoboState = 3;
 }
 
-message CurrentRobotState { 
+message RobotState { 
   CurrentState state = 1;
   int64 robotTime = 2;
   int32 temperature = 3;
