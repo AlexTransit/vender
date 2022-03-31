@@ -194,7 +194,7 @@ enum OrderStatus {
   executionStart = 1;
   complete = 2;
   overdraft = 3;
-  rxecutionInaccessible = 4;
+  executionInaccessible = 4;
   orderError = 5;
   robotIsBusy = 6;
   waitingForPayment = 7;
@@ -207,6 +207,7 @@ enum QrType {
   noType = 0;
   receipt = 1;
   payQr = 2;
+  createQrError = 3;
 }
 
 message FromRoboMessage {
