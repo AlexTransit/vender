@@ -66,7 +66,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 
 	if im.ShowQR != nil {
 		t.log.Infof("input meggase ShowQr. type:%v message:%s", im.ShowQR.QrType, im.ShowQR.QrText)
-		g.ShowQR(im.ShowQR.QrText)
+		g.ShowQR(im.ShowQR.QrType, im.ShowQR.QrText)
 	}
 	return true
 }
@@ -249,7 +249,7 @@ func (t *tele) cmdShowQR(ctx context.Context, cmd *tele_api.Command, arg *tele_a
 	}
 
 	g := state.GetGlobal(ctx)
-	g.ShowQR(arg.QrText)
+	g.ShowQR(tele_api.QrType_receipt, arg.QrText)
 	// display, err := g.Display()
 	// if err != nil {
 	// 	return errors.Annotate(err, "display")

@@ -59,9 +59,10 @@ type Pic uint32
 
 const (
 	PictureBoot Pic = iota
-	PictureMake
 	PictureIdle
+	PictureMake
 	PictureBroken
+	PictureQRPayError
 )
 
 func (g *Global) ShowPicture(pict Pic) {
@@ -76,6 +77,9 @@ func (g *Global) ShowPicture(pict Pic) {
 	case pict == PictureBroken:
 		file = g.Config.UI.Front.PicBroken
 		types.VMC.HW.Display.Gdisplay = "PictureBroken"
+	case pict == PictureQRPayError:
+		file = g.Config.UI.Front.PicQRPayError
+		types.VMC.HW.Display.Gdisplay = "PictureQRCreateerror"
 	default:
 		file = g.Config.UI.Front.PicIdle
 		types.VMC.HW.Display.Gdisplay = "PictureDefault"
@@ -280,7 +284,7 @@ func (g *Global) initDisplay() error {
 	return err
 }
 
-func (g *Global) ShowQR(QrText string) {
+func (g *Global) ShowQR(t tele_api.QrType, QrText string) {
 	display, err := g.Display()
 	if err != nil {
 		g.Log.Error(err, "display")
@@ -290,12 +294,18 @@ func (g *Global) ShowQR(QrText string) {
 		g.Log.Error("display is not configured")
 		return
 	}
-	g.Log.Infof("show QR:'%v'", QrText)
-	err = display.QR(QrText, true, 2)
-	if err != nil {
-		g.Log.Error(err, "QR show error")
+	switch t {
+	case tele_api.QrType_createQrError, tele_api.QrType_noType:
+		g.Log.Error("create QR error")
+		g.ShowPicture(PictureQRPayError)
+	default:
+		g.Log.Infof("show QR:'%v'", QrText)
+		err = display.QR(QrText, true, 2)
+		if err != nil {
+			g.Log.Error(err, "QR show error")
+		}
+		types.VMC.HW.Display.Gdisplay = QrText
 	}
-	types.VMC.HW.Display.Gdisplay = QrText
 }
 
 func (g *Global) initEngine() error {

@@ -210,6 +210,7 @@ message Err {
 message ShowQR {
   string qr_text = 1;
   QrType qr_type = 2;
+  string ownerStr = 3;  //  
 }
 
 message ToRoboMessage {
