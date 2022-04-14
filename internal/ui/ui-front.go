@@ -147,9 +147,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 			case input.EvendKeyCreamLess, input.EvendKeyCreamMore, input.EvendKeySugarLess, input.EvendKeySugarMore:
 				// could skip state machine transition and just State=StateFrontTune; goto refresh
 				return ui.onFrontTuneInput(e.Input)
-			}
-			if ui.State() == StateFrontTune {
-				ui.state = StateFrontSelect
+			default:
 			}
 			switch {
 			case e.Input.IsDigit(), e.Input.IsDot():
@@ -204,21 +202,26 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				}
 
 				return StateFrontAccept // success path
-
+				
 			default:
 				ui.g.Log.Errorf("ui-front unhandled input=%v", e)
 				return StateFrontSelect
 			}
 
 		case types.EventMoneyCredit:
-			// ui.g.Log.Debugf("ui-front money event=%s", e.String())
+			credit := moneysys.Credit(ctx)
+			if types.UI.FrontResult.Accepted {
+				if credit >= types.UI.FrontResult.Item.Price {
+					return StateFrontAccept // success path
+				}
+			}
 			go moneysys.AcceptCredit(ctx, ui.FrontMaxPrice, alive.StopChan(), ui.eventch)
 
 		case types.EventService:
 			return StateServiceBegin
 
-		case types.EventUiTimerStop:
-			goto refresh
+		// case types.EventUiTimerStop:
+		// 	goto refresh
 
 		case types.EventTime:
 			if ui.State() == StateFrontTune { // XXX onFrontTune
@@ -251,30 +254,6 @@ func (ui *UI) sendRequestForQrPayment() {
 	ui.g.Tele.RoboSend(&rm)
 }
 
-func (ui *UI) qrPrepare() {
-	// rm := tele_api.FromRoboMessage{
-	// 	RobotState: &tele_api.CurrentRobotState{
-	// 		State:       tele_api.CurrentState_TemperatureProblemState,
-	// 		Temperature: int32(errtemp.Current),
-	// 	},
-	// }
-	// ui.g.Tele.RoboSend(&rm)
-
-	// // ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
-	// // AlexM remove this
-	// ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
-
-	// // rm := tele_api.Response{
-	// // 	CookReplay:     tele_api.CookReplay_waitPay,
-	// // 	ValidateReplay: uint32(types.UI.FrontResult.Item.Price),
-	// // }
-	// // ui.g.Tele.CommandResponse(&rm)
-
-	// // t. CommandResponse(&rm)
-
-	// // AlexM QR
-	// // ui.g.ShowQR("тут текст ссылки на оплату")
-}
 func (ui *UI) frontSelectShow(ctx context.Context, credit currency.Amount) {
 	config := ui.g.Config.UI.Front
 	l1 := config.MsgStateIntro

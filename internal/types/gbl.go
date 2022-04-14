@@ -49,9 +49,10 @@ type UItype struct { //nolint:maligned
 }
 
 type UIMenuResult struct {
-	Item  MenuItemType
-	Cream uint8
-	Sugar uint8
+	Item     MenuItemType
+	Cream    uint8
+	Sugar    uint8
+	Accepted bool
 }
 
 func (mit *MenuItemType) String() string {

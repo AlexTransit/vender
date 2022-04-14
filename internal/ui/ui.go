@@ -84,8 +84,9 @@ func (ui *UI) wait(timeout time.Duration) types.Event {
 again:
 	select {
 
-	case <-ui.g.TimerUIStop:
-		return types.Event{Kind: types.EventUiTimerStop}
+	// case <-ui.g.TimerUIStop:
+	// 	fmt.Printf("\n\033[41m  \033[0m\n\n")
+	// 	return types.Event{Kind: types.EventUiTimerStop}
 
 	case e := <-ui.eventch:
 		// if e.Kind != types.EventInvalid {
