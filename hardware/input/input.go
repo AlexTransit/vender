@@ -53,7 +53,7 @@ func NewDispatch(log *log2.Log, stop <-chan struct{}) *Dispatch {
 func (d *Dispatch) Enable(e bool) {
 	if types.VMC.HW.Input != e {
 		types.VMC.HW.Input = e
-		types.Log.Infof("evendInput = %v", e)
+		// types.Log.Infof("evendInput = %v", e)
 	}
 }
 
@@ -118,7 +118,7 @@ func (d *Dispatch) Emit(event types.InputEvent) {
 	select {
 	case d.bus <- event:
 		// d.Log.Debugf("input emit=%#v", event)
-		d.Log.Infof("key press code(%d) ", event.Key)
+		// d.Log.Infof("key press code(%d) ", event.Key)
 	case <-d.stop:
 		return
 	}
@@ -178,10 +178,31 @@ func (d *Dispatch) readSource(source Source) {
 			err = errors.Annotatef(err, "input source=%s", tag)
 			d.Log.Fatal(errors.ErrorStack(err))
 		}
+		var kn string
+		switch event.Key {
+		case EvendKeyAccept:
+			kn = "Ok"
+		case EvendKeyReject:
+			kn = "C"
+		case EvendKeyCreamLess:
+			kn = "cream-"
+		case EvendKeyCreamMore:
+			kn = "cream+"
+		case EvendKeySugarLess:
+			kn = "sugar-"
+		case EvendKeySugarMore:
+			kn = "sugar+"
+		case EvendKeyDot:
+			kn = "."
+		case 48, 49, 50, 51, 52, 53, 54, 55, 56, 57:
+			kn = fmt.Sprintf("%d", event.Key-48)
+		}
+
 		if types.VMC.HW.Input || event.Source == "dev-input-event" {
+			d.Log.Infof("key press (%s) ", kn)
 			d.Emit(event)
 		} else {
-			d.Log.Debugf("keyboard disable. ignore event =%#v", event)
+			d.Log.Debugf("keyboard disable. ignore key (%s)", kn)
 		}
 	}
 }

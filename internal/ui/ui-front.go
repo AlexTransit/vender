@@ -80,6 +80,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 		return StateBroken
 	}
 	ui.g.Tele.RoboSendState(tele_api.State_Nominal)
+	types.UI.FrontResult.Accepted = false
 	return StateFrontSelect
 }
 
@@ -108,7 +109,9 @@ func menuMaxPrice() (currency.Amount, error) {
 func (ui *UI) onFrontSelect(ctx context.Context) State {
 	moneysys := money.GetGlobal(ctx)
 	alive := alive.NewAlive()
+	ui.g.Hardware.Input.Enable(true)
 	defer func() {
+		ui.g.Hardware.Input.Enable(false)
 		alive.Stop() // stop pending AcceptCredit
 		alive.Wait()
 	}()
@@ -129,6 +132,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 		if ui.State() == StateFrontTune {
 			timeout = modTuneTimeout
 		}
+		ui.g.Hardware.Input.Enable(true)
 		e := ui.wait(timeout)
 		switch e.Kind {
 		case types.EventInput:
@@ -142,19 +146,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				}
 				return StateFrontEnd
 			}
-			ui.g.ClientBegin()
-			switch e.Input.Key {
-			case input.EvendKeyCreamLess, input.EvendKeyCreamMore, input.EvendKeySugarLess, input.EvendKeySugarMore:
-				// could skip state machine transition and just State=StateFrontTune; goto refresh
-				return ui.onFrontTuneInput(e.Input)
-			default:
-			}
-			switch {
-			case e.Input.IsDigit(), e.Input.IsDot():
-				ui.inputBuf = append(ui.inputBuf, byte(e.Input.Key))
-				goto refresh
-
-			case input.IsReject(&e.Input):
+			if input.IsReject(&e.Input) {
 				// backspace semantic
 				if len(ui.inputBuf) > 0 {
 					ui.inputBuf = ui.inputBuf[:len(ui.inputBuf)-1]
@@ -164,6 +156,20 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 					goto refresh
 				}
 				return StateFrontTimeout
+
+			}
+			ui.g.ClientBegin()
+			switch e.Input.Key {
+			case input.EvendKeyCreamLess, input.EvendKeyCreamMore, input.EvendKeySugarLess, input.EvendKeySugarMore:
+				// could skip state machine transition and just State=StateFrontTune; goto refresh
+				return ui.onFrontTuneInput(e.Input)
+
+			}
+			switch {
+			case e.Input.IsDigit(), e.Input.IsDot():
+				types.UI.FrontResult.Accepted = false
+				ui.inputBuf = append(ui.inputBuf, byte(e.Input.Key))
+				goto refresh
 
 			case input.IsAccept(&e.Input):
 				if len(ui.inputBuf) == 0 {
@@ -184,6 +190,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuNotAvailable)
 					goto wait
 				}
+				types.UI.FrontResult.Accepted = true
 				ui.g.Log.Debugf("compare price=%v credit=%v", types.UI.FrontResult.Item.Price, credit)
 				if types.UI.FrontResult.Item.Price > credit {
 					var l1, l2 string
@@ -191,7 +198,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 						// remote payment (QR pay)
 						// add bank persent
 						l1 = ui.g.Config.UI.Front.MsgRemotePayL1
-						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgRemotePayL2, types.UI.FrontResult.Item.Price.Format100I())
+						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgRemotePayL2, types.UI.FrontResult.Item.Code, types.UI.FrontResult.Item.Price.Format100I())
 						ui.sendRequestForQrPayment()
 					} else {
 						l1 = ui.g.Config.UI.Front.MsgMenuInsufficientCreditL1
@@ -202,7 +209,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				}
 
 				return StateFrontAccept // success path
-				
+
 			default:
 				ui.g.Log.Errorf("ui-front unhandled input=%v", e)
 				return StateFrontSelect

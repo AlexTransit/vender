@@ -17,7 +17,7 @@ const (
 	EvendKeyCreamMore types.InputKey = 'B'
 	EvendKeySugarLess types.InputKey = 'C'
 	EvendKeySugarMore types.InputKey = 'D'
-	evendKeyDotInput  types.InputKey = 'E' // evend keyboard sends '.' as 'E'
+	EvendKeyDotInput  types.InputKey = 'E' // evend keyboard sends '.' as 'E'
 	EvendKeyDot       types.InputKey = '.'
 )
 
@@ -55,7 +55,7 @@ func (ek *EvendKeyboard) Read() (types.InputEvent, error) {
 		key, up := types.InputKey(v16&^EvendKeyMaskUp), v16&EvendKeyMaskUp != 0
 		// key replace table
 		switch key {
-		case evendKeyDotInput:
+		case EvendKeyDotInput:
 			key = EvendKeyDot
 		}
 		if !up {

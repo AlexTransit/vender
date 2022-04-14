@@ -110,7 +110,7 @@ func (g *Global) VmcStop(ctx context.Context) {
 
 func (g *Global) ClientBegin() {
 	if !types.VMC.Lock {
-		g.TimerUIStop <- struct{}{}
+		// g.TimerUIStop <- struct{}{}
 		types.VMC.Lock = true
 		types.VMC.Client.WorkTime = time.Now()
 		g.Log.Infof("--- client activity begin ---")

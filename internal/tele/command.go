@@ -65,8 +65,14 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	}
 
 	if im.ShowQR != nil {
-		t.log.Infof("input meggase ShowQr. type:%v message:%s", im.ShowQR.QrType, im.ShowQR.QrText)
-		g.ShowQR(im.ShowQR.QrType, im.ShowQR.QrText)
+		if types.VMC.State == int32(ui.StatePrepare) {
+			t.log.Infof("input meggase ShowQr. type:%v message:%s", im.ShowQR.QrType, im.ShowQR.QrText)
+			g.ShowQR(im.ShowQR.QrType, im.ShowQR.QrText)
+			if im.ShowQR.QrType == tele_api.QrType_payQr {
+				l1 := fmt.Sprintf(g.Config.UI.Front.MsgMenuInsufficientCreditL1, im.ShowQR.QrText)
+				g.Hardware.HD44780.Display.SetLines(l1, types.VMC.HW.Display.L2)
+			}
+		}
 	}
 	return true
 }

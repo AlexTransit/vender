@@ -94,8 +94,7 @@ again:
 		return e
 
 	case e := <-ui.inputch:
-		// if e.Source != "" {
-		// }
+		ui.g.Hardware.Input.Enable(false)
 		if e.Source == input.DevInputEventTag && e.Up {
 			return types.Event{Kind: types.EventService}
 		}
