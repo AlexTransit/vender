@@ -202,11 +202,11 @@ message Err {
 
 message ShowQR {
   enum QRType {
-    error = 0;
-    showQRReceipt = 1;
-    showQROrder = 2;
-    errorQROrderOverdraft = 3;
-    errorQR = 4;
+    invalid = 0;
+    receipt = 1;
+    order = 2;
+    errorOverdraft = 3;
+    error = 4;
   }
   QRType qrType= 1;
   string qrText = 2;

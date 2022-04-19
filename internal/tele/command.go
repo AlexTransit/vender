@@ -74,17 +74,17 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	if im.ShowQR != nil {
 		t.log.Infof("input meggase ShowQr. type:%v message:%s", im.ShowQR.QrType, im.ShowQR.QrText)
 		switch im.ShowQR.QrType {
-		case tele_api.ShowQR_showQROrder:
+		case tele_api.ShowQR_order:
 			if types.VMC.State == uint32(ui.StatePrepare) {
 				g.ShowQR(im.ShowQR.QrText)
 				l1 := fmt.Sprintf(g.Config.UI.Front.MsgRemotePayL1, currency.Amount(im.ShowQR.DataInt).Format100I())
 				g.Hardware.HD44780.Display.SetLines(l1, types.VMC.HW.Display.L2)
 			}
-		case tele_api.ShowQR_showQRReceipt:
+		case tele_api.ShowQR_receipt:
 			g.ShowQR(im.ShowQR.QrText)
-		case tele_api.ShowQR_error, tele_api.ShowQR_errorQR:
+		case tele_api.ShowQR_error:
 			g.ShowPicture(state.PictureQRPayError)
-		case tele_api.ShowQR_errorQROrderOverdraft:
+		case tele_api.ShowQR_errorOverdraft:
 			g.ShowPicture(state.PictureQRPayError)
 		}
 	}
