@@ -75,7 +75,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 		t.log.Infof("input meggase ShowQr. type:%v message:%s", im.ShowQR.QrType, im.ShowQR.QrText)
 		switch im.ShowQR.QrType {
 		case tele_api.ShowQR_order:
-			if types.VMC.State == uint32(ui.StatePrepare) {
+			if types.UI.FrontResult.Accepted {
 				g.ShowQR(im.ShowQR.QrText)
 				l1 := fmt.Sprintf(g.Config.UI.Front.MsgRemotePayL1, currency.Amount(im.ShowQR.DataInt).Format100I())
 				g.Hardware.HD44780.Display.SetLines(l1, types.VMC.HW.Display.L2)

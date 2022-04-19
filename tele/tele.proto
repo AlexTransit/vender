@@ -224,6 +224,7 @@ message ToRoboMessage {
 enum MessageType {
   invalid = 0;
   showQR = 1;
+  makeOrder = 2;
 }
 message RobotState { 
   int32 temperature = 3;
