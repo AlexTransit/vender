@@ -16,7 +16,7 @@ var UI *UItype = nil
 type VMCType struct {
 	Version string
 	Lock    bool
-	State   int32
+	State   uint32
 	Client  struct {
 		WorkTime time.Time
 		Input    string

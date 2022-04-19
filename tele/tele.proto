@@ -1,5 +1,3 @@
-// go:generate protoc --go_out=./ tele.proto
-
 syntax = "proto3";
 package tele;
 
@@ -189,17 +187,12 @@ enum OrderStatus {
   doTransferred = 65;
 }
 
-enum QrType {
-  noType = 0;
-  receipt = 1;
-  payQr = 2;
-  createQrError = 3;
-}
-
 message FromRoboMessage {
-  RobotState robotState = 1;
-  Order order = 2;
-  Err err = 3;
+  State state = 1;
+  int64 roboTime = 2;
+  Order Order = 3;
+  Err err = 4;
+  RobotState RoboState = 5;
 }
 
 message Err {
@@ -208,24 +201,33 @@ message Err {
 }
 
 message ShowQR {
-  string qr_text = 1;
-  QrType qr_type = 2;
-  string ownerStr = 3;
-  uint32 amount = 4;  
+  enum QRType {
+    error = 0;
+    showQRReceipt = 1;
+    showQROrder = 2;
+    errorQROrderOverdraft = 3;
+    errorQR = 4;
+  }
+  QRType qrType= 1;
+  string qrText = 2;
+  string dataStr = 3;
+  int32 dataInt = 4;
 }
 
 message ToRoboMessage {
-  Order makeOrder = 1;
-  ShowQR showQR = 2;
-  RobotState setRoboState = 3;
-}
+  MessageType cmd = 1;
+  int64 serverTime = 2;
+  Order makeOrder = 3;
+  ShowQR showQR = 4;
 
+} 
+enum MessageType {
+  invalid = 0;
+  showQR = 1;
+}
 message RobotState { 
-  State state = 1;
-  int64 robotTime = 2;
   int32 temperature = 3;
 }
-
 message Order {
   string menuCode = 1;
   bytes cream = 2;         // default = 0

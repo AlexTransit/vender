@@ -49,9 +49,9 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 			if types.VMC.HW.Display.L1 != line1 {
 				ui.display.SetLines(line1, ui.g.Config.UI.Front.MsgWait)
 				rm := tele_api.FromRoboMessage{
-					RobotState: &tele_api.RobotState{
-						State:       tele_api.State_TemperatureProblem,
-						Temperature: int32(errtemp.Current),
+					State:                tele_api.State_TemperatureProblem,
+					RoboState:            &tele_api.RobotState{
+						Temperature:          int32(errtemp.Current),
 					},
 				}
 				ui.g.Tele.RoboSend(&rm)
@@ -249,13 +249,13 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 }
 
 func (ui *UI) sendRequestForQrPayment() {
-	types.VMC.State = int32(StatePrepare)
-
+	types.VMC.State = uint32(StatePrepare)
 	rm := tele_api.FromRoboMessage{
-		RobotState: &tele_api.RobotState{State: tele_api.State_WaitingForExternalPayment},
-		Order: &tele_api.Order{
-			MenuCode: types.UI.FrontResult.Item.Code,
-			Amount:   uint32(types.UI.FrontResult.Item.Price),
+		State:                tele_api.State_WaitingForExternalPayment,
+		RoboTime:             0,
+		Order:                &tele_api.Order{
+			MenuCode:             types.UI.FrontResult.Item.Code,
+			Amount:               uint32(types.UI.FrontResult.Item.Price),
 		},
 	}
 	ui.g.Tele.RoboSend(&rm)
@@ -350,7 +350,6 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 	// 	Options: []int32{int32(types.UI.FrontResult.Cream), int32(types.UI.FrontResult.Sugar)},
 	// }
 	rm := tele_api.FromRoboMessage{
-		RobotState: &tele_api.RobotState{},
 		Order:      &tele_api.Order{MenuCode: selected.Code, Amount: uint32(selected.Price)},
 	}
 	rm.Order.Cream = types.TuneValueToByte(types.UI.FrontResult.Cream, DefaultCream)
@@ -372,7 +371,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 
 	if err == nil { // success path
 		rm.Order.OrderStatus = tele_api.OrderStatus_complete
-		rm.RobotState.State = tele_api.State_Nominal
+		rm.State = tele_api.State_Nominal
 		// ui.g.Tele.Transaction(teletx)
 		ui.g.Tele.RoboSend(&rm)
 		return StateFrontEnd

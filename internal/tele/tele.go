@@ -104,9 +104,7 @@ func (t *tele) RoboSendState(s tele_api.State) {
 	}
 	t.currentState = s
 	rm := tele_api.FromRoboMessage{
-		RobotState: &tele_api.RobotState{
-			State: s,
-		},
+		State:                s,
 	}
 	t.marshalAndSendMessage(&rm)
 }

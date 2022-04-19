@@ -284,7 +284,7 @@ func (g *Global) initDisplay() error {
 	return err
 }
 
-func (g *Global) ShowQR(t tele_api.QrType, QrText string) {
+func (g *Global) ShowQR(t string) {
 	display, err := g.Display()
 	if err != nil {
 		g.Log.Error(err, "display")
@@ -294,18 +294,12 @@ func (g *Global) ShowQR(t tele_api.QrType, QrText string) {
 		g.Log.Error("display is not configured")
 		return
 	}
-	switch t {
-	case tele_api.QrType_createQrError, tele_api.QrType_noType:
-		g.Log.Error("create QR error")
-		g.ShowPicture(PictureQRPayError)
-	default:
-		g.Log.Infof("show QR:'%v'", QrText)
-		err = display.QR(QrText, true, 2)
-		if err != nil {
-			g.Log.Error(err, "QR show error")
-		}
-		types.VMC.HW.Display.Gdisplay = QrText
+	g.Log.Infof("show QR:'%v'", t)
+	err = display.QR(t, true, 2)
+	if err != nil {
+		g.Log.Error(err, "QR show error")
 	}
+	types.VMC.HW.Display.Gdisplay = t
 }
 
 func (g *Global) initEngine() error {
