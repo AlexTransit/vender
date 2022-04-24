@@ -81,7 +81,7 @@ func (ui *UI) ScheduleSync(ctx context.Context, priority tele_api.Priority, fun 
 func (ui *UI) wait(timeout time.Duration) types.Event {
 	tmr := time.NewTimer(timeout)
 	defer tmr.Stop()
-again:
+// again:
 	select {
 
 	// case <-ui.g.TimerUIStop:
@@ -103,12 +103,12 @@ again:
 	case <-ui.g.LockCh:
 		return types.Event{Kind: types.EventFrontLock}
 
-	case <-ui.lock.ch:
-		// chan buffer may produce false positive
-		if !ui.lock.locked() {
-			goto again
-		}
-		return types.Event{Kind: types.EventLock}
+	// case <-ui.lock.ch:
+	// 	// chan buffer may produce false positive
+	// 	if !ui.lock.locked() {
+	// 		goto again
+	// 	}
+	// 	return types.Event{Kind: types.EventLock}
 
 	case <-tmr.C:
 		return types.Event{Kind: types.EventTime}

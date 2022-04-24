@@ -19,6 +19,7 @@ const (
 	EventStop
 	EventFrontLock
 	EventUiTimerStop
+	EventBroken
 )
 
 type Event struct {

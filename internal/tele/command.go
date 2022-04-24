@@ -46,28 +46,48 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	if err != nil {
 		t.log.Errorf("tele command parse raw=%x err=%v", payload, err)
 		// TODO reply error
-		return true
+		return false
 	}
 	g := state.GetGlobal(ctx)
-
 	if im.MakeOrder != nil {
-		om := tele_api.FromRoboMessage{}
-		if im.MakeOrder.PaymentMethod == tele_api.PaymentMethod_Cashless {
-
+		om := tele_api.FromRoboMessage{
+			Order: &tele_api.Order{
+				// OwnerInt: im.MakeOrder.OwnerInt,
+				// OwnerStr: im.MakeOrder.OwnerStr,
+			},
 		}
-		// проверить время валидности QR и цену
-		om.State = tele_api.State_Process
-		om.Order.OwnerStr = im.MakeOrder.OwnerStr
-		// om := tele_api.FromRoboMessage{
-		// 	RobotState: &tele_api.RobotState{
-		// 		State: tele_api.State_Process,
-		// 	},
-		// 	Order: &tele_api.Order{
-		// 		OrderStatus: tele_api.OrderStatus_executionStart,
-		// 		OwnerInt:    im.MakeOrder.OwnerInt,
-		// 	},
-		// }
-		t.RoboSend(&om)
+		switch im.MakeOrder.OrderStatus {
+		case tele_api.OrderStatus_doSelected:
+			if !types.UI.FrontResult.Accepted || t.currentState != tele_api.State_WaitingForExternalPayment {
+				om.Order.OrderStatus = tele_api.OrderStatus_robotIsBusy
+				t.RoboSend(&om)
+				return false
+			}
+			om.Order.OrderStatus = tele_api.OrderStatus_executionStart
+			t.RoboSend(&om)
+			om.Order.Amount = im.MakeOrder.Amount
+			om.Order.PaymentMethod = im.MakeOrder.PaymentMethod
+			om.Order.OwnerInt = im.MakeOrder.OwnerInt
+			om.Order.OwnerStr = im.MakeOrder.OwnerStr
+			types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
+			err := ui.Cook(ctx)
+			if types.VMC.MonSys.Dirty == 0 {
+				om.Order.OrderStatus = tele_api.OrderStatus_complete
+			}
+			if err != nil {
+				om.Err.Message = err.Error()
+				types.VMC.State = 2 //FIXME  StateBroken
+			}
+			types.VMC.State = 10 //FIXME StateFrontEnd     // 10 ->FrontBegin
+			t.RoboSend(&om)
+			g.LockCh <- struct{}{}
+
+		case tele_api.OrderStatus_doTransferred:
+			//TODO xecute external order
+			// сделать внешний заказe
+			// check validity, price
+			// проверить валидность, цену
+		}
 
 	}
 
@@ -163,7 +183,7 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 
 		t.CookReply(cmd, tele_api.CookReplay_cookStart)
 		t.log.Infof("remote coocing (%v) (%v)", cmd, arg)
-		t.State(tele_api.State_RemoteControl)
+		t.RoboSendState(tele_api.State_RemoteControl)
 	} else if arg.Menucode != "-" {
 		t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
 		t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
@@ -192,11 +212,11 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	}
 	if err != nil {
 		t.CookReply(cmd, tele_api.CookReplay_cookError)
-		t.State(tele_api.State_Broken)
+		t.RoboSendState(tele_api.State_Broken)
 		types.VMC.State = uint32(ui.StateBroken)
 		return errors.Errorf("remote cook make error: (%v)", err)
 	}
-	t.State(tele_api.State_Nominal)
+	t.RoboSendState(tele_api.State_Nominal)
 	state.VmcUnLock(ctx)
 	return nil
 }

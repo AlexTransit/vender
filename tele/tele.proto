@@ -192,7 +192,7 @@ message FromRoboMessage {
   int64 roboTime = 2;
   Order Order = 3;
   Err err = 4;
-  RobotState RoboState = 5;
+  RoboHardware RoboHardware = 5;
 }
 
 message Err {
@@ -226,7 +226,7 @@ enum MessageType {
   showQR = 1;
   makeOrder = 2;
 }
-message RobotState { 
+message RoboHardware { 
   int32 temperature = 3;
 }
 message Order {
