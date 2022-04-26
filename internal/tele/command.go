@@ -69,12 +69,17 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 			om.Order.PaymentMethod = im.MakeOrder.PaymentMethod
 			om.Order.OwnerInt = im.MakeOrder.OwnerInt
 			om.Order.OwnerStr = im.MakeOrder.OwnerStr
+			om.Order.MenuCode = types.UI.FrontResult.Item.Code
+			om.Order.Cream = types.TuneValueToByte(types.UI.FrontResult.Cream, ui.DefaultCream)
+			om.Order.Sugar = types.TuneValueToByte(types.UI.FrontResult.Sugar, ui.DefaultSugar)
 			types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
+
 			err := ui.Cook(ctx)
 			if types.VMC.MonSys.Dirty == 0 {
 				om.Order.OrderStatus = tele_api.OrderStatus_complete
 			}
 			if err != nil {
+				om.Order.OrderStatus = tele_api.OrderStatus_orderError
 				om.Err.Message = err.Error()
 				types.VMC.State = 2 //FIXME  StateBroken
 			}
