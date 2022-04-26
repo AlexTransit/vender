@@ -63,6 +63,7 @@ const (
 	PictureMake
 	PictureBroken
 	PictureQRPayError
+	PicturePayReject
 )
 
 func (g *Global) ShowPicture(pict Pic) {
@@ -80,6 +81,10 @@ func (g *Global) ShowPicture(pict Pic) {
 	case pict == PictureQRPayError:
 		file = g.Config.UI.Front.PicQRPayError
 		types.VMC.HW.Display.Gdisplay = "PictureQRCreateerror"
+	case pict == PicturePayReject:
+		file = g.Config.UI.Front.PicPayReject
+		types.VMC.HW.Display.Gdisplay = "PictureBankReject"
+
 	default:
 		file = g.Config.UI.Front.PicIdle
 		types.VMC.HW.Display.Gdisplay = "PictureDefault"
@@ -448,7 +453,7 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 			case 16:
 				key = 46
 			case 99:
-				ev := types.InputEvent{Source: "dev-input-event", Key: types.InputKey(255), Up: true}
+				ev := types.InputEvent{Source: "dev-input-event", Key: types.InputKey(256), Up: true}
 				g.Hardware.Input.Emit(ev)
 				return nil
 			}
