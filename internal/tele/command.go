@@ -78,12 +78,13 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 			if types.VMC.MonSys.Dirty == 0 {
 				om.Order.OrderStatus = tele_api.OrderStatus_complete
 			}
+			types.VMC.State = 10 //FIXME StateFrontEnd     // 10 ->FrontBegin
 			if err != nil {
 				om.Order.OrderStatus = tele_api.OrderStatus_orderError
+				om.Err = &tele_api.Err{}
 				om.Err.Message = err.Error()
 				types.VMC.State = 2 //FIXME  StateBroken
 			}
-			types.VMC.State = 10 //FIXME StateFrontEnd     // 10 ->FrontBegin
 			t.RoboSend(&om)
 			g.LockCh <- struct{}{}
 
