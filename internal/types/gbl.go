@@ -16,7 +16,7 @@ var UI *UItype = nil
 type VMCType struct {
 	Version string
 	Lock    bool
-	State   int32
+	State   uint32
 	Client  struct {
 		WorkTime time.Time
 		Input    string
@@ -49,9 +49,10 @@ type UItype struct { //nolint:maligned
 }
 
 type UIMenuResult struct {
-	Item  MenuItemType
-	Cream uint8
-	Sugar uint8
+	Item     MenuItemType
+	Cream    uint8
+	Sugar    uint8
+	Accepted bool
 }
 
 func (mit *MenuItemType) String() string {

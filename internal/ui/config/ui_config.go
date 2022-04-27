@@ -35,6 +35,8 @@ type Config struct { //nolint:maligned
 		PicIdle         string `hcl:"pic_idle"`
 		PicMake         string `hcl:"pic_make"`
 		PicBroken       string `hcl:"pic_broken"`
+		PicQRPayError   string `hcl:"pic_QR_pay_error"`
+		PicPayReject    string `hcl:"pic_pay_reject"`
 	}
 
 	Service struct {

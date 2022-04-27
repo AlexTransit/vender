@@ -86,7 +86,7 @@ func BrokenMain(ctx context.Context, config *state.Config) error {
 		}
 	}
 
-	g.RoboSendState(tele_api.CurrentState_BrokenState)
+	g.Tele.RoboSendState(tele_api.State_Broken)
 	display.SetLines(g.Config.UI.Front.MsgBrokenL1, g.Config.UI.Front.MsgBrokenL2)
 	g.Error(errors.Errorf("critical daemon broken mode"))
 	g.Alive.Wait()

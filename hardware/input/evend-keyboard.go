@@ -17,7 +17,7 @@ const (
 	EvendKeyCreamMore types.InputKey = 'B'
 	EvendKeySugarLess types.InputKey = 'C'
 	EvendKeySugarMore types.InputKey = 'D'
-	evendKeyDotInput  types.InputKey = 'E' // evend keyboard sends '.' as 'E'
+	EvendKeyDotInput  types.InputKey = 'E' // evend keyboard sends '.' as 'E'
 	EvendKeyDot       types.InputKey = '.'
 )
 
@@ -27,35 +27,35 @@ type EvendKeyboard struct{ c *mega.Client }
 var _ Source = new(EvendKeyboard)
 
 func NewEvendKeyboard(client *mega.Client) (*EvendKeyboard, error) {
-	self := &EvendKeyboard{c: client}
-	self.c.IncRef(EvendKeyboardSourceTag)
+	ek := &EvendKeyboard{c: client}
+	ek.c.IncRef(EvendKeyboardSourceTag)
 
 drain:
 	for {
 		select {
-		case <-self.c.TwiChan:
+		case <-ek.c.TwiChan:
 		default:
 			break drain
 		}
 	}
-	return self, nil
+	return ek, nil
 }
-func (self *EvendKeyboard) Close() error {
-	return self.c.DecRef(EvendKeyboardSourceTag)
+func (ek *EvendKeyboard) Close() error {
+	return ek.c.DecRef(EvendKeyboardSourceTag)
 }
 
-func (self *EvendKeyboard) String() string { return EvendKeyboardSourceTag }
+func (ek *EvendKeyboard) String() string { return EvendKeyboardSourceTag }
 
-func (self *EvendKeyboard) Read() (types.InputEvent, error) {
+func (ek *EvendKeyboard) Read() (types.InputEvent, error) {
 	for {
-		v16, ok := <-self.c.TwiChan
+		v16, ok := <-ek.c.TwiChan
 		if !ok {
 			return types.InputEvent{}, io.EOF
 		}
 		key, up := types.InputKey(v16&^EvendKeyMaskUp), v16&EvendKeyMaskUp != 0
 		// key replace table
 		switch key {
-		case evendKeyDotInput:
+		case EvendKeyDotInput:
 			key = EvendKeyDot
 		}
 		if !up {

@@ -231,11 +231,12 @@ ui {
     msg_remote_pay_l1            = "invoice :%s\x00" // "к оплате: %s\x00"
     msg_remote_pay_l2            = "QR payment" // "оплата по QR"
 
-    pic_boot    = "/path/boot-picture"
-    pic_idle    = "/path/idle-picture"
-    pic_make    = "/path/make-picture"
-    pic_broken  = "/path/broken-picture"
-
+    pic_boot         = "/path/boot-picture"
+    pic_idle         = "/path/idle-picture"
+    pic_make         = "/path/make-picture"
+    pic_broken       = "/path/broken-picture"
+    pic_QR_pay_error = "/path/QR-error-picture"
+    pic_pay_reject   = "/path/bank-pay-reject"
 
     reset_sec = 180
   }

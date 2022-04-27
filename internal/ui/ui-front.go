@@ -49,11 +49,13 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 			if types.VMC.HW.Display.L1 != line1 {
 				ui.display.SetLines(line1, ui.g.Config.UI.Front.MsgWait)
 				rm := tele_api.FromRoboMessage{
-					RobotState: &tele_api.CurrentRobotState{
-						State:       tele_api.CurrentState_TemperatureProblemState,
+					State:    tele_api.State_TemperatureProblem,
+					RoboTime: 0,
+					RoboHardware: &tele_api.RoboHardware{
 						Temperature: int32(errtemp.Current),
 					},
 				}
+
 				ui.g.Tele.RoboSend(&rm)
 			}
 			if e := ui.wait(5 * time.Second); e.Kind == types.EventService {
@@ -79,7 +81,8 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 		ui.g.Error(err)
 		return StateBroken
 	}
-	ui.g.RoboSendState(tele_api.CurrentState_NominalState)
+	ui.g.Tele.RoboSendState(tele_api.State_Nominal)
+	types.UI.FrontResult.Accepted = false
 	return StateFrontSelect
 }
 
@@ -108,7 +111,9 @@ func menuMaxPrice() (currency.Amount, error) {
 func (ui *UI) onFrontSelect(ctx context.Context) State {
 	moneysys := money.GetGlobal(ctx)
 	alive := alive.NewAlive()
+	ui.g.Hardware.Input.Enable(true)
 	defer func() {
+		ui.g.Hardware.Input.Enable(false)
 		alive.Stop() // stop pending AcceptCredit
 		alive.Wait()
 	}()
@@ -129,6 +134,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 		if ui.State() == StateFrontTune {
 			timeout = modTuneTimeout
 		}
+		ui.g.Hardware.Input.Enable(true)
 		e := ui.wait(timeout)
 		switch e.Kind {
 		case types.EventInput:
@@ -142,21 +148,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				}
 				return StateFrontEnd
 			}
-			ui.g.ClientBegin()
-			switch e.Input.Key {
-			case input.EvendKeyCreamLess, input.EvendKeyCreamMore, input.EvendKeySugarLess, input.EvendKeySugarMore:
-				// could skip state machine transition and just State=StateFrontTune; goto refresh
-				return ui.onFrontTuneInput(e.Input)
-			}
-			if ui.State() == StateFrontTune {
-				ui.state = StateFrontSelect
-			}
-			switch {
-			case e.Input.IsDigit(), e.Input.IsDot():
-				ui.inputBuf = append(ui.inputBuf, byte(e.Input.Key))
-				goto refresh
-
-			case input.IsReject(&e.Input):
+			if input.IsReject(&e.Input) {
 				// backspace semantic
 				if len(ui.inputBuf) > 0 {
 					ui.inputBuf = ui.inputBuf[:len(ui.inputBuf)-1]
@@ -166,6 +158,20 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 					goto refresh
 				}
 				return StateFrontTimeout
+
+			}
+			ui.g.ClientBegin()
+			switch e.Input.Key {
+			case input.EvendKeyCreamLess, input.EvendKeyCreamMore, input.EvendKeySugarLess, input.EvendKeySugarMore:
+				// could skip state machine transition and just State=StateFrontTune; goto refresh
+				return ui.onFrontTuneInput(e.Input)
+
+			}
+			switch {
+			case e.Input.IsDigit(), e.Input.IsDot():
+				types.UI.FrontResult.Accepted = false
+				ui.inputBuf = append(ui.inputBuf, byte(e.Input.Key))
+				goto refresh
 
 			case input.IsAccept(&e.Input):
 				if len(ui.inputBuf) == 0 {
@@ -186,14 +192,12 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuNotAvailable)
 					goto wait
 				}
+				types.UI.FrontResult.Accepted = true
 				ui.g.Log.Debugf("compare price=%v credit=%v", types.UI.FrontResult.Item.Price, credit)
 				if types.UI.FrontResult.Item.Price > credit {
 					var l1, l2 string
 					if credit == 0 {
-						// remote payment (QR pay)
-						// add bank persent
-						l1 = ui.g.Config.UI.Front.MsgRemotePayL1
-						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgRemotePayL2, types.UI.FrontResult.Item.Price.Format100I())
+						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgRemotePayL2, types.UI.FrontResult.Item.Code, types.UI.FrontResult.Item.Price.Format100I())
 						ui.sendRequestForQrPayment()
 					} else {
 						l1 = ui.g.Config.UI.Front.MsgMenuInsufficientCreditL1
@@ -211,14 +215,19 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 			}
 
 		case types.EventMoneyCredit:
-			// ui.g.Log.Debugf("ui-front money event=%s", e.String())
+			credit := moneysys.Credit(ctx)
+			if types.UI.FrontResult.Accepted {
+				if credit >= types.UI.FrontResult.Item.Price {
+					return StateFrontAccept // success path
+				}
+			}
 			go moneysys.AcceptCredit(ctx, ui.FrontMaxPrice, alive.StopChan(), ui.eventch)
 
 		case types.EventService:
 			return StateServiceBegin
 
-		case types.EventUiTimerStop:
-			goto refresh
+		// case types.EventUiTimerStop:
+		// 	goto refresh
 
 		case types.EventTime:
 			if ui.State() == StateFrontTune { // XXX onFrontTune
@@ -228,7 +237,8 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 
 		case types.EventFrontLock:
 			return StateFrontLock
-
+		case types.EventBroken:
+			return StateBroken
 		case types.EventLock, types.EventStop:
 			return StateFrontEnd
 
@@ -239,10 +249,10 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 }
 
 func (ui *UI) sendRequestForQrPayment() {
-	types.VMC.State = int32(StatePrepare)
-
+	types.VMC.State = uint32(StatePrepare)
 	rm := tele_api.FromRoboMessage{
-		RobotState: &tele_api.CurrentRobotState{State: tele_api.CurrentState_WaitingForExternalPaymentState},
+		State:    tele_api.State_WaitingForExternalPayment,
+		RoboTime: 0,
 		Order: &tele_api.Order{
 			MenuCode: types.UI.FrontResult.Item.Code,
 			Amount:   uint32(types.UI.FrontResult.Item.Price),
@@ -251,30 +261,6 @@ func (ui *UI) sendRequestForQrPayment() {
 	ui.g.Tele.RoboSend(&rm)
 }
 
-func (ui *UI) qrPrepare() {
-	// rm := tele_api.FromRoboMessage{
-	// 	RobotState: &tele_api.CurrentRobotState{
-	// 		State:       tele_api.CurrentState_TemperatureProblemState,
-	// 		Temperature: int32(errtemp.Current),
-	// 	},
-	// }
-	// ui.g.Tele.RoboSend(&rm)
-
-	// // ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
-	// // AlexM remove this
-	// ui.g.Tele.State(tele_api.State_WaitingForExternalPayment)
-
-	// // rm := tele_api.Response{
-	// // 	CookReplay:     tele_api.CookReplay_waitPay,
-	// // 	ValidateReplay: uint32(types.UI.FrontResult.Item.Price),
-	// // }
-	// // ui.g.Tele.CommandResponse(&rm)
-
-	// // t. CommandResponse(&rm)
-
-	// // AlexM QR
-	// // ui.g.ShowQR("тут текст ссылки на оплату")
-}
 func (ui *UI) frontSelectShow(ctx context.Context, credit currency.Amount) {
 	config := ui.g.Config.UI.Front
 	l1 := config.MsgStateIntro
@@ -353,23 +339,13 @@ func (ui *UI) onFrontTuneInput(e types.InputEvent) State {
 }
 
 func (ui *UI) onFrontAccept(ctx context.Context) State {
+	ui.g.Tele.RoboSendState(tele_api.State_Process)
 	// ui.g.Hardware.Input.Enable(false)
 	moneysys := money.GetGlobal(ctx)
 	uiConfig := &ui.g.Config.UI
-	// selected := &types.UI.FrontResult.Item
-	selected := types.UI.FrontResult.Item
-	// teletx := &tele_api.Telemetry_Transaction{
-	// 	Code:    selected.Code,
-	// 	Price:   uint32(selected.Price),
-	// 	Options: []int32{int32(types.UI.FrontResult.Cream), int32(types.UI.FrontResult.Sugar)},
-	// }
-	rm := tele_api.FromRoboMessage{
-		RobotState: &tele_api.CurrentRobotState{},
-		Order:      &tele_api.Order{MenuCode: selected.Code, Amount: uint32(selected.Price)},
-	}
-	rm.Order.Cream = types.TuneValueToByte(types.UI.FrontResult.Cream, DefaultCream)
-	rm.Order.Sugar = types.TuneValueToByte(types.UI.FrontResult.Sugar, DefaultSugar)
-	rm.Order.PaymentMethod = tele_api.PaymentMethod_Cash
+
+	selected := types.UI.FrontResult.Item.String()
+	rm := CreateOrderMessageAndFillSelected()
 	if moneysys.GetGiftCredit() == 0 {
 		// teletx.PaymentMethod = tele_api.PaymentMethod_Cash
 		rm.Order.PaymentMethod = tele_api.PaymentMethod_Cash
@@ -378,22 +354,22 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 		rm.Order.PaymentMethod = tele_api.PaymentMethod_Gift
 	}
 
-	ui.g.Log.Debugf("ui-front selected=%s begin", selected.String())
-	if err := moneysys.WithdrawPrepare(ctx, selected.Price); err != nil {
+	ui.g.Log.Debugf("ui-front selected=%s begin", selected)
+	if err := moneysys.WithdrawPrepare(ctx, types.UI.FrontResult.Item.Price); err != nil {
 		ui.g.Log.Errorf("ui-front CRITICAL error while return change")
 	}
 	err := Cook(ctx)
 
 	if err == nil { // success path
 		rm.Order.OrderStatus = tele_api.OrderStatus_complete
-		rm.RobotState.State = tele_api.CurrentState_NominalState
+		rm.State = tele_api.State_Nominal
 		// ui.g.Tele.Transaction(teletx)
 		ui.g.Tele.RoboSend(&rm)
 		return StateFrontEnd
 	}
 
 	ui.display.SetLines(uiConfig.Front.MsgError, uiConfig.Front.MsgMenuError)
-	err = errors.Annotatef(err, "execute %s", selected.String())
+	err = errors.Annotatef(err, "execute %s", selected)
 	ui.g.Error(err)
 
 	if errs := ui.g.Engine.ExecList(ctx, "on_menu_error", ui.g.Config.Engine.OnMenuError); len(errs) != 0 {
@@ -402,6 +378,18 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 		ui.g.Log.Infof("on_menu_error success")
 	}
 	return StateBroken
+}
+
+func CreateOrderMessageAndFillSelected() tele_api.FromRoboMessage {
+	rm := tele_api.FromRoboMessage{
+		Order: &tele_api.Order{
+			MenuCode: types.UI.FrontResult.Item.Code,
+			Cream:    types.TuneValueToByte(types.UI.FrontResult.Cream, DefaultCream),
+			Sugar:    types.TuneValueToByte(types.UI.FrontResult.Sugar, DefaultSugar),
+			Amount:   uint32(types.UI.FrontResult.Item.Price),
+		},
+	}
+	return rm
 }
 
 func (ui *UI) onFrontTimeout(ctx context.Context) State {
@@ -425,6 +413,8 @@ func (ui *UI) onFrontLock() State {
 			return StateFrontSelect // "return to previous mode"
 		}
 		return StateFrontTimeout
+	case types.EventBroken:
+		return StateBroken
 	case types.EventFrontLock:
 		if types.VMC.State == 2 { // broken. fix this
 			return StateBroken

@@ -18,7 +18,6 @@ import (
 	"github.com/AlexTransit/vender/internal/engine/inventory"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/log2"
-	"github.com/AlexTransit/vender/tele"
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
 	"github.com/temoto/alive/v2"
@@ -60,9 +59,11 @@ type Pic uint32
 
 const (
 	PictureBoot Pic = iota
-	PictureMake
 	PictureIdle
+	PictureMake
 	PictureBroken
+	PictureQRPayError
+	PicturePayReject
 )
 
 func (g *Global) ShowPicture(pict Pic) {
@@ -77,43 +78,19 @@ func (g *Global) ShowPicture(pict Pic) {
 	case pict == PictureBroken:
 		file = g.Config.UI.Front.PicBroken
 		types.VMC.HW.Display.Gdisplay = "PictureBroken"
+	case pict == PictureQRPayError:
+		file = g.Config.UI.Front.PicQRPayError
+		types.VMC.HW.Display.Gdisplay = "PictureQRCreateerror"
+	case pict == PicturePayReject:
+		file = g.Config.UI.Front.PicPayReject
+		types.VMC.HW.Display.Gdisplay = "PictureBankReject"
+
 	default:
 		file = g.Config.UI.Front.PicIdle
 		types.VMC.HW.Display.Gdisplay = "PictureDefault"
 	}
 	g.Hardware.Display.d.CopyFile2FB(file)
 
-}
-
-// func VmcStopNew() {
-// 	g := &Global{
-// 		Alive:        &alive.Alive{},
-// 		Engine:       &engine.Engine{},
-// 		Hardware:     hardware{},
-// 		Log:          &log2.Log{},
-// 		LockCh:       make(chan struct{}),
-// 		TimerUIStop:  make(chan struct{}),
-// 	}
-// 	// g.LockCh <- struct{}{}
-// 	ctx := context.Background()
-// 	ctx = context.WithValue(ctx, engine.ContextKey, g.Engine)
-// 	ctx = context.WithValue(ctx, log2.ContextKey, g.Log)
-// 	ctx = context.WithValue(ctx, ContextKey, g)
-// 	g.VmcStop(ctx)
-// }
-
-// func (g *Global) SetStateTele(s tele_api.State) {
-// 	// types.VMC.State = int32(s)
-// 	g.Tele.State(s)
-// }
-
-func (g *Global) RoboSendState(s tele_api.CurrentState) {
-	rm := tele.FromRoboMessage{
-		RobotState: &tele_api.CurrentRobotState{
-			State: s,
-		},
-	}
-	g.Tele.RoboSend(&rm)
 }
 
 func (g *Global) VmcStop(ctx context.Context) {
@@ -129,7 +106,7 @@ func (g *Global) VmcStop(ctx context.Context) {
 	_ = g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken)
 	td := g.MustTextDisplay()
 	td.SetLines(g.Config.UI.Front.MsgBrokenL1, g.Config.UI.Front.MsgBrokenL2)
-	g.RoboSendState(tele_api.CurrentState_ShutdownState)
+	g.Tele.RoboSendState(tele_api.State_Shutdown)
 	g.Tele.Close()
 	time.Sleep(2 * time.Second)
 	g.Log.Infof("--- vmc stop ---")
@@ -138,11 +115,11 @@ func (g *Global) VmcStop(ctx context.Context) {
 
 func (g *Global) ClientBegin() {
 	if !types.VMC.Lock {
-		g.TimerUIStop <- struct{}{}
+		// g.TimerUIStop <- struct{}{}
 		types.VMC.Lock = true
 		types.VMC.Client.WorkTime = time.Now()
 		g.Log.Infof("--- client activity begin ---")
-		g.RoboSendState(tele_api.CurrentState_ProccessState)
+		g.Tele.RoboSendState(tele_api.State_Process)
 	}
 }
 
@@ -312,7 +289,7 @@ func (g *Global) initDisplay() error {
 	return err
 }
 
-func (g *Global) ShowQR(QrText string) {
+func (g *Global) ShowQR(t string) {
 	display, err := g.Display()
 	if err != nil {
 		g.Log.Error(err, "display")
@@ -322,12 +299,12 @@ func (g *Global) ShowQR(QrText string) {
 		g.Log.Error("display is not configured")
 		return
 	}
-	g.Log.Infof("show QR:'%v'", QrText)
-	err = display.QR(QrText, true, 2)
+	g.Log.Infof("show QR:'%v'", t)
+	err = display.QR(t, true, 2)
 	if err != nil {
 		g.Log.Error(err, "QR show error")
 	}
-	types.VMC.HW.Display.Gdisplay = QrText
+	types.VMC.HW.Display.Gdisplay = t
 }
 
 func (g *Global) initEngine() error {
@@ -476,7 +453,7 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 			case 16:
 				key = 46
 			case 99:
-				ev := types.InputEvent{Source: "dev-input-event", Key: types.InputKey(255), Up: true}
+				ev := types.InputEvent{Source: "dev-input-event", Key: types.InputKey(256), Up: true}
 				g.Hardware.Input.Emit(ev)
 				return nil
 			}

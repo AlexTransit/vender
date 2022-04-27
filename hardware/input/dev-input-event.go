@@ -17,7 +17,7 @@ type DevInputEventSource struct {
 // compile-time interface compliance test
 var _ Source = new(DevInputEventSource)
 
-func (self *DevInputEventSource) String() string { return DevInputEventTag }
+func (ds *DevInputEventSource) String() string { return DevInputEventTag }
 
 func NewDevInputEventSource(device string) (*DevInputEventSource, error) {
 	f, err := os.Open(device)
@@ -27,9 +27,9 @@ func NewDevInputEventSource(device string) (*DevInputEventSource, error) {
 	return &DevInputEventSource{f: f}, nil
 }
 
-func (self *DevInputEventSource) Read() (types.InputEvent, error) {
+func (ds *DevInputEventSource) Read() (types.InputEvent, error) {
 	for {
-		ie, err := inputevent.ReadOne(self.f)
+		ie, err := inputevent.ReadOne(ds.f)
 		if err != nil {
 			// g.Log.Errorf("%s err=%v", DevInputEventTag, err)
 			return types.InputEvent{}, err

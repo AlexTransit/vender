@@ -105,7 +105,7 @@ func (ui *UI) onServiceBegin(ctx context.Context) State {
 	}
 
 	ui.g.Log.Debugf("ui service begin")
-	ui.g.RoboSendState(tele_api.CurrentState_ServiceState)
+	ui.g.Tele.RoboSendState(tele_api.State_Service)
 	return StateServiceAuth
 }
 

@@ -59,7 +59,7 @@ func (ui *UI) Loop(ctx context.Context) {
 	next := StateDefault
 	for next != StateStop && ui.g.Alive.IsRunning() {
 		current := ui.State()
-		types.VMC.State = int32(current)
+		types.VMC.State = uint32(current)
 		next = ui.enter(ctx, current)
 		if next == StateDefault {
 			ui.g.Log.Fatalf("ui state=%v next=default", current)
@@ -89,7 +89,7 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 	// ui.g.Log.Debugf("ui enter %s", s.String())
 	switch s {
 	case StateBoot:
-		ui.g.RoboSendState(tele_api.CurrentState_BootState)
+		ui.g.Tele.RoboSendState(tele_api.State_Boot)
 		ui.g.ShowPicture(state.PictureBoot)
 
 		onStartSuccess := false
@@ -111,14 +111,14 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 			return StateBroken
 		}
 		ui.broken = false
-		ui.g.RoboSendState(tele_api.CurrentState_NominalState)
+		ui.g.Tele.RoboSendState(tele_api.State_Nominal)
 		return StateFrontBegin
 
 	case StateBroken:
 		ui.g.Log.Infof("state=broken")
 		ui.g.ShowPicture(state.PictureBroken)
 		if !ui.broken {
-			ui.g.RoboSendState(tele_api.CurrentState_BrokenState)
+			ui.g.Tele.RoboSendState(tele_api.State_Broken)
 			if errs := ui.g.Engine.ExecList(ctx, "on_broken", ui.g.Config.Engine.OnBroken); len(errs) != 0 {
 				// TODO maybe ErrorStack should be removed
 				ui.g.Log.Error(errors.ErrorStack(errors.Annotate(helpers.FoldErrors(errs), "on_broken")))
@@ -177,6 +177,7 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 		return ui.onFrontLock()
 
 	case StateServiceBegin:
+		ui.g.Hardware.Input.Enable(true)
 		return ui.onServiceBegin(ctx)
 	case StateServiceAuth:
 		return ui.onServiceAuth()

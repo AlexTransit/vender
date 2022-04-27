@@ -1,5 +1,3 @@
-// go:generate protoc --go_out=./ tele.proto
-
 syntax = "proto3";
 package tele;
 
@@ -19,21 +17,6 @@ enum Priority {
   Now = 1;
   IdleEngine = 2;
   IdleUser = 4;
-}
-
-enum State {
-  Invalid = 0;
-  Boot = 1;
-  Nominal = 2;
-  Disconnected = 3;
-  Problem = 4;
-  Service = 5;
-  Lock = 6;
-  Client = 7;
-  TempProblem = 8;
-  Shutdown = 9;
-  RemoteControl = 10;
-  WaitingForExternalPayment = 11;
 }
 
 message Telemetry {
@@ -86,7 +69,7 @@ message Command {
   bool lock = 6;
   oneof task {
     ArgReport report = 16;
-    // ArgGetState getState = 17;
+    ArgGetState getState = 17;
     ArgExec exec = 18;
     ArgSetInventory set_inventory = 19;
     ArgSetConfig set_config = 20;
@@ -159,20 +142,21 @@ message WaitingForRemotePayment {
 }
 
 // ----------
-enum CurrentState {
-  InvalidState = 0;
+enum State {
+  Invalid = 0;
+  Boot = 1;
+  Nominal = 2;
+  Disconnected = 3;
+  Broken = 4;
+  Service = 5;
+  Lock = 6;
+  Process = 7;
+  TemperatureProblem = 8;
+  Shutdown = 9;
+  RemoteControl = 10;
+  WaitingForExternalPayment = 11;
   
-  BootState = 1;
-  BrokenState = 2;
-  TemperatureProblemState = 3;
-  ShutdownState = 4;
-  
-  NominalState = 8;
-  
-  ProccessState = 9;
-  RemoteControlState = 10;
-  ServiceState = 11;
-  WaitingForExternalPaymentState = 12;
+  RequestState = 64;
 }
 
 enum PaymentMethod {
@@ -194,7 +178,7 @@ enum OrderStatus {
   executionStart = 1;
   complete = 2;
   overdraft = 3;
-  rxecutionInaccessible = 4;
+  executionInaccessible = 4;
   orderError = 5;
   robotIsBusy = 6;
   waitingForPayment = 7;
@@ -203,16 +187,12 @@ enum OrderStatus {
   doTransferred = 65;
 }
 
-enum QrType {
-  noType = 0;
-  receipt = 1;
-  payQr = 2;
-}
-
 message FromRoboMessage {
-  CurrentRobotState robotState = 1;
-  Order order = 2;
-  Err err = 3;
+  State state = 1;
+  int64 roboTime = 2;
+  Order Order = 3;
+  Err err = 4;
+  RoboHardware RoboHardware = 5;
 }
 
 message Err {
@@ -221,20 +201,34 @@ message Err {
 }
 
 message ShowQR {
-  string qr_text = 1;
-  QrType qr_type = 2;
+  enum QRType {
+    invalid = 0;
+    receipt = 1;
+    order = 2;
+    errorOverdraft = 3;
+    error = 4;
+  }
+  QRType qrType= 1;
+  string qrText = 2;
+  string dataStr = 3;
+  int32 dataInt = 4;
 }
 
 message ToRoboMessage {
-  Order makeOrder = 1;
-  ShowQR showQR = 2;
+  MessageType cmd = 1;
+  int64 serverTime = 2;
+  Order makeOrder = 3;
+  ShowQR showQR = 4;
+
+} 
+enum MessageType {
+  invalid = 0;
+  showQR = 1;
+  makeOrder = 2;
 }
-message CurrentRobotState { 
-  CurrentState state = 1;
-  int64 robotTime = 2;
+message RoboHardware { 
   int32 temperature = 3;
 }
-
 message Order {
   string menuCode = 1;
   bytes cream = 2;         // default = 0

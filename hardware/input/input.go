@@ -50,84 +50,84 @@ func NewDispatch(log *log2.Log, stop <-chan struct{}) *Dispatch {
 	}
 }
 
-func (self *Dispatch) Enable(e bool) {
+func (d *Dispatch) Enable(e bool) {
 	if types.VMC.HW.Input != e {
 		types.VMC.HW.Input = e
-		types.Log.Infof("evendInput = %v", e)
+		// types.Log.Infof("evendInput = %v", e)
 	}
 }
 
-func (self *Dispatch) SubscribeChan(name string, substop <-chan struct{}) chan types.InputEvent {
+func (d *Dispatch) SubscribeChan(name string, substop <-chan struct{}) chan types.InputEvent {
 	target := make(chan types.InputEvent)
 	sub := &sub{
 		name: name,
 		ch:   target,
 		stop: substop,
 	}
-	self.safeSubscribe(sub)
+	d.safeSubscribe(sub)
 	return target
 }
 
-func (self *Dispatch) SubscribeFunc(name string, fun EventFunc, substop <-chan struct{}) {
+func (d *Dispatch) SubscribeFunc(name string, fun EventFunc, substop <-chan struct{}) {
 	sub := &sub{
 		name: name,
 		fun:  fun,
 		stop: substop,
 	}
-	self.safeSubscribe(sub)
+	d.safeSubscribe(sub)
 }
 
-func (self *Dispatch) Unsubscribe(name string) {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-	if sub, ok := self.subs[name]; ok {
-		self.subClose(sub)
+func (d *Dispatch) Unsubscribe(name string) {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+	if sub, ok := d.subs[name]; ok {
+		d.subClose(sub)
 	} else {
 		panic("code error input sub not found name=" + name)
 	}
 }
 
-func (self *Dispatch) Run(sources []Source) {
+func (d *Dispatch) Run(sources []Source) {
 	for _, source := range sources {
-		go self.readSource(source)
+		go d.readSource(source)
 	}
 
 	for {
 		select {
-		case event := <-self.bus:
+		case event := <-d.bus:
 			handled := false
-			self.mu.Lock()
-			for _, sub := range self.subs {
-				self.subFire(sub, event)
+			d.mu.Lock()
+			for _, sub := range d.subs {
+				d.subFire(sub, event)
 				handled = true
 			}
-			self.mu.Unlock()
+			d.mu.Unlock()
 			if !handled {
 				// TODO emit sound/etc notification
-				self.Log.Errorf("input is not handled event=%#v", event)
+				d.Log.Errorf("input is not handled event=%#v", event)
 			}
 
-		case <-self.stop:
-			Drain(self.bus)
+		case <-d.stop:
+			Drain(d.bus)
 			return
 		}
 	}
 }
 
-func (self *Dispatch) Emit(event types.InputEvent) {
+func (d *Dispatch) Emit(event types.InputEvent) {
 	select {
-	case self.bus <- event:
-		// self.Log.Debugf("input emit=%#v", event)
-		self.Log.Infof("key press code(%d) ", event.Key)
-	case <-self.stop:
+	case d.bus <- event:
+		// d.Log.Debugf("input emit=%#v", event)
+		// d.Log.Infof("key press code(%d) ", event.Key)
+	case <-d.stop:
 		return
 	}
 }
 
-func (self *Dispatch) subFire(sub *sub, event types.InputEvent) {
+func (d *Dispatch) subFire(sub *sub, event types.InputEvent) {
 	select {
 	case <-sub.stop:
-		self.subClose(sub)
+		d.subClose(sub)
 		return
 	default:
 	}
@@ -142,46 +142,67 @@ func (self *Dispatch) subFire(sub *sub, event types.InputEvent) {
 		select {
 		case sub.ch <- event:
 		case <-sub.stop:
-			self.subClose(sub)
+			d.subClose(sub)
 		}
 	}
 }
 
-func (self *Dispatch) subClose(s *sub) {
+func (d *Dispatch) subClose(s *sub) {
 	if s.ch != nil {
 		close(s.ch)
 	}
-	delete(self.subs, s.name)
+	delete(d.subs, s.name)
 }
 
-func (self *Dispatch) safeSubscribe(s *sub) {
-	self.mu.Lock()
-	if existing, ok := self.subs[s.name]; ok {
+func (d *Dispatch) safeSubscribe(s *sub) {
+	d.mu.Lock()
+	if existing, ok := d.subs[s.name]; ok {
 		select {
 		case <-s.stop:
 			panic("code error input subscribe already closed name=" + s.name)
 		case <-existing.stop:
-			self.subClose(existing)
+			d.subClose(existing)
 		default:
 			panic("code error input duplicate subscribe name=" + s.name)
 		}
 	}
-	self.subs[s.name] = s
-	self.mu.Unlock()
+	d.subs[s.name] = s
+	d.mu.Unlock()
 }
 
-func (self *Dispatch) readSource(source Source) {
+func (d *Dispatch) readSource(source Source) {
 	tag := source.String()
 	for {
 		event, err := source.Read()
 		if err != nil {
 			err = errors.Annotatef(err, "input source=%s", tag)
-			self.Log.Fatal(errors.ErrorStack(err))
+			d.Log.Fatal(errors.ErrorStack(err))
 		}
+		var kn string
+		switch event.Key {
+		case EvendKeyAccept:
+			kn = "Ok"
+		case EvendKeyReject:
+			kn = "C"
+		case EvendKeyCreamLess:
+			kn = "cream-"
+		case EvendKeyCreamMore:
+			kn = "cream+"
+		case EvendKeySugarLess:
+			kn = "sugar-"
+		case EvendKeySugarMore:
+			kn = "sugar+"
+		case EvendKeyDot:
+			kn = "."
+		case 48, 49, 50, 51, 52, 53, 54, 55, 56, 57:
+			kn = fmt.Sprintf("%d", event.Key-48)
+		}
+
 		if types.VMC.HW.Input || event.Source == "dev-input-event" {
-			self.Emit(event)
+			d.Log.Infof("key press (%s) ", kn)
+			d.Emit(event)
 		} else {
-			self.Log.Debugf("keyboard disable. ignore event =%#v", event)
+			d.Log.Debugf("keyboard disable. ignore key (%s)", kn)
 		}
 	}
 }
