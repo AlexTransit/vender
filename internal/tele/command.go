@@ -111,7 +111,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 		case tele_api.ShowQR_error:
 			g.ShowPicture(state.PictureQRPayError)
 		case tele_api.ShowQR_errorOverdraft:
-			g.ShowPicture(state.PictureQRPayError)
+			g.ShowPicture(state.PicturePayReject)
 		}
 	}
 	return true
