@@ -68,24 +68,24 @@ func (d *Dispatch) SubscribeChan(name string, substop <-chan struct{}) chan type
 	return target
 }
 
-func (d *Dispatch) SubscribeFunc(name string, fun EventFunc, substop <-chan struct{}) {
-	sub := &sub{
-		name: name,
-		fun:  fun,
-		stop: substop,
-	}
-	d.safeSubscribe(sub)
-}
+// func (d *Dispatch) SubscribeFunc(name string, fun EventFunc, substop <-chan struct{}) {
+// 	sub := &sub{
+// 		name: name,
+// 		fun:  fun,
+// 		stop: substop,
+// 	}
+// 	d.safeSubscribe(sub)
+// }
 
-func (d *Dispatch) Unsubscribe(name string) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
-	if sub, ok := d.subs[name]; ok {
-		d.subClose(sub)
-	} else {
-		panic("code error input sub not found name=" + name)
-	}
-}
+// func (d *Dispatch) Unsubscribe(name string) {
+// 	d.mu.Lock()
+// 	defer d.mu.Unlock()
+// 	if sub, ok := d.subs[name]; ok {
+// 		d.subClose(sub)
+// 	} else {
+// 		panic("code error input sub not found name=" + name)
+// 	}
+// }
 
 func (d *Dispatch) Run(sources []Source) {
 	for _, source := range sources {
