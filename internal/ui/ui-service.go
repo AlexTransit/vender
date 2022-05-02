@@ -166,6 +166,12 @@ func (ui *UI) onServiceAuth() State {
 }
 
 func (ui *UI) onServiceMenu() State {
+	alive := alive.NewAlive()
+	ui.g.Hardware.Input.Enable(true)
+	defer func() {
+		alive.Stop() // stop pending AcceptCredit
+		alive.Wait()
+	}()
 	menuName := serviceMenu[ui.Service.menuIdx]
 	ui.display.SetLines(
 		msgServiceMenu,

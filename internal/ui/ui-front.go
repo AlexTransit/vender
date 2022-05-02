@@ -86,28 +86,6 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 	return StateFrontSelect
 }
 
-func menuMaxPrice() (currency.Amount, error) {
-	max := currency.Amount(0)
-	empty := true
-	for _, item := range types.UI.Menu {
-		valErr := item.D.Validate()
-		if valErr == nil {
-			empty = false
-			if item.Price > max {
-				max = item.Price
-			}
-		} else {
-			// TODO report menu errors once or less often than every ui cycle
-			valErr = errors.Annotate(valErr, item.String())
-			types.Log.Debug(valErr)
-		}
-	}
-	if empty {
-		return 0, errors.Errorf("menu len=%d no valid items", len(types.UI.Menu))
-	}
-	return max, nil
-}
-
 func (ui *UI) onFrontSelect(ctx context.Context) State {
 	moneysys := money.GetGlobal(ctx)
 	alive := alive.NewAlive()
@@ -470,4 +448,26 @@ func ScaleTuneRate(value, max, center uint8) float32 {
 		return 1 + (0.25 * float32(value-center))
 	}
 	panic("code error")
+}
+
+func menuMaxPrice() (currency.Amount, error) {
+	max := currency.Amount(0)
+	empty := true
+	for _, item := range types.UI.Menu {
+		valErr := item.D.Validate()
+		if valErr == nil {
+			empty = false
+			if item.Price > max {
+				max = item.Price
+			}
+		} else {
+			// TODO report menu errors once or less often than every ui cycle
+			valErr = errors.Annotate(valErr, item.String())
+			types.Log.Debug(valErr)
+		}
+	}
+	if empty {
+		return 0, errors.Errorf("menu len=%d no valid items", len(types.UI.Menu))
+	}
+	return max, nil
 }
