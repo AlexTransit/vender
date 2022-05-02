@@ -201,7 +201,7 @@ func (d *Dispatch) readSource(source Source) {
 		if types.VMC.HW.Input || event.Source == "dev-input-event" {
 			d.Log.Infof("key press (%s) ", kn)
 			d.Emit(event)
-			} else {
+		} else {
 			d.Log.Debugf("keyboard disable. ignore key (%s)", kn)
 		}
 	}
