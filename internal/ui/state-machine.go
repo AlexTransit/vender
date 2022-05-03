@@ -177,10 +177,7 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 		return ui.onFrontLock()
 
 	case StateServiceBegin:
-		ui.g.Hardware.Input.Enable(true)
 		return ui.onServiceBegin(ctx)
-	case StateServiceAuth:
-		return ui.onServiceAuth()
 	case StateServiceMenu:
 		return ui.onServiceMenu()
 	case StateServiceInventory:

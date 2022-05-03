@@ -40,9 +40,6 @@ drain:
 	}
 	return ek, nil
 }
-func (ek *EvendKeyboard) Close() error {
-	return ek.c.DecRef(EvendKeyboardSourceTag)
-}
 
 func (ek *EvendKeyboard) String() string { return EvendKeyboardSourceTag }
 

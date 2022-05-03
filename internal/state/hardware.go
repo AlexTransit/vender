@@ -325,17 +325,19 @@ func (g *Global) initDevices() error {
 }
 
 func (g *Global) initInput() error {
-	g.Hardware.Input = input.NewDispatch(g.Log, g.Alive.StopChan())
+	g.Hardware.Input = &input.Dispatch{
+		Log: g.Log,
+		Bus: make(chan types.InputEvent),
+	}
 
-	// support more input sources here
-	sources := make([]input.Source, 0, 4)
-
+	// read key event from evend keyboard
 	if src, err := g.initInputEvendKeyboard(); err != nil {
 		return err
 	} else if src != nil {
-		sources = append(sources, src)
+		go g.Hardware.Input.ReadEvendKeyboard(src)
 	}
 
+	// read service key
 	if !g.Config.Hardware.Input.DevInputEvent.Enable {
 		g.Log.Infof("input=%s disabled", input.DevInputEventTag)
 	} else {
@@ -344,11 +346,10 @@ func (g *Global) initInput() error {
 		if err != nil {
 			return err
 		} else if src != nil {
-			sources = append(sources, src)
+			go g.Hardware.Input.ReadEvendKeyboard(src)
 		}
 	}
 
-	go g.Hardware.Input.Run(sources)
 	return nil
 }
 

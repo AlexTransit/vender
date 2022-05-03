@@ -33,7 +33,7 @@ type Global struct {
 	Log          *log2.Log
 	Tele         tele_api.Teler
 	LockCh       chan struct{}
-	TimerUIStop  chan struct{}
+	// TimerUIStop  chan struct{}
 	// TODO UI           types.UIer
 
 	XXX_money atomic.Value // *money.MoneySystem crutch to import cycle
@@ -124,7 +124,6 @@ func (g *Global) ClientBegin() {
 }
 
 func (g *Global) ClientEnd() {
-	g.Hardware.Input.Enable(true)
 	if types.VMC.Lock {
 		types.VMC.Lock = false
 		types.VMC.Client.WorkTime = time.Now()
@@ -364,7 +363,6 @@ func (g *Global) initInventory(ctx context.Context) error {
 func VmcLock(ctx context.Context) {
 	g := GetGlobal(ctx)
 	g.Log.Info("Vmc Locked")
-	g.Hardware.Input.Enable(false)
 	types.VMC.Lock = true
 	if types.VMC.State == 5 || types.VMC.State == 6 {
 		g.LockCh <- struct{}{}
@@ -374,7 +372,6 @@ func VmcLock(ctx context.Context) {
 func VmcUnLock(ctx context.Context) {
 	g := GetGlobal(ctx)
 	g.Log.Info("Vmc UnLocked")
-	g.Hardware.Input.Enable(true)
 	types.VMC.Lock = false
 	if types.VMC.State == 22 {
 		g.LockCh <- struct{}{}
@@ -407,21 +404,6 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		"vmc.stop!",
 		func(ctx context.Context) error {
 			g.VmcStop(ctx)
-			return nil
-		},
-	)
-
-	g.Engine.RegisterNewFunc(
-		"input.enable",
-		func(ctx context.Context) error {
-			g.Hardware.Input.Enable(true)
-			return nil
-		},
-	)
-	g.Engine.RegisterNewFunc(
-		"input.disable",
-		func(ctx context.Context) error {
-			g.Hardware.Input.Enable(false)
 			return nil
 		},
 	)

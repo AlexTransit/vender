@@ -89,9 +89,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 func (ui *UI) onFrontSelect(ctx context.Context) State {
 	moneysys := money.GetGlobal(ctx)
 	alive := alive.NewAlive()
-	ui.g.Hardware.Input.Enable(true)
 	defer func() {
-		ui.g.Hardware.Input.Enable(false)
 		alive.Stop() // stop pending AcceptCredit
 		alive.Wait()
 	}()
@@ -112,12 +110,10 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 		if ui.State() == StateFrontTune {
 			timeout = modTuneTimeout
 		}
-		ui.g.Hardware.Input.Enable(true)
 		e := ui.wait(timeout)
 		switch e.Kind {
 		case types.EventInput:
 			if input.IsMoneyAbort(&e.Input) {
-				ui.g.Hardware.Input.Enable(false)
 				ui.g.Log.Infof("money abort event.")
 				credit := moneysys.Credit(ctx) / 100
 				if credit > 0 {
@@ -258,7 +254,6 @@ func (ui *UI) onFrontTune(ctx context.Context) State {
 func (ui *UI) onFrontTuneInput(e types.InputEvent) State {
 	switch e.Key {
 	case input.EvendKeyCreamLess:
-		ui.g.Log.Infof("key.cream-")
 		if types.UI.FrontResult.Cream > 0 {
 			types.UI.FrontResult.Cream--
 			//lint:ignore SA9003 empty branch
@@ -266,7 +261,6 @@ func (ui *UI) onFrontTuneInput(e types.InputEvent) State {
 			// TODO notify "impossible input" (sound?)
 		}
 	case input.EvendKeyCreamMore:
-		ui.g.Log.Infof("key.cream+")
 		if types.UI.FrontResult.Cream < MaxCream {
 			types.UI.FrontResult.Cream++
 			//lint:ignore SA9003 empty branch
@@ -274,7 +268,6 @@ func (ui *UI) onFrontTuneInput(e types.InputEvent) State {
 			// TODO notify "impossible input" (sound?)
 		}
 	case input.EvendKeySugarLess:
-		ui.g.Log.Infof("key.sugar-")
 		if types.UI.FrontResult.Sugar > 0 {
 			types.UI.FrontResult.Sugar--
 			//lint:ignore SA9003 empty branch
@@ -282,7 +275,6 @@ func (ui *UI) onFrontTuneInput(e types.InputEvent) State {
 			// TODO notify "impossible input" (sound?)
 		}
 	case input.EvendKeySugarMore:
-		ui.g.Log.Infof("key.sugar+")
 		if types.UI.FrontResult.Sugar < MaxSugar {
 			types.UI.FrontResult.Sugar++
 			//lint:ignore SA9003 empty branch
@@ -290,7 +282,6 @@ func (ui *UI) onFrontTuneInput(e types.InputEvent) State {
 			// TODO notify "impossible input" (sound?)
 		}
 	default:
-		fmt.Printf("\n\033[41m как он может сработать? \033[0m\n\n")
 		return StateFrontSelect
 	}
 	var t1, t2 []byte
