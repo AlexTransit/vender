@@ -25,13 +25,13 @@ func ReadOne(r io.Reader) (InputEvent, error) {
 	return parse(bufa)
 }
 
-func ReadChan(r io.Reader, ch chan<- InputEvent) error {
-	for {
-		var event InputEvent
-		event, err := ReadOne(r)
-		if err != nil {
-			return err
-		}
-		ch <- event
-	}
-}
+// func ReadChan(r io.Reader, ch chan<- InputEvent) error {
+// 	for {
+// 		var event InputEvent
+// 		event, err := ReadOne(r)
+// 		if err != nil {
+// 			return err
+// 		}
+// 		ch <- event
+// 	}
+// }

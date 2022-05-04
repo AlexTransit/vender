@@ -26,7 +26,7 @@ type EvendKeyboard struct{ c *mega.Client }
 // compile-time interface compliance test
 var _ Source = new(EvendKeyboard)
 
-func NewEvendKeyboard(client *mega.Client) (*EvendKeyboard, error) {
+func NewEvendKeyboard(client *mega.Client) (*EvendKeyboard) {
 	ek := &EvendKeyboard{c: client}
 	ek.c.IncRef(EvendKeyboardSourceTag)
 
@@ -38,7 +38,7 @@ drain:
 			break drain
 		}
 	}
-	return ek, nil
+	return ek
 }
 
 func (ek *EvendKeyboard) String() string { return EvendKeyboardSourceTag }

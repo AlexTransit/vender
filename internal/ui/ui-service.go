@@ -108,11 +108,6 @@ func (ui *UI) onServiceBegin(ctx context.Context) State {
 	return StateServiceMenu
 }
 
-
-
-
-
-
 func (ui *UI) onServiceMenu() State {
 	menuName := serviceMenu[ui.Service.menuIdx]
 	ui.display.SetLines(

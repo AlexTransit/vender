@@ -366,12 +366,7 @@ func (g *Global) initInputEvendKeyboard() (input.Source, error) {
 		err = errors.Annotatef(err, "config: evend keyboard needs mega")
 		return nil, err
 	}
-	ekb, err := input.NewEvendKeyboard(mc)
-	if err != nil {
-		err = errors.Annotatef(err, "input=%s", tag)
-		err = errors.Annotatef(err, "config: %#v", g.Config.Hardware.Input)
-		return nil, err
-	}
+	ekb := input.NewEvendKeyboard(mc)
 	return ekb, nil
 }
 
