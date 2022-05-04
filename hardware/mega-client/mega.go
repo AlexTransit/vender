@@ -498,10 +498,10 @@ func (c *Client) parse(buf []byte, f *Frame) error {
 
 	for i := 0; i+1 < len(f.Fields.TwiData); i += 2 {
 		twitem := binary.BigEndian.Uint16(f.Fields.TwiData[i : i+2])
-		select {
-		case c.TwiChan <- twitem:
-		default:
-			c.Log.Errorf("CRITICAL TWI buffer overflow")
+		if len(c.TwiChan) == 0 {
+			c.TwiChan <- twitem
+		} else {
+			c.Log.Debugf("IGNORE twitem. TwiChan not empty")
 		}
 	}
 

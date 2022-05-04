@@ -57,14 +57,11 @@ func (ui *UI) Init(ctx context.Context) error {
 	ui.display = ui.g.MustTextDisplay()
 	ui.eventch = make(chan types.Event)
 	ui.inputBuf = make([]byte, 0, 32)
-	ui.inputch = ui.g.Hardware.Input.SubscribeChan("ui", ui.g.Alive.StopChan())
-	// TODO ui.g.Hardware.Input.Unsubscribe("ui")
+	ui.inputch = *ui.g.Hardware.Input.InputChain()
 
 	ui.frontResetTimeout = helpers.IntSecondDefault(ui.g.Config.UI.Front.ResetTimeoutSec, 0)
 
-	// ui.lock.ch = make(chan struct{}, 1)
 	ui.g.LockCh = make(chan struct{}, 1)
-	ui.g.TimerUIStop = make(chan struct{}, 1)
 	ui.Service.Init(ctx)
 	ui.g.XXX_uier.Store(types.UIer(ui)) // FIXME import cycle traded for pointer cycle
 	return nil
@@ -84,17 +81,12 @@ func (ui *UI) wait(timeout time.Duration) types.Event {
 	// again:
 	select {
 
-	// case <-ui.g.TimerUIStop:
-	// 	fmt.Printf("\n\033[41m  \033[0m\n\n")
-	// 	return types.Event{Kind: types.EventUiTimerStop}
-
 	case e := <-ui.eventch:
-		// if e.Kind != types.EventInvalid {
-		// }
-		return e
-
+		if e.Kind != types.EventInvalid {
+			return e
+		}
 	case e := <-ui.inputch:
-		ui.g.Hardware.Input.Enable(false)
+
 		if e.Source == input.DevInputEventTag && e.Up {
 			return types.Event{Kind: types.EventService}
 		}
@@ -103,17 +95,11 @@ func (ui *UI) wait(timeout time.Duration) types.Event {
 	case <-ui.g.LockCh:
 		return types.Event{Kind: types.EventFrontLock}
 
-	// case <-ui.lock.ch:
-	// 	// chan buffer may produce false positive
-	// 	if !ui.lock.locked() {
-	// 		goto again
-	// 	}
-	// 	return types.Event{Kind: types.EventLock}
-
 	case <-tmr.C:
 		return types.Event{Kind: types.EventTime}
 
 	case <-ui.g.Alive.StopChan():
 		return types.Event{Kind: types.EventStop}
 	}
+	return types.Event{Kind: types.EventInvalid}
 }

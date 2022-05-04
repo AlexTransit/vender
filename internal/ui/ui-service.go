@@ -78,7 +78,6 @@ func (ui *uiService) Init(ctx context.Context) {
 }
 
 func (ui *UI) onServiceBegin(ctx context.Context) State {
-	ui.g.Hardware.Input.Enable(true)
 	ui.inputBuf = ui.inputBuf[:0]
 	ui.Service.askReport = false
 	ui.Service.menuIdx = 0
@@ -106,72 +105,10 @@ func (ui *UI) onServiceBegin(ctx context.Context) State {
 
 	ui.g.Log.Debugf("ui service begin")
 	ui.g.Tele.RoboSendState(tele_api.State_Service)
-	return StateServiceAuth
-}
-
-func (ui *UI) onServiceAuth() State {
-	serviceConfig := &ui.g.Config.UI.Service
-	if !serviceConfig.Auth.Enable {
-		return StateServiceMenu
-	}
-
-	passVisualHash := VisualHash(ui.inputBuf, ui.Service.SecretSalt)
-	ui.display.SetLines(
-		serviceConfig.MsgAuth,
-		fmt.Sprintf(msgServiceInputAuth, passVisualHash),
-	)
-
-	next, e := ui.serviceWaitInput()
-	if next != StateDefault {
-		return next
-	}
-
-	switch {
-	case e.IsDigit():
-		ui.inputBuf = append(ui.inputBuf, byte(e.Key))
-		if len(ui.inputBuf) > 16 {
-			ui.display.SetLines(MsgError, "len") // FIXME extract message string
-			ui.serviceWaitInput()
-			return StateServiceEnd
-		}
-		return ui.State()
-
-	case e.IsZero() || input.IsReject(&e):
-		return StateServiceEnd
-
-	case input.IsAccept(&e):
-		if len(ui.inputBuf) == 0 {
-			ui.display.SetLines(MsgError, "empty") // FIXME extract message string
-			ui.serviceWaitInput()
-			return StateServiceEnd
-		}
-
-		// FIXME fnv->secure hash for actual password comparison
-		inputHash := VisualHash(ui.inputBuf, ui.Service.SecretSalt)
-		for i, p := range ui.g.Config.UI.Service.Auth.Passwords {
-			if inputHash == p {
-				ui.g.Log.Infof("service auth ok i=%d hash=%s", i, inputHash)
-				return StateServiceMenu
-			}
-		}
-
-		ui.display.SetLines(MsgError, "sorry") // FIXME extract message string
-		ui.serviceWaitInput()
-		return StateServiceEnd
-	}
-	ui.g.Log.Errorf("ui onServiceAuth unhandled branch")
-	ui.display.SetLines(MsgError, "code error") // FIXME extract message string
-	ui.serviceWaitInput()
-	return StateServiceEnd
+	return StateServiceMenu
 }
 
 func (ui *UI) onServiceMenu() State {
-	alive := alive.NewAlive()
-	ui.g.Hardware.Input.Enable(true)
-	defer func() {
-		alive.Stop() // stop pending AcceptCredit
-		alive.Wait()
-	}()
 	menuName := serviceMenu[ui.Service.menuIdx]
 	ui.display.SetLines(
 		msgServiceMenu,
