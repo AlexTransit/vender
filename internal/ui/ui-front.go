@@ -148,6 +148,9 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				goto refresh
 
 			case input.IsAccept(&e.Input):
+				if types.UI.FrontResult.Accepted {
+					goto wait
+				}
 				if len(ui.inputBuf) == 0 {
 					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuCodeEmpty)
 					goto wait
