@@ -296,22 +296,6 @@ func (t *tele) cmdShowQR(ctx context.Context, cmd *tele_api.Command, arg *tele_a
 
 	g := state.GetGlobal(ctx)
 	g.ShowQR(arg.QrText)
-	// display, err := g.Display()
-	// if err != nil {
-	// 	return errors.Annotate(err, "display")
-	// }
-	// if display == nil {
-	// 	return fmt.Errorf("display is not configured")
-	// }
-	// // TODO display.Layout(arg.Layout)
-	// // TODO border,redundancy from layout/config
-	// t.log.Infof("show QR:'%v'", arg.QrText)
-	// types.VMC.HW.Display.Gdisplay = arg.QrText
-	// return display.QR(arg.QrText, true, qrcode.High)
 	return nil
 }
 
-// -------------------
-func (t *tele) inputRoboMessage(ctx context.Context, payload []byte) {
-	t.log.Infof("\n\033[41m sdf \033[0m\n\n")
-}
