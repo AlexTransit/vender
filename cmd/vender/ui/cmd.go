@@ -39,7 +39,7 @@ func Main(ctx context.Context, config *state.Config) error {
 		time.Sleep(1 * time.Second)
 	}
 
-	if err := hardware.Enum(ctx); err != nil {
+	if err := hardware.InitMDBDevices(ctx); err != nil {
 		err = errors.Annotate(err, "hardware enum")
 		return err
 	}

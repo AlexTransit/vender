@@ -59,7 +59,7 @@ func Main(ctx context.Context, config *state.Config) error {
 		g.Log.Fatal(err)
 	}
 
-	if err := hardware.Enum(ctx); err != nil {
+	if err := hardware.InitMDBDevices(ctx); err != nil {
 		err = errors.Annotate(err, "hardware enum")
 		return err
 	}

@@ -41,7 +41,7 @@ func Main(ctx context.Context, config *state.Config) error {
 		return errors.Annotate(err, "mdb bus reset")
 	}
 
-	if err := hardware.Enum(ctx); err != nil {
+	if err := hardware.InitMDBDevices(ctx); err != nil {
 		return errors.Annotate(err, "hardware enum")
 	}
 	g.Log.Debugf("devices init complete")

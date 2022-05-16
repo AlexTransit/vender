@@ -32,8 +32,8 @@ func VmcMain(ctx context.Context, config *state.Config) error {
 		return errors.Annotate(err, "mdb bus reset")
 	}
 
-	if err = hardware.Enum(ctx); err != nil {
-		return errors.Annotate(err, "hardware enum")
+	if err = hardware.InitMDBDevices(ctx); err != nil {
+		return errors.Annotate(err, "hardware init")
 	}
 
 	moneysys := new(money.MoneySystem)
@@ -73,7 +73,7 @@ func BrokenMain(ctx context.Context, config *state.Config) error {
 			err = errors.Annotate(err, "mdb bus reset")
 			g.Error(err)
 		}
-		if err = hardware.Enum(ctx); err != nil {
+		if err = hardware.InitMDBDevices(ctx); err != nil {
 			err = errors.Annotate(err, "hardware enum")
 			g.Error(err)
 		}

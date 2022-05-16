@@ -28,7 +28,7 @@ func TestAbort(t *testing.T) {
 		"":             "",
 	})
 
-	require.NoError(t, hardware.Enum(ctx))
+	require.NoError(t, hardware.InitMDBDevices(ctx))
 	ms := MoneySystem{}
 	require.NoError(t, ms.Start(ctx))
 	mock.ExpectMap(nil)
@@ -53,7 +53,7 @@ func TestWithdrawGift(t *testing.T) {
 
 	ctx, g := state_new.NewTestContext(t, "", `money{scale=100}`)
 
-	require.NoError(t, hardware.Enum(ctx))
+	require.NoError(t, hardware.InitMDBDevices(ctx))
 	ms := MoneySystem{}
 	require.NoError(t, ms.Start(ctx))
 

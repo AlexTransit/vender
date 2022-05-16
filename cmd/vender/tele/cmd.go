@@ -30,7 +30,7 @@ func Main(ctx context.Context, config *state.Config) error {
 	synthConfig.Tele.LogDebug = true
 	g.MustInit(ctx, synthConfig)
 
-	if err := hardware.Enum(ctx); err != nil {
+	if err := hardware.InitMDBDevices(ctx); err != nil {
 		err = errors.Annotate(err, "hardware enum")
 		return err
 	}
