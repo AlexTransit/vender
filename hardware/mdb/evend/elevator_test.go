@@ -57,7 +57,7 @@ func TestElevator(t *testing.T) {
 		// {"d2034600", ""},
 		// {"d3", "0d00"},
 	})
-	require.NoError(t, Enum(ctx))
+	require.NoError(t, EnumElevator(ctx))
 
 	g.Engine.TestDo(t, ctx, "evend.elevator.move(100)")
 	// g.Engine.TestDo(t, ctx, "evend.elevator.move(50)")

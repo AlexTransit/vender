@@ -37,7 +37,7 @@ hardware { device "evend.valve" {} }`)
 		{"c411", "00"}, // when hot temp sensor is broken
 		{"c51000", ""}, // must disable boiler
 	})
-	require.NoError(t, Enum(ctx))
+	require.NoError(t, EnumValve(ctx))
 
 	g.Engine.TestDo(t, ctx, "evend.valve.get_temp_hot")
 	dev, err := g.GetDevice("evend.valve")

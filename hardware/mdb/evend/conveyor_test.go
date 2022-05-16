@@ -49,7 +49,7 @@ func TestConveyor(t *testing.T) {
 		// {"da016707", ""},
 		// {"db", "54"}, // oops
 	})
-	require.NoError(t, Enum(ctx))
+	require.NoError(t, EnumConveyor(ctx))
 
 	assert.NoError(t, g.Engine.RegisterParse("conveyor_move_cup", "evend.conveyor.move(1560)"))
 	assert.NoError(t, g.Engine.RegisterParse("conveyor_move_elevator", "evend.conveyor.move(1895)"))
