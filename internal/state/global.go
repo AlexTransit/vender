@@ -124,6 +124,7 @@ func (g *Global) ClientBegin() {
 }
 
 func (g *Global) ClientEnd() {
+	types.VMC.InputEnable = true
 	if types.VMC.Lock {
 		types.VMC.Lock = false
 		types.VMC.Client.WorkTime = time.Now()
@@ -364,6 +365,7 @@ func VmcLock(ctx context.Context) {
 	g := GetGlobal(ctx)
 	g.Log.Info("Vmc Locked")
 	types.VMC.Lock = true
+	types.VMC.InputEnable = false
 	if types.VMC.State == 5 || types.VMC.State == 6 {
 		g.LockCh <- struct{}{}
 	}
@@ -373,6 +375,7 @@ func VmcUnLock(ctx context.Context) {
 	g := GetGlobal(ctx)
 	g.Log.Info("Vmc UnLocked")
 	types.VMC.Lock = false
+	types.VMC.InputEnable = true
 	if types.VMC.State == 22 {
 		g.LockCh <- struct{}{}
 	}

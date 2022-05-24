@@ -31,7 +31,7 @@ hardware { device "evend.cup" {} }`)
 		{"e3", "50"},
 		{"e3", ""},
 	})
-	require.NoError(t, Enum(ctx))
+	require.NoError(t, EnumCup(ctx))
 
 	stock, err := g.Inventory.Get("cup")
 	require.NoError(t, err)

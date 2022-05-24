@@ -25,7 +25,7 @@ hardware { device "evend.espresso" {} }`)
 		{"ea01", ""},
 		{"eb", ""},
 	})
-	require.NoError(t, Enum(ctx))
+	require.NoError(t, EnumEspresso(ctx))
 
 	stock, err := g.Inventory.Get("espresso")
 	require.NoError(t, err)

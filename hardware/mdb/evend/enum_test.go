@@ -27,7 +27,7 @@ device "evend.conveyor" {}
 		"b8": "", "b9": "", "c0": "", "c1": "", "c8": "", "c9": "",
 		"d0": "", "d1": "", "e0": "", "e1": "", "e8": "", "e9": "",
 	})
-	require.NoError(t, Enum(ctx))
+	require.NoError(t, EnumHopper(ctx,1))
 
 	mock.ExpectMap(nil)
 	go mock.Expect([]mdb.MockR{
