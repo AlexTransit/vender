@@ -14,10 +14,11 @@ var VMC *VMCType = nil
 var UI *UItype = nil
 
 type VMCType struct {
-	Version string
-	Lock    bool
-	State   uint32
-	Client  struct {
+	Version     string
+	Lock        bool
+	InputEnable bool
+	State       uint32
+	Client      struct {
 		WorkTime time.Time
 		Input    string
 		Light    bool

@@ -54,8 +54,12 @@ func (d *Dispatch) ReadEvendKeyboard(s Source) {
 		}
 
 		if len(d.Bus) == 0 {
-			d.Log.Infof("key press (%s) ", kn)
-			d.Bus <- event
+			if types.VMC.InputEnable {
+				d.Log.Infof("key press (%s) ", kn)
+				d.Bus <- event
+			} else {
+				d.Log.Infof("ignore key. input disabled. (%s) ", kn)	
+			}
 		} else {
 			d.Log.Infof("ignore key. previous button not handled. (%s) ", kn)
 		}
