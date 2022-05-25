@@ -331,24 +331,22 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 		ui.g.Log.Errorf("ui-front CRITICAL error while return change")
 	}
 	err := Cook(ctx)
+	defer ui.g.Tele.RoboSend(&rm)
 
 	if err == nil { // success path
 		rm.Order.OrderStatus = tele_api.OrderStatus_complete
 		rm.State = tele_api.State_Nominal
-		// ui.g.Tele.Transaction(teletx)
-		ui.g.Tele.RoboSend(&rm)
 		return StateFrontEnd
 	}
 
 	ui.display.SetLines(uiConfig.Front.MsgError, uiConfig.Front.MsgMenuError)
-	err = errors.Annotatef(err, "execute %s", selected)
-	ui.g.Error(err)
-
+	rm.Err.Message = errors.Annotatef(err, "execute %s", selected).Error()
 	if errs := ui.g.Engine.ExecList(ctx, "on_menu_error", ui.g.Config.Engine.OnMenuError); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_menu_error"))
 	} else {
 		ui.g.Log.Infof("on_menu_error success")
 	}
+
 	return StateBroken
 }
 

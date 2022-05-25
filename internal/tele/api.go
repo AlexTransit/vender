@@ -68,10 +68,16 @@ func (t *tele) Error(e error) {
 	}
 
 	t.log.Debugf("tele.Error: " + errors.ErrorStack(e))
-	tm := &tele_api.Telemetry{
-		Error: &tele_api.Telemetry_Error{Message: e.Error()},
+	// tm := &tele_api.Telemetry{
+	// 	Error: &tele_api.Telemetry_Error{Message: e.Error()},
+	// }
+	// t.Telemetry(tm)
+	tm := &tele_api.FromRoboMessage{
+		Err: &tele_api.Err{
+			Message: e.Error(),
+		},
 	}
-	t.Telemetry(tm)
+	t.RoboSend(tm)
 }
 
 func (t *tele) Report(ctx context.Context, serviceTag bool) error {

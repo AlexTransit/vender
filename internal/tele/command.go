@@ -83,7 +83,8 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 				om.Order.OrderStatus = tele_api.OrderStatus_orderError
 				om.Err = &tele_api.Err{}
 				om.Err.Message = err.Error()
-				types.VMC.State = 2 //FIXME  StateBroken
+				om.State = tele_api.State_Broken
+				types.VMC.State =  2 //FIXME  StateBroken
 			}
 			t.RoboSend(&om)
 			g.LockCh <- struct{}{}
@@ -204,8 +205,6 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
 	err := ui.Cook(ctx)
 	if types.VMC.MonSys.Dirty == 0 {
-		// t.CookReply(cmd, tele_api.CookReplay_cookFinish, uint32(types.UI.FrontResult.Item.Price))
-		// r.ValidateReplay = price[0]
 		rm := tele_api.Response{
 			Executer:       cmd.Executer,
 			CookReplay:     tele_api.CookReplay_cookFinish,

@@ -118,7 +118,7 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 		ui.g.Log.Infof("state=broken")
 		ui.g.ShowPicture(state.PictureBroken)
 		if !ui.broken {
-			ui.g.Tele.RoboSendState(tele_api.State_Broken)
+			// ui.g.Tele.RoboSendState(tele_api.State_Broken)
 			if errs := ui.g.Engine.ExecList(ctx, "on_broken", ui.g.Config.Engine.OnBroken); len(errs) != 0 {
 				// TODO maybe ErrorStack should be removed
 				ui.g.Log.Error(errors.ErrorStack(errors.Annotate(helpers.FoldErrors(errs), "on_broken")))
