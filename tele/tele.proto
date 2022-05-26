@@ -146,7 +146,7 @@ enum State {
   Invalid = 0;
   Boot = 1;
   Nominal = 2;
-  Disconnected = 3;
+  Client = 3;
   Broken = 4;
   Service = 5;
   Lock = 6;

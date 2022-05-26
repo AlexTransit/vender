@@ -33,18 +33,18 @@ const (
 	StateFrontTimeout // 9 t=saveMoney ->FrontEnd
 	StateFrontEnd     // 10 ->FrontBegin
 
-	StateServiceBegin // 11 t=input/timeout ->ServiceAuth
-	StateServiceAuth  // 12 +inputAccept+OK=ServiceMenu
-	StateServiceMenu
-	StateServiceInventory
+	StateServiceBegin     // 11 t=input/timeout ->ServiceAuth
+	StateServiceAuth      // 12 +inputAccept+OK=ServiceMenu
+	StateServiceMenu      //13
+	StateServiceInventory //14
 	StateServiceTest
 	StateServiceReboot
 	StateServiceNetwork
 	StateServiceMoneyLoad
 	StateServiceReport
-	StateServiceEnd // +askReport=ServiceReport ->FrontBegin
+	StateServiceEnd // 20 +askReport=ServiceReport ->FrontBegin
 
-	StateStop
+	StateStop //21
 
 	StateFrontLock
 )
@@ -59,7 +59,7 @@ func (ui *UI) Loop(ctx context.Context) {
 	next := StateDefault
 	for next != StateStop && ui.g.Alive.IsRunning() {
 		current := ui.State()
-		types.VMC.State = uint32(current)
+		types.VMC.UiState = uint32(current)
 		next = ui.enter(ctx, current)
 		if next == StateDefault {
 			ui.g.Log.Fatalf("ui state=%v next=default", current)

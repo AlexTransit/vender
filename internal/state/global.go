@@ -120,24 +120,25 @@ func (g *Global) VmcStop(ctx context.Context) {
 
 func (g *Global) ClientBegin() {
 	g.ShowPicture(PictureClient)
+	types.VMC.Client.Prepare = true
 	if !types.VMC.Lock {
 		// g.TimerUIStop <- struct{}{}
 		types.VMC.Lock = true
 		types.VMC.Client.WorkTime = time.Now()
 		g.Log.Infof("--- client activity begin ---")
 	}
-	g.Tele.RoboSendState(tele_api.State_Process)
+	g.Tele.RoboSendState(tele_api.State_Client)
 }
 
 func (g *Global) ClientEnd() {
-	g.ShowPicture(PictureIdle)
 	types.VMC.InputEnable = true
+	types.VMC.Client.Prepare = false
 	if types.VMC.Lock {
 		types.VMC.Lock = false
 		types.VMC.Client.WorkTime = time.Now()
 		g.Log.Infof("--- client activity end ---")
-		// g.Tele.State(tele_api.State_Nominal)
 	}
+	g.ShowPicture(PictureIdle)
 }
 
 // If `Init` fails, consider `Global` is in broken state.
@@ -373,7 +374,7 @@ func VmcLock(ctx context.Context) {
 	g.Log.Info("Vmc Locked")
 	types.VMC.Lock = true
 	types.VMC.InputEnable = false
-	if types.VMC.State == 5 || types.VMC.State == 6 {
+	if types.VMC.UiState == 5 || types.VMC.UiState == 6 {
 		g.LockCh <- struct{}{}
 	}
 }
@@ -383,7 +384,7 @@ func VmcUnLock(ctx context.Context) {
 	g.Log.Info("Vmc UnLocked")
 	types.VMC.Lock = false
 	types.VMC.InputEnable = true
-	if types.VMC.State == 22 {
+	if types.VMC.UiState == 22 {
 		g.LockCh <- struct{}{}
 	}
 }
