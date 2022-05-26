@@ -121,7 +121,9 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				}
 				return StateFrontEnd
 			}
-
+			if types.VMC.UiState == uint32(tele_api.State_WaitingForExternalPayment) {
+				ui.g.Tele.RoboSendState(tele_api.State_Client)
+			}
 			if input.IsReject(&e.Input) {
 				// backspace semantic
 				if len(ui.inputBuf) > 0 {
@@ -131,7 +133,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				if moneysys.Credit(ctx) != 0 {
 					goto refresh
 				}
-				return StateFrontTimeout
+				return StateFrontEnd
 			}
 
 			ui.g.ClientBegin()
@@ -225,10 +227,9 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 }
 
 func (ui *UI) sendRequestForQrPayment() {
-	types.VMC.State = uint32(StatePrepare)
+	types.VMC.UiState = uint32(StatePrepare)
 	rm := tele_api.FromRoboMessage{
-		State:    tele_api.State_WaitingForExternalPayment,
-		RoboTime: 0,
+		State: tele_api.State_WaitingForExternalPayment,
 		Order: &tele_api.Order{
 			MenuCode: types.UI.FrontResult.Item.Code,
 			Amount:   uint32(types.UI.FrontResult.Item.Price),
@@ -385,7 +386,7 @@ func (ui *UI) onFrontLock() State {
 	case types.EventBroken:
 		return StateBroken
 	case types.EventFrontLock:
-		if types.VMC.State == 2 { // broken. fix this
+		if types.VMC.UiState == 2 { // broken. fix this
 			return StateBroken
 		}
 		types.VMC.Lock = false

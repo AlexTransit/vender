@@ -78,13 +78,13 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 			if types.VMC.MonSys.Dirty == 0 {
 				om.Order.OrderStatus = tele_api.OrderStatus_complete
 			}
-			types.VMC.State = 10 //FIXME StateFrontEnd     // 10 ->FrontBegin
+			types.VMC.UiState = 10 //FIXME StateFrontEnd     // 10 ->FrontBegin
 			if err != nil {
 				om.Order.OrderStatus = tele_api.OrderStatus_orderError
 				om.Err = &tele_api.Err{}
 				om.Err.Message = err.Error()
 				om.State = tele_api.State_Broken
-				types.VMC.State =  2 //FIXME  StateBroken
+				types.VMC.UiState =  2 //FIXME  StateBroken
 			}
 			t.RoboSend(&om)
 			g.LockCh <- struct{}{}
@@ -166,7 +166,7 @@ func (t *tele) cmdReport(ctx context.Context, cmd *tele_api.Command) error {
 }
 
 func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgCook) error {
-	if types.VMC.State != uint32(ui.StatePrepare) {
+	if types.VMC.UiState != uint32(ui.StatePrepare) {
 		if types.VMC.Lock {
 			t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
 			t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
@@ -218,7 +218,7 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	if err != nil {
 		t.CookReply(cmd, tele_api.CookReplay_cookError)
 		t.RoboSendState(tele_api.State_Broken)
-		types.VMC.State = uint32(ui.StateBroken)
+		types.VMC.UiState = uint32(ui.StateBroken)
 		return errors.Errorf("remote cook make error: (%v)", err)
 	}
 	t.RoboSendState(tele_api.State_Nominal)
