@@ -33,9 +33,9 @@ const (
 	StateFrontTimeout // 9 t=saveMoney ->FrontEnd
 	StateFrontEnd     // 10 ->FrontBegin
 
-	StateServiceBegin // 11 t=input/timeout ->ServiceAuth
-	StateServiceAuth  // 12 +inputAccept+OK=ServiceMenu
-	StateServiceMenu  //13
+	StateServiceBegin     // 11 t=input/timeout ->ServiceAuth
+	StateServiceAuth      // 12 +inputAccept+OK=ServiceMenu
+	StateServiceMenu      //13
 	StateServiceInventory //14
 	StateServiceTest
 	StateServiceReboot
