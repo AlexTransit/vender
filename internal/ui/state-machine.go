@@ -35,16 +35,16 @@ const (
 
 	StateServiceBegin // 11 t=input/timeout ->ServiceAuth
 	StateServiceAuth  // 12 +inputAccept+OK=ServiceMenu
-	StateServiceMenu
-	StateServiceInventory
+	StateServiceMenu  //13
+	StateServiceInventory //14
 	StateServiceTest
 	StateServiceReboot
 	StateServiceNetwork
 	StateServiceMoneyLoad
 	StateServiceReport
-	StateServiceEnd // +askReport=ServiceReport ->FrontBegin
+	StateServiceEnd // 20 +askReport=ServiceReport ->FrontBegin
 
-	StateStop
+	StateStop //21
 
 	StateFrontLock
 )
