@@ -60,6 +60,7 @@ type Pic uint32
 const (
 	PictureBoot Pic = iota
 	PictureIdle
+	PictureClient
 	PictureMake
 	PictureBroken
 	PictureQRPayError
@@ -72,6 +73,9 @@ func (g *Global) ShowPicture(pict Pic) {
 	case pict == PictureBoot:
 		file = g.Config.UI.Front.PicBoot
 		types.VMC.HW.Display.Gdisplay = "PictureBoot"
+	case pict == PictureClient:
+		file = g.Config.UI.Front.PicClient
+		types.VMC.HW.Display.Gdisplay = "PictureClient"
 	case pict == PictureMake:
 		file = g.Config.UI.Front.PicMake
 		types.VMC.HW.Display.Gdisplay = "PictureMake"
@@ -84,10 +88,11 @@ func (g *Global) ShowPicture(pict Pic) {
 	case pict == PicturePayReject:
 		file = g.Config.UI.Front.PicPayReject
 		types.VMC.HW.Display.Gdisplay = "PictureBankReject"
-
 	default:
-		file = g.Config.UI.Front.PicIdle
 		types.VMC.HW.Display.Gdisplay = "PictureDefault"
+	}
+	if file == "" {
+		file = g.Config.UI.Front.PicIdle
 	}
 	g.Hardware.Display.d.CopyFile2FB(file)
 
@@ -114,16 +119,18 @@ func (g *Global) VmcStop(ctx context.Context) {
 }
 
 func (g *Global) ClientBegin() {
+	g.ShowPicture(PictureClient)
 	if !types.VMC.Lock {
 		// g.TimerUIStop <- struct{}{}
 		types.VMC.Lock = true
 		types.VMC.Client.WorkTime = time.Now()
 		g.Log.Infof("--- client activity begin ---")
-		g.Tele.RoboSendState(tele_api.State_Process)
 	}
+	g.Tele.RoboSendState(tele_api.State_Process)
 }
 
 func (g *Global) ClientEnd() {
+	g.ShowPicture(PictureIdle)
 	types.VMC.InputEnable = true
 	if types.VMC.Lock {
 		types.VMC.Lock = false

@@ -67,7 +67,6 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 			return StateBroken
 		}
 	}
-	ui.g.ShowPicture(state.PictureIdle)
 
 	if errs := ui.g.Engine.ExecList(ctx, "on_front_begin", ui.g.Config.Engine.OnFrontBegin); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_front_begin"))
@@ -122,6 +121,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				}
 				return StateFrontEnd
 			}
+
 			if input.IsReject(&e.Input) {
 				// backspace semantic
 				if len(ui.inputBuf) > 0 {
@@ -132,8 +132,8 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 					goto refresh
 				}
 				return StateFrontTimeout
-
 			}
+
 			ui.g.ClientBegin()
 			switch e.Input.Key {
 			case input.EvendKeyCreamLess, input.EvendKeyCreamMore, input.EvendKeySugarLess, input.EvendKeySugarMore:
@@ -203,9 +203,6 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 		case types.EventService:
 			return StateServiceBegin
 
-		// case types.EventUiTimerStop:
-		// 	goto refresh
-
 		case types.EventTime:
 			if ui.State() == StateFrontTune { // XXX onFrontTune
 				return StateFrontSelect // "return to previous mode"
@@ -214,8 +211,10 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 
 		case types.EventFrontLock:
 			return StateFrontLock
+
 		case types.EventBroken:
 			return StateBroken
+
 		case types.EventLock, types.EventStop:
 			return StateFrontEnd
 

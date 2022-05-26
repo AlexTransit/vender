@@ -32,6 +32,7 @@ type Config struct { //nolint:maligned
 
 		ResetTimeoutSec int    `hcl:"reset_sec"`
 		PicBoot         string `hcl:"pic_boot"`
+		PicClient		string `hcl:"pic_client"`
 		PicIdle         string `hcl:"pic_idle"`
 		PicMake         string `hcl:"pic_make"`
 		PicBroken       string `hcl:"pic_broken"`
