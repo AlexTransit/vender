@@ -138,6 +138,7 @@ func (g *Global) ClientEnd() {
 		types.VMC.Client.WorkTime = time.Now()
 		g.Log.Infof("--- client activity end ---")
 	}
+	g.ShowPicture(PictureIdle)
 }
 
 // If `Init` fails, consider `Global` is in broken state.

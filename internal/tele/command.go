@@ -190,12 +190,12 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 
 		t.CookReply(cmd, tele_api.CookReplay_cookStart)
 		t.log.Infof("remote coocing (%v) (%v)", cmd, arg)
-		t.RoboSendState(tele_api.State_RemoteControl)
 	} else if arg.Menucode != "-" {
 		t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
 		t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
 		return nil
 	}
+	t.RoboSendState(tele_api.State_RemoteControl)
 
 	if arg.Balance < int32(types.UI.FrontResult.Item.Price) {
 		t.CookReply(cmd, tele_api.CookReplay_cookOverdraft, uint32(types.UI.FrontResult.Item.Price))

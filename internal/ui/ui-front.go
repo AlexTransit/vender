@@ -121,12 +121,12 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				}
 				return StateFrontEnd
 			}
-			if types.VMC.UiState == uint32(tele_api.State_WaitingForExternalPayment) {
+			if types.UI.FrontResult.Accepted {
 				ui.g.Tele.RoboSendState(tele_api.State_Client)
 			}
 			if input.IsReject(&e.Input) {
 				// backspace semantic
-				if len(ui.inputBuf) > 0 {
+				if len(ui.inputBuf) > 1 {
 					ui.inputBuf = ui.inputBuf[:len(ui.inputBuf)-1]
 					goto refresh
 				}
