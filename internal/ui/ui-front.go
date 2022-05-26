@@ -67,7 +67,6 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 			return StateBroken
 		}
 	}
-	ui.g.ShowPicture(state.PictureIdle)
 
 	if errs := ui.g.Engine.ExecList(ctx, "on_front_begin", ui.g.Config.Engine.OnFrontBegin); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_front_begin"))
@@ -122,18 +121,21 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				}
 				return StateFrontEnd
 			}
+			if types.UI.FrontResult.Accepted {
+				ui.g.Tele.RoboSendState(tele_api.State_Client)
+			}
 			if input.IsReject(&e.Input) {
 				// backspace semantic
-				if len(ui.inputBuf) > 0 {
+				if len(ui.inputBuf) > 1 {
 					ui.inputBuf = ui.inputBuf[:len(ui.inputBuf)-1]
 					goto refresh
 				}
 				if moneysys.Credit(ctx) != 0 {
 					goto refresh
 				}
-				return StateFrontTimeout
-
+				return StateFrontEnd
 			}
+
 			ui.g.ClientBegin()
 			switch e.Input.Key {
 			case input.EvendKeyCreamLess, input.EvendKeyCreamMore, input.EvendKeySugarLess, input.EvendKeySugarMore:
@@ -203,9 +205,6 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 		case types.EventService:
 			return StateServiceBegin
 
-		// case types.EventUiTimerStop:
-		// 	goto refresh
-
 		case types.EventTime:
 			if ui.State() == StateFrontTune { // XXX onFrontTune
 				return StateFrontSelect // "return to previous mode"
@@ -214,8 +213,10 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 
 		case types.EventFrontLock:
 			return StateFrontLock
+
 		case types.EventBroken:
 			return StateBroken
+
 		case types.EventLock, types.EventStop:
 			return StateFrontEnd
 
@@ -226,10 +227,9 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 }
 
 func (ui *UI) sendRequestForQrPayment() {
-	types.VMC.State = uint32(StatePrepare)
+	types.VMC.UiState = uint32(StatePrepare)
 	rm := tele_api.FromRoboMessage{
-		State:    tele_api.State_WaitingForExternalPayment,
-		RoboTime: 0,
+		State: tele_api.State_WaitingForExternalPayment,
 		Order: &tele_api.Order{
 			MenuCode: types.UI.FrontResult.Item.Code,
 			Amount:   uint32(types.UI.FrontResult.Item.Price),
@@ -331,24 +331,22 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 		ui.g.Log.Errorf("ui-front CRITICAL error while return change")
 	}
 	err := Cook(ctx)
+	defer ui.g.Tele.RoboSend(&rm)
 
 	if err == nil { // success path
 		rm.Order.OrderStatus = tele_api.OrderStatus_complete
 		rm.State = tele_api.State_Nominal
-		// ui.g.Tele.Transaction(teletx)
-		ui.g.Tele.RoboSend(&rm)
 		return StateFrontEnd
 	}
 
 	ui.display.SetLines(uiConfig.Front.MsgError, uiConfig.Front.MsgMenuError)
-	err = errors.Annotatef(err, "execute %s", selected)
-	ui.g.Error(err)
-
+	rm.Err.Message = errors.Annotatef(err, "execute %s", selected).Error()
 	if errs := ui.g.Engine.ExecList(ctx, "on_menu_error", ui.g.Config.Engine.OnMenuError); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_menu_error"))
 	} else {
 		ui.g.Log.Infof("on_menu_error success")
 	}
+
 	return StateBroken
 }
 
@@ -388,7 +386,7 @@ func (ui *UI) onFrontLock() State {
 	case types.EventBroken:
 		return StateBroken
 	case types.EventFrontLock:
-		if types.VMC.State == 2 { // broken. fix this
+		if types.VMC.UiState == 2 { // broken. fix this
 			return StateBroken
 		}
 		types.VMC.Lock = false

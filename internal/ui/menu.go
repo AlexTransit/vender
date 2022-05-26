@@ -81,6 +81,8 @@ func Cook(ctx context.Context) error {
 	err := g.Engine.Exec(itemCtx, types.UI.FrontResult.Item.D)
 	if invErr := g.Inventory.Persist.Store(); invErr != nil {
 		g.Error(errors.Annotate(invErr, "critical inventory persist"))
+		// err = errors.Wrap(err, invErr)
+		g.Tele.Error(invErr)
 	}
 	g.Log.Debugf("ui-front selected=%s end err=%v", types.UI.FrontResult.Item.String(), err)
 	return err

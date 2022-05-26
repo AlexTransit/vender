@@ -17,8 +17,9 @@ type VMCType struct {
 	Version     string
 	Lock        bool
 	InputEnable bool
-	State       uint32
+	UiState     uint32
 	Client      struct {
+		Prepare  bool
 		WorkTime time.Time
 		Input    string
 		Light    bool
