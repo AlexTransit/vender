@@ -84,7 +84,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 				om.Err = &tele_api.Err{}
 				om.Err.Message = err.Error()
 				om.State = tele_api.State_Broken
-				types.VMC.UiState =  2 //FIXME  StateBroken
+				types.VMC.UiState = 2 //FIXME  StateBroken
 			}
 			t.RoboSend(&om)
 			g.LockCh <- struct{}{}
@@ -297,4 +297,3 @@ func (t *tele) cmdShowQR(ctx context.Context, cmd *tele_api.Command, arg *tele_a
 	g.ShowQR(arg.QrText)
 	return nil
 }
-
