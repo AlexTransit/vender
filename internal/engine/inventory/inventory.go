@@ -1,13 +1,15 @@
 package inventory
 
 import (
+	"bytes"
 	"context"
+	"encoding/binary"
+	"os"
 	"sync"
 
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
-	"github.com/AlexTransit/vender/internal/state/persist"
 	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
 )
@@ -17,25 +19,35 @@ var (
 )
 
 type Inventory struct {
-	persist.Persist
-	config *engine_config.Inventory
-	log    *log2.Log
-	mu     sync.RWMutex
-	byName map[string]*Stock
-	byCode map[uint32]*Stock
+	// persist.Persist
+	config   *engine_config.Inventory
+	log      *log2.Log
+	mu       sync.RWMutex
+	byName   map[string]*Stock
+	byCode   map[uint32]*Stock
+	codeList []uint32
+	file     string
 }
 
-func (self *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engine *engine.Engine) error {
-	self.config = c
-	self.log = log2.ContextValueLogger(ctx)
+func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engine *engine.Engine, root string) error {
+	inv.config = c
+	inv.log = log2.ContextValueLogger(ctx)
 
-	self.mu.Lock()
-	defer self.mu.Unlock()
+	inv.mu.Lock()
+	defer inv.mu.Unlock()
 	errs := make([]error, 0)
-	self.byName = make(map[string]*Stock, len(c.Stocks))
-	self.byCode = make(map[uint32]*Stock, len(c.Stocks))
+	sd := root + "/inventory"
+	if _, err := os.Stat(sd); os.IsNotExist(err) {
+		err := os.MkdirAll(sd, 0700)
+		errs = append(errs, err)
+	}
+	inv.file = sd + "/store.file"
+	inv.byName = make(map[string]*Stock, len(c.Stocks))
+	inv.byCode = make(map[uint32]*Stock, len(c.Stocks))
+	inv.codeList = make([]uint32, len(c.Stocks))
+	i := 0
 	for _, stockConfig := range c.Stocks {
-		if _, ok := self.byName[stockConfig.Name]; ok {
+		if _, ok := inv.byName[stockConfig.Name]; ok {
 			errs = append(errs, errors.Errorf("stock=%s already registered", stockConfig.Name))
 			continue
 		}
@@ -45,31 +57,56 @@ func (self *Inventory) Init(ctx context.Context, c *engine_config.Inventory, eng
 			errs = append(errs, err)
 			continue
 		}
-		self.byName[stock.Name] = stock
-		if first, ok := self.byCode[stock.Code]; !ok {
-			self.byCode[stock.Code] = stock
+		inv.byName[stock.Name] = stock
+		inv.codeList[i] = stock.Code
+		i++
+		if first, ok := inv.byCode[stock.Code]; !ok {
+			inv.byCode[stock.Code] = stock
 		} else {
-			self.log.Errorf("stock=%s duplicate code=%d first=%s", stock.Name, stock.Code, first)
+			inv.log.Errorf("stock=%s duplicate code=%d first=%s", stock.Name, stock.Code, first)
 		}
 	}
 
 	return helpers.FoldErrors(errs)
 }
 
-func (self *Inventory) EnableAll()  { self.Iter(func(s *Stock) { s.Enable() }) }
-func (self *Inventory) DisableAll() { self.Iter(func(s *Stock) { s.Disable() }) }
+func (inv *Inventory) InventoryLoad() {
+	f, _ := os.Open(inv.file)
+	defer f.Close()
+	count := len(inv.codeList)
+	td := make([]int32, count)
+	binary.Read(f, binary.BigEndian, &td)
+	for i, cl := range inv.codeList {
+		inv.byCode[cl].value = float32(td[i])
+	}
+}
 
-func (self *Inventory) Get(name string) (*Stock, error) {
-	self.mu.RLock()
-	defer self.mu.RUnlock()
-	if s, ok := self.locked_get(0, name); ok {
+func (inv *Inventory) InventorySave() error {
+	count := len(inv.byCode)
+	buf := new(bytes.Buffer)
+	td := make([]int32, count)
+	for i, cl := range inv.codeList {
+		td[i] = int32(inv.byCode[cl].value)
+	}
+	binary.Write(buf, binary.BigEndian, td)
+
+	return os.WriteFile(inv.file, buf.Bytes(), 0600)
+}
+
+func (inv *Inventory) EnableAll()  { inv.Iter(func(s *Stock) { s.Enable() }) }
+func (inv *Inventory) DisableAll() { inv.Iter(func(s *Stock) { s.Disable() }) }
+
+func (inv *Inventory) Get(name string) (*Stock, error) {
+	inv.mu.RLock()
+	defer inv.mu.RUnlock()
+	if s, ok := inv.locked_get(0, name); ok {
 		return s, nil
 	}
 	return nil, errors.Errorf("stock=%s is not registered", name)
 }
 
-func (self *Inventory) MustGet(f interface{ Fatal(...interface{}) }, name string) *Stock {
-	s, err := self.Get(name)
+func (inv *Inventory) MustGet(f interface{ Fatal(...interface{}) }, name string) *Stock {
+	s, err := inv.Get(name)
 	if err != nil {
 		f.Fatal(err)
 		return nil
@@ -77,16 +114,16 @@ func (self *Inventory) MustGet(f interface{ Fatal(...interface{}) }, name string
 	return s
 }
 
-func (self *Inventory) Iter(fun func(s *Stock)) {
-	self.mu.Lock()
-	for _, stock := range self.byName {
+func (inv *Inventory) Iter(fun func(s *Stock)) {
+	inv.mu.Lock()
+	for _, stock := range inv.byName {
 		fun(stock)
 	}
-	self.mu.Unlock()
+	inv.mu.Unlock()
 }
 
-func (self *Inventory) WithTuning(ctx context.Context, stockName string, adj float32) (context.Context, error) {
-	stock, err := self.Get(stockName)
+func (inv *Inventory) WithTuning(ctx context.Context, stockName string, adj float32) (context.Context, error) {
+	stock, err := inv.Get(stockName)
 	if err != nil {
 		return ctx, errors.Annotate(err, "WithTuning")
 	}
@@ -94,11 +131,11 @@ func (self *Inventory) WithTuning(ctx context.Context, stockName string, adj flo
 	return ctx, nil
 }
 
-func (self *Inventory) locked_get(code uint32, name string) (*Stock, bool) {
+func (inv *Inventory) locked_get(code uint32, name string) (*Stock, bool) {
 	if name == "" {
-		s, ok := self.byCode[code]
+		s, ok := inv.byCode[code]
 		return s, ok
 	}
-	s, ok := self.byName[name]
+	s, ok := inv.byName[name]
 	return s, ok
 }

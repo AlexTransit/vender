@@ -4,10 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"sync"
 	"sync/atomic"
 
-	"github.com/AlexTransit/vender/helpers/atomic_float"
 	"github.com/AlexTransit/vender/internal/engine"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
 	"github.com/juju/errors"
@@ -23,10 +21,8 @@ type Stock struct { //nolint:maligned
 	hwRate    float32 // TODO table // FIXME concurrency
 	spendRate float32
 	min       float32
-	value     atomic_float.F32
+	value     float32
 	tuneKey   string
-
-	_copy_guard sync.Mutex //nolint:unused
 }
 
 func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
@@ -92,9 +88,11 @@ func (s *Stock) Disable() { atomic.StoreUint32(&s.enabled, 0) }
 
 func (s *Stock) Enabled() bool { return atomic.LoadUint32(&s.enabled) == 1 }
 
-func (s *Stock) Value() float32     { return s.value.Load() }
-func (s *Stock) Set(new float32)    { s.value.Store(new) }
-func (s *Stock) Has(v float32) bool { return s.value.Load()-v >= s.min }
+func (s *Stock) Value() float32 { return s.value }
+
+// func (s *Stock) Set(new float32)    { s.value.Store(new) }
+func (s *Stock) Set(v float32)      { s.value = v }
+func (s *Stock) Has(v float32) bool { return s.value-v >= s.min }
 func (s *Stock) String() string {
 	return fmt.Sprintf("source(name=%s value=%f)", s.Name, s.Value())
 }
@@ -120,8 +118,7 @@ func (s *Stock) spendArg(ctx context.Context, arg engine.Arg) error {
 
 func (s *Stock) spendValue(v float32) {
 	if s.Enabled() {
-		s.value.Add(-v)
-		// log.Printf("stock=%s value=%f", s.Name, s.Value())
+		s.value -= v
 	}
 }
 
@@ -226,7 +223,8 @@ func translate(arg int32, rate float32) float32 {
 	if arg == 0 {
 		return 0
 	}
-	result := float32(math.Round(float64(arg) * float64(rate)))
+	// result := float32(math.Round(float64(arg) * float64(rate)))
+	result := float32(float64(arg) * float64(rate))
 	if result == 0 {
 		return 1
 	}
