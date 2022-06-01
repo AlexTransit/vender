@@ -20,7 +20,6 @@ require (
 	github.com/stretchr/testify v1.5.1
 	github.com/temoto/alive/v2 v2.0.0
 	github.com/temoto/atomic_clock v1.0.1
-	github.com/temoto/extremofile v0.5.0
 	github.com/temoto/gpio-cdev-go v1.1.0
 	github.com/temoto/inputevent-go v1.0.0
 	github.com/temoto/iodin v0.0.0-20190211111721-99c87617ba86

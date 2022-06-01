@@ -359,14 +359,11 @@ func (g *Global) initEngine() error {
 
 func (g *Global) initInventory(ctx context.Context) error {
 	// TODO ctx should be enough
-	if err := g.Inventory.Init(ctx, &g.Config.Engine.Inventory, g.Engine); err != nil {
+	if err := g.Inventory.Init(ctx, &g.Config.Engine.Inventory, g.Engine, g.Config.Persist.Root); err != nil {
 		return err
 	}
-	err := g.Inventory.Persist.Init("inventory", g.Inventory, g.Config.Persist.Root, g.Config.Engine.Inventory.Persist, g.Log)
-	if err == nil {
-		err = g.Inventory.Persist.Load()
-	}
-	return errors.Annotate(err, "initInventory")
+	g.Inventory.InventoryLoad()
+	return nil
 }
 
 func VmcLock(ctx context.Context) {
