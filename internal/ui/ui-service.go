@@ -403,7 +403,7 @@ func (ui *UI) onServiceReport(ctx context.Context) State {
 }
 
 func (ui *UI) onServiceEnd(ctx context.Context) State {
-	_ = ui.g.Inventory.Persist.Store()
+	_ = ui.g.Inventory.InventorySave()
 	ui.inputBuf = ui.inputBuf[:0]
 
 	if ui.Service.askReport {

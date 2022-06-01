@@ -79,7 +79,8 @@ func Cook(ctx context.Context) error {
 	g.ShowPicture(state.PictureMake)
 
 	err := g.Engine.Exec(itemCtx, types.UI.FrontResult.Item.D)
-	if invErr := g.Inventory.Persist.Store(); invErr != nil {
+	// if invErr := g.Inventory.Persist.Store(); invErr != nil {
+	if invErr := g.Inventory.InventorySave(); invErr != nil {
 		g.Error(errors.Annotate(invErr, "critical inventory persist"))
 		// err = errors.Wrap(err, invErr)
 		g.Tele.Error(invErr)
