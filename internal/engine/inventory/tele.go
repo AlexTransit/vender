@@ -9,22 +9,22 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-func (self *Inventory) SetTele(src *tele_api.Inventory) (*tele_api.Inventory, error) {
+func (inv *Inventory) SetTele(src *tele_api.Inventory) (*tele_api.Inventory, error) {
 	const tag = "inventory.SetTele"
-	self.mu.Lock()
-	defer self.mu.Unlock()
+	inv.mu.Lock()
+	defer inv.mu.Unlock()
 
-	self.log.Debugf("%s src=%s", tag, proto.CompactTextString(src))
+	inv.log.Debugf("%s src=%s", tag, proto.CompactTextString(src))
 	if src == nil {
-		return self.locked_tele(), nil
+		return inv.locked_tele(), nil
 	}
 
 	// validate
 	errs := make([]error, 0, len(src.Stocks))
 	for _, new := range src.Stocks {
-		if _, ok := self.locked_get(new.Code, new.Name); !ok {
+		if _, ok := inv.locked_get(new.Code, new.Name); !ok {
 			err := fmt.Errorf("stock name=%s code=%d not found", new.Name, new.Code)
-			self.log.Errorf("%s %s", tag, err.Error())
+			inv.log.Errorf("%s %s", tag, err.Error())
 			errs = append(errs, err)
 		}
 	}
@@ -32,24 +32,24 @@ func (self *Inventory) SetTele(src *tele_api.Inventory) (*tele_api.Inventory, er
 		if len(errs) != 0 {
 			break
 		}
-		if stock, ok := self.locked_get(new.Code, new.Name); ok {
+		if stock, ok := inv.locked_get(new.Code, new.Name); ok {
 			stock.Set(new.Valuef)
 		}
 	}
 
-	return self.locked_tele(), helpers.FoldErrors(errs)
+	return inv.locked_tele(), helpers.FoldErrors(errs)
 }
 
-func (self *Inventory) Tele() *tele_api.Inventory {
-	self.mu.RLock()
-	defer self.mu.RUnlock()
-	return self.locked_tele()
+func (inv *Inventory) Tele() *tele_api.Inventory {
+	inv.mu.RLock()
+	defer inv.mu.RUnlock()
+	return inv.locked_tele()
 }
 
-func (self *Inventory) locked_tele() *tele_api.Inventory {
+func (inv *Inventory) locked_tele() *tele_api.Inventory {
 	pb := &tele_api.Inventory{Stocks: make([]*tele_api.Inventory_StockItem, 0, 16)}
 
-	for _, s := range self.byName {
+	for _, s := range inv.byName {
 		if s.Enabled() {
 			si := &tele_api.Inventory_StockItem{
 				Code: s.Code,
@@ -57,7 +57,7 @@ func (self *Inventory) locked_tele() *tele_api.Inventory {
 				Value:  int32(s.Value()),
 				Valuef: s.Value(),
 			}
-			if self.config.TeleAddName {
+			if inv.config.TeleAddName {
 				si.Name = s.Name
 			}
 			pb.Stocks = append(pb.Stocks, si)

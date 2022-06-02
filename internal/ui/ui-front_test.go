@@ -36,10 +36,10 @@ ui {
 	g.Config.UI.Front.MsgStateIntro = "hello tune"
 	uiTestSetup(t, env, ui.StateFrontBegin, ui.StateFrontEnd)
 	go env.ui.Loop(ctx)
-	creamStock := g.Inventory.MustGet(t, "cream")
-	creamStock.Set(100)
-	sugarStock := g.Inventory.MustGet(t, "sugar")
-	sugarStock.Set(200)
+	// creamStock := g.Inventory.MustGet(t, "cream")
+	// creamStock.Set(100)
+	// sugarStock := g.Inventory.MustGet(t, "sugar")
+	// sugarStock.Set(200)
 
 	steps := []step{
 		{expect: env._T("hello tune", " "), inev: env._Key(input.EvendKeyCreamMore)},
@@ -51,8 +51,8 @@ ui {
 		{},
 	}
 	uiTestWait(t, env, steps)
-	assert.Equal(t, float32(100-13), creamStock.Value())
-	assert.Equal(t, float32(200-5), sugarStock.Value())
+	// assert.Equal(t, float32(100-13), creamStock.Value())
+	// assert.Equal(t, float32(200-5), sugarStock.Value())
 }
 
 func TestFrontMoneyAbort(t *testing.T) {
@@ -76,8 +76,8 @@ ui {
 	g.Config.UI.Front.MsgStateIntro = "money-abort"
 	uiTestSetup(t, env, ui.StateFrontBegin, ui.StateFrontEnd)
 	go env.ui.Loop(ctx)
-	creamStock := g.Inventory.MustGet(t, "cream")
-	creamStock.Set(100)
+	// creamStock := g.Inventory.MustGet(t, "cream")
+	// creamStock.Set(100)
 
 	steps := []step{
 		{expect: env._T("money-abort", ""), inev: env._Key(input.EvendKeyCreamMore)},
