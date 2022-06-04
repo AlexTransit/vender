@@ -1,10 +1,3 @@
-script {
-    on_boot = ""
-    on_broken = ""
-    on_begin = ""
-    on_front_accept = ""
-}
-
 engine {
   // alias "cup_dispense" { scenario = "conveyor_move_cup cup_drop" }
 
@@ -44,6 +37,7 @@ engine {
     }
   }
 
+  // first_init = ["release_cup"]
   // on_boot = ["mixer_move_top", "cup_serve", "conveyor_move_cup"]
   // on_broken = ["money.abort evend.cup.light_off evend.valve.set_temp_hot(0)"]
   // on_front_begin = []
@@ -182,10 +176,6 @@ money {
   scale = 100
 
   credit_max = 200
-  
-  // добавление процента банка при облате по безналу
-  // adding the percentage of the bank when oblating by cashless
-  bank_persent = 1.075
   
   // limit to over-compensate change return when exact amount is not available
   change_over_compensate = 10

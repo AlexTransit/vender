@@ -2,6 +2,7 @@ package ui
 
 import (
 	"context"
+	"os"
 	"sync/atomic"
 	"time"
 
@@ -92,23 +93,17 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 		ui.g.Tele.RoboSendState(tele_api.State_Boot)
 		ui.g.ShowPicture(state.PictureBoot)
 
-		onStartSuccess := false
-		for i := 1; i <= 3; i++ {
-			errs := ui.g.Engine.ExecList(ctx, "on_boot", ui.g.Config.Engine.OnBoot)
-			if err := errors.Annotate(helpers.FoldErrors(errs), "on_boot"); err != nil {
-				ui.g.Tele.Error(errors.Annotatef(err, "on_boot try=%d", i))
-				ui.g.Log.Error(err)
-			}
-			// on_boot special behavior: log, report but don't stop on errors caused by optional offline devices
-			if len(removeOptionalOffline(ui.g, errs)) == 0 {
-				onStartSuccess = true
-				break
-			}
-			// TODO restart all hardware
-			// hardware.Enum(ctx)
+		onBootScript := ui.g.Config.Engine.OnBoot
+		if _, err := os.Stat("/run/vender"); os.IsNotExist(err) {
+			onBootScript = append(ui.g.Config.Engine.FirstInit, onBootScript[:]...)
 		}
-		if !onStartSuccess {
+		if errs := ui.g.Engine.ExecList(ctx, "on_boot", onBootScript); len(errs) != 0 {
+			ui.g.Tele.Error(errors.Annotatef(helpers.FoldErrors(errs), "on_boot "))
+			ui.g.Log.Error(errs)
 			return StateBroken
+		}
+		if err := os.MkdirAll("/run/vender", 0700); err != nil {
+			ui.g.Tele.Error(errors.Annotatef(err, "create vender folder"))
 		}
 		ui.broken = false
 		ui.g.Tele.RoboSendState(tele_api.State_Nominal)
