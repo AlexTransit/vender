@@ -23,7 +23,7 @@ type DeviceMixer struct { //nolint:maligned
 }
 
 func (devMix *DeviceMixer) init(ctx context.Context) error {
-	devMix.currentPos = -1
+	// devMix.currentPos = -1ec
 	devMix.shakeSpeed = DefaultShakeSpeed
 	g := state.GetGlobal(ctx)
 	config := &g.Config.Hardware.Evend.Mixer
@@ -38,7 +38,8 @@ func (devMix *DeviceMixer) init(ctx context.Context) error {
 		}})
 	g.Engine.Register(devMix.name+".move(?)",
 		engine.FuncArg{Name: devMix.name + ".move", F: func(ctx context.Context, arg engine.Arg) error {
-			return g.Engine.Exec(ctx, devMix.move(uint8(arg)))
+			// return g.Engine.Exec(ctx, devMix.move(uint8(arg)))
+			return g.Engine.Exec(ctx, devMix.Generic.WithRestart(devMix.move(uint8(arg))))
 		}})
 	g.Engine.Register(devMix.name+".fan_on", devMix.NewFan(true))
 	g.Engine.Register(devMix.name+".fan_off", devMix.NewFan(false))
