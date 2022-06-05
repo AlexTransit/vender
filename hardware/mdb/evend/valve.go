@@ -314,3 +314,10 @@ func (dv *DeviceValve) newCheckTempHotValidate(ctx context.Context) func() error
 		return nil
 	}
 }
+
+func absDiffU16(a, b uint16) uint16 {
+	if a >= b {
+		return a - b
+	}
+	return b - a
+}

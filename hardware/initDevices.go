@@ -2,7 +2,6 @@ package hardware
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/AlexTransit/vender/hardware/mdb/bill"
@@ -39,7 +38,6 @@ func InitMDBDevices(ctx context.Context) error {
 		case "evend.multihopper":
 			go helpers.WrapErrChan(&wg, errch, func() error { return evend.EnumMultiHopper(ctx) })
 		case "evend.hopper1":
-			fmt.Printf("\033[41m sdf \033[0m\n")
 			go helpers.WrapErrChan(&wg, errch, func() error { return evend.EnumHopper(ctx, 1) })
 		case "evend.hopper2":
 			go helpers.WrapErrChan(&wg, errch, func() error { return evend.EnumHopper(ctx, 2) })
