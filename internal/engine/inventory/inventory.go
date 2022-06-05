@@ -93,8 +93,8 @@ func (inv *Inventory) InventorySave() error {
 	return os.WriteFile(inv.file, buf.Bytes(), 0600)
 }
 
-func (inv *Inventory) EnableAll()  { inv.Iter(func(s *Stock) { s.Enable() }) }
-func (inv *Inventory) DisableAll() { inv.Iter(func(s *Stock) { s.Disable() }) }
+// func (inv *Inventory) EnableAll()  { inv.Iter(func(s *Stock) { s.Enable() }) }
+// func (inv *Inventory) DisableAll() { inv.Iter(func(s *Stock) { s.Disable() }) }
 
 func (inv *Inventory) Get(name string) (*Stock, error) {
 	inv.mu.RLock()
@@ -105,14 +105,14 @@ func (inv *Inventory) Get(name string) (*Stock, error) {
 	return nil, errors.Errorf("stock=%s is not registered", name)
 }
 
-func (inv *Inventory) MustGet(f interface{ Fatal(...interface{}) }, name string) *Stock {
-	s, err := inv.Get(name)
-	if err != nil {
-		f.Fatal(err)
-		return nil
-	}
-	return s
-}
+// func (inv *Inventory) MustGet(f interface{ Fatal(...interface{}) }, name string) *Stock {
+// 	s, err := inv.Get(name)
+// 	if err != nil {
+// 		f.Fatal(err)
+// 		return nil
+// 	}
+// 	return s
+// }
 
 func (inv *Inventory) Iter(fun func(s *Stock)) {
 	inv.mu.Lock()

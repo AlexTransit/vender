@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"sync/atomic"
 
 	"github.com/AlexTransit/vender/internal/engine"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
@@ -14,9 +13,10 @@ import (
 const tuneKeyFormat = "run/inventory-%s-tune"
 
 type Stock struct { //nolint:maligned
-	Code      uint32
-	Name      string
-	enabled   uint32 // atomic
+	Code uint32
+	Name string
+	// enabled   uint32 // atomic
+	enabled   bool
 	check     bool
 	hwRate    float32 // TODO table // FIXME concurrency
 	spendRate float32
@@ -44,7 +44,7 @@ func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
 		Name:      c.Name,
 		Code:      uint32(c.Code),
 		check:     c.Check,
-		enabled:   1,
+		enabled:   true,
 		hwRate:    c.HwRate,
 		spendRate: c.SpendRate,
 		min:       c.Min,
@@ -83,10 +83,14 @@ func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
 	return s, nil
 }
 
-func (s *Stock) Enable()  { atomic.StoreUint32(&s.enabled, 1) }
-func (s *Stock) Disable() { atomic.StoreUint32(&s.enabled, 0) }
+// func (s *Stock) Enable()  { atomic.StoreUint32(&s.enabled, 1) }
+// func (s *Stock) Disable() { atomic.StoreUint32(&s.enabled, 0) }
+//AlexM
+// func (s *Stock) Enable()  { s.enabled = true }
+// func (s *Stock) Disable() { s.enabled = false }
 
-func (s *Stock) Enabled() bool { return atomic.LoadUint32(&s.enabled) == 1 }
+// func (s *Stock) Enabled() bool { return atomic.LoadUint32(&s.enabled) == 1 }
+func (s *Stock) Enabled() bool { return s.enabled }
 
 func (s *Stock) Value() float32 { return s.value }
 

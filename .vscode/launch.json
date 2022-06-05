@@ -5,19 +5,29 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "console": "integratedTerminal",
             "name": "Launch Package",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            // "program": "${fileDirname}",
             "program": "${workspaceFolder}/cmd/vender/main.go",
             "buildFlags": "-ldflags=' -X main.BuildVersion=debug'",
-            // "args": ["version"],
-            "args": ["-config","/home/vmc/local.hcl","vmc"],
-            // "args": ["-config","/home/vmc/local.hcl","engine-cli"],
+            //*
+            "args": [
+                "-config",
+                "/home/vmc/local.hcl",
+                "vmc"
+            ],
+            /*/
+            "args": [
+                "-config",
+                "/home/vmc/local.hcl",
+                "engine-cli"
+            ],
+            //*/
             "env": {
-				"DEBUG_AS_ROOT": "true",
-			},
+                "DEBUG_AS_ROOT": "true",
+            },
         }
     ]
 }
