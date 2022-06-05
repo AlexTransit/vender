@@ -150,10 +150,10 @@ func (gen *Generic) NewWaitReady(tag string) engine.Doer {
 
 			case 2: // device reported error code
 				code := bs[1]
+				gen.dev.Log.Errorf("%s response=%x errorcode=%d", tag, bs, code)
 				if code == 0 {
 					return true, nil
 				}
-				gen.dev.Log.Errorf("%s response=%x errorcode=%d", tag, bs, code)
 				gen.dev.SetErrorCode(int32(code))
 				// gen.dev.SetReady(false)
 				// TODO tele
