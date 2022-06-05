@@ -18,7 +18,13 @@
                 "/home/vmc/local.hcl",
                 "vmc"
             ],
-            //*/ "args": ["-config","/home/vmc/local.hcl","engine-cli"],
+            /*/
+            "args": [
+                "-config",
+                "/home/vmc/local.hcl",
+                "engine-cli"
+            ],
+            //*/
             "env": {
                 "DEBUG_AS_ROOT": "true",
             },
