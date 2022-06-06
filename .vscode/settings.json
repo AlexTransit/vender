@@ -3,5 +3,8 @@
         // "dlv-dap": "${workspaceFolder}/.vscode/dlv-override.sh"
         "dlv": "${workspaceFolder}/.vscode/dlv-override.sh"
         // "dlv": "${workspaceFolder}/.vscode/dlv-sudo.sh"
-    }
+    },
+    "[go]": {"editor.formatOnSave": true },
+    "[json]": {"editor.formatOnSave": false },
+
 }
