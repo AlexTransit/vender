@@ -211,10 +211,8 @@ func (e *Engine) ParseText(tag, text string) (Doer, error) {
 	return tx, helpers.FoldErrors(errs)
 }
 
-func (e *Engine) Exec(ctx context.Context, d Doer) error { return e.exec(ctx, d, false, true) }
-func (e *Engine) ExecPart(ctx context.Context, d Doer) error {
-	return e.exec(ctx, d, false, false)
-}
+func (e *Engine) Exec(ctx context.Context, d Doer) error     { return e.exec(ctx, d, false, true) }
+func (e *Engine) ExecPart(ctx context.Context, d Doer) error { return e.exec(ctx, d, false, false) }
 func (e *Engine) ValidateExec(ctx context.Context, d Doer) error {
 	return e.exec(ctx, d, true, true)
 }
