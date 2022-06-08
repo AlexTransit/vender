@@ -60,7 +60,7 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 				c.dev.TeleError(errors.Errorf("restart fix preview error"))
 				return
 			}
-			c.dev.TeleError(errors.Annotatef(err, "two time "))
+			c.dev.TeleError(errors.Annotatef(err, "two times error"))
 			return
 		}})
 
