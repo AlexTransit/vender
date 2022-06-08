@@ -22,6 +22,7 @@ type DeviceConveyor struct { //nolint:maligned
 	maxTimeout time.Duration
 	minSpeed   uint16
 	cPos       int16
+	nPos       int16
 }
 
 func (c *DeviceConveyor) init(ctx context.Context) error {
@@ -36,7 +37,7 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 	}
 	g.Log.Debugf("evend.conveyor minSpeed=%d maxTimeout=%v keepalive=%v", c.minSpeed, c.maxTimeout, keepaliveInterval)
 	// c.dev.DelayNext = 245 * time.Millisecond // empirically found lower total WaitReady
-	c.dev.DelayNext = 1000 * time.Millisecond // empirically found lower total WaitReady
+	c.dev.DelayNext = 200 * time.Millisecond // empirically found lower total WaitReady
 	c.Generic.Init(ctx, 0xd8, "conveyor", proto2)
 	c.DoSetSpeed = c.newSetSpeed()
 	g.Engine.Register(c.name+".set_speed(?)", c.DoSetSpeed)
@@ -47,8 +48,20 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 		}})
 
 	g.Engine.Register(c.name+".move(?)",
-		engine.FuncArg{Name: c.name + ".move", F: func(ctx context.Context, arg engine.Arg) error {
-			return g.Engine.Exec(ctx, c.Generic.WithRestart(c.move(int16(arg))))
+		engine.FuncArg{Name: c.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
+			if err = g.Engine.Exec(ctx, c.move(int16(arg))); err == nil {
+				c.cPos = int16(arg)
+				return
+			}
+			c.dev.TeleError(err)
+			// AlexM ToDo тут нужно добавить скрипт действий в случае ошибки
+			if err = g.Engine.Exec(ctx, c.move(int16(arg))); err == nil {
+				c.cPos = int16(arg)
+				c.dev.TeleError(errors.Errorf("restart fix preview error"))
+				return
+			}
+			c.dev.TeleError(errors.Annotatef(err, "two times error"))
+			return
 		}})
 
 	g.Engine.Register(c.name+".moveNoWait(?)",
@@ -73,7 +86,7 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 func (c *DeviceConveyor) move(position int16) engine.Doer {
 	tag := fmt.Sprintf("%s.move:%d->%d", c.name, c.cPos, position)
 	d := engine.NewSeq(tag)
-	if c.cPos == position {
+	if c.cPos == position && position != 0 {
 		d.Append(engine.Func0{F: func() error { return nil }})
 		return d
 	}
@@ -81,12 +94,11 @@ func (c *DeviceConveyor) move(position int16) engine.Doer {
 	if c.cPos == -1 && position != 0 {
 		d.Append(c.Generic.NewAction(tag, 0x01, byte(0), byte(0)))
 		d.Append(c.NewWaitDone(tag, c.maxTimeout))
-		d.Append(c.Generic.NewWaitReady(tag))
 	}
 	c.cPos = -1
+	c.nPos = position
 	d.Append(c.Generic.NewAction(tag, 0x01, byte(position&0xff), byte(position>>8))).
-		Append(c.NewWaitDone(tag, c.maxTimeout)).
-		Append(engine.Func0{F: func() error { c.cPos = position; return nil }})
+		Append(c.NewWaitDone(tag, c.maxTimeout))
 	return d
 }
 

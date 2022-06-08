@@ -128,7 +128,7 @@ func (dv *DeviceValve) newGetTempHot() engine.Func {
 
 		temp := int32(bs[0])
 		if temp == 0 {
-			dv.dev.SetErrorCode(1)
+			// dv.dev.SetErrorCode(1)
 			if doSetZero, _, _ := engine.ArgApply(dv.DoSetTempHot, 0); doSetZero != nil {
 				_ = engine.GetGlobal(ctx).Exec(ctx, doSetZero)
 			}

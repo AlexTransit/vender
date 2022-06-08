@@ -340,7 +340,9 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 	}
 
 	ui.display.SetLines(uiConfig.Front.MsgError, uiConfig.Front.MsgMenuError)
-	rm.Err.Message = errors.Annotatef(err, "execute %s", selected).Error()
+	rm.Err = &tele_api.Err{
+		Message: errors.Annotatef(err, "execute %s", selected).Error(),
+	}
 	if errs := ui.g.Engine.ExecList(ctx, "on_menu_error", ui.g.Config.Engine.OnMenuError); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_menu_error"))
 	} else {

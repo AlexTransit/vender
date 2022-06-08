@@ -12,22 +12,12 @@
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/vender/main.go",
             "buildFlags": "-ldflags=' -X main.BuildVersion=debug'",
-            //*
-            "args": [
-                "-config",
-                "/home/vmc/local.hcl",
-                "vmc"
-            ],
+            "env": {"DEBUG_AS_ROOT": "true",},
+            /*
+            "args": ["-config","/home/vmc/local.hcl","vmc"],
             /*/
-            "args": [
-                "-config",
-                "/home/vmc/local.hcl",
-                "engine-cli"
-            ],
+            "args": ["-config","/home/vmc/local.hcl","engine-cli"],
             //*/
-            "env": {
-                "DEBUG_AS_ROOT": "true",
-            },
         }
     ]
 }

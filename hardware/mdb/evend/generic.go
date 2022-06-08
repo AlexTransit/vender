@@ -133,7 +133,7 @@ func (gen *Generic) Diagnostic() (byte, error) {
 		gen.dev.SetError(err)
 		return 0, err
 	}
-	gen.dev.SetErrorCode(int32(rs[0]))
+	// gen.dev.SetErrorCode(int32(rs[0]))
 	return rs[0], nil
 }
 
@@ -154,9 +154,7 @@ func (gen *Generic) NewWaitReady(tag string) engine.Doer {
 				if code == 0 {
 					return true, nil
 				}
-				gen.dev.SetErrorCode(int32(code))
-				// gen.dev.SetReady(false)
-				// TODO tele
+				// gen.dev.SetErrorCode(int32(code))
 				return true, DeviceErrorCode(code)
 
 			default:
@@ -195,7 +193,7 @@ func (gen *Generic) NewWaitReady(tag string) engine.Doer {
 				return false, nil
 			}
 
-			gen.dev.SetErrorCode(1)
+			// gen.dev.SetErrorCode(1)
 			gen.dev.Log.Errorf("%s PLEASE REPORT WaitReady value=%02x (%02x&^%02x) -> unexpected", tag, value, bs[0], gen.proto2IgnoreMask)
 			return true, gen.NewErrPollUnexpected(p)
 		}
@@ -264,7 +262,7 @@ func (gen *Generic) newProto1PollWaitSuccess(tag string, timeout time.Duration) 
 		}
 		if bs[0] == 0x04 {
 			code := bs[1]
-			gen.dev.SetErrorCode(int32(code))
+			// gen.dev.SetErrorCode(int32(code))
 			return true, DeviceErrorCode(code)
 		}
 		return true, gen.NewErrPollUnexpected(p)
