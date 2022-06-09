@@ -3,6 +3,7 @@ package types
 import (
 	"context"
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/AlexTransit/vender/currency"
@@ -78,6 +79,16 @@ func init() {
 	Log.SetFlags(0)
 	VMC = new(VMCType)
 	UI = new(UItype)
+}
+
+func FirstInit() bool {
+	if _, err := os.Stat("/run/vender"); os.IsNotExist(err) {
+		return true
+	}
+	return false
+}
+func InitRequared() {
+	os.RemoveAll("/run/vender")
 }
 
 func SetLight(v bool) {

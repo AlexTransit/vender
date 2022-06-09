@@ -106,6 +106,9 @@ func (g *Global) VmcStop(ctx context.Context) {
 		g.Log.Infof("--- vmc timeout EXIT ---")
 		os.Exit(1)
 	}()
+	if types.VMC.UiState != 5 { // FixMe состояние ожидания
+		types.InitRequared()
+	}
 
 	g.LockCh <- struct{}{}
 	_ = g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken)
@@ -116,6 +119,8 @@ func (g *Global) VmcStop(ctx context.Context) {
 	time.Sleep(2 * time.Second)
 	g.Log.Infof("--- vmc stop ---")
 	g.Stop()
+	g.Alive.Done()
+	os.Exit(1)
 }
 
 func (g *Global) ClientBegin() {

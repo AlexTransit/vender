@@ -94,7 +94,7 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 		ui.g.ShowPicture(state.PictureBoot)
 
 		onBootScript := ui.g.Config.Engine.OnBoot
-		if _, err := os.Stat("/run/vender"); os.IsNotExist(err) {
+		if types.FirstInit(){
 			onBootScript = append(ui.g.Config.Engine.FirstInit, onBootScript[:]...)
 		}
 		if errs := ui.g.Engine.ExecList(ctx, "on_boot", onBootScript); len(errs) != 0 {
