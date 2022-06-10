@@ -51,10 +51,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	g := state.GetGlobal(ctx)
 	if im.MakeOrder != nil {
 		om := tele_api.FromRoboMessage{
-			Order: &tele_api.Order{
-				// OwnerInt: im.MakeOrder.OwnerInt,
-				// OwnerStr: im.MakeOrder.OwnerStr,
-			},
+			Order: &tele_api.Order{},
 		}
 		switch im.MakeOrder.OrderStatus {
 		case tele_api.OrderStatus_doSelected:
@@ -63,34 +60,42 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 				t.RoboSend(&om)
 				return false
 			}
+			om.State = tele_api.State_RemoteControl
 			om.Order.OrderStatus = tele_api.OrderStatus_executionStart
 			t.RoboSend(&om)
-			om.Order.Amount = im.MakeOrder.Amount
-			om.Order.PaymentMethod = im.MakeOrder.PaymentMethod
-			om.Order.OwnerInt = im.MakeOrder.OwnerInt
-			om.Order.OwnerStr = im.MakeOrder.OwnerStr
-			om.Order.MenuCode = types.UI.FrontResult.Item.Code
-			om.Order.Cream = types.TuneValueToByte(types.UI.FrontResult.Cream, ui.DefaultCream)
-			om.Order.Sugar = types.TuneValueToByte(types.UI.FrontResult.Sugar, ui.DefaultSugar)
-			types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
-
-			err := ui.Cook(ctx)
-			if types.VMC.MonSys.Dirty == 0 {
-				om.Order.OrderStatus = tele_api.OrderStatus_complete
+			om := tele_api.FromRoboMessage{
+				State: tele_api.State_Nominal,
+				Order: &tele_api.Order{
+					MenuCode:      types.UI.FrontResult.Item.Code,
+					Cream:         types.TuneValueToByte(types.UI.FrontResult.Cream, ui.DefaultCream),
+					Sugar:         types.TuneValueToByte(types.UI.FrontResult.Sugar, ui.DefaultSugar),
+					Amount:        im.MakeOrder.Amount,
+					PaymentMethod: im.MakeOrder.PaymentMethod,
+					OwnerInt:      im.MakeOrder.OwnerInt,
+					OwnerStr:      im.MakeOrder.OwnerStr,
+					OwnerType:     im.MakeOrder.OwnerType,
+				},
 			}
+
+			types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
+			err := ui.Cook(ctx)
 			types.VMC.UiState = 10 //FIXME StateFrontEnd     // 10 ->FrontBegin
 			if err != nil {
-				om.Order.OrderStatus = tele_api.OrderStatus_orderError
-				om.Err = &tele_api.Err{}
-				om.Err.Message = err.Error()
 				om.State = tele_api.State_Broken
+				om.Order.OrderStatus = tele_api.OrderStatus_orderError
+				om.Err = &tele_api.Err{
+					Message: err.Error(),
+				}
 				types.VMC.UiState = 2 //FIXME  StateBroken
+			}
+			if types.VMC.MonSys.Dirty == 0 {
+				om.Order.OrderStatus = tele_api.OrderStatus_complete
 			}
 			t.RoboSend(&om)
 			g.LockCh <- struct{}{}
 
 		case tele_api.OrderStatus_doTransferred:
-			//TODO xecute external order
+			//TODO execute external order
 			// сделать внешний заказe
 			// check validity, price
 			// проверить валидность, цену
