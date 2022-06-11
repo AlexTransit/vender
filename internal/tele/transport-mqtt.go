@@ -146,7 +146,7 @@ func (tm *transportMqtt) SendFromRobot(payload []byte) {
 func (tm *transportMqtt) messageHandler(c mqtt.Client, msg mqtt.Message) {
 	payload := msg.Payload()
 	// ALexM rewrite  onCommand = old
-	tm.log.Infof("mqtt income message (%x)", payload)
+	tm.log.Debugf("mqtt income message (%x)", payload)
 	if msg.Topic() == tm.topicRoboIn {
 		tm.inRobo(payload)
 	} else {

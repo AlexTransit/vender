@@ -48,6 +48,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 		// TODO reply error
 		return false
 	}
+	t.log.Infof("incoming message:%v", im)
 	g := state.GetGlobal(ctx)
 	if im.MakeOrder != nil {
 		om := tele_api.FromRoboMessage{
@@ -104,7 +105,6 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	}
 
 	if im.ShowQR != nil {
-		t.log.Infof("input meggase ShowQr. type:%v message:%s", im.ShowQR.QrType, im.ShowQR.QrText)
 		switch im.ShowQR.QrType {
 		case tele_api.ShowQR_order:
 			if types.UI.FrontResult.Accepted {
