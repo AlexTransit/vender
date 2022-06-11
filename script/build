@@ -24,6 +24,7 @@ main() {
     # http://single-boards.com/armv6-vs-armv7/
     export -- GOARCH GOOS GOARM=6
     go build "${build_flags[@]}" "$gopkg"
+    ./build/vender version
   )
 
   if [ -z "$1" ]; then
