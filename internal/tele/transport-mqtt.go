@@ -3,6 +3,8 @@ package tele
 import (
 	"context"
 	"fmt"
+	"os/exec"
+	"time"
 
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/log2"
@@ -12,13 +14,14 @@ import (
 
 type transportMqtt struct {
 	enabled   bool
+	Connected bool
+	config    *tele_config.Config
 	log       *log2.Log
 	onCommand func([]byte) bool
 	inRobo    func([]byte) bool
 	m         mqtt.Client
 	mopt      *mqtt.ClientOptions
-	// stopCh    chan struct{}
-
+	networkRestartTimeout time.Duration
 	topicPrefix    string
 	topicConnect   string
 	topicState     string
@@ -32,6 +35,7 @@ func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tel
 	if !teleConfig.Enabled {
 		return nil
 	}
+	tm.config = &teleConfig
 	tm.enabled = true
 	tm.log = log
 	// AlexM FIXME add loglevel to config
@@ -61,22 +65,13 @@ func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tel
 	keepAlive := helpers.IntSecondConfigDefault(teleConfig.KeepaliveSec, 60)
 	pingTimeout := helpers.IntSecondConfigDefault(teleConfig.PingTimeoutSec, 30)
 	retryInterval := helpers.IntSecondConfigDefault(teleConfig.KeepaliveSec/2, 30)
+	tm.networkRestartTimeout = helpers.IntSecondConfigDefault(teleConfig.NetworkRestartTimeout, 600)
+	tm.config.NetworkRestartScript = teleConfig.NetworkRestartScript
+
 	storePath := teleConfig.StorePath
 	if teleConfig.StorePath == "" {
-		storePath = "/home/vmc/telemessages"
+		storePath = "/home/vmc/vender-db/telemessages"
 	}
-	// tlsconf := new(tls.Config)
-	// if teleConfig.TlsCaFile != "" {
-	// 	tlsconf.RootCAs = x509.NewCertPool()
-	// 	cabytes, err := ioutil.ReadFile(teleConfig.TlsCaFile)
-	// 	if err != nil {
-	// 		tm.log.Errorf("tls not possible. certivicate file - not found")
-	// 	}
-	// 	tlsconf.RootCAs.AppendCertsFromPEM(cabytes)
-	// }
-	// if teleConfig.TlsPsk != "" {
-	// 	copy(tlsconf.SessionTicketKey[:], helpers.MustHex(teleConfig.TlsPsk))
-	// }
 	tm.mopt = mqtt.NewClientOptions().
 		AddBroker(teleConfig.MqttBroker).
 		SetBinaryWill(tm.topicConnect, []byte{0x00}, 1, true).
@@ -100,6 +95,7 @@ func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tel
 	if sConnToken.Error() != nil {
 		tm.log.Errorf("token.Error\n")
 	}
+	go tm.restartNetwork()
 	return nil
 }
 
@@ -156,9 +152,16 @@ func (tm *transportMqtt) messageHandler(c mqtt.Client, msg mqtt.Message) {
 
 func (tm *transportMqtt) connectLostHandler(c mqtt.Client, err error) {
 	tm.log.Infof("mqtt disconnect")
+	if tm.enabled {
+		tm.Connected = false
+		go tm.restartNetwork()
+	}
 }
 
 func (tm *transportMqtt) onConnectHandler(c mqtt.Client) {
+	if !tm.enabled {
+		return
+	}
 	tm.log.Infof("mqtt connect")
 	if token := c.Subscribe(tm.topicCommand, 1, nil); token.Wait() && token.Error() != nil {
 		tm.log.Infof("mqtt subscribe error")
@@ -167,8 +170,33 @@ func (tm *transportMqtt) onConnectHandler(c mqtt.Client) {
 		c.Publish(tm.topicConnect, 1, true, []byte{0x01})
 	}
 
-	if token1 := c.Subscribe(tm.topicRoboIn, 1, nil); token1.Wait() && token1.Error() != nil {
+	if token := c.Subscribe(tm.topicRoboIn, 1, nil); token.Wait() && token.Error() != nil {
 		tm.log.Infof("mqtt subscribe error")
 	}
+	tm.Connected = true
+}
 
+func (tm *transportMqtt) restartNetwork() {
+	if tm.config.NetworkRestartScript == "" {
+		return
+	}
+	tmr := time.NewTimer(tm.networkRestartTimeout)
+	defer tmr.Stop()
+	for {
+		<-tmr.C
+		if tm.Connected {
+			return
+		}
+		tmr.Reset(tm.networkRestartTimeout)
+		tm.runNetworkRestartScript()
+	}
+}
+
+func (tm *transportMqtt) runNetworkRestartScript() {
+	tm.log.Infof("run script fot restart network")
+	cmd := exec.Command(tm.config.NetworkRestartScript)
+	execOutput, execErr := cmd.CombinedOutput()
+	if execErr != nil {
+		tm.log.Errorf("script execute=%s\noutput=%s\nerror=%v\nscript=%s", tm.config.NetworkRestartScript, execOutput, execErr)
+	}
 }
