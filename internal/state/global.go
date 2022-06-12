@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -161,10 +160,6 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	g.Log.Debugf("config: persist.root=%s", g.Config.Persist.Root)
 
 	// Since tele is remote error reporting mechanism, it must be inited before anything else
-	g.Config.Tele.BuildVersion = g.BuildVersion
-	if g.Config.Tele.PersistPath == "" {
-		g.Config.Tele.PersistPath = filepath.Join(g.Config.Persist.Root, "tele")
-	}
 	// Tele.Init gets g.Log clone before SetErrorFunc, so Tele.Log.Error doesn't recurse on itself
 	if err := g.Tele.Init(ctx, g.Log.Clone(log2.LInfo), g.Config.Tele); err != nil {
 		g.Tele = tele_api.Noop{}

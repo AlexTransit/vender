@@ -16,7 +16,6 @@ github.com/eclipse/paho.mqtt.golang/packets
 github.com/golang/protobuf/proto
 # github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db
 ## explicit
-github.com/golang/snappy
 # github.com/gorilla/websocket v1.4.2
 ## explicit; go 1.12
 github.com/gorilla/websocket
@@ -71,26 +70,12 @@ github.com/stretchr/testify/mock
 github.com/stretchr/testify/require
 # github.com/syndtr/goleveldb v1.0.0
 ## explicit
-github.com/syndtr/goleveldb/leveldb
-github.com/syndtr/goleveldb/leveldb/cache
-github.com/syndtr/goleveldb/leveldb/comparer
-github.com/syndtr/goleveldb/leveldb/errors
-github.com/syndtr/goleveldb/leveldb/filter
-github.com/syndtr/goleveldb/leveldb/iterator
-github.com/syndtr/goleveldb/leveldb/journal
-github.com/syndtr/goleveldb/leveldb/memdb
-github.com/syndtr/goleveldb/leveldb/opt
-github.com/syndtr/goleveldb/leveldb/storage
-github.com/syndtr/goleveldb/leveldb/table
-github.com/syndtr/goleveldb/leveldb/util
 # github.com/temoto/alive/v2 v2.0.0
 ## explicit; go 1.11
 github.com/temoto/alive/v2
 # github.com/temoto/atomic_clock v1.0.1
 ## explicit; go 1.9
 github.com/temoto/atomic_clock
-# github.com/temoto/extremofile v0.5.0
-## explicit; go 1.11
 # github.com/temoto/gpio-cdev-go v1.1.0
 ## explicit; go 1.11
 github.com/temoto/gpio-cdev-go
@@ -101,9 +86,6 @@ github.com/temoto/inputevent-go
 # github.com/temoto/iodin v0.0.0-20190211111721-99c87617ba86
 ## explicit
 github.com/temoto/iodin/client/go-iodin
-# github.com/temoto/spq v0.10.0
-## explicit; go 1.11
-github.com/temoto/spq
 # golang.org/x/net v0.0.0-20210614182718-04defd469f4e
 ## explicit; go 1.17
 golang.org/x/net/internal/socks

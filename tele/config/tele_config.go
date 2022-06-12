@@ -17,8 +17,6 @@ type Config struct { //nolint:maligned
 	TlsPsk            string `hcl:"tls_psk"` // secret
 	StorePath         string `hcl:"store_path"`
 
-	PersistPath        string             `hcl:"-"`
-	GetInventory       func() interface{} `hcl:"-"`
-	FIXME_stopDelaySec int                `hcl:"-"`
-	BuildVersion       string             `hcl:"-"`
+	// PersistPath        string             `hcl:"-"`
+	// GetInventory       func() interface{} `hcl:"-"`
 }
