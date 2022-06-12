@@ -190,13 +190,15 @@ tele {
   enable              = false
   vm_id               = -1
   log_debug           = true
-  mqtt_log_debug      = false
-  mqtt_broker         = "tls://TODO_EDIT:8884"
-  mqtt_password       = "TODO_EDIT"
-  tls_ca_file         = "TODO_EDIT"
  	keepalive_sec       = 60 //default
 	ping_timeout_sec    = 30 //default
-  store_path          = "TODO_EDIT store unsend messages"
+  mqtt_broker         = "tls://TODO_EDIT:8884"
+  mqtt_log_debug      = false
+  mqtt_password       = "TODO_EDIT"
+  store_path          = "TODO_EDIT store unsend messages"  //default '/home/vmc/vender-db/telemessages'
+
+  network_restart_script = "TODO_EDIT script to run in case of network failure / скрипт запускаемый в случае отсутствия сети " 
+  network_restart_timeout_sec = 600 //default ( timeout before running the script / время ожидания перед запуском скрипта )
 
 }
 
