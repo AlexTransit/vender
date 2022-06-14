@@ -65,6 +65,7 @@ func (t *tele) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.C
 }
 
 func (t *tele) Close() {
+	t.RoboSendState(tele_api.State_Shutdown)
 	t.transport.CloseTele()
 }
 
