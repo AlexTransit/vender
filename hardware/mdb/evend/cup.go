@@ -14,7 +14,7 @@ import (
 )
 
 const DefaultCupAssertBusyDelay = 30 * time.Millisecond
-const DefaultCupDispenseTimeout = 20 * time.Second
+const DefaultCupDispenseTimeout = 30 * time.Second
 const DefaultCupEnsureTimeout = 70 * time.Second
 
 type DeviceCup struct {
@@ -50,32 +50,9 @@ func (devCup *DeviceCup) NewDispense() engine.Doer {
 	return engine.NewSeq(tag).
 		Append(engine.Func0{F: func() error { types.Log.Info("cup dispence"); return nil }}).
 		Append(devCup.NewWaitReady(tag)).
-		Append(devCup.NewAction(tag, 0x01)).
-		Append(devCup.NewWaitDone(tag, devCup.dispenseTimeout))
+		Append(devCup.NewAction(tag, 0x01))
+	// Append(devCup.NewWaitDone(tag, devCup.dispenseTimeout))
 }
-
-// func (devCup *DeviceCup) aa() engine.Doer {
-// 	return engine.NewSeq("blablabla").
-// 	Append(engine.Func{Name: "/assert-busy", F: func(ctx context.Context) error {
-// 		// time.Sleep(devCup.assertBusyDelayMils)
-// 		time.Sleep(400 * time.Millisecond)
-// 		response := mdb.Packet{}
-// 		err := devCup.dev.TxKnown(devCup.dev.PacketPoll, &response)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		bs := response.Bytes()
-// 		fmt.Printf("\033[41m %v \033[0m\n", bs)
-// 		if len(bs) != 1 {
-// 			return devCup.NewErrPollUnexpected(response)
-// 		}
-// 		if bs[0] != devCup.proto2BusyMask {
-// 			devCup.dev.Log.Errorf("expected BUSY, cup device is broken")
-// 			return devCup.NewErrPollUnexpected(response)
-// 		}
-// 		return nil
-// 	}})
-// }
 
 func (devCup *DeviceCup) NewLight(v bool) engine.Doer {
 	tag := fmt.Sprintf("%s.light:%t", devCup.name, v)
@@ -95,12 +72,4 @@ func (devCup *DeviceCup) NewEnsure() engine.Doer {
 		Append(devCup.NewWaitReady(tag)).
 		Append(devCup.NewAction(tag, 0x04)).
 		Append(devCup.NewWaitDone(tag, devCup.dispenseTimeout))
-	// Append(engine.Func{
-	// 	F: func(ctx context.Context) error {
-	// 		g := state.GetGlobal(ctx)
-	// 		cupConfig := &g.Config.Hardware.Evend.Cup
-	// 		ensureTimeout := helpers.IntSecondDefault(cupConfig.EnsureTimeoutSec, DefaultCupEnsureTimeout)
-	// 		return g.Engine.Exec(ctx, devCup.Generic.NewWaitDone(tag, ensureTimeout))
-	// 	},
-	// })
 }
