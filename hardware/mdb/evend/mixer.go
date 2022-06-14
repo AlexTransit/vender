@@ -55,6 +55,7 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 				return
 			}
 			m.dev.TeleError(err)
+			m.dev.Reset()
 			if err = g.Engine.Exec(ctx, m.move(uint8(arg))); err == nil {
 				m.cPos = int8(arg)
 				m.dev.TeleError(errors.Errorf("restart fix preview error"))

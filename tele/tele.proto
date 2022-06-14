@@ -193,6 +193,15 @@ message FromRoboMessage {
   Order Order = 3;
   Err err = 4;
   RoboHardware RoboHardware = 5;
+  Stock Stock = 6;
+}
+
+message Stock {
+  repeated StockItem stocks = 1;
+  message StockItem {
+    uint32 code = 1;
+    int32 value = 2;
+  }
 }
 
 message Err {
@@ -219,12 +228,12 @@ message ToRoboMessage {
   int64 serverTime = 2;
   Order makeOrder = 3;
   ShowQR showQR = 4;
-
 } 
 enum MessageType {
   invalid = 0;
   showQR = 1;
   makeOrder = 2;
+  executeCommand = 3;
 }
 message RoboHardware { 
   int32 temperature = 3;
