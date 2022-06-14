@@ -16,6 +16,7 @@ type DeviceElevator struct { //nolint:maligned
 
 	moveTimeout time.Duration
 	cPos        int8
+	nPos        int8
 }
 
 func (e *DeviceElevator) init(ctx context.Context) error {
@@ -27,8 +28,20 @@ func (e *DeviceElevator) init(ctx context.Context) error {
 	e.Generic.Init(ctx, 0xd0, "elevator", proto1)
 
 	g.Engine.Register(e.name+".move(?)",
-		engine.FuncArg{Name: e.name + ".move", F: func(ctx context.Context, arg engine.Arg) error {
-			return g.Engine.Exec(ctx, e.move(uint8(arg)))
+		engine.FuncArg{Name: e.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
+			if err = g.Engine.Exec(ctx, e.move(uint8(arg))); err == nil {
+				e.cPos = int8(arg)
+				return
+			}
+			e.dev.TeleError(err)
+			e.dev.Reset()
+			if err = g.Engine.Exec(ctx, e.move(uint8(arg))); err == nil {
+				e.cPos = int8(arg)
+				e.dev.TeleError(errors.Errorf("restart fix preview error"))
+				return
+			}
+			e.dev.TeleError(errors.Annotatef(err, "two times error"))
+			return
 		}})
 
 	g.Engine.Register(e.name+".moveNoWait(?)",
@@ -73,7 +86,8 @@ func (e *DeviceElevator) move(position uint8) engine.Doer {
 	}
 
 	d.Append(e.NewWaitDone(tag, e.moveTimeout))
-	d.Append(engine.Func0{F: func() error { e.cPos = int8(position); return nil }})
+	e.cPos = -1
+	e.nPos = position
 	return d
 }
 
