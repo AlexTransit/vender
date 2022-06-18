@@ -3,7 +3,7 @@ package evend
 import (
 	"context"
 	"strconv"
-
+	
 	"github.com/AlexTransit/vender/internal/state"
 )
 
@@ -13,6 +13,12 @@ func EnumHopper(ctx context.Context, hNo int) error {
 	addr := uint8(0x40 + (hNo-1)*8)
 	suffix := strconv.Itoa(hNo)
 	return g.RegisterDevice("evend.hopper"+suffix, dev, func() error { return dev.init(ctx, addr, suffix) })
+}
+
+func EnumMultiHopper(ctx context.Context) error {
+	g := state.GetGlobal(ctx)
+	dev := &DeviceMultiHopper{}
+	return g.RegisterDevice("evend.multihopper", dev, func() error { return dev.init(ctx) })
 }
 
 func EnumValve(ctx context.Context) error {
@@ -51,8 +57,3 @@ func EnumConveyor(ctx context.Context) error {
 	return g.RegisterDevice("evend.conveyor", dev, func() error { return dev.init(ctx) })
 }
 
-func EnumMultiHopper(ctx context.Context) error {
-	g := state.GetGlobal(ctx)
-	dev := &DeviceMultiHopper{}
-	return g.RegisterDevice("evend.multihopper", dev, func() error { return dev.init(ctx) })
-}
