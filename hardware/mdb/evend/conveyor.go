@@ -54,6 +54,7 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 				return
 			}
 			c.dev.TeleError(err)
+			c.dev.Reset()
 			// AlexM ToDo тут нужно добавить скрипт действий в случае ошибки
 			if err = g.Engine.Exec(ctx, c.move(int16(arg))); err == nil {
 				c.cPos = int16(arg)

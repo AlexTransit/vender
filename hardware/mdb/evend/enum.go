@@ -15,6 +15,12 @@ func EnumHopper(ctx context.Context, hNo int) error {
 	return g.RegisterDevice("evend.hopper"+suffix, dev, func() error { return dev.init(ctx, addr, suffix) })
 }
 
+func EnumMultiHopper(ctx context.Context) error {
+	g := state.GetGlobal(ctx)
+	dev := &DeviceMultiHopper{}
+	return g.RegisterDevice("evend.multihopper", dev, func() error { return dev.init(ctx) })
+}
+
 func EnumValve(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	dev := &DeviceValve{}
@@ -49,10 +55,4 @@ func EnumConveyor(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	dev := &DeviceConveyor{}
 	return g.RegisterDevice("evend.conveyor", dev, func() error { return dev.init(ctx) })
-}
-
-func EnumMultiHopper(ctx context.Context) error {
-	g := state.GetGlobal(ctx)
-	dev := &DeviceMultiHopper{}
-	return g.RegisterDevice("evend.multihopper", dev, func() error { return dev.init(ctx) })
 }
