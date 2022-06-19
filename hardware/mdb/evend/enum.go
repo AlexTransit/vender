@@ -3,7 +3,7 @@ package evend
 import (
 	"context"
 	"strconv"
-	
+
 	"github.com/AlexTransit/vender/internal/state"
 )
 
@@ -56,4 +56,3 @@ func EnumConveyor(ctx context.Context) error {
 	dev := &DeviceConveyor{}
 	return g.RegisterDevice("evend.conveyor", dev, func() error { return dev.init(ctx) })
 }
-

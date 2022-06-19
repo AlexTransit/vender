@@ -24,7 +24,7 @@ func (devHop *DeviceHopper) init(ctx context.Context, addr uint8, nameSuffix str
 	devHop.Generic.Init(ctx, addr, name, proto2)
 
 	do := newHopperRun(&devHop.Generic, fmt.Sprintf("%s.run", devHop.name), nil)
-	g.Engine.Register(fmt.Sprintf("%s.run(?)", devHop.name), do)
+	g.Engine.Register(fmt.Sprintf("%s.run(?)", devHop.name), devHop.Generic.WithRestart(do))
 
 	err := devHop.Generic.FIXME_initIO(ctx)
 	return errors.Annotate(err, devHop.name+".init")
@@ -45,7 +45,7 @@ func (devHop *DeviceMultiHopper) init(ctx context.Context) error {
 			fmt.Sprintf("%s%d.run", devHop.name, i),
 			[]byte{i},
 		)
-		g.Engine.Register(fmt.Sprintf("%s%d.run(?)", devHop.name, i), do)
+		g.Engine.Register(fmt.Sprintf("%s%d.run(?)", devHop.name, i), devHop.Generic.WithRestart(do))
 	}
 
 	err := devHop.Generic.FIXME_initIO(ctx)
@@ -66,6 +66,10 @@ func newHopperRun(gen *Generic, tag string, argsPrefix []byte) engine.FuncArg {
 		if err := gen.txAction(args); err != nil {
 			return err
 		}
-		return g.Engine.Exec(ctx, gen.NewWaitDone(tag, runTimeout*time.Duration(units)+HopperTimeout))
+		if err := g.Engine.Exec(ctx, gen.NewWaitDone(tag, runTimeout*time.Duration(units)+HopperTimeout)); err != nil {
+			gen.dev.TeleError(err)
+			return err
+		}
+		return nil
 	}}
 }

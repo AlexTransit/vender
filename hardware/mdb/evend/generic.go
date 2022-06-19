@@ -37,7 +37,6 @@ func (c DeviceErrorCode) Error() string { return fmt.Sprintf("evend errorcode=%d
 type Generic struct {
 	dev          mdb.Device
 	name         string
-	logPrefix    string
 	readyTimeout time.Duration
 	proto        evendProtocol
 
@@ -49,7 +48,6 @@ type Generic struct {
 
 func (gen *Generic) Init(ctx context.Context, address uint8, name string, proto evendProtocol) {
 	gen.name = "evend." + name
-	gen.logPrefix = fmt.Sprintf("%s(%02x)", gen.name, address)
 
 	if gen.proto2BusyMask == 0 {
 		gen.proto2BusyMask = genericPollBusy
@@ -72,7 +70,7 @@ func (gen *Generic) Init(ctx context.Context, address uint8, name string, proto 
 
 // FIXME_initIO Enum, remove IO from Init
 func (gen *Generic) FIXME_initIO(ctx context.Context) error {
-	tag := gen.logPrefix + ".initIO"
+	tag := gen.name + ".initIO"
 	g := state.GetGlobal(ctx)
 	_, err := g.Mdb()
 	if err != nil {
@@ -88,10 +86,10 @@ func (gen *Generic) FIXME_initIO(ctx context.Context) error {
 func (gen *Generic) Name() string { return gen.name }
 
 func (gen *Generic) NewErrPollProblem(p mdb.Packet) error {
-	return errors.Errorf("%s POLL=%x -> need to ask problem code", gen.logPrefix, p.Bytes())
+	return errors.Errorf("%s POLL=%x -> need to ask problem code", gen.name, p.Bytes())
 }
 func (gen *Generic) NewErrPollUnexpected(p mdb.Packet) error {
-	return errors.Errorf("%s POLL=%x unexpected", gen.logPrefix, p.Bytes())
+	return errors.Errorf("%s POLL=%x unexpected", gen.name, p.Bytes())
 }
 
 func (gen *Generic) NewAction(tag string, args ...byte) engine.Doer {
@@ -109,12 +107,12 @@ func (gen *Generic) txAction(args []byte) error {
 	if err != nil {
 		return err
 	}
-	gen.dev.Log.Debugf("%s action=%x response=(%d)%s", gen.logPrefix, args, response.Len(), response.Format())
+	gen.dev.Log.Debugf("%s action=%x response=(%d)%s", gen.name, args, response.Len(), response.Format())
 	return nil
 }
 
 func (gen *Generic) Diagnostic() (byte, error) {
-	tag := gen.logPrefix + ".diagnostic"
+	tag := gen.name + ".diagnostic"
 
 	bs := []byte{gen.dev.Address + 4, 0x02}
 	request := mdb.MustPacketFromBytes(bs, true)

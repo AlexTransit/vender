@@ -13,22 +13,22 @@ import (
 )
 
 type transportMqtt struct {
-	enabled   bool
-	Connected bool
-	config    *tele_config.Config
-	log       *log2.Log
-	onCommand func([]byte) bool
-	inRobo    func([]byte) bool
-	m         mqtt.Client
-	mopt      *mqtt.ClientOptions
+	enabled               bool
+	Connected             bool
+	config                *tele_config.Config
+	log                   *log2.Log
+	onCommand             func([]byte) bool
+	inRobo                func([]byte) bool
+	m                     mqtt.Client
+	mopt                  *mqtt.ClientOptions
 	networkRestartTimeout time.Duration
-	topicPrefix    string
-	topicConnect   string
-	topicState     string
-	topicTelemetry string
-	topicCommand   string
-	topicRoboIn    string
-	topicRoboOut   string
+	topicPrefix           string
+	topicConnect          string
+	topicState            string
+	topicTelemetry        string
+	topicCommand          string
+	topicRoboIn           string
+	topicRoboOut          string
 }
 
 func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.Config, onCommand CommandCallback, inRobo CommandCallback) error {
