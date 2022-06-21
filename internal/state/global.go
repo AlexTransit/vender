@@ -134,7 +134,7 @@ func (g *Global) ClientBegin() {
 }
 
 func (g *Global) ClientEnd() {
-	types.VMC.InputEnable = true
+	types.VMC.EvendKeyboardInput(true)
 	types.VMC.Client.Prepare = false
 	if types.VMC.Lock {
 		types.VMC.Lock = false
@@ -369,7 +369,7 @@ func VmcLock(ctx context.Context) {
 	g := GetGlobal(ctx)
 	g.Log.Info("Vmc Locked")
 	types.VMC.Lock = true
-	types.VMC.InputEnable = false
+	types.VMC.EvendKeyboardInput(false)
 	if types.VMC.UiState == 5 || types.VMC.UiState == 6 {
 		g.LockCh <- struct{}{}
 	}
@@ -379,7 +379,7 @@ func VmcUnLock(ctx context.Context) {
 	g := GetGlobal(ctx)
 	g.Log.Info("Vmc UnLocked")
 	types.VMC.Lock = false
-	types.VMC.InputEnable = true
+	types.VMC.EvendKeyboardInput(true)
 	if types.VMC.UiState == 22 {
 		g.LockCh <- struct{}{}
 	}
