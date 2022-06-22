@@ -62,7 +62,7 @@ func Cook(ctx context.Context) error {
 		const name = "cream"
 		var err error
 		g.Log.Debugf("ui-front tuning stock=%s tune=%v", name, tuneCream)
-		if itemCtx, err = g.Inventory.WithTuning(itemCtx, name, tuneCream); err != nil {
+		if itemCtx, err = g.Inventory.WithTuning(itemCtx, "cream", tuneCream); err != nil {
 			g.Log.Errorf("ui-front tuning stock=%s err=%v", name, err)
 		}
 	}
@@ -70,7 +70,7 @@ func Cook(ctx context.Context) error {
 		const name = "sugar"
 		var err error
 		g.Log.Debugf("ui-front tuning stock=%s tune=%v", name, tuneSugar)
-		if itemCtx, err = g.Inventory.WithTuning(itemCtx, name, tuneSugar); err != nil {
+		if itemCtx, err = g.Inventory.WithTuning(itemCtx, "sugar", tuneSugar); err != nil {
 			g.Log.Errorf("ui-front tuning stock=%s err=%v", name, err)
 		}
 	}
@@ -79,7 +79,7 @@ func Cook(ctx context.Context) error {
 	g.ShowPicture(state.PictureMake)
 
 	err := g.Engine.Exec(itemCtx, types.UI.FrontResult.Item.D)
-	// if invErr := g.Inventory.Persist.Store(); invErr != nil {
+	
 	if invErr := g.Inventory.InventorySave(); invErr != nil {
 		g.Error(errors.Annotate(invErr, "critical inventory persist"))
 		// err = errors.Wrap(err, invErr)

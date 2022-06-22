@@ -115,3 +115,11 @@ func TuneValueToByte(currentValue uint8, defaultValue int) []byte {
 	}
 	return []byte{currentValue + 1}
 }
+
+func (evk *VMCType) EvendKeyboardInput(v bool) {
+	if evk.InputEnable == v {
+		return
+	}
+	Log.Infof("evend keyboard: %v", v)
+	evk.InputEnable = v
+}

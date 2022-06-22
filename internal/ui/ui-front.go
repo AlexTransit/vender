@@ -176,6 +176,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				if types.UI.FrontResult.Item.Price > credit {
 					var l1, l2 string
 					if credit == 0 {
+						types.VMC.EvendKeyboardInput(false)
 						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgRemotePayL2, types.UI.FrontResult.Item.Code, types.UI.FrontResult.Item.Price.Format100I())
 						ui.sendRequestForQrPayment()
 					} else {

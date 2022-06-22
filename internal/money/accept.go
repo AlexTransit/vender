@@ -49,12 +49,12 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 		limit = 0
 		billmax = 0
 		coinmax = 0
-		ms.Log.Debugf("%s bill input disable", tag)
+		ms.Log.Debugf("%s money input disable", tag)
 	}
-	if ms.Credit(ctx) != 0 {
-		ms.Log.Debugf("%s maxConfig=%s maxPrice=%s available=%s -> limit=%s",
-			tag, maxConfig.FormatCtx(ctx), maxPrice.FormatCtx(ctx), available.FormatCtx(ctx), limit.FormatCtx(ctx))
-	}
+	// if ms.Credit(ctx) != 0 {
+	// 	ms.Log.Debugf("%s maxConfig=%s maxPrice=%s available=%s -> limit=%s",
+	// 		tag, maxConfig.FormatCtx(ctx), maxPrice.FormatCtx(ctx), available.FormatCtx(ctx), limit.FormatCtx(ctx))
+	// }
 
 	g.Engine.Exec(ctx, ms.bill.AcceptMax(billmax))
 	g.Engine.Exec(ctx, ms.coin.AcceptMax(coinmax))
@@ -91,14 +91,15 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 					g.Error(errors.Annotatef(err, "money.bill credit.Add n=%v c=%d", pi.DataNominal, pi.DataCount))
 					break
 				}
-				ms.Log.Debugf("money.bill credit amount=%s bill=%s cash=%s total=%s",
-					pi.Amount().FormatCtx(ctx), ms.billCredit.Total().FormatCtx(ctx),
-					ms.locked_credit(creditCash|creditEscrow).FormatCtx(ctx),
-					ms.locked_credit(creditAll).FormatCtx(ctx))
+				// ms.Log.Debugf("money.bill credit amount=%s bill=%s cash=%s total=%s",
+				// 	pi.Amount().FormatCtx(ctx), ms.billCredit.Total().FormatCtx(ctx),
+				// 	ms.locked_credit(creditCash|creditEscrow).FormatCtx(ctx),
+				// 	ms.locked_credit(creditAll).FormatCtx(ctx))
 				// ms.dirty += pi.Amount()
 				ms.AddDirty(pi.Amount())
-				alive.Stop()
+				ms.Log.Infof("bill accepted:%v", pi.Amount().Format100I())
 				g.Engine.Exec(ctx, ms.bill.AcceptMax(0))
+				alive.Stop()
 				if out != nil {
 					event := types.Event{Kind: types.EventMoneyCredit, Amount: pi.Amount()}
 					// async channel send to avoid deadlock lk.Lock vs <-out
@@ -146,6 +147,7 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 			_ = ms.coin.ExpansionDiagStatus(nil)
 			// ms.dirty += pi.Amount()
 			ms.AddDirty(pi.Amount())
+			ms.Log.Infof("coin accepted:%v", pi.Amount().Format100I())
 			alive.Stop()
 			if out != nil {
 				event := types.Event{Kind: types.EventMoneyCredit, Amount: pi.Amount()}
