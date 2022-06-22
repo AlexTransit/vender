@@ -19,6 +19,7 @@ type VMCType struct {
 	Lock        bool
 	InputEnable bool
 	UiState     uint32
+	ReportInv   uint32
 	Client      struct {
 		Prepare  bool
 		WorkTime time.Time

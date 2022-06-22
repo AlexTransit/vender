@@ -89,7 +89,7 @@ func (inv *Inventory) InventorySave() error {
 		td[i] = int32(inv.byCode[cl].value)
 	}
 	binary.Write(buf, binary.BigEndian, td)
-	
+
 	return os.WriteFile(inv.file, buf.Bytes(), 0600)
 }
 

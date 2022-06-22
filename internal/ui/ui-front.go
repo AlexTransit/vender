@@ -230,7 +230,8 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 func (ui *UI) sendRequestForQrPayment() {
 	types.VMC.UiState = uint32(StatePrepare)
 	rm := tele_api.FromRoboMessage{
-		State: tele_api.State_WaitingForExternalPayment,
+		State:    tele_api.State_WaitingForExternalPayment,
+		RoboTime: time.Now().Unix(),
 		Order: &tele_api.Order{
 			MenuCode: types.UI.FrontResult.Item.Code,
 			Amount:   uint32(types.UI.FrontResult.Item.Price),
@@ -333,6 +334,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 	}
 	err := Cook(ctx)
 	defer ui.g.Tele.RoboSend(&rm)
+	// rm.Stock.Stocks
 
 	if err == nil { // success path
 		rm.Order.OrderStatus = tele_api.OrderStatus_complete

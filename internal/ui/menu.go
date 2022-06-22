@@ -79,7 +79,17 @@ func Cook(ctx context.Context) error {
 	g.ShowPicture(state.PictureMake)
 
 	err := g.Engine.Exec(itemCtx, types.UI.FrontResult.Item.D)
-	
+	if err == nil {
+		if g.Tele.RoboConnected() {
+			types.VMC.ReportInv += 1
+			// AlexM autoreporter move to config
+			if types.VMC.ReportInv > 10 {
+				types.VMC.ReportInv = 0
+				_ = g.Tele.Report(ctx, false)
+			}
+		}
+	}
+
 	if invErr := g.Inventory.InventorySave(); invErr != nil {
 		g.Error(errors.Annotate(invErr, "critical inventory persist"))
 		// err = errors.Wrap(err, invErr)
