@@ -77,7 +77,7 @@ func (inv *Inventory) InventoryLoad() {
 	td := make([]int32, count)
 	binary.Read(f, binary.BigEndian, &td)
 	for i, cl := range inv.codeList {
-		inv.byCode[cl].value = float32(td[i])
+		inv.byCode[cl].Set(float32(td[i]))
 	}
 }
 
@@ -89,7 +89,7 @@ func (inv *Inventory) InventorySave() error {
 		td[i] = int32(inv.byCode[cl].value)
 	}
 	binary.Write(buf, binary.BigEndian, td)
-
+	
 	return os.WriteFile(inv.file, buf.Bytes(), 0600)
 }
 

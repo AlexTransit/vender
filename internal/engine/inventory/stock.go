@@ -155,7 +155,7 @@ func (c *custom) Validate() error {
 	if c.stock.Has(c.spend) {
 		return nil
 	}
-	return ErrStockLow
+	return errors.Errorf("%s low", c.stock.Name)
 }
 
 func (c *custom) Do(ctx context.Context) error {

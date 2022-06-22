@@ -25,8 +25,8 @@ func TestStockErrors(t *testing.T) {
 		log := log2.NewTest(t, log2.LDebug)
 		e := engine.NewEngine(log)
 		ctx := context.Background()
-		ctx = context.WithValue(ctx, log2.ContextKey, log)
-		ctx = context.WithValue(ctx, engine.ContextKey, e)
+		// ctx = context.WithValue(ctx, log2.ContextKey, log)
+		// ctx = context.WithValue(ctx, engine.ContextKey, e)
 
 		e.Register("fail", engine.Func0{F: func() error { return errors.New("expected error") }})
 		require.NoError(t, e.RegisterParse("subseq(?)", "unknown(?)"))

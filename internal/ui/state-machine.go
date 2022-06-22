@@ -214,33 +214,33 @@ func replaceDefault(s, def State) State {
 	return s
 }
 
-func filterErrors(errs []error, take func(error) bool) []error {
-	if len(errs) == 0 {
-		return nil
-	}
-	new := errs[:0]
-	for _, e := range errs {
-		if e != nil && take(e) {
-			new = append(new, e)
-		}
-	}
-	for i := len(new); i < len(errs); i++ {
-		errs[i] = nil
-	}
-	return new
-}
+// func filterErrors(errs []error, take func(error) bool) []error {
+// 	if len(errs) == 0 {
+// 		return nil
+// 	}
+// 	new := errs[:0]
+// 	for _, e := range errs {
+// 		if e != nil && take(e) {
+// 			new = append(new, e)
+// 		}
+// 	}
+// 	for i := len(new); i < len(errs); i++ {
+// 		errs[i] = nil
+// 	}
+// 	return new
+// }
 
-func removeOptionalOffline(g *state.Global, errs []error) []error {
-	take := func(e error) bool {
-		if errOffline, ok := errors.Cause(e).(types.DeviceOfflineError); ok {
-			if devconf, err := g.GetDeviceConfig(errOffline.Device.Name()); err == nil {
-				return devconf.Required
-			}
-		}
-		return true
-	}
-	return filterErrors(errs, take)
-}
+// func removeOptionalOffline(g *state.Global, errs []error) []error {
+// 	take := func(e error) bool {
+// 		if errOffline, ok := errors.Cause(e).(types.DeviceOfflineError); ok {
+// 			if devconf, err := g.GetDeviceConfig(errOffline.Device.Name()); err == nil {
+// 				return devconf.Required
+// 			}
+// 		}
+// 		return true
+// 	}
+// 	return filterErrors(errs, take)
+// }
 
 // func executeScript(ctx context.Context, onstate string, data string) {
 // 	g := state.GetGlobal(ctx)
