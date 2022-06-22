@@ -64,6 +64,8 @@ func (t *tele) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.C
 	return nil
 }
 
+func (t *tele) RoboConnected() bool { return t.transport.RoboConnected() }
+
 func (t *tele) Close() {
 	t.RoboSendState(tele_api.State_Shutdown)
 	t.transport.CloseTele()

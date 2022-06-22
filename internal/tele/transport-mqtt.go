@@ -14,7 +14,7 @@ import (
 
 type transportMqtt struct {
 	enabled               bool
-	Connected             bool
+	connected             bool
 	config                *tele_config.Config
 	log                   *log2.Log
 	onCommand             func([]byte) bool
@@ -99,6 +99,8 @@ func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tel
 	return nil
 }
 
+func (tm *transportMqtt) RoboConnected() bool { return tm.connected }
+
 func (tm *transportMqtt) CloseTele() {
 	tm.log.Infof("mqtt unsubscribe")
 	if token := tm.m.Unsubscribe(tm.topicCommand); token.Wait() && token.Error() != nil {
@@ -153,7 +155,7 @@ func (tm *transportMqtt) messageHandler(c mqtt.Client, msg mqtt.Message) {
 func (tm *transportMqtt) connectLostHandler(c mqtt.Client, err error) {
 	tm.log.Infof("mqtt disconnect")
 	if tm.enabled {
-		tm.Connected = false
+		tm.connected = false
 		go tm.restartNetwork()
 	}
 }
@@ -173,7 +175,7 @@ func (tm *transportMqtt) onConnectHandler(c mqtt.Client) {
 	if token := c.Subscribe(tm.topicRoboIn, 1, nil); token.Wait() && token.Error() != nil {
 		tm.log.Infof("mqtt subscribe error")
 	}
-	tm.Connected = true
+	tm.connected = true
 }
 
 func (tm *transportMqtt) restartNetwork() {
@@ -184,7 +186,7 @@ func (tm *transportMqtt) restartNetwork() {
 	defer tmr.Stop()
 	for {
 		<-tmr.C
-		if tm.Connected {
+		if tm.connected {
 			return
 		}
 		tmr.Reset(tm.networkRestartTimeout)

@@ -20,6 +20,7 @@ type Transporter interface {
 	SendCommandResponse(topicSuffix string, payload []byte) bool
 	SendFromRobot(payload []byte)
 	CloseTele()
+	RoboConnected() bool
 }
 
 type CommandCallback func(context.Context, []byte) bool
