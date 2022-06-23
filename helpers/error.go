@@ -2,8 +2,10 @@ package helpers
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/juju/errors"
 )
@@ -50,4 +52,21 @@ func WrapErrChan(wg *sync.WaitGroup, ch chan<- error, fun func() error) {
 	if err := fun(); err != nil {
 		ch <- err
 	}
+}
+
+type LogDoItems map[time.Time]string
+
+func SaveAndShowDoError(li []string, err error) {
+	sf := "/home/vmc/vender-db/errors/" + li[0]
+	var d string
+	for _, val := range li {
+		d = d + val + "\n"
+	}
+	d = d + fmt.Sprintf("err: %v\n", err)
+	fmt.Printf("------------------- begin \n%v\n------------------- end\n", d)
+
+	f, _ := os.Create(sf)
+	_, _ = f.WriteString(d)
+	f.Close()
+
 }
