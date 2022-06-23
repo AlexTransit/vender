@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"time"
 
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/juju/errors"
@@ -45,13 +46,19 @@ func (seq *Seq) Validate() error {
 
 func (seq *Seq) Do(ctx context.Context) error {
 	e := GetGlobal(ctx)
+	var itemsList []string
+	itemsList = append(itemsList, time.Now().Format("2006-01-02_15-04-05.00000"))
+	itemsList = append(itemsList, seq.name)
 	for _, d := range seq.items {
+		itemsList = append(itemsList, time.Now().Format("-> 15:04:05.00000 ")+d.String())
 		err := e.Exec(ctx, d)
-		// log.Printf("seq.Do seq=%s elem=%s err=%v", seq.String(), d.String(), err)
+		itemsList = append(itemsList, time.Now().Format("<- 15:04:05.00000 ")+d.String())
 		if err != nil {
+			helpers.SaveAndShowDoError(itemsList, err)
 			return err
 		}
 	}
+	//	helpers.SaveAndShowDoError(itemsList, nil)
 	return nil
 }
 
