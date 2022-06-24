@@ -7,6 +7,7 @@ import (
 
 	"github.com/AlexTransit/vender/internal/engine"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
+	"github.com/AlexTransit/vender/internal/types"
 	"github.com/juju/errors"
 )
 
@@ -18,6 +19,7 @@ type Stock struct { //nolint:maligned
 	// enabled   uint32 // atomic
 	enabled   bool
 	check     bool
+	TeleLow   bool
 	hwRate    float32 // TODO table // FIXME concurrency
 	spendRate float32
 	min       float32
@@ -154,6 +156,10 @@ func (c *custom) Validate() error {
 	}
 	if c.stock.Has(c.spend) {
 		return nil
+	}
+	if !c.stock.TeleLow {
+		types.TeleError(c.stock.Name + "- low")
+		c.stock.TeleLow = true
 	}
 	return errors.Errorf("%s low", c.stock.Name)
 }

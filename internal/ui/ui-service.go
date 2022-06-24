@@ -213,6 +213,7 @@ func (ui *UI) onServiceInventory() State {
 		invCurrent := ui.Service.invList[ui.Service.invIdx]
 		invCurrent.Set(float32(x))
 		ui.Service.askReport = true
+		invCurrent.TeleLow = false
 
 	case input.IsReject(&e):
 		// backspace semantic

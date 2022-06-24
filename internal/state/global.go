@@ -164,6 +164,7 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 		g.Tele = tele_api.Noop{}
 		return errors.Annotate(err, "tele init")
 	}
+	types.TeleN = g.Tele
 	g.Log.SetErrorFunc(g.Tele.Error)
 
 	if g.BuildVersion == "unknown" {
