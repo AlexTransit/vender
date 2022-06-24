@@ -15,9 +15,9 @@ func (Noop) Init(context.Context, *log2.Log, tele_config.Config) error { return 
 
 func (Noop) Close() {}
 
-func (Noop) Error(error) {}
+func (Noop) Error(error)     {}
 
-// func (Noop) State(State) {}
+func (Noop) ErrorStr(string) {}
 
 func (Noop) StatModify(func(*Stat)) {}
 

@@ -21,6 +21,7 @@ type Teler interface {
 	Close()
 	// State(State)
 	Error(error)
+	ErrorStr(string)
 	StatModify(func(*Stat))
 	Report(ctx context.Context, serviceTag bool) error
 	Transaction(*Telemetry_Transaction)
@@ -39,6 +40,7 @@ func (stub) Close() {}
 
 // func (stub) State(State)                                      {}
 func (stub) Error(error)                                       {}
+func (stub) ErrorStr(string)                                   {}
 func (stub) StatModify(func(*Stat))                            {}
 func (stub) Report(ctx context.Context, serviceTag bool) error { return nil }
 func (stub) Transaction(*Telemetry_Transaction)                {}

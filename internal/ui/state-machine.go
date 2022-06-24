@@ -110,6 +110,7 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 		return StateFrontBegin
 
 	case StateBroken:
+		types.InitRequared()
 		ui.g.Log.Infof("state=broken")
 		ui.g.ShowPicture(state.PictureBroken)
 		if !ui.broken {

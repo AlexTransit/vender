@@ -68,13 +68,13 @@ func (t *tele) Error(e error) {
 	}
 
 	t.log.Debugf("tele.Error: " + errors.ErrorStack(e))
-	// tm := &tele_api.Telemetry{
-	// 	Error: &tele_api.Telemetry_Error{Message: e.Error()},
-	// }
-	// t.Telemetry(tm)
+	t.ErrorStr(e.Error())
+}
+
+func (t *tele) ErrorStr(s string) {
 	tm := &tele_api.FromRoboMessage{
 		Err: &tele_api.Err{
-			Message: e.Error(),
+			Message: s,
 		},
 	}
 	t.RoboSend(tm)

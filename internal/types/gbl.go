@@ -8,11 +8,13 @@ import (
 
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/log2"
+	tele_api "github.com/AlexTransit/vender/tele"
 )
 
 var Log = *log2.NewStderr(log2.LDebug)
 var VMC *VMCType = nil
 var UI *UItype = nil
+var TeleN tele_api.Teler
 
 type VMCType struct {
 	Version     string
@@ -123,4 +125,9 @@ func (evk *VMCType) EvendKeyboardInput(v bool) {
 	}
 	Log.Infof("evend keyboard: %v", v)
 	evk.InputEnable = v
+}
+
+func TeleError(s string) {
+	Log.Info(s)
+	TeleN.ErrorStr(s)
 }

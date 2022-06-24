@@ -167,7 +167,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				mitemString := types.UI.FrontResult.Item.String()
 				ui.g.Log.Debugf("mitem=%s validate", mitemString)
 				if err := types.UI.FrontResult.Item.D.Validate(); err != nil {
-					ui.g.Log.Errorf("ui-front selected=%s Validate err=%v", mitemString, err)
+					// ui.g.Log.Errorf("ui-front selected=%s Validate err=%v", mitemString, err)
 					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuNotAvailable)
 					goto wait
 				}
@@ -457,11 +457,7 @@ func menuMaxPrice() (currency.Amount, error) {
 			if item.Price > max {
 				max = item.Price
 			}
-		} else {
-			// TODO report menu errors once or less often than every ui cycle
-			valErr = errors.Annotate(valErr, item.String())
-			types.Log.Debug(valErr)
-		}
+		} 
 	}
 	if empty {
 		return 0, errors.Errorf("menu len=%d no valid items", len(types.UI.Menu))
