@@ -12,13 +12,6 @@ message Inventory {
   }
 }
 
-enum Priority {
-  Default = 0;
-  Now = 1;
-  IdleEngine = 2;
-  IdleUser = 4;
-}
-
 message Telemetry {
   int32 vm_id = 1;
   int64 time = 2;

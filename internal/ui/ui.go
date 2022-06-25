@@ -11,8 +11,6 @@ import (
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
 	ui_config "github.com/AlexTransit/vender/internal/ui/config"
-	tele_api "github.com/AlexTransit/vender/tele"
-	"github.com/juju/errors"
 )
 
 type UI struct { //nolint:maligned
@@ -67,10 +65,7 @@ func (ui *UI) Init(ctx context.Context) error {
 	return nil
 }
 
-func (ui *UI) ScheduleSync(ctx context.Context, priority tele_api.Priority, fun types.TaskFunc) error {
-	if !ui.LockWait(priority) {
-		return errors.Trace(types.ErrInterrupted)
-	}
+func (ui *UI) ScheduleSync(ctx context.Context, fun types.TaskFunc) error {
 	defer ui.LockDecrementWait()
 	return fun(ctx)
 }

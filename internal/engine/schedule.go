@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/AlexTransit/vender/internal/types"
-	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
 	"github.com/temoto/alive/v2"
 )
@@ -13,7 +12,6 @@ import (
 type task struct {
 	fun  types.TaskFunc
 	done chan error
-	pri  tele_api.Priority
 }
 
 type Run struct {
@@ -53,7 +51,7 @@ func (r *Run) Loop(ctx context.Context, parent *alive.Alive) {
 	}
 }
 
-func (r *Run) Schedule(ctx context.Context, priority tele_api.Priority, fun types.TaskFunc) chan error {
+func (r *Run) Schedule(ctx context.Context, fun types.TaskFunc) chan error {
 	if !r.alive.IsRunning() {
 		return nil
 	}
@@ -61,29 +59,22 @@ func (r *Run) Schedule(ctx context.Context, priority tele_api.Priority, fun type
 	r.q <- task{
 		done: ch,
 		fun:  fun,
-		pri:  priority,
 	}
 	return ch
 }
 
-func (r *Run) ScheduleSync(ctx context.Context, priority tele_api.Priority, fun types.TaskFunc) error {
+func (r *Run) ScheduleSync(ctx context.Context, fun types.TaskFunc) error {
 	if !r.alive.IsRunning() {
 		return errors.Trace(types.ErrInterrupted)
 	}
 	r.alive.Add(1)
-	return r.do(ctx, priority, fun)
+	return r.do(ctx, fun)
 }
 
-func (r *Run) do(ctx context.Context, priority tele_api.Priority, fun types.TaskFunc) error {
+func (r *Run) do(ctx context.Context, fun types.TaskFunc) error {
 	defer r.alive.Done()
 
-	if wantIdle(priority) {
-		r.idle.Lock()
 		defer r.idle.Unlock()
-	} else {
-		r.idle.RLock()
-		defer r.idle.RUnlock()
-	}
 	// May be stopped while waiting for lock
 	select {
 	case <-r.alive.StopChan():
@@ -95,9 +86,7 @@ func (r *Run) do(ctx context.Context, priority tele_api.Priority, fun types.Task
 }
 
 func (r *Run) doTask(ctx context.Context, t task) {
-	err := r.do(ctx, t.pri, t.fun)
+	err := r.do(ctx,  t.fun)
 	t.done <- err
 	close(t.done)
 }
-
-func wantIdle(p tele_api.Priority) bool { return p&tele_api.Priority_IdleEngine != 0 }
