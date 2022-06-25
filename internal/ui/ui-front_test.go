@@ -9,7 +9,6 @@ import (
 	state_new "github.com/AlexTransit/vender/internal/state/new"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/ui"
-	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -112,7 +111,7 @@ ui {
 
 	steps := []step{
 		{expect: env._T("hello,world", ""), inev: types.Event{Kind: types.EventTime}},
-		{fun: func() { assert.True(t, env.ui.LockWait(tele_api.Priority_Now)) }},
+		// {fun: func() { assert.True(t, env.ui.LockWait(tele_api.Priority_Now)) }},
 		{expect: env._T("locked,wait", ""), inev: types.Event{Kind: types.EventTime}},
 		{fun: func() { env.ui.LockEnd() }},
 		{expect: env._T("hello,world", ""), inev: types.Event{Kind: types.EventStop}},
