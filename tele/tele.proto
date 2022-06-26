@@ -127,13 +127,6 @@ message Response {
   string INTERNAL_topic = 2048; // convenience
 }
 
-message WaitingForRemotePayment {
-  string menucode  = 1;
-  bytes cream = 2;
-  bytes sugar = 3;
-  uint32 amount = 4;
-}
-
 // ----------
 enum State {
   Invalid = 0;
@@ -222,12 +215,15 @@ message ToRoboMessage {
   Order makeOrder = 3;
   ShowQR showQR = 4;
 } 
+
 enum MessageType {
   invalid = 0;
   showQR = 1;
   makeOrder = 2;
   executeCommand = 3;
+  reportStock = 4;
 }
+
 message RoboHardware { 
   int32 temperature = 3;
 }
