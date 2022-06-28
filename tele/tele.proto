@@ -127,7 +127,7 @@ message Response {
   string INTERNAL_topic = 2048; // convenience
 }
 
-// ----------
+// ---------------------------------------------------------------------- new
 enum State {
   Invalid = 0;
   Boot = 1;

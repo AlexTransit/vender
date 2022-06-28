@@ -8,19 +8,18 @@ package ui
 import (
 	"sync/atomic"
 	"time"
-
 )
 
 const lockPoll = 300 * time.Millisecond
 
 type uiLock struct {
-	ch   chan struct{}
-	pri  uint32
+	// ch   chan struct{}
+	// pri  uint32
 	sem  int32
 	next State
 }
 
-func (ui *UI) LockFunc( fun func()) bool {
+func (ui *UI) LockFunc(fun func()) bool {
 	fun()
 	return true
 }
@@ -62,5 +61,6 @@ func (ui *UI) checkInterrupt(s State) bool {
 	return interrupt
 }
 
-func (l *uiLock) locked() bool                { return atomic.LoadInt32(&l.sem) > 0 }
+func (l *uiLock) locked() bool { return atomic.LoadInt32(&l.sem) > 0 }
+
 // func (l *uiLock) priority() tele_api.Priority { return tele_api.Priority(atomic.LoadUint32(&l.pri)) }

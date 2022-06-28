@@ -9,6 +9,7 @@ import (
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
+	// tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
 )
 
@@ -51,6 +52,7 @@ func Init(ctx context.Context) error {
 	return nil
 }
 
+// func Cook(ctx context.Context, rm *tele_api.FromRoboMessage) error {
 func Cook(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	// moneysys := money.GetGlobal(ctx)
