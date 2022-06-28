@@ -30,6 +30,7 @@ type tele struct { //nolint:maligned
 	vmId         int32
 	stat         tele_api.Stat
 	currentState tele_api.State
+	OutMessage   tele_api.FromRoboMessage
 }
 
 func New() tele_api.Teler {
@@ -98,7 +99,9 @@ func (t *tele) Telemetry(tm *tele_api.Telemetry) {
 }
 
 func (t *tele) RoboSend(sm *tele_api.FromRoboMessage) {
-	t.currentState = sm.State
+	if sm.State != 0 {
+		t.currentState = sm.State
+	}
 	t.marshalAndSendMessage(sm)
 }
 
@@ -119,6 +122,6 @@ func (t *tele) marshalAndSendMessage(m proto.Message) {
 		t.log.Errorf("CRITICAL telemetry Marshal message(%#v) err=%v", m, err)
 		return
 	}
-	t.log.Infof("telemetry message: %v", m)
+	t.log.Infof("robot send message: %v", m)
 	t.transport.SendFromRobot(payload)
 }

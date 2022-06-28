@@ -3,6 +3,7 @@ package tele
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/internal/state"
@@ -45,61 +46,78 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	err := proto.Unmarshal(payload, im)
 	if err != nil {
 		t.log.Errorf("tele command parse raw=%x err=%v", payload, err)
-		// TODO reply error
 		return false
 	}
 	t.log.Infof("incoming message:%v", im)
 	g := state.GetGlobal(ctx)
 	if im.MakeOrder != nil {
-		om := tele_api.FromRoboMessage{
+		// prepare output message
+		t.OutMessage = tele_api.FromRoboMessage{
 			Order: &tele_api.Order{},
 		}
+		t.OutMessage.Order.OwnerInt = im.MakeOrder.OwnerInt
+		t.OutMessage.Order.OwnerStr = im.MakeOrder.OwnerStr
+		t.OutMessage.Order.OwnerType = im.MakeOrder.OwnerType
+		defer t.RoboSend(&t.OutMessage)
+		rt := time.Now().Unix()
+		st := im.ServerTime
+		if rt-st > 180 {
+			errM := fmt.Sprintf("remote make error. big time difference between server and robot. RTime:%v STime:%v", time.Unix(rt, 0), time.Unix(st, 0))
+			t.OutMessage.Err = &tele_api.Err{Message: errM}
+			t.log.Errorf(errM)
+			t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_orderError
+			return false
+		}
+
 		switch im.MakeOrder.OrderStatus {
 		case tele_api.OrderStatus_doSelected:
+			// make selected code. payment via QR, etc
 			if !types.UI.FrontResult.Accepted || t.currentState != tele_api.State_WaitingForExternalPayment {
-				om.Order.OrderStatus = tele_api.OrderStatus_robotIsBusy
-				t.RoboSend(&om)
+				t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_robotIsBusy
 				return false
 			}
-			om.State = tele_api.State_RemoteControl
-			om.Order.OrderStatus = tele_api.OrderStatus_executionStart
-			t.RoboSend(&om)
-			om := tele_api.FromRoboMessage{
-				State: tele_api.State_Nominal,
-				Order: &tele_api.Order{
-					MenuCode:      types.UI.FrontResult.Item.Code,
-					Cream:         types.TuneValueToByte(types.UI.FrontResult.Cream, ui.DefaultCream),
-					Sugar:         types.TuneValueToByte(types.UI.FrontResult.Sugar, ui.DefaultSugar),
-					Amount:        im.MakeOrder.Amount,
-					PaymentMethod: im.MakeOrder.PaymentMethod,
-					OwnerInt:      im.MakeOrder.OwnerInt,
-					OwnerStr:      im.MakeOrder.OwnerStr,
-					OwnerType:     im.MakeOrder.OwnerType,
-				},
-			}
-
+			t.reportExecutionStart()
 			types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
-			err := ui.Cook(ctx)
-			types.VMC.UiState = 10 //FIXME StateFrontEnd     // 10 ->FrontBegin
-			if err != nil {
-				om.State = tele_api.State_Broken
-				om.Order.OrderStatus = tele_api.OrderStatus_orderError
-				om.Err = &tele_api.Err{
-					Message: err.Error(),
-				}
-				types.VMC.UiState = 2 //FIXME  StateBroken
-			}
-			if types.VMC.MonSys.Dirty == 0 {
-				om.Order.OrderStatus = tele_api.OrderStatus_complete
-			}
-			t.RoboSend(&om)
+			t.OutMessage.Order.PaymentMethod = tele_api.PaymentMethod_Cashless
+			t.RemCook(ctx)
 			g.LockCh <- struct{}{}
 
 		case tele_api.OrderStatus_doTransferred:
-			//TODO execute external order
-			// сделать внешний заказe
-			// check validity, price
-			// проверить валидность, цену
+			//TODO execute external order. сделать внешний заказ
+			// check validity, price. проверить валидность, цену
+			if t.currentState != tele_api.State_Nominal {
+				t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_robotIsBusy
+				return false
+			}
+			// when paying by balance, the current balance of the client is sent. при оплате по балансу, присылвется текущий баланс клиента
+			if im.MakeOrder.PaymentMethod != tele_api.PaymentMethod_Balance {
+				t.OutMessage.Err.Message = "command remote cook, not set balance"
+				return false
+			}
+			var found bool
+			types.UI.FrontResult.Item, found = types.UI.Menu[im.MakeOrder.MenuCode]
+			if !found {
+				t.log.Infof("remote cook error: code not found")
+				t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_executionInaccessible
+				return false
+			}
+			price := uint32(types.UI.FrontResult.Item.Price)
+			if price > im.MakeOrder.Amount {
+				t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_overdraft
+				return false
+			}
+			if err := types.UI.FrontResult.Item.D.Validate(); err != nil {
+				t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_executionInaccessible
+				t.log.Infof("remote cook error: code not valid")
+				return false
+			}
+			t.reportExecutionStart()
+			types.UI.FrontResult.Sugar = tuneCook(im.MakeOrder.Sugar, ui.DefaultSugar, ui.MaxSugar)
+			types.UI.FrontResult.Cream = tuneCook(im.MakeOrder.Cream, ui.DefaultCream, ui.MaxCream)
+			t.OutMessage.Order.Amount = price
+			types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
+			t.RemCook(ctx)
+			g.LockCh <- struct{}{}
 		}
 
 	}
@@ -123,6 +141,12 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	return true
 }
 
+func (t *tele) reportExecutionStart() {
+	t.OutMessage.State = tele_api.State_RemoteControl
+	t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_executionStart
+	t.RoboSend(&t.OutMessage)
+}
+
 func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error {
 	switch task := cmd.Task.(type) {
 	case *tele_api.Command_Report:
@@ -143,7 +167,8 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 		return nil
 
 	case *tele_api.Command_Cook:
-		return t.cmdCook(ctx, cmd, task.Cook)
+		// return t.cmdCook(ctx, cmd, task.Cook)
+		return nil
 
 	case *tele_api.Command_Show_QR:
 		return t.cmdShowQR(ctx, cmd, task.Show_QR)
@@ -228,6 +253,30 @@ func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	}
 	t.RoboSendState(tele_api.State_Nominal)
 	state.VmcUnLock(ctx)
+	return nil
+}
+
+type FromRoboMessage tele_api.FromRoboMessage
+
+func (t *tele) RemCook(ctx context.Context) (err error) {
+	t.OutMessage.Order.MenuCode = types.UI.FrontResult.Item.Code
+	t.OutMessage.Order.Cream = types.TuneValueToByte(types.UI.FrontResult.Cream, ui.DefaultCream)
+	t.OutMessage.Order.Sugar = types.TuneValueToByte(types.UI.FrontResult.Sugar, ui.DefaultSugar)
+
+	err = ui.Cook(ctx)
+	if err == nil {
+		t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_complete
+		t.OutMessage.State = tele_api.State_Nominal
+		types.VMC.UiState = 10 //FIXME StateFrontEnd     // 10 ->FrontBegin
+	} else {
+		t.OutMessage.State = tele_api.State_Broken
+		if types.VMC.MonSys.Dirty != 0 {
+			t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_orderError
+		}
+		t.OutMessage.Err = &tele_api.Err{Message: err.Error()}
+		types.VMC.UiState = 2 //FIXME  StateBroken
+	}
+
 	return nil
 }
 

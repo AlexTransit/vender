@@ -457,7 +457,7 @@ func menuMaxPrice() (currency.Amount, error) {
 			if item.Price > max {
 				max = item.Price
 			}
-		} 
+		}
 	}
 	if empty {
 		return 0, errors.Errorf("menu len=%d no valid items", len(types.UI.Menu))

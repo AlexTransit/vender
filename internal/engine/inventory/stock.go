@@ -158,7 +158,7 @@ func (c *custom) Validate() error {
 		return nil
 	}
 	if !c.stock.TeleLow {
-		types.TeleError(c.stock.Name + "- low")
+		types.TeleError(c.stock.Name + " - low")
 		c.stock.TeleLow = true
 	}
 	return errors.Errorf("%s low", c.stock.Name)
