@@ -233,8 +233,9 @@ func (ui *UI) sendRequestForQrPayment() {
 		State:    tele_api.State_WaitingForExternalPayment,
 		RoboTime: time.Now().Unix(),
 		Order: &tele_api.Order{
-			MenuCode: types.UI.FrontResult.Item.Code,
-			Amount:   uint32(types.UI.FrontResult.Item.Price),
+			OrderStatus: tele_api.OrderStatus_waitingForPayment,
+			MenuCode:    types.UI.FrontResult.Item.Code,
+			Amount:      uint32(types.UI.FrontResult.Item.Price),
 		},
 	}
 	ui.g.Tele.RoboSend(&rm)
