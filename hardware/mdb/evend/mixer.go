@@ -93,6 +93,7 @@ func (m *DeviceMixer) shake(steps uint8) engine.Doer {
 	return engine.NewSeq(tag).
 		Append(m.NewWaitReady(tag)).
 		Append(m.NewAction(tag, 0x01, steps, m.shakeSpeed)).
+		Append(engine.Sleep{Duration: time.Duration(1+steps) * 100 * time.Millisecond}).
 		Append(m.NewWaitDone(tag, m.shakeTimeout*time.Duration(1+steps)))
 }
 

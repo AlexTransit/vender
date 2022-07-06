@@ -7,11 +7,11 @@ import (
 	"time"
 
 	"github.com/AlexTransit/vender/currency"
-	"github.com/AlexTransit/vender/log2"
+	// "github.com/AlexTransit/vender/log2"
 	tele_api "github.com/AlexTransit/vender/tele"
 )
 
-var Log = *log2.NewStderr(log2.LDebug)
+// var Log = *log2.NewStderr(log2.LDebug)
 var VMC *VMCType = nil
 var UI *UItype = nil
 var TeleN tele_api.Teler
@@ -79,7 +79,7 @@ type Doer interface {
 }
 
 func init() {
-	Log.SetFlags(0)
+	// Log.SetFlags(0)
 	VMC = new(VMCType)
 	UI = new(UItype)
 }
@@ -99,12 +99,12 @@ func SetLight(v bool) {
 		return
 	}
 	VMC.Client.Light = v
-	Log.Infof("light = %v", v)
+	// Log.Infof("light = %v", v)
 }
 
 func ShowEnvs() string {
 	s := fmt.Sprintf("GBL=%+v", VMC)
-	Log.Info(s)
+	// Log.Info(s)
 	return s
 }
 
@@ -123,11 +123,11 @@ func (evk *VMCType) EvendKeyboardInput(v bool) {
 	if evk.InputEnable == v {
 		return
 	}
-	Log.Infof("evend keyboard: %v", v)
+	// Log.Infof("evend keyboard: %v", v)
 	evk.InputEnable = v
 }
 
 func TeleError(s string) {
-	Log.Info(s)
+	// Log.Info(s)
 	TeleN.ErrorStr(s)
 }

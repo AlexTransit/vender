@@ -48,7 +48,7 @@ func (devCup *DeviceCup) NewDispenseProper() engine.Doer {
 func (devCup *DeviceCup) NewDispense() engine.Doer {
 	tag := devCup.name + ".dispense"
 	return engine.NewSeq(tag).
-		Append(engine.Func0{F: func() error { types.Log.Info("cup dispence"); return nil }}).
+		Append(engine.Func0{F: func() error { devCup.dev.Log.Info("cup dispence"); return nil }}).
 		Append(devCup.NewWaitReady(tag)).
 		Append(devCup.NewAction(tag, 0x01))
 	// Append(devCup.NewWaitDone(tag, devCup.dispenseTimeout))
