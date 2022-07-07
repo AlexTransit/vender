@@ -19,6 +19,8 @@ func (Noop) Error(error) {}
 
 func (Noop) ErrorStr(string) {}
 
+func (Noop) Log(string) {}
+
 func (Noop) StatModify(func(*Stat)) {}
 
 func (Noop) Report(ctx context.Context, serviceTag bool) error { return nil }

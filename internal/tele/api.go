@@ -71,6 +71,10 @@ func (t *tele) Error(e error) {
 	t.ErrorStr(e.Error())
 }
 
+func (t *tele) Log(s string) {
+	t.log.Infof(s)
+}
+
 func (t *tele) ErrorStr(s string) {
 	tm := &tele_api.FromRoboMessage{
 		Err: &tele_api.Err{

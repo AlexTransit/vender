@@ -62,10 +62,16 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 		rt := time.Now().Unix()
 		st := im.ServerTime
 		if rt-st > 180 {
+			// AlexM FIXME затычка по тайм ауту.
 			errM := fmt.Sprintf("remote make error. big time difference between server and robot. RTime:%v STime:%v", time.Unix(rt, 0), time.Unix(st, 0))
 			t.OutMessage.Err = &tele_api.Err{Message: errM}
 			t.log.Errorf(errM)
 			t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_orderError
+			types.VMC.EvendKeyboardInput(true)
+			l1 := g.Config.UI.Front.MsgMenuInsufficientCreditL1
+			l2 := fmt.Sprintf(g.Config.UI.Front.MsgMenuInsufficientCreditL2, "0", types.UI.FrontResult.Item.Price.Format100I())
+			g.Hardware.HD44780.Display.SetLines(l1, l2)
+			g.ShowPicture(state.PictureClient)
 			return false
 		}
 
