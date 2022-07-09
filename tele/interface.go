@@ -17,7 +17,7 @@ import (
 // Teler interface Telemetry client, vending machine side.
 // Not for external public usage.
 type Teler interface {
-	Init(context.Context, *log2.Log, tele_config.Config) error
+	Init(context.Context, *log2.Log, tele_config.Config, string) error
 	Close()
 	// State(State)
 	Error(error)
@@ -34,11 +34,8 @@ type Teler interface {
 
 type stub struct{}
 
-func (stub) Init(context.Context, *log2.Log, tele_config.Config) error {
-	return nil
-}
+func (stub) Init(context.Context, *log2.Log, tele_config.Config,string) error {return nil}
 func (stub) Close() {}
-
 // func (stub) State(State)                                      {}
 func (stub) Error(error)                                       {}
 func (stub) ErrorStr(string)                                   {}

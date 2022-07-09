@@ -55,7 +55,7 @@ func (inv *Inventory) locked_tele() *tele_api.Inventory {
 				Code: s.Code,
 				// XXX TODO retype Value to float
 				Value:  int32(s.Value()),
-				Valuef: s.Value(),
+				// Valuef: s.Value(),
 			}
 			if inv.config.TeleAddName {
 				si.Name = s.Name
