@@ -126,6 +126,6 @@ func (t *tele) marshalAndSendMessage(m proto.Message) {
 		t.log.Errorf("CRITICAL telemetry Marshal message(%#v) err=%v", m, err)
 		return
 	}
-	t.log.Infof("robot send message: %v", m)
+	t.log.Infof("robot send message: (%v)", m)
 	t.transport.SendFromRobot(payload)
 }

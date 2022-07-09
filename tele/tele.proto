@@ -223,6 +223,7 @@ enum MessageType {
   makeOrder = 2;
   executeCommand = 3;
   reportStock = 4;
+  reportState = 5;
 }
 
 message RoboHardware {

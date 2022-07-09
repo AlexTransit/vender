@@ -50,6 +50,9 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	}
 	t.log.Infof("incoming message:%v", im)
 	g := state.GetGlobal(ctx)
+	if im.Cmd == tele_api.MessageType_reportState {
+		t.RoboSend(nil)
+	}
 	if im.MakeOrder != nil {
 		// prepare output message
 		t.OutMessage = tele_api.FromRoboMessage{
