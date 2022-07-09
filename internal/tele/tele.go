@@ -40,7 +40,7 @@ func NewWithTransporter(trans Transporter) tele_api.Teler {
 	return &tele{transport: trans}
 }
 
-func (t *tele) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.Config) error {
+func (t *tele) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.Config, swVersion string) error {
 	t.config = teleConfig
 	t.log = log
 	if t.config.LogDebug {
@@ -59,9 +59,13 @@ func (t *tele) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.C
 	if !t.config.Enabled {
 		return nil
 	}
-
-	t.RoboSendState(tele_api.State_Boot)
-
+	rm := tele_api.FromRoboMessage{
+		State: tele_api.State_Boot,
+		RoboHardware: &tele_api.RoboHardware{
+			SwVersion: swVersion,
+		},
+	}
+	t.marshalAndSendMessage(&rm)
 	return nil
 }
 
