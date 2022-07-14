@@ -78,6 +78,7 @@ func (ui *uiService) Init(ctx context.Context) {
 }
 
 func (ui *UI) onServiceBegin(ctx context.Context) State {
+	types.VMC.InputEnable = true
 	ui.inputBuf = ui.inputBuf[:0]
 	ui.Service.askReport = false
 	ui.Service.menuIdx = 0

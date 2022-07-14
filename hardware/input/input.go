@@ -54,7 +54,7 @@ func (d *Dispatch) ReadEvendKeyboard(s Source) {
 		}
 
 		if len(d.Bus) == 0 {
-			if types.VMC.InputEnable {
+			if types.VMC.InputEnable || event.Source == DevInputEventTag {
 				d.Log.Infof("key press (%s) ", kn)
 				d.Bus <- event
 			} else {
