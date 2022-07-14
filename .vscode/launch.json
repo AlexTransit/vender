@@ -13,7 +13,7 @@
             "program": "${workspaceFolder}/cmd/vender/main.go",
             "buildFlags": "-ldflags=' -X main.BuildVersion=debug'",
             "env": {"DEBUG_AS_ROOT": "true",},
-            //*
+            /*
             "args": ["-config","/home/vmc/local.hcl","vmc"],
             /*/
             "args": ["-config","/home/vmc/local.hcl","engine-cli"],
