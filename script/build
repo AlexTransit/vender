@@ -1,7 +1,6 @@
 #!/bin/bash
 set -e 
 base="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
-
 #argv="$1"
 #arglength=("$#")
 
@@ -52,3 +51,4 @@ build_version() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]] ; then
   main "$@"
 fi
+
