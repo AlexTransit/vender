@@ -42,6 +42,9 @@ func (t *tele) onCommandMessage(ctx context.Context, payload []byte) bool {
 }
 
 func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
+	if t.currentState == 0 {
+		return false
+	}
 	im := new(tele_api.ToRoboMessage) // input message
 	err := proto.Unmarshal(payload, im)
 	if err != nil {
@@ -79,6 +82,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 			g.ShowPicture(state.PictureClient)
 			return false
 		}
+		t.OutMessage.Order.PaymentMethod = im.MakeOrder.PaymentMethod
 
 		switch im.MakeOrder.OrderStatus {
 		case tele_api.OrderStatus_doSelected:
@@ -88,8 +92,9 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 				return false
 			}
 			t.reportExecutionStart()
+			t.OutMessage.Order.Amount = im.MakeOrder.Amount
 			types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
-			t.OutMessage.Order.PaymentMethod = tele_api.PaymentMethod_Cashless
+			// t.OutMessage.Order.PaymentMethod = tele_api.PaymentMethod_Cashless
 			t.RemCook(ctx)
 			g.LockCh <- struct{}{}
 
