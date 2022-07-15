@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e 
+set -e
 base="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
 #argv="$1"
 #arglength=("$#")
