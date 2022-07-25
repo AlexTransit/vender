@@ -34,18 +34,17 @@ type Teler interface {
 
 type stub struct{}
 
-func (stub) Init(context.Context, *log2.Log, tele_config.Config,string) error {return nil}
-func (stub) Close() {}
-// func (stub) State(State)                                      {}
-func (stub) Error(error)                                       {}
-func (stub) ErrorStr(string)                                   {}
-func (stub) Log(string)                                        {}
-func (stub) StatModify(func(*Stat))                            {}
-func (stub) Report(ctx context.Context, serviceTag bool) error { return nil }
-func (stub) Transaction(*Telemetry_Transaction)                {}
-func (stub) CommandResponse(*Response)                         {}
-func (stub) RoboSend(*FromRoboMessage)                         {}
-func (stub) RoboSendState(s State)                             {}
-func (stub) RoboConnected() bool                               { return false }
+func (stub) Init(context.Context, *log2.Log, tele_config.Config, string) error { return nil }
+func (stub) Close()                                                            {}
+func (stub) Error(error)                                                       {}
+func (stub) ErrorStr(string)                                                   {}
+func (stub) Log(string)                                                        {}
+func (stub) StatModify(func(*Stat))                                            {}
+func (stub) Report(ctx context.Context, serviceTag bool) error                 { return nil }
+func (stub) Transaction(*Telemetry_Transaction)                                {}
+func (stub) CommandResponse(*Response)                                         {}
+func (stub) RoboSend(*FromRoboMessage)                                         {}
+func (stub) RoboSendState(s State)                                             {}
+func (stub) RoboConnected() bool                                               { return false }
 
 func NewStub() Teler { return stub{} }

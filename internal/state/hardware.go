@@ -119,9 +119,9 @@ func (g *Global) Mdb() (*mdb.Bus, error) {
 			return fmt.Errorf("config: unknown mdb.uart_driver=\"%s\" valid: file, mega, iodin", g.Config.Hardware.Mdb.UartDriver)
 		}
 
-		mdbLog := g.Log.Clone(log2.LInfo)
+		mdbLog := g.Log.Clone(log2.LOG_INFO)
 		if g.Config.Hardware.Mdb.LogDebug {
-			mdbLog.SetLevel(log2.LDebug)
+			mdbLog.SetLevel(log2.LOG_DEBUG)
 		}
 		if err := x.Uarter.Open(g.Config.Hardware.Mdb.UartDevice); err != nil {
 			return errors.Annotatef(err, "config: mdb=%v", g.Config.Hardware.Mdb)
@@ -142,9 +142,9 @@ func (g *Global) Mega() (*mega.Client, error) {
 			NotifyPinChip: devConfig.PinChip,
 			NotifyPinName: devConfig.Pin,
 		}
-		log := g.Log.Clone(log2.LInfo)
+		log := g.Log.Clone(log2.LOG_INFO)
 		if devConfig.LogDebug {
-			log.SetLevel(log2.LDebug)
+			log.SetLevel(log2.LOG_DEBUG)
 		}
 		x.client, x.err = mega.NewClient(megaConfig, log)
 		return errors.Annotatef(x.err, "mega config=%#v", megaConfig)

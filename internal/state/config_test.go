@@ -155,7 +155,7 @@ engine { inventory {
 	mkCheck := func(c Case) func(*testing.T) {
 		return func(t *testing.T) {
 			// log := log2.NewStderr(log2.LDebug) // helps with panics
-			log := log2.NewTest(t, log2.LDebug)
+			log := log2.NewTest(t, log2.LOG_DEBUG)
 
 			// XXX FIXME code duplicate from NewContext but stupid import cycle
 			// ctx, g := NewContext(log)
@@ -205,6 +205,6 @@ func TestFunctionalBundled(t *testing.T) {
 	// not Parallel
 	t.Logf("this test needs OS open|read|stat access to file `vender.hcl`")
 
-	log := log2.NewTest(t, log2.LDebug)
+	log := log2.NewTest(t, log2.LOG_DEBUG)
 	MustReadConfig(log, NewOsFullReader(), "../../vender.hcl")
 }

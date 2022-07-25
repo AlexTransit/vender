@@ -33,7 +33,6 @@ func (t *tele) onCommandMessage(ctx context.Context, payload []byte) bool {
 	t.log.Debugf("tele command raw=%x task=%#v", payload, cmd.String())
 
 	if err = t.dispatchCommand(ctx, cmd); err != nil {
-		t.CommandReplyErr(cmd, err)
 		t.log.Errorf("command message error (%v)", err)
 		return true
 	}
@@ -209,67 +208,6 @@ func (t *tele) cmdValidateCode(cmd *tele_api.Command, code string) {
 
 func (t *tele) cmdReport(ctx context.Context, cmd *tele_api.Command) error {
 	return errors.Annotate(t.Report(ctx, false), "cmdReport")
-}
-
-func (t *tele) cmdCook(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgCook) error {
-	if types.VMC.UiState != uint32(ui.StatePrepare) {
-		if types.VMC.Lock {
-			t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
-			t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
-			return nil
-		}
-		var checkVal bool
-		types.UI.FrontResult.Item, checkVal = types.UI.Menu[arg.Menucode]
-		if !checkVal {
-			t.CookReply(cmd, tele_api.CookReplay_cookInaccessible)
-			t.log.Infof("remote cook error: code not found")
-			return nil
-		}
-		if err := types.UI.FrontResult.Item.D.Validate(); err != nil {
-			t.CookReply(cmd, tele_api.CookReplay_cookInaccessible)
-			t.log.Infof("remote cook error: code not valid")
-			return nil
-		}
-		types.UI.FrontResult.Sugar = tuneCook(arg.Sugar, ui.DefaultSugar, ui.MaxSugar)
-		types.UI.FrontResult.Cream = tuneCook(arg.Cream, ui.DefaultCream, ui.MaxCream)
-		types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
-
-		t.CookReply(cmd, tele_api.CookReplay_cookStart)
-		t.log.Infof("remote coocing (%v) (%v)", cmd, arg)
-	} else if arg.Menucode != "-" {
-		t.log.Infof("ignore remote make command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Menucode)
-		t.CookReply(cmd, tele_api.CookReplay_vmcbusy)
-		return nil
-	}
-	t.RoboSendState(tele_api.State_RemoteControl)
-
-	if arg.Balance < int32(types.UI.FrontResult.Item.Price) {
-		t.CookReply(cmd, tele_api.CookReplay_cookOverdraft, uint32(types.UI.FrontResult.Item.Price))
-		t.log.Infof("remote cook inposible. ovedraft. balance=%d price=%d", arg.Balance, types.UI.FrontResult.Item.Price)
-		return nil
-	}
-	types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
-	err := ui.Cook(ctx)
-	if types.VMC.MonSys.Dirty == 0 {
-		rm := tele_api.Response{
-			Executer:       cmd.Executer,
-			CookReplay:     tele_api.CookReplay_cookFinish,
-			ValidateReplay: uint32(types.UI.FrontResult.Item.Price),
-		}
-		if arg.Menucode != types.UI.FrontResult.Item.Code {
-			rm.Data = types.UI.FrontResult.Item.Code
-		}
-		t.CommandResponse(&rm)
-	}
-	if err != nil {
-		t.CookReply(cmd, tele_api.CookReplay_cookError)
-		t.RoboSendState(tele_api.State_Broken)
-		types.VMC.UiState = uint32(ui.StateBroken)
-		return errors.Errorf("remote cook make error: (%v)", err)
-	}
-	t.RoboSendState(tele_api.State_Nominal)
-	state.VmcUnLock(ctx)
-	return nil
 }
 
 type FromRoboMessage tele_api.FromRoboMessage

@@ -25,7 +25,7 @@ const usage = `syntax: commands separated by whitespace
 - tXX...   (debug) transmit bytes from hex XX...
 `
 
-var log = log2.NewStderr(log2.LInfo)
+var log = log2.NewStderr(log2.LOG_INFO)
 
 var BuildVersion string = "unknown" // set by ldflags -X
 
@@ -49,7 +49,7 @@ func main() {
 
 	log.SetFlags(log2.LInteractiveFlags)
 	if *logDebug {
-		log.SetLevel(log2.LDebug)
+		log.SetLevel(log2.LOG_DEBUG)
 	}
 
 	megaConfig := &mega.Config{

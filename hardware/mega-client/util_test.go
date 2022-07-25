@@ -36,11 +36,11 @@ func testEnv(t *testing.T) *tenv {
 	env := &tenv{
 		t:          t,
 		rand:       helpers.RandUnix(),
-		log:        log2.NewTest(t, log2.LDebug),
+		log:        log2.NewTest(t, log2.LOG_DEBUG),
 		notifyMock: notifyMock,
 		spiMock:    newSpiMock(t),
 	}
-	env.log = log2.NewStderr(log2.LDebug) // helps with panics
+	env.log = log2.NewStderr(log2.LOG_DEBUG) // helps with panics
 
 	env.config = Config{
 		SpiBus:        testDevice,

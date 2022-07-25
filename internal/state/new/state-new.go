@@ -43,9 +43,9 @@ func NewTestContext(t testing.TB, buildVersion string, confString string) (conte
 
 	var log *log2.Log
 	if os.Getenv("vender_test_log_stderr") == "1" {
-		log = log2.NewStderr(log2.LDebug) // useful with panics
+		log = log2.NewStderr(log2.LOG_DEBUG) // useful with panics
 	} else {
-		log = log2.NewTest(t, log2.LDebug)
+		log = log2.NewTest(t, log2.LOG_DEBUG)
 	}
 	log.SetFlags(log2.LTestFlags)
 	ctx, g := NewContext(log, tele_api.NewStub())

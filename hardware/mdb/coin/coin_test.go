@@ -288,7 +288,7 @@ func BenchmarkCoinPoll(b *testing.B) {
 			ctx := mockContext(b, rs)
 
 			g := state.GetGlobal(ctx)
-			g.Log.SetLevel(log2.LError)
+			g.Log.SetLevel(log2.LOG_ERR)
 			// g.Hardware.Mdb.Mdber.Log.SetLevel(log2.LError)
 
 			defer mdb.MockFromContext(ctx).Close()

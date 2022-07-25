@@ -349,8 +349,6 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 	}
 	if errs := ui.g.Engine.ExecList(ctx, "on_menu_error", ui.g.Config.Engine.OnMenuError); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_menu_error"))
-	} else {
-		ui.g.Log.Infof("on_menu_error success")
 	}
 
 	return StateBroken

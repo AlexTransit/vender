@@ -13,7 +13,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
-	"math"
+	"log/syslog"
 	"os"
 	"sync/atomic"
 	"testing"
@@ -49,17 +49,22 @@ func ContextValueLogger(ctx context.Context) *Log {
 type Level int32
 
 const (
-	LError = iota
-	LInfo
-	LDebug
-	LAll = math.MaxInt32
+	LOG_EMERG = iota
+	LOG_ALERT
+	LOG_CRIT
+	LOG_ERR
+	LOG_WARNING
+	LOG_NOTICE
+	LOG_INFO
+	LOG_DEBUG
 )
 
 type Log struct {
-	l       *log.Logger
-	level   Level
-	onError atomic.Value // <ErrorHandler>
-	fatalf  FmtFunc
+	l         *log.Logger
+	level     Level
+	logWriter []io.Writer
+	onError   atomic.Value // <ErrorHandler>
+	fatalf    FmtFunc
 }
 
 func NewStderr(level Level) *Log { return NewWriter(os.Stderr, level) }
@@ -67,10 +72,34 @@ func NewWriter(w io.Writer, level Level) *Log {
 	if w == ioutil.Discard {
 		return nil
 	}
-	return &Log{
-		l:     log.New(w, "", LStdFlags),
-		level: level,
+	var lg Log
+	lg.logWriter = make([]io.Writer, 8)
+	lg.l, _ = syslog.NewLogger(syslog.Priority(level), LStdFlags)
+	lg.level = level
+	lg.LogToSyslog()
+	return &lg
+
+}
+func (l *Log) LogToSyslog() {
+	if l == nil {
+		return
 	}
+	for i := 0; i < 8; i++ {
+		l.logWriter[i], _ = syslog.New(syslog.Priority(i), "")
+	}
+}
+func (l *Log) LogToConsole() {
+	if l == nil {
+		return
+	}
+	for i := 0; i < 8; i++ {
+		if i < 5 {
+			l.logWriter[i] = os.Stderr
+		} else {
+			l.logWriter[i] = os.Stdout
+		}
+	}
+
 }
 
 type ErrorFunc func(error)
@@ -93,11 +122,13 @@ func (lg *Log) Clone(level Level) *Log {
 	if lg == nil {
 		return nil
 	}
-	new := NewWriter(lg.l.Writer(), level)
+	var new Log
+	new.l, _ = syslog.NewLogger(syslog.Priority(level), LStdFlags)
 	new.fatalf = lg.fatalf
+	new.logWriter = lg.logWriter
 	new.storeErrorFunc(lg.loadErrorFunc())
 	new.SetFlags(lg.l.Flags())
-	return new
+	return &new
 }
 
 func (lg *Log) SetErrorFunc(f ErrorFunc) {
@@ -151,34 +182,60 @@ func (lg *Log) Enabled(level Level) bool {
 
 func (lg *Log) Log(level Level, s string) {
 	if lg.Enabled(level) {
+		lg.SetOutput(lg.logWriter[level])
 		_ = lg.l.Output(3, s)
 	}
 }
 func (lg *Log) Logf(level Level, format string, args ...interface{}) {
 	if lg.Enabled(level) {
-		_ = lg.l.Output(3, fmt.Sprintf(format, args...))
+		s := fmt.Sprintf(format, args...)
+		lg.Log(level, s)
 	}
 }
 
 // compatibility with eclipse.paho.mqtt
-func (lg *Log) Printf(format string, args ...interface{}) { lg.Logf(LInfo, format, args...) }
-func (lg *Log) Println(args ...interface{})               { lg.Log(LInfo, fmt.Sprint(args...)) }
+func (lg *Log) Printf(format string, args ...interface{}) { lg.Logf(LOG_INFO, format, args...) }
+func (lg *Log) Println(args ...interface{})               { lg.Log(LOG_INFO, fmt.Sprint(args...)) }
 
 func (lg *Log) Info(args ...interface{}) {
-	lg.Log(LInfo, fmt.Sprint(args...))
+	lg.Log(LOG_INFO, fmt.Sprint(args...))
 }
 func (lg *Log) Infof(format string, args ...interface{}) {
-	lg.Logf(LInfo, format, args...)
+	s := fmt.Sprintf(format, args...)
+	lg.Log(LOG_INFO, s)
 }
 func (lg *Log) Debug(args ...interface{}) {
-	lg.Log(LDebug, "debug: "+fmt.Sprint(args...))
+	lg.Log(LOG_DEBUG, fmt.Sprint(args...))
 }
 func (lg *Log) Debugf(format string, args ...interface{}) {
-	lg.Logf(LDebug, "debug: "+format, args...)
+	s := fmt.Sprintf(format, args...)
+	lg.Log(LOG_DEBUG, s)
+}
+func (lg *Log) Err(args ...interface{}) {
+	lg.Log(LOG_ERR, fmt.Sprint(args...))
+}
+func (lg *Log) Errf(format string, args ...interface{}) {
+	s := fmt.Sprintf(format, args...)
+	lg.Log(LOG_ERR, s)
+}
+func (lg *Log) Warning(args ...interface{}) {
+	lg.Log(LOG_WARNING, fmt.Sprint(args...))
+}
+func (lg *Log) WarningF(format string, args ...interface{}) {
+	s := fmt.Sprintf(format, args...)
+	lg.Log(LOG_WARNING, s)
+}
+func (lg *Log) Notice(args ...interface{}) {
+	lg.Log(LOG_NOTICE, fmt.Sprint(args...))
+}
+func (lg *Log) NoticeF(format string, args ...interface{}) {
+	s := fmt.Sprintf(format, args...)
+	lg.Log(LOG_NOTICE, s)
+
 }
 
 func (lg *Log) Error(args ...interface{}) {
-	lg.Log(LError, "error: "+fmt.Sprint(args...))
+	lg.Log(LOG_ERR, "error: "+fmt.Sprint(args...))
 	if lg == nil {
 		return
 	}
@@ -198,7 +255,8 @@ func (lg *Log) Error(args ...interface{}) {
 	}
 }
 func (lg *Log) Errorf(format string, args ...interface{}) {
-	lg.Logf(LError, "error: "+format, args...)
+	s := fmt.Sprintf(format, args...)
+	lg.Log(LOG_ERR, s)
 	if lg == nil {
 		return
 	}
@@ -212,7 +270,7 @@ func (lg *Log) Fatalf(format string, args ...interface{}) {
 	if lg.fatalf != nil {
 		lg.fatalf(format, args...)
 	} else {
-		lg.Logf(LError, "fatal: "+format, args...)
+		lg.Logf(LOG_ERR, "fatal: "+format, args...)
 		os.Exit(1)
 	}
 }
@@ -221,7 +279,7 @@ func (lg *Log) Fatal(args ...interface{}) {
 	if lg.fatalf != nil {
 		lg.fatalf(s)
 	} else {
-		lg.Logf(LError, "fatal: "+s)
+		lg.Logf(LOG_ERR, "fatal: "+s)
 		os.Exit(1)
 	}
 }

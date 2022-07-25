@@ -90,6 +90,8 @@ func Cook(ctx context.Context) error {
 				_ = g.Tele.Report(ctx, false)
 			}
 		}
+	} else {
+		g.Log.Err(err)
 	}
 
 	if invErr := g.Inventory.InventorySave(); invErr != nil {

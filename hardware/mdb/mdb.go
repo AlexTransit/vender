@@ -73,7 +73,7 @@ func (b *Bus) Tx(request Packet, response *Packet) error {
 		return errors.Annotatef(err, "mdb.Tx send=%x recv=%x", rbs, response.Bytes())
 	}
 	// explicit level check to save costly .Format()
-	if b.Log.Enabled(log2.LDebug) {
+	if b.Log.Enabled(log2.LOG_DEBUG) {
 		b.Log.Debugf("mdb.Tx (%02d) %s -> (%02d) %s",
 			request.Len(), request.Format(), response.Len(), response.Format())
 	}

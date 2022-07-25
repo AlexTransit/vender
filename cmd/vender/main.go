@@ -18,10 +18,11 @@ import (
 	"github.com/AlexTransit/vender/internal/state"
 	state_new "github.com/AlexTransit/vender/internal/state/new"
 	"github.com/AlexTransit/vender/internal/tele"
+	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/log2"
 )
 
-var log = log2.NewStderr(log2.LDebug)
+var log = log2.NewStderr(log2.LOG_DEBUG)
 var modules = []subcmd.Mod{
 	vmc.BrokenMod,
 	cmd_engine.Mod,
@@ -36,7 +37,7 @@ var BuildVersion string = "unknown" // set by ldflags -X
 var reFlagVersion = regexp.MustCompile("-?-?version")
 
 func main() {
-	log.SetFlags(0)
+	// log.SetFlags(0)
 
 	flagset := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	flagset.Usage = func() {
@@ -64,42 +65,22 @@ func main() {
 		flagset.Usage()
 		os.Exit(1)
 	}
+	log.SetFlags(log2.LServiceFlags)
+	if !subcmd.SdNotify("start") {
+		// under systemd assume systemd journal logging, no timestamp
+		log.LogToConsole ()
+		log.SetFlags(log2.LInteractiveFlags)
+	}
 
 	config := state.MustReadConfig(log, state.NewOsFullReader(), *configPath)
-
-	log.SetFlags(log2.LInteractiveFlags)
 	ctx, g := state_new.NewContext(log, tele.New())
 	g.BuildVersion = BuildVersion
-	if subcmd.SdNotify("start") {
-		// under systemd assume systemd journal logging, no timestamp
-		log.SetFlags(log2.LServiceFlags)
-	}
-	// g.Error(pprofStart(g, config.Debug.PprofListen))
-
+	types.Log = log
 	log.Debugf("starting command %s", mod.Name)
 	if err := mod.Main(ctx, config); err != nil {
 		g.Fatal(err)
 	}
 }
-
-// func pprofStart(g *state.Global, addr string) error {
-// 	if addr == "" {
-// 		return nil
-// 	}
-
-// 	srv := &http.Server{Addr: addr, Handler: nil} // TODO specific pprof handler
-// 	ln, err := net.Listen("tcp", addr)
-// 	if err != nil {
-// 		return errors.Annotate(err, "pprof")
-// 	}
-// 	g.Log.Debugf("pprof http://%s/debug/pprof/", ln.Addr().String())
-// 	go pprofServe(g, srv, ln)
-// 	return nil
-
-// }
-
-// // not inline only for clear goroutine source in panic trace
-// func pprofServe(g *state.Global, srv *http.Server, ln net.Listener) { g.Error(srv.Serve(ln)) }
 
 func versionMain(ctx context.Context, config *state.Config) error {
 	fmt.Printf("vender %s\n", BuildVersion)

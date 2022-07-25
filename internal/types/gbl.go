@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/log2"
 	// "github.com/AlexTransit/vender/log2"
 	tele_api "github.com/AlexTransit/vender/tele"
 )
@@ -15,6 +16,7 @@ import (
 var VMC *VMCType = nil
 var UI *UItype = nil
 var TeleN tele_api.Teler
+var Log *log2.Log
 
 type VMCType struct {
 	Version     string
@@ -79,7 +81,6 @@ type Doer interface {
 }
 
 func init() {
-	// Log.SetFlags(0)
 	VMC = new(VMCType)
 	UI = new(UItype)
 }

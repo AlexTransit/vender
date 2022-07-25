@@ -160,7 +160,7 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 
 	// Since tele is remote error reporting mechanism, it must be inited before anything else
 	// Tele.Init gets g.Log clone before SetErrorFunc, so Tele.Log.Error doesn't recurse on itself
-	if err := g.Tele.Init(ctx, g.Log.Clone(log2.LInfo), g.Config.Tele,g.BuildVersion); err != nil {
+	if err := g.Tele.Init(ctx, g.Log.Clone(log2.LOG_INFO), g.Config.Tele, g.BuildVersion); err != nil {
 		g.Tele = tele_api.Noop{}
 		return errors.Annotate(err, "tele init")
 	}
