@@ -73,10 +73,16 @@ func NewWriter(w io.Writer, level Level) *Log {
 		return nil
 	}
 	var lg Log
+	var err error
 	lg.logWriter = make([]io.Writer, 8)
-	lg.l, _ = syslog.NewLogger(syslog.Priority(level), LStdFlags)
+	lg.l, err = syslog.NewLogger(syslog.Priority(level), LStdFlags)
+	if err != nil {
+		lg.l = log.New(os.Stderr, "", LStdFlags)
+		lg.LogToConsole()
+	} else {
+		lg.LogToSyslog()
+	}
 	lg.level = level
-	lg.LogToSyslog()
 	return &lg
 
 }
@@ -84,8 +90,13 @@ func (l *Log) LogToSyslog() {
 	if l == nil {
 		return
 	}
+	var err error
 	for i := 0; i < 8; i++ {
-		l.logWriter[i], _ = syslog.New(syslog.Priority(i), "")
+		l.logWriter[i], err = syslog.New(syslog.Priority(i), "")
+		if err != nil {
+			l.LogToConsole()
+			return
+		}
 	}
 }
 func (l *Log) LogToConsole() {
@@ -122,13 +133,12 @@ func (lg *Log) Clone(level Level) *Log {
 	if lg == nil {
 		return nil
 	}
-	var new Log
-	new.l, _ = syslog.NewLogger(syslog.Priority(level), LStdFlags)
+	new := NewWriter(os.Stderr, level)
 	new.fatalf = lg.fatalf
 	new.logWriter = lg.logWriter
 	new.storeErrorFunc(lg.loadErrorFunc())
 	new.SetFlags(lg.l.Flags())
-	return &new
+	return new
 }
 
 func (lg *Log) SetErrorFunc(f ErrorFunc) {
