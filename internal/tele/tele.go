@@ -44,7 +44,7 @@ func (t *tele) Init(ctx context.Context, log *log2.Log, teleConfig tele_config.C
 	t.config = teleConfig
 	t.log = log
 	if t.config.LogDebug {
-		t.log.SetLevel(log2.LDebug)
+		t.log.SetLevel(log2.LOG_DEBUG)
 	}
 
 	t.vmId = int32(t.config.VmId)

@@ -11,21 +11,6 @@ import (
 
 const logMsgDisabled = "tele disabled"
 
-func (t *tele) CommandReplyErr(c *tele_api.Command, e error) {
-	if !t.config.Enabled {
-		t.log.Infof(logMsgDisabled)
-		return
-	}
-	errText := ""
-	if e != nil {
-		errText = e.Error()
-	}
-	r := tele_api.Response{
-		Error: errText,
-	}
-	t.CommandResponse(&r)
-}
-
 func (t *tele) CommandReply(c *tele_api.Command, cr tele_api.CmdReplay) {
 	if te := t.teleEnable(); te {
 		return
@@ -67,7 +52,8 @@ func (t *tele) Error(e error) {
 		return
 	}
 
-	t.log.Debugf("tele.Error: " + errors.ErrorStack(e))
+	// t.log.Debugf("tele.Error: " + errors.ErrorStack(e))
+	t.log.Err(errors.ErrorStack(e))
 	t.ErrorStr(e.Error())
 }
 

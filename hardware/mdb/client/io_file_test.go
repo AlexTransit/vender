@@ -79,7 +79,7 @@ func parseMockReader(s string) *mockReader {
 }
 
 func testFileUart(t testing.TB, r io.Reader, w io.Writer) *fileUart {
-	u := NewFileUart(log2.NewTest(t, log2.LDebug))
+	u := NewFileUart(log2.NewTest(t, log2.LOG_DEBUG))
 	u.r = r
 	u.w = w
 	return u
@@ -130,7 +130,7 @@ func TestUarterTx(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()
 			mr := parseMockReader(c.rmock)
-			mr.Log = log2.NewTest(t, log2.LDebug)
+			mr.Log = log2.NewTest(t, log2.LOG_DEBUG)
 			mw := bytes.NewBuffer(nil)
 			u := testFileUart(t, mr, mw)
 			checkUarterTx(t, u, c.send, mw, c.expectOk, c.expectErr)

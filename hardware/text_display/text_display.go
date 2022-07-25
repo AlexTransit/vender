@@ -140,11 +140,12 @@ func (td *TextDisplay) SetLines(line1, line2 string) {
 		td.Translate(line2))
 	if types.VMC.HW.Display.L1 != line1 {
 		types.VMC.HW.Display.L1 = line1
-		types.TeleN.Log(fmt.Sprintf("Display.L1=%s", line1))
+		types.Log.NoticeF(fmt.Sprintf("Display.L1=%s", line1))
+		// types.TeleN.Log(fmt.Sprintf("Display.L1=%s", line1))
 	}
 	if types.VMC.HW.Display.L2 != line2 {
 		types.VMC.HW.Display.L2 = line2
-		types.TeleN.Log(fmt.Sprintf("Display.L2=%s", line2))
+		types.Log.NoticeF(fmt.Sprintf("Display.L2=%s", line2))
 	}
 }
 

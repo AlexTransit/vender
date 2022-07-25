@@ -71,7 +71,7 @@ func BenchmarkSequentialDo(b *testing.B) {
 		return func(b *testing.B) {
 			ctx, _ := newTestContext(b)
 			log := log2.ContextValueLogger(ctx)
-			log.SetLevel(log2.LError)
+			log.SetLevel(log2.LOG_ERR)
 			log.SetFlags(log2.LTestFlags)
 
 			var tx Doer

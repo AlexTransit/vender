@@ -73,7 +73,7 @@ func TestLog2(t *testing.T) {
 		})
 		t.Run(c.name, func(t *testing.T) {
 			buf := bytes.NewBuffer(nil)
-			l := NewWriter(buf, LAll)
+			l := NewWriter(buf, LOG_DEBUG)
 			expect := c.fun(t, l)
 			assert.Equal(t, expect, buf.String())
 		})
@@ -85,8 +85,8 @@ func BenchmarkLog2(b *testing.B) {
 	const expect string = "example log with arg1=example-arg and arg2=12345678\n"
 
 	prepareStd := func(w io.Writer) FmtFunc { return log.New(w, "", 0).Printf }
-	prepareMe := func(w io.Writer) FmtFunc { l := NewWriter(w, LInfo); l.SetFlags(0); return l.Infof }
-	prepareMeSkipLevel := func(w io.Writer) FmtFunc { l := NewWriter(w, LError); l.SetFlags(0); return l.Infof }
+	prepareMe := func(w io.Writer) FmtFunc { l := NewWriter(w, LOG_INFO); l.SetFlags(0); return l.Infof }
+	prepareMeSkipLevel := func(w io.Writer) FmtFunc { l := NewWriter(w, LOG_ERR); l.SetFlags(0); return l.Infof }
 
 	type Case struct {
 		name    string

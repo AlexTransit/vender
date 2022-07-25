@@ -115,7 +115,7 @@ func TestMeasure(t *testing.T) {
 }
 
 func newTestContext(t testing.TB) (context.Context, *Engine) {
-	log := log2.NewTest(t, log2.LDebug)
+	log := log2.NewTest(t, log2.LOG_DEBUG)
 	e := NewEngine(log)
 	ctx := context.Background()
 	// ctx = context.WithValue(ctx, log2.ContextKey, log)

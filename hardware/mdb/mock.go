@@ -165,7 +165,7 @@ func (mu *MockUart) ExpectMap(rrs map[string]string) {
 
 func NewMockBus(t testing.TB) (*Bus, *MockUart) {
 	mock := NewMockUart(t)
-	b := NewBus(mock, log2.NewTest(t, log2.LDebug), func(e error) {
+	b := NewBus(mock, log2.NewTest(t, log2.LOG_DEBUG), func(e error) {
 		t.Logf("bus.Error: %v", e)
 	})
 	return b, mock

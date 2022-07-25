@@ -22,7 +22,7 @@ func TestStockErrors(t *testing.T) {
 
 	rand := helpers.RandUnix()
 	try := func(t testing.TB, c engine_config.Stock) string {
-		log := log2.NewTest(t, log2.LDebug)
+		log := log2.NewTest(t, log2.LOG_DEBUG)
 		e := engine.NewEngine(log)
 		ctx := context.Background()
 		// ctx = context.WithValue(ctx, log2.ContextKey, log)
@@ -73,7 +73,7 @@ func TestStockErrors(t *testing.T) {
 func TestSpendValue(t *testing.T) {
 	t.Parallel()
 
-	log := log2.NewTest(t, log2.LDebug)
+	log := log2.NewTest(t, log2.LOG_DEBUG)
 	rand := helpers.RandUnix()
 	f := func(i1, i2, i3 int32) bool {
 		e := engine.NewEngine(log)
