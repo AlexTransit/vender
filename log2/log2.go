@@ -75,9 +75,9 @@ func NewWriter(w io.Writer, level Level) *Log {
 	var lg Log
 	var err error
 	lg.logWriter = make([]io.Writer, 8)
-	lg.l, err = syslog.NewLogger(syslog.Priority(level), LStdFlags)
+	lg.l, err = syslog.NewLogger(syslog.Priority(level), LServiceFlags)
 	if err != nil {
-		lg.l = log.New(os.Stderr, "", LStdFlags)
+		lg.l = log.New(os.Stderr, "", LServiceFlags)
 		lg.LogToConsole()
 	} else {
 		lg.LogToSyslog()
