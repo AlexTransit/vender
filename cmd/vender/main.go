@@ -68,8 +68,10 @@ func main() {
 	log.SetFlags(log2.LServiceFlags)
 	if !subcmd.SdNotify("start") {
 		// under systemd assume systemd journal logging, no timestamp
-		log.LogToConsole ()
+		log.LogToConsole()
 		log.SetFlags(log2.LInteractiveFlags)
+	} else {
+		log.LogToSyslog(mod.Name)
 	}
 
 	config := state.MustReadConfig(log, state.NewOsFullReader(), *configPath)
