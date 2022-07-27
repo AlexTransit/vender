@@ -80,19 +80,19 @@ func NewWriter(w io.Writer, level Level) *Log {
 		lg.l = log.New(os.Stderr, "", LServiceFlags)
 		lg.LogToConsole()
 	} else {
-		lg.LogToSyslog()
+		lg.LogToSyslog("")
 	}
 	lg.level = level
 	return &lg
 
 }
-func (l *Log) LogToSyslog() {
+func (l *Log) LogToSyslog(tag string) {
 	if l == nil {
 		return
 	}
 	var err error
 	for i := 0; i < 8; i++ {
-		l.logWriter[i], err = syslog.New(syslog.Priority(i), "")
+		l.logWriter[i], err = syslog.New(syslog.Priority(i), tag)
 		if err != nil {
 			l.LogToConsole()
 			return
