@@ -342,7 +342,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 		rm.State = tele_api.State_Nominal
 		return StateFrontEnd
 	}
-
+	rm.State = tele_api.State_Broken
 	ui.display.SetLines(uiConfig.Front.MsgError, uiConfig.Front.MsgMenuError)
 	rm.Err = &tele_api.Err{
 		Message: errors.Annotatef(err, "execute %s", selected).Error(),
