@@ -80,8 +80,11 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 		ui.g.Error(err)
 		return StateBroken
 	}
-	ui.g.Tele.RoboSendState(tele_api.State_Nominal)
-	types.UI.FrontResult.Accepted = false
+	if types.UI.FrontResult.QRPaymenID == "" {
+		ui.g.Tele.RoboSendState(tele_api.State_Nominal)
+	} else {
+		ui.cancelQRPay(tele_api.State_Nominal)
+	}
 	return StateFrontSelect
 }
 
@@ -121,9 +124,6 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				}
 				return StateFrontEnd
 			}
-			if types.UI.FrontResult.Accepted {
-				ui.g.Tele.RoboSendState(tele_api.State_Client)
-			}
 			if input.IsReject(&e.Input) {
 				// backspace semantic
 				if len(ui.inputBuf) > 1 {
@@ -145,12 +145,12 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 			}
 			switch {
 			case e.Input.IsDigit(), e.Input.IsDot():
-				types.UI.FrontResult.Accepted = false
+				ui.cancelQRPay(tele_api.State_Client)
 				ui.inputBuf = append(ui.inputBuf, byte(e.Input.Key))
 				goto refresh
 
 			case input.IsAccept(&e.Input):
-				if types.UI.FrontResult.Accepted {
+				if types.UI.FrontResult.QRPaymenID != "" {
 					goto wait
 				}
 				if len(ui.inputBuf) == 0 {
@@ -171,7 +171,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuNotAvailable)
 					goto wait
 				}
-				types.UI.FrontResult.Accepted = true
+				types.UI.FrontResult.QRPaymenID = "wait"
 				ui.g.Log.Debugf("compare price=%v credit=%v", types.UI.FrontResult.Item.Price, credit)
 				if types.UI.FrontResult.Item.Price > credit {
 					var l1, l2 string
@@ -196,11 +196,11 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 
 		case types.EventMoneyCredit:
 			credit := moneysys.Credit(ctx)
-			if types.UI.FrontResult.Accepted {
-				if credit >= types.UI.FrontResult.Item.Price {
-					return StateFrontAccept // success path
-				}
+			ui.cancelQRPay(tele_api.State_Client)
+			if credit >= types.UI.FrontResult.Item.Price {
+				return StateFrontAccept // success path
 			}
+
 			go moneysys.AcceptCredit(ctx, ui.FrontMaxPrice, alive.StopChan(), ui.eventch)
 
 		case types.EventService:
@@ -236,6 +236,24 @@ func (ui *UI) sendRequestForQrPayment() {
 			OrderStatus: tele_api.OrderStatus_waitingForPayment,
 			MenuCode:    types.UI.FrontResult.Item.Code,
 			Amount:      uint32(types.UI.FrontResult.Item.Price),
+		},
+	}
+	ui.g.Tele.RoboSend(&rm)
+}
+func (ui *UI) cancelQRPay(s tele_api.State) {
+	defer func() {
+		types.UI.FrontResult.QRPaymenID = ""
+	}()
+	if types.UI.FrontResult.QRPaymenID == "" {
+		return
+	}
+	rm := tele_api.FromRoboMessage{
+		State: s,
+		Order: &tele_api.Order{
+			Amount:      types.UI.FrontResult.QRPayAmount,
+			OrderStatus: tele_api.OrderStatus_cancel,
+			OwnerStr:    types.UI.FrontResult.QRPaymenID,
+			OwnerType:   tele_api.OwnerType_qrCashLessUser,
 		},
 	}
 	ui.g.Tele.RoboSend(&rm)
