@@ -168,6 +168,7 @@ enum OrderStatus {
   orderError = 5;
   robotIsBusy = 6;
   waitingForPayment = 7;
+  cancel = 8;
 
   doSelected = 64;
   doTransferred = 65;
