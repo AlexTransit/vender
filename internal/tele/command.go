@@ -86,8 +86,8 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 		switch im.MakeOrder.OrderStatus {
 		case tele_api.OrderStatus_doSelected:
 			// make selected code. payment via QR, etc
-			if !types.UI.FrontResult.Accepted || t.currentState != tele_api.State_WaitingForExternalPayment {
-				t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_robotIsBusy
+			if types.UI.FrontResult.QRPaymenID != im.MakeOrder.OwnerStr {
+				t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_orderError
 				return false
 			}
 			t.reportExecutionStart()
@@ -140,7 +140,9 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	if im.ShowQR != nil {
 		switch im.ShowQR.QrType {
 		case tele_api.ShowQR_order:
-			if types.UI.FrontResult.Accepted {
+			if types.UI.FrontResult.QRPaymenID == "wait" {
+				types.UI.FrontResult.QRPaymenID = im.ShowQR.DataStr
+				types.UI.FrontResult.QRPayAmount = uint32(im.ShowQR.DataInt)
 				g.ShowQR(im.ShowQR.QrText)
 				l1 := fmt.Sprintf(g.Config.UI.Front.MsgRemotePayL1, currency.Amount(im.ShowQR.DataInt).Format100I())
 				g.Hardware.HD44780.Display.SetLines(l1, types.VMC.HW.Display.L2)

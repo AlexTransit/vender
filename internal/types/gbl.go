@@ -57,10 +57,11 @@ type UItype struct { //nolint:maligned
 }
 
 type UIMenuResult struct {
-	Item     MenuItemType
-	Cream    uint8
-	Sugar    uint8
-	Accepted bool
+	Item       MenuItemType
+	Cream      uint8
+	Sugar      uint8
+	QRPaymenID string
+	QRPayAmount uint32
 }
 
 func (mit *MenuItemType) String() string {
