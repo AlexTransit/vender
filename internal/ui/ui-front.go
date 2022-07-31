@@ -32,11 +32,6 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 		ui.g.Error(errors.Errorf("money timeout lost (%v)", credit))
 	}
 	ms.ResetMoney()
-	types.UI.FrontResult = types.UIMenuResult{
-		Cream: DefaultCream,
-		Sugar: DefaultSugar,
-	}
-
 	// XXX FIXME custom business logic creeped into code TODO move to config
 	if doCheckTempHot := ui.g.Engine.Resolve("evend.valve.check_temp_hot"); doCheckTempHot != nil && !engine.IsNotResolved(doCheckTempHot) {
 		err := doCheckTempHot.Validate()
@@ -85,6 +80,11 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 	} else {
 		ui.cancelQRPay(tele_api.State_Nominal)
 	}
+	types.UI.FrontResult = types.UIMenuResult{
+		Cream: DefaultCream,
+		Sugar: DefaultSugar,
+	}
+
 	return StateFrontSelect
 }
 
