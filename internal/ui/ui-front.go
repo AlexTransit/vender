@@ -28,6 +28,11 @@ import (
 func (ui *UI) onFrontBegin(ctx context.Context) State {
 	ms := money.GetGlobal(ctx)
 	credit := ms.Credit(ctx) / 100
+	types.UI.FrontResult = types.UIMenuResult{
+		Cream: DefaultCream,
+		Sugar: DefaultSugar,
+	}
+
 	if credit != 0 {
 		ui.g.Error(errors.Errorf("money timeout lost (%v)", credit))
 	}
@@ -74,16 +79,9 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 	if err != nil {
 		ui.g.Error(err)
 		return StateBroken
+
 	}
-	if types.UI.FrontResult.QRPaymenID == "" {
-		ui.g.Tele.RoboSendState(tele_api.State_Nominal)
-	} else {
-		ui.cancelQRPay(tele_api.State_Nominal)
-	}
-	types.UI.FrontResult = types.UIMenuResult{
-		Cream: DefaultCream,
-		Sugar: DefaultSugar,
-	}
+	ui.g.Tele.RoboSendState(tele_api.State_Nominal)
 
 	return StateFrontSelect
 }
@@ -121,6 +119,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				if credit > 0 {
 					ui.display.SetLines("  :-(", fmt.Sprintf(" -%v", credit))
 					ui.g.Error(errors.Trace(moneysys.Abort(ctx)))
+					ui.cancelQRPay(tele_api.State_Client)
 				}
 				return StateFrontEnd
 			}
@@ -246,7 +245,7 @@ func (ui *UI) cancelQRPay(s tele_api.State) {
 	defer func() {
 		types.UI.FrontResult.QRPaymenID = ""
 	}()
-	if types.UI.FrontResult.QRPaymenID == "" {
+	if types.UI.FrontResult.QRPaymenID == "" || types.UI.FrontResult.QRPaymenID == "wait" {
 		return
 	}
 	rm := tele_api.FromRoboMessage{
