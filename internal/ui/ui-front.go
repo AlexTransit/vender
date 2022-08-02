@@ -197,9 +197,9 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 			credit := moneysys.Credit(ctx)
 			if types.UI.FrontResult.QRPaymenID != "" {
 				ui.cancelQRPay(tele_api.State_Client)
-				if credit >= types.UI.FrontResult.Item.Price {
-					return StateFrontAccept // success path
-				}
+			}
+			if credit >= types.UI.FrontResult.Item.Price {
+				return StateFrontAccept // success path
 			}
 
 			go moneysys.AcceptCredit(ctx, ui.FrontMaxPrice, alive.StopChan(), ui.eventch)
