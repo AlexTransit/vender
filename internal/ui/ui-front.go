@@ -170,11 +170,11 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuNotAvailable)
 					goto wait
 				}
-				types.UI.FrontResult.QRPaymenID = "wait"
 				ui.g.Log.Debugf("compare price=%v credit=%v", types.UI.FrontResult.Item.Price, credit)
 				if types.UI.FrontResult.Item.Price > credit {
 					var l1, l2 string
 					if credit == 0 {
+						types.UI.FrontResult.QRPaymenID = "wait"
 						types.VMC.EvendKeyboardInput(false)
 						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgRemotePayL2, types.UI.FrontResult.Item.Code, types.UI.FrontResult.Item.Price.Format100I())
 						ui.sendRequestForQrPayment()
@@ -195,11 +195,18 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 
 		case types.EventMoneyCredit:
 			credit := moneysys.Credit(ctx)
-			if types.UI.FrontResult.QRPaymenID != "" {
+			if types.UI.FrontResult.QRPaymenID == "wait" {
 				ui.cancelQRPay(tele_api.State_Client)
+				// types.VMC.EvendKeyboardInput(true)
 			}
-			if credit >= types.UI.FrontResult.Item.Price {
-				return StateFrontAccept // success path
+			price := types.UI.FrontResult.Item.Price 
+			if price != 0 && credit >= price {
+				if types.UI.FrontResult.Item.D == nil {
+					goto wait
+				}
+				if err := types.UI.FrontResult.Item.D.Validate(); err == nil {
+					return StateFrontAccept // success path
+				}
 			}
 
 			go moneysys.AcceptCredit(ctx, ui.FrontMaxPrice, alive.StopChan(), ui.eventch)
