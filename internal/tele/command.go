@@ -75,8 +75,9 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 			t.log.Errorf(errM)
 			t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_orderError
 			types.VMC.EvendKeyboardInput(true)
-			l1 := g.Config.UI.Front.MsgMenuInsufficientCreditL1
-			l2 := fmt.Sprintf(g.Config.UI.Front.MsgMenuInsufficientCreditL2, "0", types.UI.FrontResult.Item.Price.Format100I())
+			l1 := g.Config.UI.Front.MsgMenuInsufficientCredit
+			l2 := fmt.Sprintf(g.Config.UI.Front.MsgInputCode, types.UI.FrontResult.Item.Code)
+			// l2 := fmt.Sprintf(g.Config.UI.Front.MsgMenuInsufficientCreditL2, "0", types.UI.FrontResult.Item.Price.Format100I())
 			g.Hardware.HD44780.Display.SetLines(l1, l2)
 			g.ShowPicture(state.PictureClient)
 			return false
@@ -144,7 +145,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 				types.UI.FrontResult.QRPaymenID = im.ShowQR.DataStr
 				types.UI.FrontResult.QRPayAmount = uint32(im.ShowQR.DataInt)
 				g.ShowQR(im.ShowQR.QrText)
-				l1 := fmt.Sprintf(g.Config.UI.Front.MsgRemotePayL1, currency.Amount(im.ShowQR.DataInt).Format100I())
+				l1 := fmt.Sprintf(g.Config.UI.Front.MsgRemotePay+" "+ g.Config.UI.Front.MsgPrice, currency.Amount(im.ShowQR.DataInt).Format100I())
 				g.Hardware.HD44780.Display.SetLines(l1, types.VMC.HW.Display.L2)
 			}
 		case tele_api.ShowQR_receipt:

@@ -151,7 +151,7 @@ ui {
 	env.g.Hardware.Input.Emit(env._Key('1').Input)
 	env.requireDisplay(t, g.Config.UI.Front.MsgCredit+"5", fmt.Sprintf(g.Config.UI.Front.MsgInputCode, "1"))
 	env.g.Hardware.Input.Emit(env._KeyAccept.Input)
-	env.requireDisplay(t, "", g.Config.UI.Front.MsgMenuInsufficientCreditL1)
+	env.requireDisplay(t, "", g.Config.UI.Front.MsgMenuInsufficientCredit)
 	require.NoError(t, moneysys.XXX_InjectCoin(200))
 	env.g.Hardware.Input.Emit(env._KeyAccept.Input)
 	env.requireState(t, ui.StateFrontAccept)
