@@ -173,14 +173,11 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				ui.g.Log.Debugf("compare price=%v credit=%v", types.UI.FrontResult.Item.Price, credit)
 				if types.UI.FrontResult.Item.Price > credit {
 					var l1, l2 string
+					l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgInputCode+" "+ui.g.Config.UI.Front.MsgPrice, types.UI.FrontResult.Item.Code, types.UI.FrontResult.Item.Price.Format100I())
 					if credit == 0 {
-						types.UI.FrontResult.QRPaymenID = "wait"
-						types.VMC.EvendKeyboardInput(false)
-						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgRemotePayL2, types.UI.FrontResult.Item.Code, types.UI.FrontResult.Item.Price.Format100I())
-						ui.sendRequestForQrPayment()
+						l1 = *ui.sendRequestForQrPayment()
 					} else {
-						l1 = ui.g.Config.UI.Front.MsgMenuInsufficientCreditL1
-						l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgMenuInsufficientCreditL2, credit.Format100I(), types.UI.FrontResult.Item.Price.Format100I())
+						l1 = ui.g.Config.UI.Front.MsgMenuInsufficientCredit
 					}
 					ui.display.SetLines(l1, l2)
 					goto wait
@@ -199,7 +196,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				ui.cancelQRPay(tele_api.State_Client)
 				// types.VMC.EvendKeyboardInput(true)
 			}
-			price := types.UI.FrontResult.Item.Price 
+			price := types.UI.FrontResult.Item.Price
 			if price != 0 && credit >= price {
 				if types.UI.FrontResult.Item.D == nil {
 					goto wait
@@ -235,7 +232,15 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 	}
 }
 
-func (ui *UI) sendRequestForQrPayment() {
+// send request for pay ( if posible ) and
+// return message for display
+func (ui *UI) sendRequestForQrPayment() (message_for_display *string) {
+	if !ui.g.Tele.RoboConnected() {
+		ui.g.ShowPicture(state.PictureQRPayError)
+		return &ui.g.Config.UI.Front.MsgNoNetwork
+	}
+	types.UI.FrontResult.QRPaymenID = "wait"
+	types.VMC.EvendKeyboardInput(false)
 	types.VMC.UiState = uint32(StatePrepare)
 	rm := tele_api.FromRoboMessage{
 		State:    tele_api.State_WaitingForExternalPayment,
@@ -247,6 +252,7 @@ func (ui *UI) sendRequestForQrPayment() {
 		},
 	}
 	ui.g.Tele.RoboSend(&rm)
+	return &ui.g.Config.UI.Front.MsgRemotePayRequest
 }
 func (ui *UI) cancelQRPay(s tele_api.State) {
 	defer func() {
