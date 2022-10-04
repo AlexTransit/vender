@@ -31,10 +31,12 @@ func FillMenu(ctx context.Context) {
 
 	for _, x := range config.Engine.Menu.Items {
 		types.UI.Menu[x.Code] = types.MenuItemType{
-			Name:  x.Name,
-			D:     x.Doer,
-			Price: x.Price,
-			Code:  x.Code,
+			Name:     x.Name,
+			D:        x.Doer,
+			Price:    x.Price,
+			Code:     x.Code,
+			CreamMax: uint8(x.CreamMax),
+			SugarMax: uint8(x.SugarMax),
 		}
 	}
 }
@@ -60,7 +62,7 @@ func Cook(ctx context.Context) error {
 	// defer state.VmcUnLock(ctx)
 
 	itemCtx := money.SetCurrentPrice(ctx, types.UI.FrontResult.Item.Price)
-	if tuneCream := ScaleTuneRate(types.UI.FrontResult.Cream, MaxCream, DefaultCream); tuneCream != 1 {
+	if tuneCream := ScaleTuneRate(types.UI.FrontResult.Cream, creamMax(), DefaultCream); tuneCream != 1 {
 		const name = "cream"
 		var err error
 		g.Log.Debugf("ui-front tuning stock=%s tune=%v", name, tuneCream)
@@ -68,7 +70,7 @@ func Cook(ctx context.Context) error {
 			g.Log.Errorf("ui-front tuning stock=%s err=%v", name, err)
 		}
 	}
-	if tuneSugar := ScaleTuneRate(types.UI.FrontResult.Sugar, MaxSugar, DefaultSugar); tuneSugar != 1 {
+	if tuneSugar := ScaleTuneRate(types.UI.FrontResult.Sugar, sugarMax(), DefaultSugar); tuneSugar != 1 {
 		const name = "sugar"
 		var err error
 		g.Log.Debugf("ui-front tuning stock=%s tune=%v", name, tuneSugar)
@@ -102,4 +104,18 @@ func Cook(ctx context.Context) error {
 	g.Log.Debugf("ui-front selected=%s end err=%v", types.UI.FrontResult.Item.String(), err)
 	return err
 
+}
+
+func creamMax() uint8 {
+	if types.UI.FrontResult.Item.CreamMax == 0 {
+		return MaxCream
+	}
+	return types.UI.FrontResult.Item.CreamMax
+}
+
+func sugarMax() uint8 {
+	if types.UI.FrontResult.Item.SugarMax == 0 {
+		return MaxSugar
+	}
+	return types.UI.FrontResult.Item.SugarMax
 }

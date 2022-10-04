@@ -8,6 +8,7 @@ import (
 
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/log2"
+
 	// "github.com/AlexTransit/vender/log2"
 	tele_api "github.com/AlexTransit/vender/tele"
 )
@@ -69,10 +70,12 @@ func (mit *MenuItemType) String() string {
 }
 
 type MenuItemType struct {
-	Name  string
-	D     Doer
-	Price currency.Amount
-	Code  string
+	Name     string
+	D        Doer
+	Price    currency.Amount
+	Code     string
+	CreamMax uint8
+	SugarMax uint8
 }
 
 type Doer interface {

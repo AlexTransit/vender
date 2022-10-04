@@ -192,7 +192,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 
 		case types.EventMoneyCredit:
 			credit := moneysys.Credit(ctx)
-			if types.UI.FrontResult.QRPaymenID == "wait" {
+			if types.UI.FrontResult.QRPaymenID == "0" {
 				ui.cancelQRPay(tele_api.State_Client)
 				// types.VMC.EvendKeyboardInput(true)
 			}
@@ -239,7 +239,7 @@ func (ui *UI) sendRequestForQrPayment() (message_for_display *string) {
 		ui.g.ShowPicture(state.PictureQRPayError)
 		return &ui.g.Config.UI.Front.MsgNoNetwork
 	}
-	types.UI.FrontResult.QRPaymenID = "wait"
+	types.UI.FrontResult.QRPaymenID = "0"
 	types.VMC.EvendKeyboardInput(false)
 	types.VMC.UiState = uint32(StatePrepare)
 	rm := tele_api.FromRoboMessage{
@@ -258,7 +258,7 @@ func (ui *UI) cancelQRPay(s tele_api.State) {
 	defer func() {
 		types.UI.FrontResult.QRPaymenID = ""
 	}()
-	if types.UI.FrontResult.QRPaymenID == "" || types.UI.FrontResult.QRPaymenID == "wait" {
+	if types.UI.FrontResult.QRPaymenID == "" || types.UI.FrontResult.QRPaymenID == "0" {
 		return
 	}
 	rm := tele_api.FromRoboMessage{
@@ -460,14 +460,14 @@ func formatScale(value, min, max uint8, alphabet []byte) []byte {
 }
 
 func ScaleTuneRate(value, max, center uint8) float32 {
+	if value > max {
+		value = max
+	}
 	switch {
 	case value == center: // most common path
 		return 1
 	case value == 0:
 		return 0
-	}
-	if value > max {
-		value = max
 	}
 	if value > 0 && value < center {
 		return 1 - (0.25 * float32(center-value))
