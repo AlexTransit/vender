@@ -11,6 +11,7 @@ import (
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
 	ui_config "github.com/AlexTransit/vender/internal/ui/config"
+	"github.com/AlexTransit/vender/internal/watchdog"
 )
 
 type UI struct { //nolint:maligned
@@ -58,7 +59,7 @@ func (ui *UI) Init(ctx context.Context) error {
 	ui.inputch = *ui.g.Hardware.Input.InputChain()
 
 	ui.frontResetTimeout = helpers.IntSecondDefault(ui.g.Config.UI.Front.ResetTimeoutSec, 0)
-
+	watchdog.WatchDogSetTics((ui.g.Config.UI.Front.ResetTimeoutSec / 10) * 3)
 	ui.g.LockCh = make(chan struct{}, 1)
 	ui.Service.Init(ctx)
 	ui.g.XXX_uier.Store(types.UIer(ui)) // FIXME import cycle traded for pointer cycle

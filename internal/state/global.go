@@ -16,6 +16,7 @@ import (
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
 	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/internal/watchdog"
 	"github.com/AlexTransit/vender/log2"
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
@@ -98,6 +99,8 @@ func (g *Global) ShowPicture(pict Pic) {
 }
 
 func (g *Global) VmcStop(ctx context.Context) {
+	watchdog.WatchDogDisable()
+	watchdog.WatchDogSetTics(0)
 	g.ShowPicture(PictureBroken)
 	g.Log.Infof("--- event vmc stop ---")
 	go func() {

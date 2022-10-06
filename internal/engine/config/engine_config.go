@@ -40,6 +40,8 @@ type MenuItem struct {
 	Name      string `hcl:"name"`
 	XXX_Price int    `hcl:"price"` // use scaled `Price`, this is for decoding config only
 	Scenario  string `hcl:"scenario"`
+	CreamMax  int    `hcl:"creamMax"`
+	SugarMax  int    `hcl:"sugarMax"`
 
 	Price currency.Amount `hcl:"-"`
 	Doer  engine.Doer     `hcl:"-"`

@@ -34,6 +34,8 @@ engine {
       name     = "example2"
       price    = 1
       scenario = "cup_drop add.water_hot(10) add.milk(10) cup_serve"
+      creamMax = 4
+      sugarMax = 4
     }
   }
 

@@ -128,8 +128,8 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 				return false
 			}
 			t.reportExecutionStart()
-			types.UI.FrontResult.Sugar = tuneCook(im.MakeOrder.Sugar, ui.DefaultSugar, ui.MaxSugar)
-			types.UI.FrontResult.Cream = tuneCook(im.MakeOrder.Cream, ui.DefaultCream, ui.MaxCream)
+			types.UI.FrontResult.Sugar = tuneCook(im.MakeOrder.Sugar, ui.DefaultSugar, types.UI.FrontResult.Item.SugarMax)
+			types.UI.FrontResult.Cream = tuneCook(im.MakeOrder.Cream, ui.DefaultCream, types.UI.FrontResult.Item.CreamMax)
 			t.OutMessage.Order.Amount = price
 			types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
 			t.RemCook(ctx)
@@ -141,7 +141,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	if im.ShowQR != nil {
 		switch im.ShowQR.QrType {
 		case tele_api.ShowQR_order:
-			if types.UI.FrontResult.QRPaymenID == "wait" {
+			if types.UI.FrontResult.QRPaymenID == "0" {
 				types.UI.FrontResult.QRPaymenID = im.ShowQR.DataStr
 				types.UI.FrontResult.QRPayAmount = uint32(im.ShowQR.DataInt)
 				g.ShowQR(im.ShowQR.QrText)
@@ -237,9 +237,9 @@ func (t *tele) RemCook(ctx context.Context) (err error) {
 	return nil
 }
 
+// tunecook(value uint8, maximum uint8, defined uint8) (convertedvalue uint8)
+// для робота занчения  от 0 (0=not change) до максимума. поэтому передаваемые значени = +1
 func tuneCook(b []byte, def uint8, max uint8) uint8 {
-	// tunecook(value uint8, maximum uint8, defined uint8) (convertedvalue uint8)
-	// для робота занчения  от 0 (0=not change) до максимума. поэтому передаваемые значени = +1
 	if len(b) == 0 {
 		return def
 	} else {
