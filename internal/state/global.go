@@ -99,7 +99,8 @@ func (g *Global) ShowPicture(pict Pic) {
 }
 
 func (g *Global) VmcStop(ctx context.Context) {
-	watchdog.WatchDogOff()
+	watchdog.WatchDogDisable()
+	watchdog.WatchDogSetTics(0)
 	g.ShowPicture(PictureBroken)
 	g.Log.Infof("--- event vmc stop ---")
 	go func() {

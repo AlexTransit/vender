@@ -1,5 +1,5 @@
-// +build !windows
-// +build !plan9
+//go:build !windows && !plan9
+// +build !windows,!plan9
 
 package tty
 
@@ -7,8 +7,6 @@ import (
 	"bufio"
 	"os"
 	"os/signal"
-	"syscall"
-	"unsafe"
 
 	"golang.org/x/sys/unix"
 )
@@ -17,54 +15,42 @@ type TTY struct {
 	in      *os.File
 	bin     *bufio.Reader
 	out     *os.File
-	termios syscall.Termios
-	ws      chan WINSIZE
+	termios unix.Termios
 	ss      chan os.Signal
 }
 
-func open() (*TTY, error) {
+func open(path string) (*TTY, error) {
 	tty := new(TTY)
 
-	in, err := os.Open("/dev/tty")
+	in, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	tty.in = in
 	tty.bin = bufio.NewReader(in)
 
-	out, err := os.OpenFile("/dev/tty", syscall.O_WRONLY, 0)
+	out, err := os.OpenFile(path, unix.O_WRONLY, 0)
 	if err != nil {
 		return nil, err
 	}
 	tty.out = out
 
-	if _, _, err := syscall.Syscall6(syscall.SYS_IOCTL, uintptr(tty.in.Fd()), ioctlReadTermios, uintptr(unsafe.Pointer(&tty.termios)), 0, 0, 0); err != 0 {
+	termios, err := unix.IoctlGetTermios(int(tty.in.Fd()), ioctlReadTermios)
+	if err != nil {
 		return nil, err
 	}
-	newios := tty.termios
-	newios.Iflag &^= syscall.ISTRIP | syscall.INLCR | syscall.ICRNL | syscall.IGNCR | syscall.IXON | syscall.IXOFF
-	newios.Lflag &^= syscall.ECHO | syscall.ICANON /*| syscall.ISIG*/
-	if _, _, err := syscall.Syscall6(syscall.SYS_IOCTL, uintptr(tty.in.Fd()), ioctlWriteTermios, uintptr(unsafe.Pointer(&newios)), 0, 0, 0); err != 0 {
+	tty.termios = *termios
+
+	termios.Iflag &^= unix.ISTRIP | unix.INLCR | unix.ICRNL | unix.IGNCR | unix.IXOFF
+	termios.Lflag &^= unix.ECHO | unix.ICANON /*| unix.ISIG*/
+	termios.Cc[unix.VMIN] = 1
+	termios.Cc[unix.VTIME] = 0
+	if err := unix.IoctlSetTermios(int(tty.in.Fd()), ioctlWriteTermios, termios); err != nil {
 		return nil, err
 	}
 
-	tty.ws = make(chan WINSIZE)
 	tty.ss = make(chan os.Signal, 1)
-	signal.Notify(tty.ss, syscall.SIGWINCH)
-	go func() {
-		for sig := range tty.ss {
-			switch sig {
-			case syscall.SIGWINCH:
-				if w, h, err := tty.size(); err == nil {
-					tty.ws <- WINSIZE{
-						W: w,
-						H: h,
-					}
-				}
-			default:
-			}
-		}
-	}()
+
 	return tty, nil
 }
 
@@ -78,18 +64,22 @@ func (tty *TTY) readRune() (rune, error) {
 }
 
 func (tty *TTY) close() error {
+	signal.Stop(tty.ss)
 	close(tty.ss)
-	close(tty.ws)
-	_, _, err := syscall.Syscall6(syscall.SYS_IOCTL, uintptr(tty.in.Fd()), ioctlWriteTermios, uintptr(unsafe.Pointer(&tty.termios)), 0, 0, 0)
-	return err
+	return unix.IoctlSetTermios(int(tty.in.Fd()), ioctlWriteTermios, &tty.termios)
 }
 
 func (tty *TTY) size() (int, int, error) {
-	var dim [4]uint16
-	if _, _, err := syscall.Syscall6(syscall.SYS_IOCTL, uintptr(tty.out.Fd()), uintptr(syscall.TIOCGWINSZ), uintptr(unsafe.Pointer(&dim)), 0, 0, 0); err != 0 {
-		return -1, -1, err
+	x, y, _, _, err := tty.sizePixel()
+	return x, y, err
+}
+
+func (tty *TTY) sizePixel() (int, int, int, int, error) {
+	ws, err := unix.IoctlGetWinsize(int(tty.out.Fd()), unix.TIOCGWINSZ)
+	if err != nil {
+		return -1, -1, -1, -1, err
 	}
-	return int(dim[1]), int(dim[0]), nil
+	return int(ws.Row), int(ws.Col), int(ws.Xpixel), int(ws.Ypixel), nil
 }
 
 func (tty *TTY) input() *os.File {
@@ -105,6 +95,7 @@ func (tty *TTY) raw() (func() error, error) {
 	if err != nil {
 		return nil, err
 	}
+	backup := *termios
 
 	termios.Iflag &^= unix.IGNBRK | unix.BRKINT | unix.PARMRK | unix.ISTRIP | unix.INLCR | unix.IGNCR | unix.ICRNL | unix.IXON
 	termios.Oflag &^= unix.OPOST
@@ -118,13 +109,35 @@ func (tty *TTY) raw() (func() error, error) {
 	}
 
 	return func() error {
-		if err := unix.IoctlSetTermios(int(tty.in.Fd()), ioctlWriteTermios, termios); err != nil {
+		if err := unix.IoctlSetTermios(int(tty.in.Fd()), ioctlWriteTermios, &backup); err != nil {
 			return err
 		}
 		return nil
 	}, nil
 }
 
-func (tty *TTY) sigwinch() chan WINSIZE {
-	return tty.ws
+func (tty *TTY) sigwinch() <-chan WINSIZE {
+	signal.Notify(tty.ss, unix.SIGWINCH)
+
+	ws := make(chan WINSIZE)
+	go func() {
+		defer close(ws)
+		for sig := range tty.ss {
+			if sig != unix.SIGWINCH {
+				continue
+			}
+
+			w, h, err := tty.size()
+			if err != nil {
+				continue
+			}
+			// send but do not block for it
+			select {
+			case ws <- WINSIZE{W: w, H: h}:
+			default:
+			}
+
+		}
+	}()
+	return ws
 }
