@@ -12,6 +12,7 @@ import (
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/internal/watchdog"
 
 	tele_api "github.com/AlexTransit/vender/tele"
 )
@@ -92,6 +93,7 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 	case StateBoot:
 		ui.g.Tele.RoboSendState(tele_api.State_Boot)
 		ui.g.ShowPicture(state.PictureBoot)
+		watchdog.WatchDogEnable()
 
 		onBootScript := ui.g.Config.Engine.OnBoot
 		if types.FirstInit() {
@@ -110,6 +112,7 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 		return StateFrontBegin
 
 	case StateBroken:
+		watchdog.WatchDogDisable()
 		types.InitRequared()
 		ui.g.Log.Infof("state=broken")
 		ui.g.ShowPicture(state.PictureBroken)
@@ -151,6 +154,7 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 	case StateFrontBegin:
 		ui.inputBuf = ui.inputBuf[:0]
 		ui.broken = false
+		watchdog.WatchDogEnable()
 		return ui.onFrontBegin(ctx)
 
 	case StateFrontSelect:
@@ -173,6 +177,7 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 		return ui.onFrontLock()
 
 	case StateServiceBegin:
+		watchdog.WatchDogDisable()
 		return ui.onServiceBegin(ctx)
 	case StateServiceMenu:
 		return ui.onServiceMenu()
