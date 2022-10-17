@@ -26,6 +26,8 @@ func (devEspr *DeviceEspresso) init(ctx context.Context) error {
 	devEspr.Generic.Init(ctx, 0xe8, "espresso", proto2)
 
 	g.Engine.Register(devEspr.name+".grind", devEspr.Generic.WithRestart(devEspr.NewGrind()))
+	g.Engine.Register(devEspr.name+".grindNoWait", devEspr.GrindNoWait())
+	g.Engine.Register(devEspr.name+".waitDone", devEspr.WaitDone())
 	g.Engine.Register(devEspr.name+".press", devEspr.NewPress())
 	g.Engine.Register(devEspr.name+".dispose", devEspr.Generic.WithRestart(devEspr.NewRelease()))
 	g.Engine.Register(devEspr.name+".heat_on", devEspr.NewHeat(true))
@@ -41,6 +43,19 @@ func (devEspr *DeviceEspresso) NewGrind() engine.Doer {
 		Append(devEspr.Generic.NewWaitReady(tag)).
 		Append(devEspr.Generic.NewAction(tag, 0x01)).
 		// TODO expect delay like in cup dispense, ignore immediate error, retry
+		Append(devEspr.Generic.NewWaitDone(tag, devEspr.timeout))
+}
+
+func (devEspr *DeviceEspresso) GrindNoWait() engine.Doer {
+	tag := devEspr.name + ".grindNoWait"
+	return engine.NewSeq(tag).
+		Append(devEspr.Generic.NewAction(tag, 0x01))
+}
+
+func (devEspr *DeviceEspresso) WaitDone() engine.Doer {
+	tag := devEspr.name + ".waitDone"
+	return engine.NewSeq(tag).
+		Append(devEspr.Generic.NewWaitReady(tag)).
 		Append(devEspr.Generic.NewWaitDone(tag, devEspr.timeout))
 }
 
