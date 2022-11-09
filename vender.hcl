@@ -236,6 +236,8 @@ ui {
     pic_pay_reject   = "/path/bank-pay-reject"
 
     reset_sec = 180
+
+    light_sheduler = "(* 8:00-22:00) (1-2 10:30-19:40) (3 00:01-00:01)" 
   }
 }
 

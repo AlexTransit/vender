@@ -13,11 +13,11 @@ type Config struct { //nolint:maligned
 		MsgWait        string `hcl:"msg_wait"`
 		MsgWaterTemp   string `hcl:"msg_water_temp"`
 
-		MsgMenuCodeEmpty            string `hcl:"msg_menu_code_empty"`
-		MsgMenuCodeInvalid          string `hcl:"msg_menu_code_invalid"`
-		MsgMenuInsufficientCredit   string `hcl:"msg_menu_insufficient_credit_l1"`
+		MsgMenuCodeEmpty          string `hcl:"msg_menu_code_empty"`
+		MsgMenuCodeInvalid        string `hcl:"msg_menu_code_invalid"`
+		MsgMenuInsufficientCredit string `hcl:"msg_menu_insufficient_credit_l1"`
 		// MsgMenuInsufficientCreditL2 string `hcl:"msg_menu_insufficient_credit_l2"`
-		MsgMenuNotAvailable         string `hcl:"msg_menu_not_available"`
+		MsgMenuNotAvailable string `hcl:"msg_menu_not_available"`
 
 		MsgCream   string `hcl:"msg_cream"`
 		MsgSugar   string `hcl:"msg_sugar"`
@@ -41,6 +41,8 @@ type Config struct { //nolint:maligned
 		PicBroken       string `hcl:"pic_broken"`
 		PicQRPayError   string `hcl:"pic_QR_pay_error"`
 		PicPayReject    string `hcl:"pic_pay_reject"`
+
+		LightShedule string `hcl:"light_sheduler"`
 	}
 
 	Service struct {
