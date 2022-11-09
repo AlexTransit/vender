@@ -32,5 +32,5 @@ func WatchDogDisable() {
 
 func WatchDogSetTics(tics int) {
 	wdTics = strconv.Itoa(tics)
-	types.Log.Infof("watchdog set count:%d",tics)
+	types.Log.Infof("watchdog set count:%d", tics)
 }

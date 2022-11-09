@@ -145,7 +145,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 				types.UI.FrontResult.QRPaymenID = im.ShowQR.DataStr
 				types.UI.FrontResult.QRPayAmount = uint32(im.ShowQR.DataInt)
 				g.ShowQR(im.ShowQR.QrText)
-				l1 := fmt.Sprintf(g.Config.UI.Front.MsgRemotePay+" "+ g.Config.UI.Front.MsgPrice, currency.Amount(im.ShowQR.DataInt).Format100I())
+				l1 := fmt.Sprintf(g.Config.UI.Front.MsgRemotePay+" "+g.Config.UI.Front.MsgPrice, currency.Amount(im.ShowQR.DataInt).Format100I())
 				g.Hardware.HD44780.Display.SetLines(l1, types.VMC.HW.Display.L2)
 			}
 		case tele_api.ShowQR_receipt:

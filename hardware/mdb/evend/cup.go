@@ -148,7 +148,7 @@ func (s *worktime) putWorkDuration(v *[]string) {
 }
 func caclDuration(sheduleTime string) time.Duration {
 	t, _ := time.Parse("15:04", sheduleTime)
-	return time.Duration(t.Hour()*int(time.Hour) + t.Minute()*int(time.Minute))
+	return time.Duration(float64(t.Hour()*60*60 + t.Minute()*60) * 1e9)
 }
 
 func (s *DeviceCup) lightShouldWork() bool {
