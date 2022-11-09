@@ -17,12 +17,12 @@ const (
 )
 
 // Tele contract:
-// - Init() fails only with invalid config, network issues ignored
-// - Transaction/Error/Service/etc public API calls block at most for disk write
-//   network may be slow or absent, messages will be delivered in background
-// - Close() will block until all messages are delivered
-// - Telemetry/Response messages delivered at least once
-// - Status messages may be lost
+//   - Init() fails only with invalid config, network issues ignored
+//   - Transaction/Error/Service/etc public API calls block at most for disk write
+//     network may be slow or absent, messages will be delivered in background
+//   - Close() will block until all messages are delivered
+//   - Telemetry/Response messages delivered at least once
+//   - Status messages may be lost
 type tele struct { //nolint:maligned
 	config       tele_config.Config
 	log          *log2.Log

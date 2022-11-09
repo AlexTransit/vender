@@ -1,10 +1,10 @@
 // Package money provides high-level interaction with money devices.
 // Overview:
-// - head->money: enable accepting coins and bills
-//   inits required devices, starts polling
-// - (parsed device status)
-//   money->ui: X money inserted
-// - head->money: (ready to serve product) secure transaction, release change
+//   - head->money: enable accepting coins and bills
+//     inits required devices, starts polling
+//   - (parsed device status)
+//     money->ui: X money inserted
+//   - head->money: (ready to serve product) secure transaction, release change
 package money
 
 import (
