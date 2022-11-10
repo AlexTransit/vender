@@ -136,6 +136,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 			}
 
 			ui.g.ClientBegin()
+			_ = ui.g.Engine.ExecList(ctx, "water-temp", []string{"evend.cup.light_on"})
 			switch e.Input.Key {
 			case input.EvendKeyCreamLess, input.EvendKeyCreamMore, input.EvendKeySugarLess, input.EvendKeySugarMore:
 				// could skip state machine transition and just State=StateFrontTune; goto refresh
