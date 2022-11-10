@@ -48,9 +48,26 @@ func (devCup *DeviceCup) init(ctx context.Context) error {
 	devCup.d = g.Engine
 	// doDispense := devCup.Generic.WithRestart(devCup.NewDispenseProper())
 	g.Engine.Register(devCup.name+".dispense", devCup.WithRestart(devCup.NewDispenseProper()))
-	g.Engine.Register(devCup.name+".light_on", devCup.NewLight(true))
 	g.Engine.Register(devCup.name+".light_on_schedule", devCup.LightOnSchedule(ctx))
-	g.Engine.Register(devCup.name+".light_off", devCup.NewLight(false))
+	// g.Engine.Register(devCup.name+".light_on", devCup.NewLight(true))
+	g.Engine.Register(devCup.name+".light_on",
+		engine.Func0{F: func() error {
+			if devCup.Light {
+				return nil
+			}
+			err := devCup.d.Exec(ctx, devCup.NewLight(true))
+			return err
+		}})
+	// g.Engine.Register(devCup.name+".light_off", devCup.NewLight(false))
+	g.Engine.Register(devCup.name+".light_off",
+		engine.Func0{F: func() error {
+			if !devCup.Light {
+				return nil
+			}
+			err := devCup.d.Exec(ctx, devCup.NewLight(false))
+			return err
+		}})
+
 	g.Engine.Register(devCup.name+".ensure", devCup.NewEnsure())
 
 	err := devCup.Generic.FIXME_initIO(ctx)
@@ -94,7 +111,6 @@ func (devCup *DeviceCup) NewLight(v bool) engine.Doer {
 	return engine.NewSeq(tag).
 		Append(devCup.NewAction(tag, arg)).
 		Append(engine.Func0{F: func() error { devCup.Light = v; types.SetLight(v); return nil }})
-
 }
 
 func (devCup *DeviceCup) NewEnsure() engine.Doer {
@@ -147,8 +163,11 @@ func (s *worktime) putWorkDuration(v *[]string) {
 	s.EndOfWork = caclDuration((*v)[4])
 }
 func caclDuration(sheduleTime string) time.Duration {
-	t, _ := time.Parse("15:04", sheduleTime)
-	return time.Duration(float64(t.Hour()*60*60 + t.Minute()*60) * 1e9)
+	t, err := time.Parse("2006010215:04", "00010101"+sheduleTime)
+	if err != nil {
+		return 0
+	}
+	return t.Sub(time.Date(1, 1, 1, 00, 00, 00, 0, time.UTC))
 }
 
 func (s *DeviceCup) lightShouldWork() bool {

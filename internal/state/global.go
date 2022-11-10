@@ -124,7 +124,8 @@ func (g *Global) VmcStop(ctx context.Context) {
 	os.Exit(1)
 }
 
-func (g *Global) ClientBegin() {
+func (g *Global) ClientBegin(ctx context.Context) {
+	_ = g.Engine.ExecList(ctx, "client-light", []string{"evend.cup.light_on"})
 	g.ShowPicture(PictureClient)
 	types.VMC.Client.Prepare = true
 	if !types.VMC.Lock {
@@ -136,7 +137,8 @@ func (g *Global) ClientBegin() {
 	g.Tele.RoboSendState(tele_api.State_Client)
 }
 
-func (g *Global) ClientEnd() {
+func (g *Global) ClientEnd(ctx context.Context) {
+	_ = g.Engine.ExecList(ctx, "client-light", []string{"evend.cup.light_off"})
 	types.VMC.EvendKeyboardInput(true)
 	types.VMC.Client.Prepare = false
 	if types.VMC.Lock {
