@@ -67,7 +67,7 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 	alive.Add(2)
 	if billmax != 0 {
 		go ms.bill.Run(ctx, alive, func(pi money.PollItem) bool {
-			g.ClientBegin()
+			g.ClientBegin(ctx)
 			switch pi.Status {
 			case money.StatusEscrow:
 				if ms.bill.EscrowAmount() == 0 {
@@ -131,7 +131,7 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 			})
 
 		case money.StatusCredit:
-			g.ClientBegin()
+			g.ClientBegin(ctx)
 			if pi.DataCashbox {
 				if err := ms.coinCashbox.Add(pi.DataNominal, uint(pi.DataCount)); err != nil {
 					g.Error(errors.Annotatef(err, "%s cashbox.Add n=%v c=%d", tag, pi.DataNominal, pi.DataCount))

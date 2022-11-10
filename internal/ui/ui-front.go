@@ -67,12 +67,12 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 			return StateBroken
 		}
 	}
-
+	
+	ui.g.ClientEnd(ctx)
 	if errs := ui.g.Engine.ExecList(ctx, "on_front_begin", ui.g.Config.Engine.OnFrontBegin); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_front_begin"))
 		return StateBroken
 	}
-	ui.g.ClientEnd()
 
 	var err error
 	ui.FrontMaxPrice, err = menuMaxPrice()
@@ -135,8 +135,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				return StateFrontEnd
 			}
 
-			ui.g.ClientBegin()
-			_ = ui.g.Engine.ExecList(ctx, "water-temp", []string{"evend.cup.light_on"})
+			ui.g.ClientBegin(ctx)
 			switch e.Input.Key {
 			case input.EvendKeyCreamLess, input.EvendKeyCreamMore, input.EvendKeySugarLess, input.EvendKeySugarMore:
 				// could skip state machine transition and just State=StateFrontTune; goto refresh

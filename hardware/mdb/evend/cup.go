@@ -48,9 +48,26 @@ func (devCup *DeviceCup) init(ctx context.Context) error {
 	devCup.d = g.Engine
 	// doDispense := devCup.Generic.WithRestart(devCup.NewDispenseProper())
 	g.Engine.Register(devCup.name+".dispense", devCup.WithRestart(devCup.NewDispenseProper()))
-	g.Engine.Register(devCup.name+".light_on", devCup.NewLight(true))
 	g.Engine.Register(devCup.name+".light_on_schedule", devCup.LightOnSchedule(ctx))
-	g.Engine.Register(devCup.name+".light_off", devCup.NewLight(false))
+	// g.Engine.Register(devCup.name+".light_on", devCup.NewLight(true))
+	g.Engine.Register(devCup.name+".light_on",
+		engine.Func0{F: func() error {
+			if devCup.Light {
+				return nil
+			}
+			err := devCup.d.Exec(ctx, devCup.NewLight(true))
+			return err
+		}})
+	// g.Engine.Register(devCup.name+".light_off", devCup.NewLight(false))
+	g.Engine.Register(devCup.name+".light_off",
+		engine.Func0{F: func() error {
+			if !devCup.Light {
+				return nil
+			}
+			err := devCup.d.Exec(ctx, devCup.NewLight(false))
+			return err
+		}})
+
 	g.Engine.Register(devCup.name+".ensure", devCup.NewEnsure())
 
 	err := devCup.Generic.FIXME_initIO(ctx)
