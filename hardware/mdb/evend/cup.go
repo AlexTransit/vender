@@ -11,7 +11,6 @@ import (
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
-	"github.com/AlexTransit/vender/internal/types"
 	"github.com/juju/errors"
 )
 
@@ -48,23 +47,18 @@ func (devCup *DeviceCup) init(ctx context.Context) error {
 	devCup.d = g.Engine
 	// doDispense := devCup.Generic.WithRestart(devCup.NewDispenseProper())
 	g.Engine.Register(devCup.name+".dispense", devCup.WithRestart(devCup.NewDispenseProper()))
-	g.Engine.Register(devCup.name+".light_on_schedule", devCup.LightOnSchedule(ctx))
-	// g.Engine.Register(devCup.name+".light_on", devCup.NewLight(true))
-	g.Engine.Register(devCup.name+".light_on",
+	g.Engine.Register(devCup.name+".light_on", devCup.DevLight(ctx, true))
+	g.Engine.Register(devCup.name+".light_off", devCup.DevLight(ctx, false))
+	// g.Engine.Register(devCup.name+".light_on_schedule", devCup.LightOnSchedule(ctx))
+	g.Engine.Register(devCup.name+".light_on_schedule",
 		engine.Func0{F: func() error {
 			if devCup.Light {
 				return nil
 			}
-			err := devCup.d.Exec(ctx, devCup.NewLight(true))
-			return err
-		}})
-	// g.Engine.Register(devCup.name+".light_off", devCup.NewLight(false))
-	g.Engine.Register(devCup.name+".light_off",
-		engine.Func0{F: func() error {
-			if !devCup.Light {
+			if !devCup.lightShouldWork() {
 				return nil
 			}
-			err := devCup.d.Exec(ctx, devCup.NewLight(false))
+			err := devCup.d.Exec(ctx, devCup.DevLight(ctx, true))
 			return err
 		}})
 
@@ -89,28 +83,21 @@ func (devCup *DeviceCup) NewDispense() engine.Doer {
 	// Append(devCup.NewWaitDone(tag, devCup.dispenseTimeout))
 }
 
-func (devCup *DeviceCup) LightOnSchedule(ctx context.Context) engine.Doer {
+func (devCup *DeviceCup) DevLight(ctx context.Context, v bool) engine.Doer {
 	return engine.Func0{F: func() error {
-		if devCup.Light {
+		if devCup.Light == v {
 			return nil
 		}
-		if !devCup.lightShouldWork() {
-			return nil
+		devCup.Light = v
+		tag := fmt.Sprintf("%s.light:%t", devCup.name, v)
+		devCup.dev.Log.Infof(tag)
+		arg := byte(0x02)
+		if !v {
+			arg = 0x03
 		}
-		_ = devCup.d.Exec(ctx, devCup.NewLight(true))
-		return nil
+		err := devCup.d.Exec(ctx, devCup.NewAction(tag, arg))
+		return err
 	}}
-}
-
-func (devCup *DeviceCup) NewLight(v bool) engine.Doer {
-	tag := fmt.Sprintf("%s.light:%t", devCup.name, v)
-	arg := byte(0x02)
-	if !v {
-		arg = 0x03
-	}
-	return engine.NewSeq(tag).
-		Append(devCup.NewAction(tag, arg)).
-		Append(engine.Func0{F: func() error { devCup.Light = v; types.SetLight(v); return nil }})
 }
 
 func (devCup *DeviceCup) NewEnsure() engine.Doer {
