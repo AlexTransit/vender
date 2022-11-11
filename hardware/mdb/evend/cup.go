@@ -11,7 +11,6 @@ import (
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
-	"github.com/AlexTransit/vender/internal/types"
 	"github.com/juju/errors"
 )
 
@@ -48,23 +47,17 @@ func (devCup *DeviceCup) init(ctx context.Context) error {
 	devCup.d = g.Engine
 	// doDispense := devCup.Generic.WithRestart(devCup.NewDispenseProper())
 	g.Engine.Register(devCup.name+".dispense", devCup.WithRestart(devCup.NewDispenseProper()))
-	g.Engine.Register(devCup.name+".light_on_schedule", devCup.LightOnSchedule(ctx))
-	// g.Engine.Register(devCup.name+".light_on", devCup.NewLight(true))
-	g.Engine.Register(devCup.name+".light_on",
+	g.Engine.Register(devCup.name+".light_on", devCup.DevLight(ctx, true))
+	g.Engine.Register(devCup.name+".light_off", devCup.DevLight(ctx, false))
+	g.Engine.Register(devCup.name+".light_on_schedule",
 		engine.Func0{F: func() error {
 			if devCup.Light {
 				return nil
 			}
-			err := devCup.d.Exec(ctx, devCup.NewLight(true))
-			return err
-		}})
-	// g.Engine.Register(devCup.name+".light_off", devCup.NewLight(false))
-	g.Engine.Register(devCup.name+".light_off",
-		engine.Func0{F: func() error {
-			if !devCup.Light {
+			if !devCup.lightShouldWork() {
 				return nil
 			}
-			err := devCup.d.Exec(ctx, devCup.NewLight(false))
+			err := devCup.d.Exec(ctx, devCup.DevLight(ctx, true))
 			return err
 		}})
 
@@ -89,28 +82,21 @@ func (devCup *DeviceCup) NewDispense() engine.Doer {
 	// Append(devCup.NewWaitDone(tag, devCup.dispenseTimeout))
 }
 
-func (devCup *DeviceCup) LightOnSchedule(ctx context.Context) engine.Doer {
+func (devCup *DeviceCup) DevLight(ctx context.Context, v bool) engine.Doer {
 	return engine.Func0{F: func() error {
-		if devCup.Light {
+		if devCup.Light == v {
 			return nil
 		}
-		if !devCup.lightShouldWork() {
-			return nil
+		devCup.Light = v
+		tag := fmt.Sprintf("%s.light:%t", devCup.name, v)
+		devCup.dev.Log.Infof(tag)
+		arg := byte(0x02)
+		if !v {
+			arg = 0x03
 		}
-		_ = devCup.d.Exec(ctx, devCup.NewLight(true))
-		return nil
+		err := devCup.d.Exec(ctx, devCup.NewAction(tag, arg))
+		return err
 	}}
-}
-
-func (devCup *DeviceCup) NewLight(v bool) engine.Doer {
-	tag := fmt.Sprintf("%s.light:%t", devCup.name, v)
-	arg := byte(0x02)
-	if !v {
-		arg = 0x03
-	}
-	return engine.NewSeq(tag).
-		Append(devCup.NewAction(tag, arg)).
-		Append(engine.Func0{F: func() error { devCup.Light = v; types.SetLight(v); return nil }})
 }
 
 func (devCup *DeviceCup) NewEnsure() engine.Doer {
@@ -129,45 +115,42 @@ func (devCup *DeviceCup) NewEnsure() engine.Doer {
 // parts format
 // 1 - week number *=all days 0=saturday 1=monday
 // 2 - range days
-// 3 - begin way
-// 4 - end day
+// 3,4 - begin hours, minutes
+// 5,6 - end hours, minutes
 func (devCup *DeviceCup) initLightSheduler(sh string) {
-	wd := `([\d|\*])[-]?(\d)? (\d{1,2}:\d{1,2})-(\d{1,2}:\d{1,2})`
+	wd := `([0-6]|\*)[-]?([0-6])? ([01][0-9]|2[0-3]):([0-5][0-9])-([01][0-9]|2[0-3]):([0-5][0-9])`
 	cmd := regexp.MustCompile(wd)
 
 	parts := cmd.FindAllStringSubmatch(sh, 7)
+	if (sh != "") && (len(parts) == 0) {
+		devCup.dev.Log.Errorf("shedule string error: %s", sh)
+		return
+	}
 	for _, v := range parts {
 		devCup.dev.Log.Infof("add light shedule %v", v[0])
 		switch v[1] {
 		case "*":
 			for i := 0; i < 7; i++ {
-				devCup.lightShedule.weekDay[i].putWorkDuration(&v)
+				devCup.textTimeToDudation(i, v)
 			}
 		default:
 			w, _ := strconv.Atoi(v[1])
 			if v[2] == "" {
-				devCup.lightShedule.weekDay[w].putWorkDuration(&v)
+				devCup.textTimeToDudation(w, v)
 			} else {
 				e, _ := strconv.Atoi(v[2])
 				for i := w; i <= e; i++ {
-					devCup.lightShedule.weekDay[i].putWorkDuration(&v)
+					devCup.textTimeToDudation(i, v)
 				}
 			}
 		}
 	}
 
 }
-
-func (s *worktime) putWorkDuration(v *[]string) {
-	s.BeginOfWork = caclDuration((*v)[3])
-	s.EndOfWork = caclDuration((*v)[4])
-}
-func caclDuration(sheduleTime string) time.Duration {
-	t, err := time.Parse("2006010215:04", "00010101"+sheduleTime)
-	if err != nil {
-		return 0
-	}
-	return t.Sub(time.Date(1, 1, 1, 00, 00, 00, 0, time.UTC))
+func (s *DeviceCup) textTimeToDudation(week int, v []string) time.Duration {
+	h, _ := strconv.Atoi(v[3])
+	m, _ := strconv.Atoi(v[4])
+	return time.Hour*time.Duration(h) + time.Minute*time.Duration(m)
 }
 
 func (s *DeviceCup) lightShouldWork() bool {
