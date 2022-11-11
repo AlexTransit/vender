@@ -51,10 +51,11 @@ func (devCup *DeviceCup) init(ctx context.Context) error {
 	g.Engine.Register(devCup.name+".light_off", devCup.DevLight(ctx, false))
 	g.Engine.Register(devCup.name+".light_on_schedule",
 		engine.Func0{F: func() error {
-			if devCup.Light {
-				return nil
-			}
 			if !devCup.lightShouldWork() {
+				if devCup.Light {
+					err := devCup.d.Exec(ctx, devCup.DevLight(ctx, false))
+					return err
+				}
 				return nil
 			}
 			err := devCup.d.Exec(ctx, devCup.DevLight(ctx, true))
