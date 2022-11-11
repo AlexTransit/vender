@@ -138,7 +138,6 @@ func (g *Global) ClientBegin(ctx context.Context) {
 }
 
 func (g *Global) ClientEnd(ctx context.Context) {
-	_ = g.Engine.ExecList(ctx, "client-light", []string{"evend.cup.light_off"})
 	types.VMC.EvendKeyboardInput(true)
 	types.VMC.Client.Prepare = false
 	if types.VMC.Lock {

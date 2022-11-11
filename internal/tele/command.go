@@ -128,8 +128,8 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 				return false
 			}
 			t.reportExecutionStart()
-			types.UI.FrontResult.Sugar = tuneCook(im.MakeOrder.Sugar, ui.DefaultSugar, types.UI.FrontResult.Item.SugarMax)
-			types.UI.FrontResult.Cream = tuneCook(im.MakeOrder.Cream, ui.DefaultCream, types.UI.FrontResult.Item.CreamMax)
+			types.UI.FrontResult.Sugar = tuneCook(im.MakeOrder.Sugar, ui.DefaultSugar, ui.SugarMax())
+			types.UI.FrontResult.Cream = tuneCook(im.MakeOrder.Cream, ui.DefaultCream, ui.CreamMax())
 			t.OutMessage.Order.Amount = price
 			types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
 			t.RemCook(ctx)
