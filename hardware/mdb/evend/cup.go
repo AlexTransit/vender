@@ -132,27 +132,41 @@ func (devCup *DeviceCup) initLightSheduler(sh string) {
 		switch v[1] {
 		case "*":
 			for i := 0; i < 7; i++ {
-				devCup.textTimeToDudation(i, v)
+				devCup.writeShedule(i, v)
 			}
 		default:
 			w, _ := strconv.Atoi(v[1])
 			if v[2] == "" {
-				devCup.textTimeToDudation(w, v)
+				devCup.writeShedule(w, v)
 			} else {
 				e, _ := strconv.Atoi(v[2])
 				for i := w; i <= e; i++ {
-					devCup.textTimeToDudation(i, v)
+					devCup.writeShedule(i, v)
 				}
 			}
 		}
 	}
 
 }
-func (s *DeviceCup) textTimeToDudation(week int, v []string) time.Duration {
-	h, _ := strconv.Atoi(v[3])
-	m, _ := strconv.Atoi(v[4])
+func (s *DeviceCup) writeShedule(w int, v []string) {
+	s.lightShedule.weekDay[w].BeginOfWork = textTimeToDudation(v[3], v[4])
+	s.lightShedule.weekDay[w].EndOfWork = textTimeToDudation(v[5], v[6])
+}
+
+func textTimeToDudation(hours string, minutes string) time.Duration {
+	h, _ := strconv.Atoi(hours)
+	m, _ := strconv.Atoi(minutes)
 	return time.Hour*time.Duration(h) + time.Minute*time.Duration(m)
 }
+
+// func (s *DeviceCup) textTimeToDudation(week int, v []string) {
+// 	h, _ := strconv.Atoi(v[3])
+// 	m, _ := strconv.Atoi(v[4])
+// 	s.lightShedule.weekDay[week].BeginOfWork = time.Hour*time.Duration(h) + time.Minute*time.Duration(m)
+// 	h, _ = strconv.Atoi(v[5])
+// 	m, _ = strconv.Atoi(v[6])
+// 	s.lightShedule.weekDay[week].EndOfWork = time.Hour*time.Duration(h) + time.Minute*time.Duration(m)
+// }
 
 func (s *DeviceCup) lightShouldWork() bool {
 	t := time.Now()
