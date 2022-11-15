@@ -157,7 +157,7 @@ func (t *tele) checkCodePriceValid(menuCode *string, amount uint32) bool {
 		t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_overdraft
 		return false
 	}
-	if err := types.UI.FrontResult.Item.D.Validate(); err != nil {
+	if err := i.D.Validate(); err != nil {
 		t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_executionInaccessible
 		t.log.Infof("remote cook error: code not valid")
 		return false
