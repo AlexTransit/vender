@@ -110,27 +110,13 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 				t.OutMessage.Err.Message = "command remote cook, not set balance"
 				return false
 			}
-			var found bool
-			types.UI.FrontResult.Item, found = types.UI.Menu[im.MakeOrder.MenuCode]
-			if !found {
-				t.log.Infof("remote cook error: code not found")
-				t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_executionInaccessible
-				return false
-			}
-			price := uint32(types.UI.FrontResult.Item.Price)
-			if price > im.MakeOrder.Amount {
-				t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_overdraft
-				return false
-			}
-			if err := types.UI.FrontResult.Item.D.Validate(); err != nil {
-				t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_executionInaccessible
-				t.log.Infof("remote cook error: code not valid")
+			if !t.checkCodePriceValid(&im.MakeOrder.MenuCode, im.MakeOrder.Amount) {
 				return false
 			}
 			t.reportExecutionStart()
 			types.UI.FrontResult.Sugar = tuneCook(im.MakeOrder.Sugar, ui.DefaultSugar, ui.SugarMax())
 			types.UI.FrontResult.Cream = tuneCook(im.MakeOrder.Cream, ui.DefaultCream, ui.CreamMax())
-			t.OutMessage.Order.Amount = price
+			t.OutMessage.Order.Amount = uint32(types.UI.FrontResult.Item.Price)
 			types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
 			t.RemCook(ctx)
 			g.LockCh <- struct{}{}
@@ -156,6 +142,27 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 			g.ShowPicture(state.PictureQRPayError)
 		}
 	}
+	return true
+}
+
+func (t *tele) checkCodePriceValid(menuCode *string, amount uint32) bool {
+	i, found := types.UI.Menu[*menuCode]
+	if !found {
+		t.log.Infof("remote cook error: code not found")
+		t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_executionInaccessible
+		types.UI.FrontResult.Item = types.MenuItemType{}
+		return false
+	}
+	if amount < uint32(i.Price) {
+		t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_overdraft
+		return false
+	}
+	if err := types.UI.FrontResult.Item.D.Validate(); err != nil {
+		t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_executionInaccessible
+		t.log.Infof("remote cook error: code not valid")
+		return false
+	}
+	types.UI.FrontResult.Item = i
 	return true
 }
 
