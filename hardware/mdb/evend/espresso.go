@@ -25,11 +25,11 @@ func (devEspr *DeviceEspresso) init(ctx context.Context) error {
 	devEspr.timeout = helpers.IntSecondDefault(espressoConfig.TimeoutSec, DefaultEspressoTimeout)
 	devEspr.Generic.Init(ctx, 0xe8, "espresso", proto2)
 
-	g.Engine.Register(devEspr.name+".grind", devEspr.Generic.WithRestart(devEspr.NewGrind()))
+	g.Engine.Register(devEspr.name+".grind", devEspr.NewGrind())
 	g.Engine.Register(devEspr.name+".grindNoWait", devEspr.GrindNoWait())
 	g.Engine.Register(devEspr.name+".waitDone", devEspr.WaitDone())
 	g.Engine.Register(devEspr.name+".press", devEspr.NewPress())
-	g.Engine.Register(devEspr.name+".dispose", devEspr.Generic.WithRestart(devEspr.NewRelease()))
+	g.Engine.Register(devEspr.name+".dispose", devEspr.NewRelease())
 	g.Engine.Register(devEspr.name+".heat_on", devEspr.NewHeat(true))
 	g.Engine.Register(devEspr.name+".heat_off", devEspr.NewHeat(false))
 
