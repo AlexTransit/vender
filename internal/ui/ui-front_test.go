@@ -165,7 +165,7 @@ ui {
 // This test ensures particular behavior of currently operated coffee machine tuning.
 func TestScaleTuneRate(t *testing.T) {
 	t.Run("cream", func(t *testing.T) {
-		f := func(v uint8) float32 { return ui.ScaleTuneRate(v, ui.MaxCream, ui.DefaultCream) }
+		f := func(v uint8) float32 { return ui.ScaleTuneRate(&v, ui.MaxCream, ui.DefaultCream) }
 		cases := []float32{0, 0.25, 0.5, 0.75, 1, 1.25, 1.5}
 		for input, expect := range cases {
 			assert.Equal(t, expect, f(uint8(input)))
@@ -175,7 +175,7 @@ func TestScaleTuneRate(t *testing.T) {
 		}
 	})
 	t.Run("sugar", func(t *testing.T) {
-		f := func(v uint8) float32 { return ui.ScaleTuneRate(v, ui.MaxSugar, ui.DefaultSugar) }
+		f := func(v uint8) float32 { return ui.ScaleTuneRate(&v, ui.MaxSugar, ui.DefaultSugar) }
 		cases := []float32{0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2}
 		for input, expect := range cases {
 			assert.Equal(t, expect, f(uint8(input)))
