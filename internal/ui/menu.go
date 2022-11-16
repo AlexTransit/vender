@@ -62,7 +62,7 @@ func Cook(ctx context.Context) error {
 	// defer state.VmcUnLock(ctx)
 
 	itemCtx := money.SetCurrentPrice(ctx, types.UI.FrontResult.Item.Price)
-	if tuneCream := ScaleTuneRate(types.UI.FrontResult.Cream, CreamMax(), DefaultCream); tuneCream != 1 {
+	if tuneCream := ScaleTuneRate(&types.UI.FrontResult.Cream, CreamMax(), DefaultCream); tuneCream != 1 {
 		const name = "cream"
 		var err error
 		g.Log.Debugf("ui-front tuning stock=%s tune=%v", name, tuneCream)
@@ -70,7 +70,7 @@ func Cook(ctx context.Context) error {
 			g.Log.Errorf("ui-front tuning stock=%s err=%v", name, err)
 		}
 	}
-	if tuneSugar := ScaleTuneRate(types.UI.FrontResult.Sugar, SugarMax(), DefaultSugar); tuneSugar != 1 {
+	if tuneSugar := ScaleTuneRate(&types.UI.FrontResult.Sugar, SugarMax(), DefaultSugar); tuneSugar != 1 {
 		const name = "sugar"
 		var err error
 		g.Log.Debugf("ui-front tuning stock=%s tune=%v", name, tuneSugar)

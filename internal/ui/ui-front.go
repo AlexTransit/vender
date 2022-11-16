@@ -67,7 +67,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 			return StateBroken
 		}
 	}
-	
+
 	ui.g.ClientEnd(ctx)
 	if errs := ui.g.Engine.ExecList(ctx, "on_front_begin", ui.g.Config.Engine.OnFrontBegin); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_front_begin"))
@@ -352,22 +352,14 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 	uiConfig := &ui.g.Config.UI
 
 	selected := types.UI.FrontResult.Item.String()
-	rm := CreateOrderMessageAndFillSelected()
-	if moneysys.GetGiftCredit() == 0 {
-		// teletx.PaymentMethod = tele_api.PaymentMethod_Cash
-		rm.Order.PaymentMethod = tele_api.PaymentMethod_Cash
-	} else {
-		// teletx.PaymentMethod = tele_api.PaymentMethod_Gift
-		rm.Order.PaymentMethod = tele_api.PaymentMethod_Gift
-	}
-
+	
 	ui.g.Log.Debugf("ui-front selected=%s begin", selected)
 	if err := moneysys.WithdrawPrepare(ctx, types.UI.FrontResult.Item.Price); err != nil {
 		ui.g.Log.Errorf("ui-front CRITICAL error while return change")
 	}
 	err := Cook(ctx)
+	rm := CreateOrderMessageAndFillSelected()
 	defer ui.g.Tele.RoboSend(&rm)
-	// rm.Stock.Stocks
 
 	if err == nil { // success path
 		rm.Order.OrderStatus = tele_api.OrderStatus_complete
@@ -389,10 +381,11 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 func CreateOrderMessageAndFillSelected() tele_api.FromRoboMessage {
 	rm := tele_api.FromRoboMessage{
 		Order: &tele_api.Order{
-			MenuCode: types.UI.FrontResult.Item.Code,
-			Cream:    types.TuneValueToByte(types.UI.FrontResult.Cream, DefaultCream),
-			Sugar:    types.TuneValueToByte(types.UI.FrontResult.Sugar, DefaultSugar),
-			Amount:   uint32(types.UI.FrontResult.Item.Price),
+			MenuCode:             types.UI.FrontResult.Item.Code,
+			Cream:                types.TuneValueToByte(types.UI.FrontResult.Cream, DefaultCream),
+			Sugar:                types.TuneValueToByte(types.UI.FrontResult.Sugar, DefaultSugar),
+			Amount:               uint32(types.UI.FrontResult.Item.Price),
+			PaymentMethod:        tele_api.PaymentMethod_Cash,
 		},
 	}
 	return rm
@@ -459,21 +452,21 @@ func formatScale(value, min, max uint8, alphabet []byte) []byte {
 	return vicon[:]
 }
 
-func ScaleTuneRate(value, max, center uint8) float32 {
-	if value > max {
-		value = max
+func ScaleTuneRate(value *uint8, max uint8, center uint8) float32 {
+	if *value > max {
+		*value = max
 	}
 	switch {
-	case value == center: // most common path
+	case *value == center: // most common path
 		return 1
-	case value == 0:
+	case *value == 0:
 		return 0
 	}
-	if value > 0 && value < center {
-		return 1 - (0.25 * float32(center-value))
+	if *value > 0 && *value < center {
+		return 1 - (0.25 * float32(center-*value))
 	}
-	if value > center && value <= max {
-		return 1 + (0.25 * float32(value-center))
+	if *value > center && *value <= max {
+		return 1 + (0.25 * float32(*value-center))
 	}
 	panic("code error")
 }
