@@ -36,6 +36,7 @@ type Alias struct {
 }
 
 type MenuItem struct {
+	Disabled  bool   `hcl:"disabled"`
 	Code      string `hcl:"code,key"`
 	Name      string `hcl:"name"`
 	XXX_Price int    `hcl:"price"` // use scaled `Price`, this is for decoding config only

@@ -9,6 +9,7 @@ import (
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
+
 	// tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
 )
@@ -26,31 +27,47 @@ func (mi *MenuItem) String() string {
 	return fmt.Sprintf("menu code=%s price=%d(raw) name='%s'", mi.Code, mi.Price, mi.Name)
 }
 
+// меню может меняться в нескольких конфигах.
+// disables
 func FillMenu(ctx context.Context) {
 	config := state.GetGlobal(ctx).Config
 
 	for _, x := range config.Engine.Menu.Items {
-		types.UI.Menu[x.Code] = types.MenuItemType{
-			Name:     x.Name,
-			D:        x.Doer,
-			Price:    x.Price,
-			Code:     x.Code,
-			CreamMax: uint8(x.CreamMax),
-			SugarMax: uint8(x.SugarMax),
+		if x.Disabled || types.UI.Menu[x.Code].Disabled {
+			types.UI.Menu[x.Code] = types.MenuItemType{
+				Disabled: true,
+				Code:     x.Code,
+			}
+			continue
+		}
+		ic := types.UI.Menu[x.Code]
+		if x.Name != "" {
+			ic.Name = x.Name
+		}
+		if x.Doer.String() != "" {
+			ic.D = x.Doer
+		}
+		if x.Price != 0 {
+			ic.Price = x.Price
+		}
+		if x.CreamMax != 0 {
+			ic.CreamMax = uint8(x.CreamMax)
+		}
+		if x.SugarMax != 0 {
+			ic.SugarMax = uint8(x.SugarMax)
+		}
+		ic.Code = x.Code
+		types.UI.Menu[x.Code] = ic
+	}
+	for i, x := range types.UI.Menu {
+		if x.Disabled {
+			delete(types.UI.Menu, i)
 		}
 	}
 }
-func Init(ctx context.Context) error {
-	config := state.GetGlobal(ctx).Config
 
-	for _, x := range config.Engine.Menu.Items {
-		types.UI.Menu[x.Code] = types.MenuItemType{
-			Name:  x.Name,
-			D:     x.Doer,
-			Price: x.Price,
-			Code:  x.Code,
-		}
-	}
+func Init(ctx context.Context) error {
+	FillMenu(ctx)
 	return nil
 }
 
@@ -118,4 +135,22 @@ func SugarMax() uint8 {
 		return MaxSugar
 	}
 	return types.UI.FrontResult.Item.SugarMax
+}
+
+func menuMaxPrice() (currency.Amount, error) {
+	max := currency.Amount(0)
+	empty := true
+	for _, item := range types.UI.Menu {
+		valErr := item.D.Validate()
+		if valErr == nil {
+			empty = false
+			if item.Price > max {
+				max = item.Price
+			}
+		}
+	}
+	if empty {
+		return 0, errors.Errorf("menu len=%d no valid items", len(types.UI.Menu))
+	}
+	return max, nil
 }
