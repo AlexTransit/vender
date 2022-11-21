@@ -70,6 +70,7 @@ func (mit *MenuItemType) String() string {
 }
 
 type MenuItemType struct {
+	Disabled bool
 	Name     string
 	D        Doer
 	Price    currency.Amount

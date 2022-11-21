@@ -102,6 +102,9 @@ func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tel
 func (tm *transportMqtt) RoboConnected() bool { return tm.connected }
 
 func (tm *transportMqtt) CloseTele() {
+	if tm.m == nil{
+		return
+	}
 	tm.log.Infof("mqtt unsubscribe")
 	if token := tm.m.Unsubscribe(tm.topicCommand); token.Wait() && token.Error() != nil {
 		tm.log.Infof("mqtt unsubscribe error")

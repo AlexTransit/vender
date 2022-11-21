@@ -37,6 +37,9 @@ engine {
       creamMax = 4
       sugarMax = 4
     }
+    item "3" { disabled = true name = "example3" price = 1 scenario = "cup_drop add.water_hot(10) add.milk(10) cup_serve" creamMax = 4 sugarMax = 4}
+    item "3" { disabled = true }
+    item "1" { sugarMax = 6}
   }
 
   // first_init = ["release_cup"]

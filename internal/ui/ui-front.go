@@ -470,21 +470,3 @@ func ScaleTuneRate(value *uint8, max uint8, center uint8) float32 {
 	}
 	panic("code error")
 }
-
-func menuMaxPrice() (currency.Amount, error) {
-	max := currency.Amount(0)
-	empty := true
-	for _, item := range types.UI.Menu {
-		valErr := item.D.Validate()
-		if valErr == nil {
-			empty = false
-			if item.Price > max {
-				max = item.Price
-			}
-		}
-	}
-	if empty {
-		return 0, errors.Errorf("menu len=%d no valid items", len(types.UI.Menu))
-	}
-	return max, nil
-}

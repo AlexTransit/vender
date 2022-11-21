@@ -21,10 +21,9 @@ type Config struct {
 		Items []*MenuItem `hcl:"item"`
 	}
 	Profile struct {
-		Regexp      string `hcl:"regexp"`
-		MinUs       int    `hcl:"min_us"`
-		LogFormat   string `hcl:"log_format"`
-		StateScript string `hcl:"state_script"` // env ${data}, ${state} (StateBoot, StateBroken, BeginProcess, EndProcess )
+		Regexp    string `hcl:"regexp"`
+		MinUs     int    `hcl:"min_us"`
+		LogFormat string `hcl:"log_format"`
 	}
 }
 
@@ -36,6 +35,7 @@ type Alias struct {
 }
 
 type MenuItem struct {
+	Disabled  bool   `hcl:"disabled"`
 	Code      string `hcl:"code,key"`
 	Name      string `hcl:"name"`
 	XXX_Price int    `hcl:"price"` // use scaled `Price`, this is for decoding config only
@@ -47,7 +47,7 @@ type MenuItem struct {
 	Doer  engine.Doer     `hcl:"-"`
 }
 
-func (self *MenuItem) String() string { return fmt.Sprintf("menu.%s %s", self.Code, self.Name) }
+func (mi *MenuItem) String() string { return fmt.Sprintf("menu.%s %s", mi.Code, mi.Name) }
 
 type Inventory struct { //nolint:maligned
 	Persist     bool    `hcl:"persist"`
@@ -65,7 +65,7 @@ type Stock struct { //nolint:maligned
 	RegisterAdd string  `hcl:"register_add"`
 }
 
-func (self *Stock) String() string {
+func (s *Stock) String() string {
 	return fmt.Sprintf("inventory.%s #%d check=%t hw_rate=%f spend_rate=%f min=%f",
-		self.Name, self.Code, self.Check, self.HwRate, self.SpendRate, self.Min)
+		s.Name, s.Code, s.Check, s.HwRate, s.SpendRate, s.Min)
 }
