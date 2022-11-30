@@ -102,7 +102,7 @@ func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tel
 func (tm *transportMqtt) RoboConnected() bool { return tm.connected }
 
 func (tm *transportMqtt) CloseTele() {
-	if tm.m == nil{
+	if tm.m == nil {
 		return
 	}
 	tm.log.Infof("mqtt unsubscribe")
@@ -128,14 +128,18 @@ func (tm *transportMqtt) SendState(payload []byte) bool {
 }
 
 func (tm *transportMqtt) SendTelemetry(payload []byte) bool {
-	tm.publish2Telemetry(tm.topicTelemetry, 1, false, payload)
+	if tm.enabled {
+		tm.publish2Telemetry(tm.topicTelemetry, 1, false, payload)
+	}
 	return true
 }
 
 func (tm *transportMqtt) SendCommandResponse(topicSuffix string, payload []byte) bool {
-	topic := fmt.Sprintf("%s/%s", tm.topicPrefix, topicSuffix)
-	tm.log.Infof("mqtt publish command response to topic=%s", topic)
-	tm.publish2Telemetry(topic, 1, false, payload)
+	if tm.enabled {
+		topic := fmt.Sprintf("%s/%s", tm.topicPrefix, topicSuffix)
+		tm.log.Infof("mqtt publish command response to topic=%s", topic)
+		tm.publish2Telemetry(topic, 1, false, payload)
+	}
 	return true
 }
 func (tm *transportMqtt) SendFromRobot(payload []byte) {

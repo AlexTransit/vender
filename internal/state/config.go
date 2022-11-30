@@ -2,7 +2,6 @@ package state
 
 import (
 	"path/filepath"
-	// "sync"
 
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/hardware/hd44780"
@@ -165,5 +164,17 @@ func MustReadConfig(log *log2.Log, fs FullReader, names ...string) *Config {
 	if err != nil {
 		log.Fatal(errors.ErrorStack(err))
 	}
+	c.rewriteAliace()
 	return c
+}
+
+func (c *Config) rewriteAliace() {
+	m := make(map[string]engine_config.Alias)
+	for _, v := range c.Engine.Aliases {
+		m[v.Name] = v
+	}
+	c.Engine.Aliases = nil
+	for _, v := range m {
+		c.Engine.Aliases = append(c.Engine.Aliases, v)
+	}
 }
