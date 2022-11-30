@@ -17,6 +17,7 @@
             "args": ["-config","/home/vmc/config.hcl","vmc"],
             /*/
             "args": ["-config","/home/vmc/config.hcl","engine-cli"],
+            // "args": ["-config","/home/vmc/config.hcl1","engine-cli"],
             //*/
         }
     ]

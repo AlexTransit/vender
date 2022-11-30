@@ -352,7 +352,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 	uiConfig := &ui.g.Config.UI
 
 	selected := types.UI.FrontResult.Item.String()
-	
+
 	ui.g.Log.Debugf("ui-front selected=%s begin", selected)
 	if err := moneysys.WithdrawPrepare(ctx, types.UI.FrontResult.Item.Price); err != nil {
 		ui.g.Log.Errorf("ui-front CRITICAL error while return change")
@@ -381,11 +381,11 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 func CreateOrderMessageAndFillSelected() tele_api.FromRoboMessage {
 	rm := tele_api.FromRoboMessage{
 		Order: &tele_api.Order{
-			MenuCode:             types.UI.FrontResult.Item.Code,
-			Cream:                types.TuneValueToByte(types.UI.FrontResult.Cream, DefaultCream),
-			Sugar:                types.TuneValueToByte(types.UI.FrontResult.Sugar, DefaultSugar),
-			Amount:               uint32(types.UI.FrontResult.Item.Price),
-			PaymentMethod:        tele_api.PaymentMethod_Cash,
+			MenuCode:      types.UI.FrontResult.Item.Code,
+			Cream:         types.TuneValueToByte(types.UI.FrontResult.Cream, DefaultCream),
+			Sugar:         types.TuneValueToByte(types.UI.FrontResult.Sugar, DefaultSugar),
+			Amount:        uint32(types.UI.FrontResult.Item.Price),
+			PaymentMethod: tele_api.PaymentMethod_Cash,
 		},
 	}
 	return rm
