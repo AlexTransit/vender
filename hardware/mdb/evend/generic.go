@@ -27,7 +27,7 @@ const (
 	genericPollBusy    = 0x50
 
 	DefaultReadyTimeout = 5 * time.Second
-	DefaultResetDelay   = 2100 * time.Millisecond
+	DefaultResetDelay   = 210 * time.Millisecond
 )
 
 type DeviceErrorCode byte
