@@ -87,10 +87,6 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 		switch im.MakeOrder.OrderStatus {
 		case tele_api.OrderStatus_doSelected:
 			// make selected code. payment via QR, etc
-			if types.UI.FrontResult.QRPaymenID != im.MakeOrder.OwnerStr {
-				t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_orderError
-				return false
-			}
 			t.reportExecutionStart()
 			t.OutMessage.Order.Amount = im.MakeOrder.Amount
 			types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
