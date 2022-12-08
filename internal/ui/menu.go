@@ -44,7 +44,7 @@ func FillMenu(ctx context.Context) {
 		if x.Name != "" {
 			ic.Name = x.Name
 		}
-		if x.Doer.String() != "" {
+		if x.Scenario != "" {
 			ic.D = x.Doer
 		}
 		if x.Price != 0 {
