@@ -1,7 +1,8 @@
 package state
 
 import (
-	"io/ioutil"
+	// "io/ioutil"
+
 	"log"
 	"os"
 	"path/filepath"
@@ -50,15 +51,16 @@ func (ofr *OsFullReader) ReadAll(path string) ([]byte, error) {
 		log.Fatalf("config.ReadAll path=%s must Normalize()", path)
 	}
 
-	f, err := os.Open(path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
-		}
-		return nil, err
-	}
-	b, err := ioutil.ReadAll(f)
-	f.Close()
+	// f, err := os.Open(path)
+	// if err != nil {
+	// 	if os.IsNotExist(err) {
+	// 		return nil, nil
+	// 	}
+	// 	return nil, err
+	// }
+	// b, err := io.ReadAll(f)
+	b, err := os.ReadFile(path)
+	// f.Close()
 	return b, err
 }
 
