@@ -31,6 +31,7 @@ type tele struct { //nolint:maligned
 	stat         tele_api.Stat
 	currentState tele_api.State
 	OutMessage   tele_api.FromRoboMessage
+	InMessage    tele_api.ToRoboMessage
 }
 
 func New() tele_api.Teler {

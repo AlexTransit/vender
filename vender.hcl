@@ -1,3 +1,5 @@
+upgrade_script = "git -C /home/vmc/vender-distr/ pull && /home/vmc/vender-distr/script/build && rsync -av /home/vmc/vender-distr/build/vender"
+
 engine {
   // alias "cup_dispense" { scenario = "conveyor_move_cup cup_drop" }
 

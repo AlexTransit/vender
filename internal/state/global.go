@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"os/signal"
 	"regexp"
 	"strings"
@@ -390,6 +391,22 @@ func VmcUnLock(ctx context.Context) {
 	}
 }
 
+func (g *Global) UpgradeVender() {
+
+	if g.Config.UpgradeScript != "" {
+		go func() {
+		cmd := exec.Command("/usr/bin/bash", "-c", g.Config.UpgradeScript)
+		stdout, err := cmd.Output()
+		if err == nil {
+			types.VMC.NeedRestart = true
+			return
+		}
+		g.Log.Errorf("stdout(%s) error(%s)", stdout, cmd.Stderr)
+
+		}()
+	}
+}
+
 func (g *Global) RegisterCommands(ctx context.Context) {
 	g.Engine.RegisterNewFunc(
 		"vmc.lock!",
@@ -416,6 +433,14 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		"vmc.stop!",
 		func(ctx context.Context) error {
 			g.VmcStop(ctx)
+			return nil
+		},
+	)
+
+	g.Engine.RegisterNewFunc(
+		"vmc.upgrade!",
+		func(ctx context.Context) error {
+			g.UpgradeVender()
 			return nil
 		},
 	)

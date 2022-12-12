@@ -20,7 +20,8 @@ type Config struct {
 	// includeSeen contains absolute paths to prevent include loops
 	includeSeen map[string]struct{}
 	// only used for Unmarshal, do not access
-	XXX_Include []ConfigSource `hcl:"include"`
+	XXX_Include   []ConfigSource `hcl:"include"`
+	UpgradeScript string         `hcl:"upgrade_script"`
 
 	Debug struct {
 		PprofListen string `hcl:"pprof_listen"`
