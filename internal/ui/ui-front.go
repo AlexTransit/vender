@@ -26,6 +26,10 @@ import (
 // }
 
 func (ui *UI) onFrontBegin(ctx context.Context) State {
+	if types.VMC.NeedRestart {
+		ui.g.VmcStop(ctx)
+	}
+
 	ms := money.GetGlobal(ctx)
 	credit := ms.Credit(ctx) / 100
 	types.UI.FrontResult = types.UIMenuResult{
@@ -272,7 +276,9 @@ func (ui *UI) cancelQRPay(s tele_api.State) {
 	}
 	ui.g.Tele.RoboSend(&rm)
 }
-
+func (ui *UI) FrontSelectShowZero(ctx context.Context) {
+	ui.frontSelectShow(ctx, 0)
+}
 func (ui *UI) frontSelectShow(ctx context.Context, credit currency.Amount) {
 	config := ui.g.Config.UI.Front
 	l1 := config.MsgStateIntro

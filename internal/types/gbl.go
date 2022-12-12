@@ -22,6 +22,7 @@ var Log *log2.Log
 type VMCType struct {
 	Version     string
 	Lock        bool
+	NeedRestart bool
 	InputEnable bool
 	UiState     uint32
 	ReportInv   uint32
@@ -62,6 +63,7 @@ type UIMenuResult struct {
 	Cream       uint8
 	Sugar       uint8
 	QRPaymenID  string
+	PaymenId    int64
 	QRPayAmount uint32
 }
 

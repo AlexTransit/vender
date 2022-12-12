@@ -15,6 +15,7 @@ import (
 type transportMqtt struct {
 	enabled               bool
 	connected             bool
+	parseMessage          bool
 	config                *tele_config.Config
 	log                   *log2.Log
 	onCommand             func([]byte) bool
@@ -149,6 +150,17 @@ func (tm *transportMqtt) SendFromRobot(payload []byte) {
 }
 
 func (tm *transportMqtt) messageHandler(c mqtt.Client, msg mqtt.Message) {
+	count := 0
+	for tm.parseMessage {
+		tm.log.Info("wait executiong prewiew message")
+		time.Sleep(200 * time.Millisecond)
+		count++
+		if count > 10 {
+			tm.log.Errf("long parse preview message")
+			break
+		}
+	}
+	tm.parseMessage = true
 	payload := msg.Payload()
 	// ALexM rewrite  onCommand = old
 	tm.log.Debugf("mqtt income message (%x)", payload)
@@ -157,6 +169,7 @@ func (tm *transportMqtt) messageHandler(c mqtt.Client, msg mqtt.Message) {
 	} else {
 		tm.onCommand(payload)
 	}
+	tm.parseMessage = false
 }
 
 func (tm *transportMqtt) connectLostHandler(c mqtt.Client, err error) {
