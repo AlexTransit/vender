@@ -103,7 +103,11 @@ func (t *tele) mesageMakeOrger(ctx context.Context) {
 	switch t.InMessage.MakeOrder.OrderStatus {
 	case tele_api.OrderStatus_doSelected:
 		// make selected code. payment via QR, etc
-		if t.currentState != tele_api.State_WaitingForExternalPayment || types.UI.FrontResult.QRPaymenID != t.InMessage.MakeOrder.OwnerStr {
+		fmt.Printf("\033[41m FrontResult.PaymenId-%v \033[0m\n",types.UI.FrontResult.PaymenId)
+		fmt.Printf("\033[41m t.InMessage.MakeOrder.OwnerInt-%v \033[0m\n",t.InMessage.MakeOrder.OwnerInt)
+		if t.currentState != tele_api.State_WaitingForExternalPayment {
+			// if t.currentState != tele_api.State_WaitingForExternalPayment || types.UI.FrontResult.QRPaymenID != t.InMessage.MakeOrder.OwnerStr {
+			t.log.Errorf("doSelected t.currentState != tele_api.State_WaitingForExternalPayment (%v != %v) or types.UI.FrontResult.QRPaymenID != t.InMessage.MakeOrder.OwnerStr (%v !=%v)", t.currentState, tele_api.State_WaitingForExternalPayment, types.UI.FrontResult.QRPaymenID, t.InMessage.MakeOrder.OwnerStr)
 			t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_orderError
 			return
 		}
