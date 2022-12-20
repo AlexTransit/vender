@@ -27,7 +27,7 @@ import (
 
 func (ui *UI) onFrontBegin(ctx context.Context) State {
 	if types.VMC.NeedRestart {
-		ui.g.VmcStop(ctx)
+		ui.g.VmcStopWOInitRequared(ctx)
 	}
 
 	ms := money.GetGlobal(ctx)
