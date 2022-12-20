@@ -100,6 +100,13 @@ func (g *Global) ShowPicture(pict Pic) {
 }
 
 func (g *Global) VmcStop(ctx context.Context) {
+	if types.VMC.UiState != 5 { // FixMe состояние ожидания
+		types.InitRequared()
+	}
+	g.VmcStopWOInitRequared(ctx)
+}
+
+func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 	watchdog.WatchDogDisable()
 	watchdog.WatchDogSetTics(0)
 	g.ShowPicture(PictureBroken)
@@ -109,10 +116,6 @@ func (g *Global) VmcStop(ctx context.Context) {
 		g.Log.Infof("--- vmc timeout EXIT ---")
 		os.Exit(1)
 	}()
-	if types.VMC.UiState != 5 { // FixMe состояние ожидания
-		types.InitRequared()
-	}
-
 	g.LockCh <- struct{}{}
 	_ = g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken)
 	td := g.MustTextDisplay()
@@ -395,13 +398,13 @@ func (g *Global) UpgradeVender() {
 
 	if g.Config.UpgradeScript != "" {
 		go func() {
-		cmd := exec.Command("/usr/bin/bash", "-c", g.Config.UpgradeScript)
-		stdout, err := cmd.Output()
-		if err == nil {
-			types.VMC.NeedRestart = true
-			return
-		}
-		g.Log.Errorf("stdout(%s) error(%s)", stdout, cmd.Stderr)
+			cmd := exec.Command("/usr/bin/bash", "-c", g.Config.UpgradeScript)
+			stdout, err := cmd.Output()
+			if err == nil {
+				types.VMC.NeedRestart = true
+				return
+			}
+			g.Log.Errorf("stdout(%s) error(%s)", stdout, cmd.Stderr)
 
 		}()
 	}
