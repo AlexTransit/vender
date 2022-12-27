@@ -1,6 +1,6 @@
 #!/bin/sh
 
-DLV="/home/vmc/go/bin/dlv-dap"
+DLV="/home/vmc/go/bin/dlv"
 
 if [ "$DEBUG_AS_ROOT" = "true" ]; then
 	echo Run as Root
