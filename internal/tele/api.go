@@ -51,6 +51,10 @@ func (t *tele) Error(e error) {
 		t.log.Infof(logMsgDisabled)
 		return
 	}
+	if e == nil {
+		t.log.Error("tele nil error")
+		return
+	}
 
 	// t.log.Debugf("tele.Error: " + errors.ErrorStack(e))
 	t.log.Err(errors.ErrorStack(e))
