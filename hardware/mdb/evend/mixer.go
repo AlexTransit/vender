@@ -52,17 +52,17 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 		engine.FuncArg{Name: m.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
 			if err = g.Engine.Exec(ctx, m.move(uint8(arg))); err == nil {
 				m.cPos = int8(arg)
-				return
+				return nil
 			}
 			m.dev.TeleError(err)
 			m.dev.Reset()
 			if err = g.Engine.Exec(ctx, m.move(uint8(arg))); err == nil {
 				m.cPos = int8(arg)
 				m.dev.TeleError(errors.Errorf("restart fix preview error"))
-				return
+				return nil
 			}
 			m.dev.TeleError(errors.Annotatef(err, "two times error"))
-			return
+			return err
 		}})
 	g.Engine.Register(m.name+".fan_on", m.NewFan(true))
 	g.Engine.Register(m.name+".fan_off", m.NewFan(false))
