@@ -12,7 +12,7 @@
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/vender/main.go",
             "buildFlags": "-ldflags=' -X main.BuildVersion=debug'",
-            "dlvFlags": ["--check-go-version=false"],
+            // "dlvFlags": ["--check-go-version=false"],
             "env": {"DEBUG_AS_ROOT": "true",},
             //*
             "args": ["-config","/home/vmc/config.hcl","vmc"],
