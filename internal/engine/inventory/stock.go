@@ -93,26 +93,43 @@ func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
 
 func (s *Stock) ShowLevel() string {
 	currenValue := int(s.value) * 100
+	valuePerDelay, i := s.valuePerDelay(currenValue)
+	if valuePerDelay == 0 {
+		return "0"
+	}
+	ost := currenValue - s.level[i].val
+	valOst := (ost / valuePerDelay)
+	r := s.level[i].lev + valOst
+	ri := r / 100
+	return fmt.Sprintf("%d.%d", ri, r-ri*100)
+}
+
+func (s *Stock) SetLevel(f float64) {
+	v := int(f * 100)
+	valuePerDelay, i := s.valuePerDelay(v)
+	ost := v - s.level[i].lev
+	l1 := s.level[i].val
+	l2 := ost * valuePerDelay
+	s.value = float32((l1 + l2) / 100)
+}
+
+func (s *Stock) valuePerDelay(value int) (valuePerDelay int, index int) {
 	countLevels := len(s.level) - 1
 	for i := countLevels; i >= 0; i-- {
-		if s.level[i].val < currenValue {
+		if s.level[i].lev < value {
 			var valuePerDelay int
 			switch {
 			case countLevels == i && i == 0: // levels not sets
-				return "0"
+				return 0, 0
 			case countLevels == i && i > 0: // level > max rate
 				valuePerDelay = (s.level[i].val - s.level[i-1].val) / (s.level[i].lev - s.level[i-1].lev)
 			default: // level between
 				valuePerDelay = (s.level[i+1].val - s.level[i].val) / (s.level[i+1].lev - s.level[i].lev)
 			}
-			ost := currenValue - s.level[i].val
-			valOst := (ost * 100 / valuePerDelay) / 100
-			r := s.level[i].lev + valOst
-			ri := r / 100
-			return fmt.Sprintf("%d.%d", ri, r-ri*100)
+			return valuePerDelay, i
 		}
 	}
-	return "0"
+	return 0, 0
 }
 
 func (s *Stock) fillLevels(c *engine_config.Stock) {
