@@ -63,6 +63,7 @@ type Stock struct { //nolint:maligned
 	HwRate      float32 `hcl:"hw_rate"`
 	SpendRate   float32 `hcl:"spend_rate"`
 	RegisterAdd string  `hcl:"register_add"`
+	Level       string  `hcl:"level"`
 }
 
 func (s *Stock) String() string {

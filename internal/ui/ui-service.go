@@ -169,7 +169,7 @@ func (ui *UI) onServiceInventory() State {
 	}
 	invCurrent := ui.Service.invList[ui.Service.invIdx]
 	ui.display.SetLines(
-		fmt.Sprintf("I%d %s", invCurrent.Code, invCurrent.Name),
+		fmt.Sprintf("%s %s", invCurrent.ShowLevel(), invCurrent.Name),
 		fmt.Sprintf("%.1f %s\x00", invCurrent.Value(), string(ui.inputBuf)), // TODO configurable decimal point
 	)
 

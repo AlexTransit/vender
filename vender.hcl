@@ -19,6 +19,10 @@ engine {
     // - hw_rate float, default=1, engine `add.{name}(x)` sends x*hw_rate to hardware device
     // - spend_rate float, default=1, engine `stock.{name}.spend(x)` (implied by add) subtracts x*spend_rate from remainder
     // - register_add string, registers `add.{name}(?)` in engine with this scenario, must contain `foo(?)` arg placeholder
+    // - level string, плотность по уровню. какое количество на делении. формат <деление(значение)> пример:
+    //                 density by level. what is the amount on the division. format <delive(value)> example: 
+    //                 "0.53(100) 1(150) 2(200.5)" 
+    //                 "8(3100)" 
     // stock "water" { hw_rate = 0.649999805 }
     // stock "cup" { code = 1 }
 
