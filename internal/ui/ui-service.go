@@ -172,13 +172,13 @@ func (ui *UI) onServiceInventory() State {
 	invCurrent := ui.Service.invList[ui.Service.invIdx]
 	if lv {
 		ui.display.SetLines(
-			fmt.Sprintf("%.1f %s\x00", invCurrent.Value(), invCurrent.Name),
+			fmt.Sprintf("%.0f %s\x00", invCurrent.Value(), invCurrent.Name),
 			fmt.Sprintf("%s %s", invCurrent.ShowLevel(), string(ui.inputBuf)), // TODO configurable decimal point
 		)
 	} else {
 		ui.display.SetLines(
 			fmt.Sprintf("%s %s", invCurrent.ShowLevel(), invCurrent.Name),
-			fmt.Sprintf("%.1f %s\x00", invCurrent.Value(), string(ui.inputBuf)), // TODO configurable decimal point
+			fmt.Sprintf("%.0f %s\x00", invCurrent.Value(), string(ui.inputBuf)), // TODO configurable decimal point
 		)
 	}
 	next, e := ui.serviceWaitInput()

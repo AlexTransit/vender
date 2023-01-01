@@ -31,6 +31,7 @@ type Inventory struct {
 
 func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engine *engine.Engine, root string) error {
 	inv.config = c
+	inv.initOverWriteStocks()
 	inv.log = log2.ContextValueLogger(ctx)
 
 	inv.mu.Lock()
@@ -74,6 +75,42 @@ func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engi
 	}
 
 	return helpers.FoldErrors(errs)
+}
+
+func (inv *Inventory) initOverWriteStocks() {
+	m := make(map[string]*engine_config.Stock)
+	for _, v := range inv.config.Stocks {
+		n := v.Name
+		if m[n] == nil {
+			m[n] = new(engine_config.Stock)
+		}
+		m[n].Name = n
+		if v.Code != 0 {
+			m[n].Code = v.Code
+		}
+		if v.HwRate != 0 {
+			m[n].HwRate = v.HwRate
+		}
+		if v.Level != "" {
+			m[n].Level = v.Level
+		}
+		if v.Min != 0 {
+			m[n].Min = v.Min
+		}
+		if v.RegisterAdd != "" {
+			m[n].RegisterAdd = v.RegisterAdd
+		}
+		if v.SpendRate != 0 {
+			m[n].SpendRate = v.SpendRate
+		}
+	}
+	inv.config.Stocks = nil
+	inv.config.Stocks = make([]engine_config.Stock, len(m))
+	i := 0
+	for _, v := range m {
+		inv.config.Stocks[i] = *v
+		i++
+	}
 }
 
 func (inv *Inventory) InventoryLoad() {
