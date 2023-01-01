@@ -161,6 +161,8 @@ func (ui *UI) onServiceMenu() State {
 	return StateServiceMenu
 }
 
+var lv bool
+
 func (ui *UI) onServiceInventory() State {
 	if len(ui.Service.invList) == 0 {
 		ui.display.SetLines(MsgError, "inv empty") // FIXME extract message string
@@ -168,11 +170,17 @@ func (ui *UI) onServiceInventory() State {
 		return StateServiceMenu
 	}
 	invCurrent := ui.Service.invList[ui.Service.invIdx]
-	ui.display.SetLines(
-		fmt.Sprintf("I%d %s", invCurrent.Code, invCurrent.Name),
-		fmt.Sprintf("%.1f %s\x00", invCurrent.Value(), string(ui.inputBuf)), // TODO configurable decimal point
-	)
-
+	if lv {
+		ui.display.SetLines(
+			fmt.Sprintf("%.1f %s\x00", invCurrent.Value(), invCurrent.Name),
+			fmt.Sprintf("%s %s", invCurrent.ShowLevel(), string(ui.inputBuf)), // TODO configurable decimal point
+		)
+	} else {
+		ui.display.SetLines(
+			fmt.Sprintf("%s %s", invCurrent.ShowLevel(), invCurrent.Name),
+			fmt.Sprintf("%.1f %s\x00", invCurrent.Value(), string(ui.inputBuf)), // TODO configurable decimal point
+		)
+	}
 	next, e := ui.serviceWaitInput()
 	if next != StateDefault {
 		return next
@@ -193,7 +201,13 @@ func (ui *UI) onServiceInventory() State {
 		}
 	case e.Key == input.EvendKeyDot || e.IsDigit():
 		ui.inputBuf = append(ui.inputBuf, byte(e.Key))
-
+	case e.Key == input.EvendKeySugarLess || e.Key == input.EvendKeySugarMore:
+		if lv {
+			lv = false
+		} else {
+			lv = true
+		}
+		return StateServiceInventory
 	case input.IsAccept(&e):
 		if len(ui.inputBuf) == 0 {
 			ui.g.Log.Errorf("ui onServiceInventory input=accept inputBuf=empty")
@@ -212,7 +226,11 @@ func (ui *UI) onServiceInventory() State {
 		}
 
 		invCurrent := ui.Service.invList[ui.Service.invIdx]
-		invCurrent.Set(float32(x))
+		if lv {
+			invCurrent.SetLevel(x)
+		} else {
+			invCurrent.Set(float32(x))
+		}
 		ui.Service.askReport = true
 		invCurrent.TeleLow = false
 

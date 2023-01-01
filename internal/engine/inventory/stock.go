@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"regexp"
+	"sort"
+	"strconv"
 
 	"github.com/AlexTransit/vender/internal/engine"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
@@ -25,6 +28,10 @@ type Stock struct { //nolint:maligned
 	min       float32
 	value     float32
 	tuneKey   string
+	level     []struct { // used fixed comma x.xx
+		lev int
+		val int
+	}
 }
 
 func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
@@ -52,7 +59,7 @@ func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
 		min:       c.Min,
 		tuneKey:   fmt.Sprintf(tuneKeyFormat, c.Name),
 	}
-
+	s.fillLevels(&c)
 	doSpend1 := engine.Func0{
 		Name: fmt.Sprintf("stock.%s.spend1", s.Name),
 		F:    s.spend1,
@@ -81,8 +88,77 @@ func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
 	}
 	e.Register(doSpend1.Name, doSpend1)
 	e.Register(doSpendArg.Name, doSpendArg)
-
 	return s, nil
+}
+
+func (s *Stock) ShowLevel() string {
+	currenValue := int(s.value) * 100
+	valuePerDelay, i := s.valuePerDelay(currenValue)
+	if valuePerDelay == 0 {
+		return "0"
+	}
+	ost := currenValue - s.level[i].val
+	valOst := (ost / valuePerDelay)
+	r := s.level[i].lev + valOst
+	ri := r / 100
+	return fmt.Sprintf("%d.%d", ri, r-ri*100)
+}
+
+func (s *Stock) SetLevel(f float64) {
+	v := int(f * 100)
+	valuePerDelay, i := s.valuePerDelay(v)
+	ost := v - s.level[i].lev
+	l1 := s.level[i].val
+	l2 := ost * valuePerDelay
+	s.value = float32((l1 + l2) / 100)
+}
+
+func (s *Stock) valuePerDelay(value int) (valuePerDelay int, index int) {
+	countLevels := len(s.level) - 1
+	for i := countLevels; i >= 0; i-- {
+		if s.level[i].lev < value {
+			var valuePerDelay int
+			switch {
+			case countLevels == i && i == 0: // levels not sets
+				return 0, 0
+			case countLevels == i && i > 0: // level > max rate
+				valuePerDelay = (s.level[i].val - s.level[i-1].val) / (s.level[i].lev - s.level[i-1].lev)
+			default: // level between
+				valuePerDelay = (s.level[i+1].val - s.level[i].val) / (s.level[i+1].lev - s.level[i].lev)
+			}
+			return valuePerDelay, i
+		}
+	}
+	return 0, 0
+}
+
+func (s *Stock) fillLevels(c *engine_config.Stock) {
+	rm := `([0-9]*[.,]?[0-9]+)\(([0-9]*[.,]?[0-9]+)\)`
+	parts := regexp.MustCompile(rm).FindAllStringSubmatch(c.Level, 50)
+	s.level = make([]struct {
+		lev int
+		val int
+	}, len(parts)+1)
+
+	if len(parts) == 0 {
+		return
+	}
+
+	for i, v := range parts {
+		s.level[i+1].lev = stringToFixInt(v[1])
+		s.level[i+1].val = stringToFixInt(v[2])
+	}
+	sort.Slice(s.level, func(i, j int) bool {
+		return s.level[i].lev < s.level[j].lev
+	})
+
+}
+
+func stringToFixInt(s string) int {
+	if v, err := strconv.ParseFloat(s, 32); err == nil {
+		return int(v * 100)
+	}
+	return 0
 }
 
 // func (s *Stock) Enable()  { atomic.StoreUint32(&s.enabled, 1) }
