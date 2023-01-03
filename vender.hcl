@@ -13,8 +13,8 @@ engine {
 
     // Stock fields:
     // - name string, must be non-empty and unique
-    // - code uint32, default=0, sorting index in service menu, duplicates produce warning at boot but allowed
-    // - check bool, default=false, validate stock remainder > `min`
+    // - code uint32, not zero. bunker number, and using the config overwrite
+    // - check bool, default=false, validate stock remainder > `min` (not overwrite)
     // - min float, only makes sense together with check
     // - hw_rate float, default=1, engine `add.{name}(x)` sends x*hw_rate to hardware device
     // - spend_rate float, default=1, engine `stock.{name}.spend(x)` (implied by add) subtracts x*spend_rate from remainder
