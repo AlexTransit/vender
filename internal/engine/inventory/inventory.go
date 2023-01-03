@@ -78,37 +78,42 @@ func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engi
 }
 
 func (inv *Inventory) initOverWriteStocks() {
-	m := make(map[string]*engine_config.Stock)
+	m := make(map[int]engine_config.Stock)
 	for _, v := range inv.config.Stocks {
-		n := v.Name
-		if m[n] == nil {
-			m[n] = new(engine_config.Stock)
+		if v.Code == 0 {
+			continue
 		}
-		m[n].Name = n
-		if v.Code != 0 {
-			m[n].Code = v.Code
+		n := v.Code
+		if m[n].Code == 0 {
+			m[n] = v
+			continue
+		}
+		ss := m[n]
+		if v.Name != "" {
+			ss.Name = v.Name
 		}
 		if v.HwRate != 0 {
-			m[n].HwRate = v.HwRate
+			ss.HwRate = v.HwRate
 		}
 		if v.Level != "" {
-			m[n].Level = v.Level
+			ss.Level = v.Level
 		}
 		if v.Min != 0 {
-			m[n].Min = v.Min
+			ss.Min = v.Min
 		}
 		if v.RegisterAdd != "" {
-			m[n].RegisterAdd = v.RegisterAdd
+			ss.RegisterAdd = v.RegisterAdd
 		}
 		if v.SpendRate != 0 {
-			m[n].SpendRate = v.SpendRate
+			ss.SpendRate = v.SpendRate
 		}
+		m[n] = ss
 	}
 	inv.config.Stocks = nil
 	inv.config.Stocks = make([]engine_config.Stock, len(m))
 	i := 0
 	for _, v := range m {
-		inv.config.Stocks[i] = *v
+		inv.config.Stocks[i] = v
 		i++
 	}
 }
