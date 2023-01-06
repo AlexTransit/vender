@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"hash/fnv"
+	"math"
 
 	// "net"
 	"os/exec"
@@ -172,13 +173,13 @@ func (ui *UI) onServiceInventory() State {
 	invCurrent := ui.Service.invList[ui.Service.invIdx]
 	if lv {
 		ui.display.SetLines(
-			fmt.Sprintf("%.0f %s\x00", invCurrent.Value(), invCurrent.Name),
-			fmt.Sprintf("%s %s", invCurrent.ShowLevel(), string(ui.inputBuf)), // TODO configurable decimal point
+			fmt.Sprintf("V:%.0f %s\x00", invCurrent.Value(), invCurrent.Name),
+			fmt.Sprintf("L:%s %s", invCurrent.ShowLevel(), string(ui.inputBuf)), // TODO configurable decimal point
 		)
 	} else {
 		ui.display.SetLines(
-			fmt.Sprintf("%s %s", invCurrent.ShowLevel(), invCurrent.Name),
-			fmt.Sprintf("%.0f %s\x00", invCurrent.Value(), string(ui.inputBuf)), // TODO configurable decimal point
+			fmt.Sprintf("L:%s %s", invCurrent.ShowLevel(), invCurrent.Name),
+			fmt.Sprintf("V:%.0f %s\x00", invCurrent.Value(), string(ui.inputBuf)), // TODO configurable decimal point
 		)
 	}
 	next, e := ui.serviceWaitInput()
@@ -216,7 +217,8 @@ func (ui *UI) onServiceInventory() State {
 			return StateServiceInventory
 		}
 
-		x, err := strconv.ParseFloat(string(ui.inputBuf), 32)
+		xt, err := strconv.ParseFloat(string(ui.inputBuf), 8)
+		x := math.Round(xt*100) / 100
 		ui.inputBuf = ui.inputBuf[:0]
 		if err != nil {
 			ui.g.Log.Errorf("ui onServiceInventory input=accept inputBuf='%s'", string(ui.inputBuf))
