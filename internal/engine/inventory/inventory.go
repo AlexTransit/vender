@@ -25,13 +25,13 @@ type Inventory struct {
 	mu       sync.RWMutex
 	byName   map[string]*Stock
 	byCode   map[uint32]*Stock
-	codeList []uint32
 	file     string
 }
 
 func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engine *engine.Engine, root string) error {
 	inv.config = c
-	inv.initOverWriteStocks()
+	bunkers, countBunkers := initOverWriteStocks(c)
+	inv.config.Stocks = nil
 	inv.log = log2.ContextValueLogger(ctx)
 
 	inv.mu.Lock()
@@ -49,15 +49,9 @@ func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engi
 		errs = append(errs, err)
 	}
 	inv.file = sd + "/store.file"
-	inv.byName = make(map[string]*Stock, len(c.Stocks))
-	inv.byCode = make(map[uint32]*Stock, len(c.Stocks))
-	inv.codeList = make([]uint32, len(c.Stocks))
-	i := 0
-	for _, stockConfig := range c.Stocks {
-		if _, ok := inv.byName[stockConfig.Name]; ok {
-			errs = append(errs, errors.Errorf("stock=%s already registered", stockConfig.Name))
-			continue
-		}
+	inv.byName = make(map[string]*Stock, countBunkers)
+	inv.byCode = make(map[uint32]*Stock, countBunkers)
+	for _, stockConfig := range bunkers {
 
 		stock, err := NewStock(stockConfig, engine)
 		if err != nil {
@@ -65,25 +59,19 @@ func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engi
 			continue
 		}
 		inv.byName[stock.Name] = stock
-		inv.codeList[i] = stock.Code
-		i++
-		if first, ok := inv.byCode[stock.Code]; !ok {
-			inv.byCode[stock.Code] = stock
-		} else {
-			inv.log.Errorf("stock=%s duplicate code=%d first=%s", stock.Name, stock.Code, first)
-		}
+		inv.byCode[stock.Code] = stock
 	}
 
 	return helpers.FoldErrors(errs)
 }
 
-func (inv *Inventory) initOverWriteStocks() {
-	m := make(map[int]engine_config.Stock)
-	for _, v := range inv.config.Stocks {
+func initOverWriteStocks(c *engine_config.Inventory) (m map[uint32]engine_config.Stock, countBunkers int) {
+	m = make(map[uint32]engine_config.Stock)
+	for _, v := range c.Stocks {
 		if v.Code == 0 {
 			continue
 		}
-		n := v.Code
+		n := uint32(v.Code)
 		if m[n].Code == 0 {
 			m[n] = v
 			continue
@@ -109,32 +97,26 @@ func (inv *Inventory) initOverWriteStocks() {
 		}
 		m[n] = ss
 	}
-	inv.config.Stocks = nil
-	inv.config.Stocks = make([]engine_config.Stock, len(m))
-	i := 0
-	for _, v := range m {
-		inv.config.Stocks[i] = v
-		i++
-	}
+	return m, len(m)
 }
 
 func (inv *Inventory) InventoryLoad() {
 	f, _ := os.Open(inv.file)
+	stat, _ := f.Stat()
 	defer f.Close()
-	count := len(inv.codeList)
-	td := make([]int32, count)
+	td := make([]int32, stat.Size()/4)
 	binary.Read(f, binary.BigEndian, &td)
-	for i, cl := range inv.codeList {
-		inv.byCode[cl].Set(float32(td[i]))
+	for _, cl := range inv.byCode {
+		inv.byCode[cl.Code].Set(float32(td[cl.Code-1]))
 	}
 }
 
 func (inv *Inventory) InventorySave() error {
-	count := len(inv.byCode)
 	buf := new(bytes.Buffer)
-	td := make([]int32, count)
-	for i, cl := range inv.codeList {
-		td[i] = int32(inv.byCode[cl].value)
+	// td := make([]int32, len(inv.byCode))
+	td := make([]int32, 10)
+	for _, cl := range inv.byCode {
+		td[int32(cl.Code-1)] = int32(cl.value)
 	}
 	binary.Write(buf, binary.BigEndian, td)
 
