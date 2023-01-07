@@ -53,9 +53,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	t.log.Infof("incoming message:%v", t.InMessage)
 	switch t.InMessage.Cmd {
 	case tele_api.MessageType_makeOrder:
-		if types.UI.FrontResult.PaymenId == 0 {
-			t.mesageMakeOrger(ctx)
-		}
+		t.mesageMakeOrger(ctx)
 	case tele_api.MessageType_reportState:
 		t.RoboSend(&tele_api.FromRoboMessage{
 			State: t.currentState,
@@ -103,8 +101,7 @@ func (t *tele) mesageMakeOrger(ctx context.Context) {
 	switch t.InMessage.MakeOrder.OrderStatus {
 	case tele_api.OrderStatus_doSelected:
 		// make selected code. payment via QR, etc
-		fmt.Printf("\033[41m FrontResult.PaymenId-%v \033[0m\n",types.UI.FrontResult.PaymenId)
-		fmt.Printf("\033[41m t.InMessage.MakeOrder.OwnerInt-%v \033[0m\n",t.InMessage.MakeOrder.OwnerInt)
+		t.log.Infof("message make doSelected. robo state:%v", t.currentState)
 		if t.currentState != tele_api.State_WaitingForExternalPayment {
 			// if t.currentState != tele_api.State_WaitingForExternalPayment || types.UI.FrontResult.QRPaymenID != t.InMessage.MakeOrder.OwnerStr {
 			t.log.Errorf("doSelected t.currentState != tele_api.State_WaitingForExternalPayment (%v != %v) or types.UI.FrontResult.QRPaymenID != t.InMessage.MakeOrder.OwnerStr (%v !=%v)", t.currentState, tele_api.State_WaitingForExternalPayment, types.UI.FrontResult.QRPaymenID, t.InMessage.MakeOrder.OwnerStr)
@@ -118,15 +115,18 @@ func (t *tele) mesageMakeOrger(ctx context.Context) {
 		//TODO execute external order. сделать внешний заказ
 		// check validity, price. проверить валидность, цену
 		if t.currentState != tele_api.State_Nominal {
+			t.log.Errorf("make doTransferred unposible. robo state:%v", t.currentState)
 			t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_robotIsBusy
 			return
 		}
 		// when paying by balance, the current balance of the client is sent. при оплате по балансу, присылвется текущий баланс клиента
 		if t.InMessage.MakeOrder.PaymentMethod != tele_api.PaymentMethod_Balance {
+			t.log.Errorf("make doTransferred unposible. PaymentMethod not balanse(%v)", t.currentState)
 			t.OutMessage.Err.Message = "command remote cook, not set balance"
 			return
 		}
 		if !t.checkCodePriceValid(&t.InMessage.MakeOrder.MenuCode, t.InMessage.MakeOrder.Amount) {
+			t.log.Errorf("checkCodePriceValid not valid(%v)", t.InMessage.MakeOrder)
 			return
 		}
 		types.UI.FrontResult.Sugar = tuneCook(t.InMessage.MakeOrder.Sugar, ui.DefaultSugar, ui.SugarMax())
@@ -135,6 +135,7 @@ func (t *tele) mesageMakeOrger(ctx context.Context) {
 		types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
 
 	default: //unknown status
+		t.log.Errorf("unknown order status(%v)", t.InMessage.MakeOrder.OrderStatus)
 		t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_orderError
 		return
 	}
