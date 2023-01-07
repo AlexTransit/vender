@@ -20,12 +20,12 @@ var (
 
 type Inventory struct {
 	// persist.Persist
-	config   *engine_config.Inventory
-	log      *log2.Log
-	mu       sync.RWMutex
-	byName   map[string]*Stock
-	byCode   map[uint32]*Stock
-	file     string
+	config *engine_config.Inventory
+	log    *log2.Log
+	mu     sync.RWMutex
+	byName map[string]*Stock
+	byCode map[uint32]*Stock
+	file   string
 }
 
 func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engine *engine.Engine, root string) error {
