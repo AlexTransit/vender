@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"hash/fnv"
-	"math"
 
 	// "net"
 	"os/exec"
@@ -218,7 +217,7 @@ func (ui *UI) onServiceInventory() State {
 		}
 
 		xt, err := strconv.ParseFloat(string(ui.inputBuf), 8)
-		x := math.Round(xt*100) / 100
+		x := int(xt * 100)
 		ui.inputBuf = ui.inputBuf[:0]
 		if err != nil {
 			ui.g.Log.Errorf("ui onServiceInventory input=accept inputBuf='%s'", string(ui.inputBuf))
@@ -231,7 +230,7 @@ func (ui *UI) onServiceInventory() State {
 		if lv {
 			invCurrent.SetLevel(x)
 		} else {
-			invCurrent.Set(float32(x))
+			invCurrent.Set(float32(x) / 100)
 		}
 		ui.Service.askReport = true
 		invCurrent.TeleLow = false
