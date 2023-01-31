@@ -98,14 +98,13 @@ func (s *Stock) ShowLevel() string {
 		return "0"
 	}
 	ost := currenValue - s.level[i].val
-	valOst := (ost / valuePerDelay)
+	valOst := int(math.Round(float64((ost * 10 / valuePerDelay * 10)) / 100))
 	r := s.level[i].lev + valOst
 	ri := r / 100
 	return fmt.Sprintf("%d.%d", ri, r-ri*100)
 }
 
-func (s *Stock) SetLevel(f float64) {
-	v := int(f * 100)
+func (s *Stock) SetLevel(v int) {
 	valuePerDelay, i := s.valuePerDelay(v)
 	ost := v - s.level[i].lev
 	l1 := s.level[i].val
@@ -113,6 +112,7 @@ func (s *Stock) SetLevel(f float64) {
 	s.value = float32((l1 + l2) / 100)
 }
 
+// returns the number per 0.01 division and the index of the smaller value
 func (s *Stock) valuePerDelay(value int) (valuePerDelay int, index int) {
 	countLevels := len(s.level) - 1
 	for i := countLevels; i >= 0; i-- {
