@@ -139,6 +139,7 @@ func (t *tele) mesageMakeOrger(ctx context.Context) {
 		t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_orderError
 		return
 	}
+	ui.OrderMenuAndTune(t.OutMessage.Order)
 	om := t.OutMessage
 
 	go func() { // run cooking

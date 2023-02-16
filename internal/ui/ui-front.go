@@ -387,14 +387,18 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 func CreateOrderMessageAndFillSelected() tele_api.FromRoboMessage {
 	rm := tele_api.FromRoboMessage{
 		Order: &tele_api.Order{
-			MenuCode:      types.UI.FrontResult.Item.Code,
-			Cream:         types.TuneValueToByte(types.UI.FrontResult.Cream, DefaultCream),
-			Sugar:         types.TuneValueToByte(types.UI.FrontResult.Sugar, DefaultSugar),
 			Amount:        uint32(types.UI.FrontResult.Item.Price),
 			PaymentMethod: tele_api.PaymentMethod_Cash,
 		},
 	}
+	OrderMenuAndTune(rm.Order)
 	return rm
+}
+
+func OrderMenuAndTune(o *tele_api.Order) {
+	o.MenuCode = types.UI.FrontResult.Item.Code
+	o.Cream = types.TuneValueToByte(types.UI.FrontResult.Cream, DefaultCream)
+	o.Sugar = types.TuneValueToByte(types.UI.FrontResult.Sugar, DefaultSugar)
 }
 
 func (ui *UI) onFrontTimeout(ctx context.Context) State {
