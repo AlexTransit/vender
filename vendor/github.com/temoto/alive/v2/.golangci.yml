@@ -1,8 +1,0 @@
-linters:
-  enable:
-    - goconst
-    - gofmt
-    - gosec
-    - maligned
-    - prealloc
-    - staticcheck
