@@ -150,6 +150,8 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 			case e.Input.IsDigit(), e.Input.IsDot():
 				ui.cancelQRPay(tele_api.State_Client)
 				ui.inputBuf = append(ui.inputBuf, byte(e.Input.Key))
+				// AlexM затычка 
+				ui.setState(StateFrontSelect)
 				goto refresh
 
 			case input.IsAccept(&e.Input):
@@ -196,9 +198,8 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 
 		case types.EventMoneyCredit:
 			credit := moneysys.Credit(ctx)
-			if types.UI.FrontResult.QRPaymenID == "0" {
+			if types.UI.FrontResult.QRPaymenID != "0" {
 				ui.cancelQRPay(tele_api.State_Client)
-				// types.VMC.EvendKeyboardInput(true)
 			}
 			price := types.UI.FrontResult.Item.Price
 			if price != 0 && credit >= price {
@@ -258,10 +259,12 @@ func (ui *UI) sendRequestForQrPayment() (message_for_display *string) {
 	ui.g.Tele.RoboSend(&rm)
 	return &ui.g.Config.UI.Front.MsgRemotePayRequest
 }
+
 func (ui *UI) cancelQRPay(s tele_api.State) {
 	defer func() {
 		types.UI.FrontResult.QRPaymenID = ""
 	}()
+	types.VMC.EvendKeyboardInput(true)
 	if types.UI.FrontResult.QRPaymenID == "" || types.UI.FrontResult.QRPaymenID == "0" {
 		return
 	}
@@ -276,9 +279,11 @@ func (ui *UI) cancelQRPay(s tele_api.State) {
 	}
 	ui.g.Tele.RoboSend(&rm)
 }
+
 func (ui *UI) FrontSelectShowZero(ctx context.Context) {
 	ui.frontSelectShow(ctx, 0)
 }
+
 func (ui *UI) frontSelectShow(ctx context.Context, credit currency.Amount) {
 	config := ui.g.Config.UI.Front
 	l1 := config.MsgStateIntro
