@@ -216,7 +216,7 @@ func (ui *UI) onServiceInventory() State {
 			return StateServiceInventory
 		}
 
-		xt, err := strconv.ParseFloat(string(ui.inputBuf), 8)
+		xt, err := strconv.ParseFloat(string(ui.inputBuf), 64)
 		x := int(xt * 100)
 		ui.inputBuf = ui.inputBuf[:0]
 		if err != nil {
