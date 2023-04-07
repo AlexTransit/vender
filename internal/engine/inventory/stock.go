@@ -155,7 +155,7 @@ func (s *Stock) fillLevels(c *engine_config.Stock) {
 }
 
 func stringToFixInt(s string) int {
-	if v, err := strconv.ParseFloat(s, 32); err == nil {
+	if v, err := strconv.ParseFloat(s, 64); err == nil {
 		return int(v * 100)
 	}
 	return 0

@@ -166,6 +166,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				types.UI.FrontResult.Item, checkVal = types.UI.Menu[string(ui.inputBuf)]
 				if !checkVal {
 					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuCodeInvalid)
+					ui.inputBuf = []byte{}
 					goto wait
 				}
 				credit := moneysys.Credit(ctx)
