@@ -129,6 +129,12 @@ func (dev *Device) TxKnown(request Packet, response *Packet) error {
 	return dev.txKnown(request, response)
 }
 
+func (dev *Device) Tx(request Packet, response *Packet) error {
+	dev.cmdLk.Lock()
+	defer dev.cmdLk.Unlock()
+	return dev.bus.Tx(request, response)
+}
+
 // Please make sure it is called under cmdLk or don't use it.
 func (dev *Device) Locked_TxKnown(request Packet, response *Packet) error {
 	return dev.txKnown(request, response)
@@ -155,6 +161,11 @@ func (dev *Device) TxCustom(request Packet, response *Packet, opt TxOpt) error {
 
 func (dev *Device) TxSetup() error {
 	err := dev.TxKnown(dev.PacketSetup, &dev.SetupResponse)
+	return errors.Annotatef(err, "%s SETUP", dev.name)
+}
+
+func (dev *Device) TxReadSetup() error {
+	err := dev.Tx(dev.PacketSetup, &dev.SetupResponse)
 	return errors.Annotatef(err, "%s SETUP", dev.name)
 }
 

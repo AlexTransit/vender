@@ -70,6 +70,7 @@ func (b *Bus) Tx(request Packet, response *Packet) error {
 	response.l = n
 
 	if err != nil {
+		b.Log.Errorf("mega transmit error:%v",err)
 		return errors.Annotatef(err, "mdb.Tx send=%x recv=%x", rbs, response.Bytes())
 	}
 	// explicit level check to save costly .Format()

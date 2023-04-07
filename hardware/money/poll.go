@@ -24,6 +24,19 @@ const (
 	StatusDispensed
 )
 
+type BillMoneyEvent struct {
+	Event MoneyEvent
+	Err   error
+}
+type MoneyEvent int
+
+const (
+	NoEvent MoneyEvent = iota
+	InEscrow
+	OutEscrow
+	Stacked
+)
+
 type PollItem struct {
 	// TODO avoid time.Time for easy GC (contains pointer)
 	// Time        time.Time

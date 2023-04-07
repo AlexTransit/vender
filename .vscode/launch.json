@@ -6,20 +6,26 @@
     "configurations": [
         {
             "console": "integratedTerminal",
-            "name": "Launch Package",
+            "name": "cli",
             "type": "go",
             "request": "launch",
             "mode": "auto",
             "program": "${workspaceFolder}/cmd/vender/main.go",
-            "buildFlags": "-ldflags=' -X main.BuildVersion=debug'",
-            // "dlvFlags": ["--check-go-version=false"],
+            "buildFlags": "-ldflags=' -X main.BuildVersion=debugCLI'",
             "env": {"DEBUG_AS_ROOT": "true",},
-            //*
-            "args": ["-config","/home/vmc/config.hcl","vmc"],
-            /*/
             "args": ["-config","/home/vmc/config.hcl","engine-cli"],
-            // "args": ["-config","/home/vmc/config.hcl1","engine-cli"],
-            //*/
-        }
+        },
+        {
+            "console": "integratedTerminal",
+            "name": "vmc",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/vender/main.go",
+            "buildFlags": "-ldflags=' -X main.BuildVersion=debugVMC'",
+            "env": {"DEBUG_AS_ROOT": "true",},
+            "args": ["-config","/home/vmc/config.hcl","vmc"],
+        },
+
     ]
 }

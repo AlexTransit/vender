@@ -27,6 +27,8 @@ type Biller interface {
 	EscrowAmount() currency.Amount
 	EscrowAccept() engine.Doer
 	EscrowReject() engine.Doer
+	BillRun() error
+	Stop()
 }
 
 var _ Biller = &BillValidator{}
@@ -60,3 +62,6 @@ func (Stub) EscrowAmount() currency.Amount { return 0 }
 // func (Stub) EscrowReject() engine.Doer { return engine.Fail{E: errors.NotSupportedf("bill.Stub.EscrowReject")} }
 func (Stub) EscrowAccept() engine.Doer { return engine.Nothing{} }
 func (Stub) EscrowReject() engine.Doer { return engine.Nothing{} }
+
+func (Stub) BillRun() error              { return nil }
+func (Stub) Stop()                       {}

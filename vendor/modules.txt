@@ -1,3 +1,5 @@
+# github.com/766b/go-outliner v0.0.0-20180511142203-fc6edecdadd7
+## explicit
 # github.com/c-bata/go-prompt v0.2.6
 ## explicit; go 1.14
 github.com/c-bata/go-prompt

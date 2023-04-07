@@ -96,6 +96,22 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 		},
 	)
 	g.Engine.RegisterNewFunc(
+		// testaaa
+		"aaa",
+		func(ctx context.Context) error {
+			return ms.bill.BillRun()
+		},
+	)
+	g.Engine.RegisterNewFunc(
+		// testaaa
+		"aaaStop",
+		func(ctx context.Context) error {
+			ms.bill.Stop()
+			return nil
+		},
+	)
+
+	g.Engine.RegisterNewFunc(
 		"money.commit",
 		func(ctx context.Context) error {
 			curPrice := GetCurrentPrice(ctx)

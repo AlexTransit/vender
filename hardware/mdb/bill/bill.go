@@ -23,20 +23,54 @@ const (
 	TypeCount = 16
 )
 
-//go:generate stringer -type=Features -trimprefix=Feature
-type Features uint32
+type BillControls uint32
 
 const (
-	FeatureFTL Features = 1 << iota
-	FeatureRecycling
+	stop BillControls = iota
+	escrowAccept
+	escrowReject
+	stacker
 )
 
-const DefaultEscrowTimeout = 30 * time.Second
+type billState uint32
+
+const (
+	stateInvalid billState = iota // new unknow
+	stateReseted                  // after reset. readed config. no poll
+	stateBroken
+	stateError
+	stateDisabled
+	stateBusy
+	stateReadyForEscrow  // start polling. bills configured to accept
+	stateEscorowPosition // bill inside escorw
+)
+
+func (s billState) String() string {
+	switch s {
+	case stateBroken:
+		return "broken"
+	case stateError:
+		return "error"
+	case stateReseted:
+		return "reseted"
+	case stateBusy:
+		return "busy"
+	case stateDisabled:
+		return "disabled"
+	case stateReadyForEscrow:
+		return "ready escrow"
+	case stateEscorowPosition:
+		return "bill in escrow"
+	}
+	return "state unknown"
+}
 
 type BillValidator struct { //nolint:maligned
 	mdb.Device
 	pollmu        sync.Mutex // isolate active/idle polling
 	configScaling uint16
+	controlChan   chan BillControls
+	state         billState
 
 	DoEscrowAccept engine.Func
 	DoEscrowReject engine.Func
@@ -44,7 +78,7 @@ type BillValidator struct { //nolint:maligned
 
 	// parsed from SETUP
 	featureLevel      uint8
-	supportedFeatures Features
+	supportedFeatures uint32
 	escrowSupported   bool
 	nominals          [TypeCount]currency.Nominal // final values, includes all scaling factors
 
@@ -83,21 +117,402 @@ func (bv *BillValidator) init(ctx context.Context) error {
 	if config.ScalingFactor != 0 {
 		bv.configScaling = uint16(config.ScalingFactor)
 	}
+	bv.controlChan = make(chan BillControls)
 
 	bv.DoEscrowAccept = bv.newEscrow(true)
 	bv.DoEscrowReject = bv.newEscrow(false)
 	bv.DoStacker = bv.newStacker()
 	g.Engine.Register(bv.DoEscrowAccept.Name, bv.DoEscrowAccept)
 	g.Engine.Register(bv.DoEscrowReject.Name, bv.DoEscrowReject)
-	g.Engine.Register("bill.reset", bv.billReset())
-	bv.Device.DoInit = bv.newIniter()
+	// g.Engine.Register("bill.reset", bv.billResetOLD())
+	g.Engine.RegisterNewFunc(
+		"bill.reset",
+		func(ctx context.Context) error {
+			return bv.billReset()
+		},
+	)
+	// bv.Device.DoInit = bv.newIniter()
 
 	// TODO remove IO from Init()
-	if err = g.Engine.Exec(ctx, bv.Device.DoInit); err != nil {
+	// if err = g.Engine.Exec(ctx, bv.Device.DoInit); err != nil {
+	// 	return errors.Annotate(err, tag)
+	// }
+	if err = bv.billReset(); err != nil {
+		return err
+	}
+	time.Sleep(2 * time.Second)
+
+	bv.BillRun()
+	return nil
+	// return bv.billReset()
+}
+
+func (bv *BillValidator) billReset() (err error) {
+	bv.setState(stateInvalid)
+	response := mdb.Packet{}
+	if err = bv.Device.Tx(bv.Device.PacketReset, nil); err != nil {
+		return err
+	}
+	if err = bv.Device.Tx(bv.Device.PacketPoll, &response); err != nil || response.Len() == 0 {
+		err = fmt.Errorf("bill. bad reset request. need two bytes. response:(%v) error:%v", response, err)
+		return err
+	}
+	if err, _ = bv.poll(); err != nil {
+		return err
+	}
+	if err = bv.setup(); err != nil {
+		return err
+	}
+	if err = bv.commandExpansionIdentificationOptions(); err != nil {
+		if _, ok := err.(mdb.FeatureNotSupported); ok {
+			if err = bv.commandExpansionIdentification(); err != nil {
+				return err
+			}
+		} else {
+			return err
+		}
+	}
+
+	time.Sleep(200 * time.Millisecond)
+	// bv.SetState(stateInited)
+	bv.readStacker()
+	err, _ = bv.poll()
+	return err
+}
+
+func (bv *BillValidator) setState(state billState) {
+	if bv.state == state {
+		return
+	}
+	bv.state = state
+	fmt.Printf("state-%v \n", bv.state.String())
+}
+
+// compare state. true if current state = or > state
+func (bv *BillValidator) compareState(state billState) bool {
+	return bv.state == state
+}
+
+func (bv *BillValidator) checkState(state billState) bool {
+	return bv.state >= state
+}
+
+func (bv *BillValidator) setup() error {
+	const expectLength = 27
+	var billFactors [16]uint8
+	if err := bv.Device.TxReadSetup(); err != nil {
+		return errors.Trace(err)
+	}
+	bs := bv.Device.SetupResponse.Bytes()
+	if len(bs) < expectLength {
+		return fmt.Errorf("bill validator SETUP response=%s expected %d bytes", bv.Device.SetupResponse.Format(), expectLength)
+	}
+
+	bv.featureLevel = bs[0]
+	currencyCode := bs[1:3]
+	scalingFactor := bv.Device.ByteOrder.Uint16(bs[3:5])
+	decimalPlaces := bs[5]
+	scalingFinal := currency.Nominal(scalingFactor) * currency.Nominal(bv.configScaling)
+	for i := decimalPlaces; i > 0 && scalingFinal > 10; i-- {
+		scalingFinal /= 10
+	}
+	stackerCap := bv.Device.ByteOrder.Uint16(bs[6:8])
+	billSecurityLevels := bv.Device.ByteOrder.Uint16(bs[8:10])
+	bv.escrowSupported = bs[10] == 0xff
+
+	bv.Log.Debugf("Bill Type Scaling Factors: %3v", bs[11:])
+	for i, sf := range bs[11:] {
+		if i >= 16 {
+			bv.Log.Errorf("CRITICAL bill SETUP type factors count=%d > expected=%d", len(bs[11:]), 16)
+			break
+		}
+		billFactors[i] = sf
+		bv.nominals[i] = currency.Nominal(sf) * scalingFinal
+	}
+	bv.Log.Debugf("Bill Type calc. nominals:  %3v", bv.nominals)
+	bv.Log.Debugf("Bill Validator Feature Level: %d", bv.featureLevel)
+	bv.Log.Debugf("Country / Currency Code: %x", currencyCode)
+	bv.Log.Debugf("Bill Scaling Factor: %d Decimal Places: %d final scaling: %d", scalingFactor, decimalPlaces, scalingFinal)
+	bv.Log.Debugf("Stacker Capacity: %d", stackerCap)
+	bv.Log.Debugf("Bill Security Levels: %016b", billSecurityLevels)
+	bv.Log.Debugf("Escrow/No Escrow: %t", bv.escrowSupported)
+	bv.Log.Debugf("Bill Type Credit: %x %v", bs[11:], bv.nominals)
+	return nil
+}
+
+func (bv *BillValidator) commandExpansionIdentification() error {
+	const tag = deviceName + ".ExpId"
+	const expectLength = 29
+	request := packetExpIdent
+	response := mdb.Packet{}
+	if err := bv.Device.Tx(request, &response); err != nil {
 		return errors.Annotate(err, tag)
+	}
+	bs := response.Bytes()
+	bv.Log.Debugf("%s response=%x", tag, bs)
+	if len(bs) < expectLength {
+		return fmt.Errorf("%s response=%x length=%d expected=%d", tag, bs, len(bs), expectLength)
+	}
+	bv.Log.Infof("%s Manufacturer Code: '%s'", tag, bs[0:0+3])
+	bv.Log.Debugf("%s Serial Number: '%s'", tag, string(bs[3:3+12]))
+	bv.Log.Debugf("%s Model #/Tuning Revision: '%s'", tag, string(bs[15:15+12]))
+	bv.Log.Debugf("%s Software Version: %x", tag, bs[27:27+2])
+	return nil
+}
+
+// func (bv *BillValidator) commandFeatureEnable(requested Features) error {
+// 	f := requested & bv.supportedFeatures
+// 	buf := [6]byte{0x37, 0x01}
+// 	bv.Device.ByteOrder.PutUint32(buf[2:], uint32(f))
+// 	request := mdb.MustPacketFromBytes(buf[:], true)
+// 	err := bv.Device.TxMaybe(request, nil)
+// 	return errors.Annotate(err, deviceName+".FeatureEnable")
+// }
+
+func (bv *BillValidator) commandExpansionIdentificationOptions() error {
+	const tag = deviceName + ".ExpIdOptions"
+	if bv.featureLevel < 2 {
+		return mdb.FeatureNotSupported(tag + " is level 1")
+	}
+	const expectLength = 33
+	request := packetExpIdentOptions
+	response := mdb.Packet{}
+	err := bv.Device.Tx(request, &response)
+	if err != nil {
+		return errors.Annotate(err, tag)
+	}
+	bv.Log.Debugf("%s response=(%d)%s", tag, response.Len(), response.Format())
+	bs := response.Bytes()
+	if len(bs) < expectLength {
+		return fmt.Errorf("%s response=%s expected %d bytes", tag, response.Format(), expectLength)
+	}
+	bv.supportedFeatures = bv.Device.ByteOrder.Uint32(bs[29 : 29+4])
+	bv.Log.Infof("%s Manufacturer Code: '%s'", tag, bs[0:0+3])
+	bv.Log.Infof("%s Serial Number: '%s'", tag, string(bs[3:3+12]))
+	bv.Log.Infof("%s Model #/Tuning Revision: '%s'", tag, string(bs[15:15+12]))
+	bv.Log.Infof("%s Software Version: %x", tag, bs[27:27+2])
+	bv.Log.Infof("%s Optional Features: %b", tag, bv.supportedFeatures)
+	return nil
+}
+
+func (bv *BillValidator) readStacker() bool {
+	request := packetStacker
+	response := mdb.Packet{}
+	err := bv.Device.Tx(request, &response)
+	if err != nil {
+		bv.Log.Errorf("bill error send read stacker command:%v", err)
+		return false
+	}
+	rb := response.Bytes()
+	if len(rb) != 2 {
+		bv.Log.Errorf("bill error request stacker command. request(%x) ", rb)
+		return false
+	}
+	x := bv.Device.ByteOrder.Uint16(rb)
+	bv.stackerFull = (x & 0x8000) != 0
+	bv.stackerCount = uint32(x & 0x7fff)
+	bv.Log.Infof("bill stacker full=%t count=%d", bv.stackerFull, bv.stackerCount)
+	return true
+}
+
+func (bv *BillValidator) Stop() {
+	if bv.compareState(stateReadyForEscrow) {
+		bv.controlChan <- stop
+	}
+}
+func (bv *BillValidator) disableAccept() (err error) {
+	buf := [5]byte{0x34, 00, 00, 00, 00}
+	request := mdb.MustPacketFromBytes(buf[:], true)
+	if err = bv.Device.Tx(request, nil); err != nil {
+		return fmt.Errorf("bill. send disable accept packet not complete. (%v)", err)
+	}
+	err, _ = bv.poll()
+	return err
+}
+func (bv *BillValidator) enableAccept() (err error) {
+	allNominals := bv.acceptNominals(0, 0)
+	buf := [5]byte{0x34}
+	bv.Device.ByteOrder.PutUint16(buf[1:], allNominals) // allow to accept
+	if bv.escrowSupported {
+		bv.Device.ByteOrder.PutUint16(buf[3:], allNominals) // allow to escrow
+	}
+	request := mdb.MustPacketFromBytes(buf[:], true)
+	if err = bv.Device.Tx(request, nil); err != nil {
+		return fmt.Errorf("bill. send disable accept packet not complete. (%v)", err)
+	}
+	err, _ = bv.poll()
+	// alexm
+	return err
+}
+
+func (bv *BillValidator) poll() (err error, moneyEvent money.MoneyEvent) {
+	var response mdb.Packet
+	if err = bv.Device.Tx(bv.Device.PacketPoll, &response); err != nil {
+		return err, moneyEvent
+	}
+	if response.Len() == 0 {
+		bv.setState(stateReadyForEscrow)
+		return nil, moneyEvent
+	}
+	for _, b := range response.Bytes() {
+		d := bv.decodeByte(b)
+		if d.Err != nil {
+			err = fmt.Errorf("%v; %v", err, d.Err)
+		}
+		if moneyEvent == 0 {
+			moneyEvent = d.Event
+		}
+	}
+
+	return err, moneyEvent
+}
+
+func (bv *BillValidator) decodeByte(b byte) (e money.BillMoneyEvent) {
+	switch b {
+	case StatusDefectiveMotor:
+		bv.setState(stateBroken)
+		return money.BillMoneyEvent{Err: fmt.Errorf("defective motor")}
+	case StatusSensorProblem:
+		bv.setState(stateBroken)
+		return money.BillMoneyEvent{Err: fmt.Errorf("sensor problem")}
+	case StatusValidatorBusy:
+		bv.setState(stateBusy)
+		return
+	case StatusROMChecksumError:
+		bv.setState(stateBroken)
+		return money.BillMoneyEvent{Err: fmt.Errorf("rom checksum error")}
+	case StatusValidatorJammed:
+		bv.setState(stateBroken)
+		return money.BillMoneyEvent{Err: fmt.Errorf("bill jamed")}
+	case StatusValidatorWasReset:
+		bv.setState(stateReseted)
+		return
+	case StatusBillRemoved:
+		return money.BillMoneyEvent{Event: money.OutEscrow, Err: fmt.Errorf("bill removed")}
+	case StatusCashboxOutOfPosition:
+		bv.setState(stateBroken)
+		return money.BillMoneyEvent{Err: fmt.Errorf("cashbox out")}
+	case StatusValidatorDisabled:
+		bv.setState(stateDisabled)
+		return
+	case StatusInvalidEscrowRequest:
+		return money.BillMoneyEvent{Event: money.OutEscrow, Err: fmt.Errorf("bill invalid escrow request")}
+	case StatusBillRejected:
+		return money.BillMoneyEvent{Event: money.OutEscrow, Err: fmt.Errorf("bill rejected")}
+	case StatusCreditedBillRemoval: // fishing attempt
+		return money.BillMoneyEvent{Event: money.OutEscrow, Err: fmt.Errorf("credited bill removed")}
+	}
+	if b&0x80 != 0 {
+		status, billType := b&0xf0, b&0x0f
+		// fmt.Printf("\033[41m %v \033[0m\n", bv.nominals[billType])
+		switch status {
+		case StatusRoutingBillStacked:
+			fmt.Print("\033[41m StatusRoutingBillStacked \033[0m\n")
+		case StatusRoutingEscrowPosition:
+			bv.setEscrowBill(bv.nominals[billType])
+			fmt.Printf("\033[41m bill %v in escrow \033[0m\n", bv.nominals[billType])
+			return money.BillMoneyEvent{Event: money.InEscrow}
+		case StatusRoutingBillReturned:
+			fmt.Print("\033[41m StatusRoutingBillReturned \033[0m\n")
+		case StatusRoutingBillToRecycler:
+			fmt.Print("\033[41m StatusRoutingBillToRecycler \033[0m\n")
+		case StatusRoutingDisabledBillRejected:
+			return money.BillMoneyEvent{Event: money.OutEscrow}
+		case StatusRoutingBillToRecyclerManualFill:
+			fmt.Print("\033[41m StatusRoutingBillToRecyclerManualFill \033[0m\n")
+		case StatusRoutingManualDispense:
+			fmt.Print("\033[41m StatusRoutingManualDispense \033[0m\n")
+		case StatusRoutingTransferredFromRecyclerToCashbox:
+			fmt.Print("\033[41m StatusRoutingTransferredFromRecyclerToCashbox \033[0m\n")
+		default:
+			fmt.Printf("\033[41m unknow bill poll status%v \033[0m\n", status)
+		}
+		fmt.Printf("\033[41m %v \033[0m\n", b)
+		bv.setEscrowBill(0)
+	}
+	return
+}
+
+func (bv *BillValidator) setEscrowBill(n currency.Nominal) {
+	fmt.Printf("\033[41m escrow bill %v \033[0m\n", n)
+	atomic.StoreUint32((*uint32)(&bv.escrowBill), uint32(n))
+}
+
+func (bv *BillValidator) acceptNominals(minNominal currency.Amount, maxNominal currency.Amount) (bitSet uint16) {
+	for i, n := range bv.nominals {
+		if n == 0 {
+			continue
+		}
+		if currency.Amount(n) >= minNominal && (maxNominal == 0 || currency.Amount(n) <= maxNominal) {
+			// if currency.Amount(n) <= maxNominal {
+			bitSet |= 1 << uint(i)
+		}
+	}
+	return bitSet
+}
+
+// прием банкнот ( если не принимал ранее). передаем канал для обмена событиями.
+// останавливаем по времени.
+func (bv *BillValidator) BillRun() (err error) {
+	if !bv.checkState(stateReseted) {
+		return fmt.Errorf("bill not work. bill state:%v", bv.state.String())
+	}
+	if err = bv.enableAccept(); err != nil {
+		return err
+	}
+	refreshTime := time.Duration(200 * time.Millisecond)
+	refreshTimer := time.NewTimer(refreshTime)
+	defer func() {
+		refreshTimer.Stop()
+	}()
+	for pollCount := (10 * (1000 / 200)); pollCount > 0; {
+		select {
+		case <-refreshTimer.C:
+			if pollCount--; pollCount == 0 {
+				bv.disableAccept()
+			}
+			var e money.MoneyEvent
+			if err, e = bv.poll(); err != nil {
+				return err
+			}
+			if e > 0 {
+				fmt.Printf("\033[41m %v \033[0m\n", e)
+			}
+			refreshTimer.Reset(refreshTime)
+		}
 	}
 	return nil
 }
+
+// bill poll status
+const (
+	StatusDefectiveMotor       byte = 0x01
+	StatusSensorProblem        byte = 0x02
+	StatusValidatorBusy        byte = 0x03
+	StatusROMChecksumError     byte = 0x04
+	StatusValidatorJammed      byte = 0x05
+	StatusValidatorWasReset    byte = 0x06
+	StatusBillRemoved          byte = 0x07
+	StatusCashboxOutOfPosition byte = 0x08
+	StatusValidatorDisabled    byte = 0x09
+	StatusInvalidEscrowRequest byte = 0x0a
+	StatusBillRejected         byte = 0x0b
+	StatusCreditedBillRemoval  byte = 0x0c
+)
+
+// bill poll routing status
+const (
+	StatusRoutingBillStacked byte = 0x80 | (iota << 4)
+	StatusRoutingEscrowPosition
+	StatusRoutingBillReturned
+	StatusRoutingBillToRecycler
+	StatusRoutingDisabledBillRejected
+	StatusRoutingBillToRecyclerManualFill
+	StatusRoutingManualDispense
+	StatusRoutingTransferredFromRecyclerToCashbox
+)
+
+// ------------------------------------------------------------------------------------------------------------
 
 func (bv *BillValidator) AcceptMax(max currency.Amount) engine.Doer {
 	// config := state.GetConfig(ctx)
@@ -198,45 +613,45 @@ func (bv *BillValidator) pollFun(fun func(money.PollItem) bool) mdb.PollRequestF
 	}
 }
 
-func (bv *BillValidator) billReset() engine.Doer {
-	const tag = deviceName + ".reset"
-	return engine.NewSeq(tag).
-		Append(bv.Device.DoReset).
-		Append(engine.Func{Name: tag + "/poll", F: func(ctx context.Context) error {
-			bv.Run(ctx, nil, func(money.PollItem) bool {
-				return false
-			})
-			// POLL until it settles on empty response
-			return nil
-		}}).
-		Append(bv.DoStacker)
-}
+// func (bv *BillValidator) billResetOLD() engine.Doer {
+// 	const tag = deviceName + ".reset"
+// 	return engine.NewSeq(tag).
+// 		Append(bv.Device.DoReset).
+// 		Append(engine.Func{Name: tag + "/poll", F: func(ctx context.Context) error {
+// 			bv.Run(ctx, nil, func(money.PollItem) bool {
+// 				return false
+// 			})
+// 			// POLL until it settles on empty response
+// 			return nil
+// 		}}).
+// 		Append(bv.DoStacker)
+// }
 
-func (bv *BillValidator) newIniter() engine.Doer {
-	const tag = deviceName + ".init"
-	return engine.NewSeq(tag).
-		Append(bv.Device.DoReset).
-		Append(engine.Func{Name: tag + "/poll", F: func(ctx context.Context) error {
-			bv.Run(ctx, nil, func(money.PollItem) bool { return false })
-			// POLL until it settles on empty response
-			return nil
-		}}).
-		Append(engine.Func{Name: tag + "/setup", F: bv.CommandSetup}).
-		Append(engine.Func0{Name: tag + "/expid", F: func() error {
-			if err := bv.CommandExpansionIdentificationOptions(); err != nil {
-				if _, ok := err.(mdb.FeatureNotSupported); ok {
-					if err = bv.CommandExpansionIdentification(); err != nil {
-						return err
-					}
-				} else {
-					return err
-				}
-			}
-			return nil
-		}}).
-		Append(bv.DoStacker).
-		Append(engine.Sleep{Duration: bv.Device.DelayNext})
-}
+// func (bv *BillValidator) newIniter() engine.Doer {
+// 	const tag = deviceName + ".init"
+// 	return engine.NewSeq(tag).
+// 		Append(bv.Device.DoReset).
+// 		Append(engine.Func{Name: tag + "/poll", F: func(ctx context.Context) error {
+// 			bv.Run(ctx, nil, func(money.PollItem) bool { return false })
+// 			// POLL until it settles on empty response
+// 			return nil
+// 		}}).
+// 		Append(engine.Func{Name: tag + "/setup", F: bv.CommandSetup}).
+// 		Append(engine.Func0{Name: tag + "/expid", F: func() error {
+// 			if err := bv.CommandExpansionIdentificationOptions(); err != nil {
+// 				if _, ok := err.(mdb.FeatureNotSupported); ok {
+// 					if err = bv.CommandExpansionIdentification(); err != nil {
+// 						return err
+// 					}
+// 				} else {
+// 					return err
+// 				}
+// 			}
+// 			return nil
+// 		}}).
+// 		Append(bv.DoStacker).
+// 		Append(engine.Sleep{Duration: bv.Device.DelayNext})
+// }
 
 func (bv *BillValidator) NewBillType(accept, escrow uint16) engine.Doer {
 	buf := [5]byte{0x34}
@@ -248,112 +663,18 @@ func (bv *BillValidator) NewBillType(accept, escrow uint16) engine.Doer {
 	}}
 }
 
-func (bv *BillValidator) setEscrowBill(n currency.Nominal) {
-	atomic.StoreUint32((*uint32)(&bv.escrowBill), uint32(n))
-}
+// func (bv *BillValidator) setEscrowBill(n currency.Nominal) {
+// 	atomic.StoreUint32((*uint32)(&bv.escrowBill), uint32(n))
+// }
+
 func (bv *BillValidator) EscrowAmount() currency.Amount {
 	u32 := atomic.LoadUint32((*uint32)(&bv.escrowBill))
 	return currency.Amount(u32)
 }
 
-func (bv *BillValidator) CommandSetup(ctx context.Context) error {
-	const expectLength = 27
-	var billFactors [TypeCount]uint8
-
-	if err := bv.Device.TxSetup(); err != nil {
-		return errors.Trace(err)
-	}
-	bs := bv.Device.SetupResponse.Bytes()
-	if len(bs) < expectLength {
-		return fmt.Errorf("bill validator SETUP response=%s expected %d bytes", bv.Device.SetupResponse.Format(), expectLength)
-	}
-
-	bv.featureLevel = bs[0]
-	currencyCode := bs[1:3]
-	scalingFactor := bv.Device.ByteOrder.Uint16(bs[3:5])
-	decimalPlaces := bs[5]
-	scalingFinal := currency.Nominal(scalingFactor) * currency.Nominal(bv.configScaling)
-	for i := decimalPlaces; i > 0 && scalingFinal > 10; i-- {
-		scalingFinal /= 10
-	}
-	stackerCap := bv.Device.ByteOrder.Uint16(bs[6:8])
-	billSecurityLevels := bv.Device.ByteOrder.Uint16(bs[8:10])
-	bv.escrowSupported = bs[10] == 0xff
-
-	bv.Log.Debugf("Bill Type Scaling Factors: %3v", bs[11:])
-	for i, sf := range bs[11:] {
-		if i >= TypeCount {
-			bv.Log.Errorf("CRITICAL bill SETUP type factors count=%d > expected=%d", len(bs[11:]), TypeCount)
-			break
-		}
-		billFactors[i] = sf
-		bv.nominals[i] = currency.Nominal(sf) * scalingFinal
-	}
-	bv.Log.Debugf("Bill Type calc. nominals:  %3v", bv.nominals)
-	bv.Log.Debugf("Bill Validator Feature Level: %d", bv.featureLevel)
-	bv.Log.Debugf("Country / Currency Code: %x", currencyCode)
-	bv.Log.Debugf("Bill Scaling Factor: %d Decimal Places: %d final scaling: %d", scalingFactor, decimalPlaces, scalingFinal)
-	bv.Log.Debugf("Stacker Capacity: %d", stackerCap)
-	bv.Log.Debugf("Bill Security Levels: %016b", billSecurityLevels)
-	bv.Log.Debugf("Escrow/No Escrow: %t", bv.escrowSupported)
-	bv.Log.Debugf("Bill Type Credit: %x %v", bs[11:], bv.nominals)
-	return nil
-}
-
-func (bv *BillValidator) CommandExpansionIdentification() error {
-	const tag = deviceName + ".ExpId"
-	const expectLength = 29
-	request := packetExpIdent
-	response := mdb.Packet{}
-	if err := bv.Device.TxMaybe(request, &response); err != nil {
-		return errors.Annotate(err, tag)
-	}
-	bs := response.Bytes()
-	bv.Log.Debugf("%s response=%x", tag, bs)
-	if len(bs) < expectLength {
-		return fmt.Errorf("%s response=%x length=%d expected=%d", tag, bs, len(bs), expectLength)
-	}
-	bv.Log.Infof("%s Manufacturer Code: '%s'", tag, bs[0:0+3])
-	bv.Log.Debugf("%s Serial Number: '%s'", tag, string(bs[3:3+12]))
-	bv.Log.Debugf("%s Model #/Tuning Revision: '%s'", tag, string(bs[15:15+12]))
-	bv.Log.Debugf("%s Software Version: %x", tag, bs[27:27+2])
-	return nil
-}
-
-func (bv *BillValidator) CommandFeatureEnable(requested Features) error {
-	f := requested & bv.supportedFeatures
-	buf := [6]byte{0x37, 0x01}
-	bv.Device.ByteOrder.PutUint32(buf[2:], uint32(f))
-	request := mdb.MustPacketFromBytes(buf[:], true)
-	err := bv.Device.TxMaybe(request, nil)
-	return errors.Annotate(err, deviceName+".FeatureEnable")
-}
-
-func (bv *BillValidator) CommandExpansionIdentificationOptions() error {
-	const tag = deviceName + ".ExpIdOptions"
-	if bv.featureLevel < 2 {
-		return mdb.FeatureNotSupported(tag + " is level 2+")
-	}
-	const expectLength = 33
-	request := packetExpIdentOptions
-	response := mdb.Packet{}
-	err := bv.Device.TxMaybe(request, &response)
-	if err != nil {
-		return errors.Annotate(err, tag)
-	}
-	bv.Log.Debugf("%s response=(%d)%s", tag, response.Len(), response.Format())
-	bs := response.Bytes()
-	if len(bs) < expectLength {
-		return fmt.Errorf("%s response=%s expected %d bytes", tag, response.Format(), expectLength)
-	}
-	bv.supportedFeatures = Features(bv.Device.ByteOrder.Uint32(bs[29 : 29+4]))
-	bv.Log.Infof("%s Manufacturer Code: '%s'", tag, bs[0:0+3])
-	bv.Log.Infof("%s Serial Number: '%s'", tag, string(bs[3:3+12]))
-	bv.Log.Infof("%s Model #/Tuning Revision: '%s'", tag, string(bs[15:15+12]))
-	bv.Log.Infof("%s Software Version: %x", tag, bs[27:27+2])
-	bv.Log.Infof("%s Optional Features: %b", tag, bv.supportedFeatures)
-	return nil
-}
+// func (bv *BillValidator) CommandSetup(ctx context.Context) error {
+// 	return bv.Setup()
+// }
 
 func (bv *BillValidator) newEscrow(accept bool) engine.Func {
 	var tag string
@@ -410,7 +731,7 @@ func (bv *BillValidator) newEscrow(accept bool) engine.Func {
 				return false
 			}
 		})
-		d := bv.Device.NewPollLoop(tag, bv.Device.PacketPoll, DefaultEscrowTimeout, fun)
+		d := bv.Device.NewPollLoop(tag, bv.Device.PacketPoll, 30, fun)
 		if err := engine.GetGlobal(ctx).Exec(ctx, d); err != nil {
 			return err
 		}
@@ -435,36 +756,10 @@ func (bv *BillValidator) newStacker() engine.Func {
 		x := bv.Device.ByteOrder.Uint16(rb)
 		bv.stackerFull = (x & 0x8000) != 0
 		bv.stackerCount = uint32(x & 0x7fff)
-		bv.Log.Debugf("%s full=%t count=%d", tag, bv.stackerFull, bv.stackerCount)
+		bv.Log.Infof("%s full=%t count=%d", tag, bv.stackerFull, bv.stackerCount)
 		return nil
 	}}
 }
-
-const (
-	StatusDefectiveMotor       byte = 0x01
-	StatusSensorProblem        byte = 0x02
-	StatusValidatorBusy        byte = 0x03
-	StatusROMChecksumError     byte = 0x04
-	StatusValidatorJammed      byte = 0x05
-	StatusValidatorWasReset    byte = 0x06
-	StatusBillRemoved          byte = 0x07
-	StatusCashboxOutOfPosition byte = 0x08
-	StatusValidatorDisabled    byte = 0x09
-	StatusInvalidEscrowRequest byte = 0x0a
-	StatusBillRejected         byte = 0x0b
-	StatusCreditedBillRemoval  byte = 0x0c
-)
-
-const (
-	StatusRoutingBillStacked byte = 0x80 | (iota << 4)
-	StatusRoutingEscrowPosition
-	StatusRoutingBillReturned
-	StatusRoutingBillToRecycler
-	StatusRoutingDisabledBillRejected
-	StatusRoutingBillToRecyclerManualFill
-	StatusRoutingManualDispense
-	StatusRoutingTransferredFromRecyclerToCashbox
-)
 
 func (bv *BillValidator) parsePollItem(b byte) money.PollItem {
 	const tag = deviceName + ".poll-parse"
