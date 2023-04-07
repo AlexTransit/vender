@@ -66,7 +66,6 @@ includes_Darwin='
 #include <sys/ptrace.h>
 #include <sys/select.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
 #include <sys/un.h>
 #include <sys/sockio.h>
 #include <sys/sys_domain.h>
@@ -522,7 +521,6 @@ ccflags="$@"
 		$2 ~ /^NFC_(GENL|PROTO|COMM|RF|SE|DIRECTION|LLCP|SOCKPROTO)_/ ||
 		$2 ~ /^NFC_.*_(MAX)?SIZE$/ ||
 		$2 ~ /^RAW_PAYLOAD_/ ||
-		$2 ~ /^[US]F_/ ||
 		$2 ~ /^TP_STATUS_/ ||
 		$2 ~ /^FALLOC_/ ||
 		$2 ~ /^ICMPV?6?_(FILTER|SEC)/ ||
@@ -644,7 +642,7 @@ errors=$(
 signals=$(
 	echo '#include <signal.h>' | $CC -x c - -E -dM $ccflags |
 	awk '$1=="#define" && $2 ~ /^SIG[A-Z0-9]+$/ { print $2 }' |
-	grep -v 'SIGSTKSIZE\|SIGSTKSZ\|SIGRT\|SIGMAX64' |
+	egrep -v '(SIGSTKSIZE|SIGSTKSZ|SIGRT|SIGMAX64)' |
 	sort
 )
 
@@ -654,7 +652,7 @@ echo '#include <errno.h>' | $CC -x c - -E -dM $ccflags |
 	sort >_error.grep
 echo '#include <signal.h>' | $CC -x c - -E -dM $ccflags |
 	awk '$1=="#define" && $2 ~ /^SIG[A-Z0-9]+$/ { print "^\t" $2 "[ \t]*=" }' |
-	grep -v 'SIGSTKSIZE\|SIGSTKSZ\|SIGRT\|SIGMAX64' |
+	egrep -v '(SIGSTKSIZE|SIGSTKSZ|SIGRT|SIGMAX64)' |
 	sort >_signal.grep
 
 echo '// mkerrors.sh' "$@"
