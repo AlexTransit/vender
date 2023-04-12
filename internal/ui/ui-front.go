@@ -175,6 +175,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 				if err := types.UI.FrontResult.Item.D.Validate(); err != nil {
 					// ui.g.Log.Errorf("ui-front selected=%s Validate err=%v", mitemString, err)
 					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuNotAvailable)
+					ui.inputBuf = []byte{}
 					goto wait
 				}
 				ui.g.Log.Debugf("compare price=%v credit=%v", types.UI.FrontResult.Item.Price, credit)
