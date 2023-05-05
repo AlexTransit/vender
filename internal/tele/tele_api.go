@@ -6,7 +6,6 @@ import (
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
 	tele_api "github.com/AlexTransit/vender/tele"
-	"github.com/juju/errors"
 )
 
 const logMsgDisabled = "tele disabled"
@@ -57,7 +56,8 @@ func (t *tele) Error(e error) {
 	}
 
 	// t.log.Debugf("tele.Error: " + errors.ErrorStack(e))
-	t.log.Err(errors.ErrorStack(e))
+	// alexm-comment duplicate
+	// t.log.Err(errors.ErrorStack(e))
 	t.ErrorStr(e.Error())
 }
 

@@ -8,6 +8,8 @@ import (
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/hardware/mdb/bill"
 	"github.com/AlexTransit/vender/hardware/mdb/coin"
+
+	// "github.com/AlexTransit/vender/hardware/money"
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
@@ -18,7 +20,7 @@ import (
 	tele_api "github.com/AlexTransit/vender/tele"
 
 	// "github.com/golang/protobuf/proto"
-	"github.com/juju/errors"
+	oerr "github.com/juju/errors"
 )
 
 type MoneySystem struct { //nolint:maligned
@@ -29,6 +31,7 @@ type MoneySystem struct { //nolint:maligned
 	bill        bill.Biller
 	billCashbox currency.NominalGroup
 	billCredit  currency.NominalGroup
+	// enableBillChanger bool
 
 	coin        coin.Coiner
 	coinCashbox currency.NominalGroup
@@ -48,25 +51,25 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 	defer ms.lk.Unlock()
 	ms.Log = g.Log
 	g.XXX_money.Store(ms)
-
 	const devNameBill = "bill"
 	const devNameCoin = "coin"
 	ms.bill = bill.Stub{}
 	ms.coin = coin.Stub{}
+	// ms.enableBillChanger = g.Config.Money.EnableChangeBillToCoin
 	errs := make([]error, 0, 2)
 	if dev, err := g.GetDevice(devNameBill); err == nil {
 		ms.bill = dev.(bill.Biller)
-	} else if errors.IsNotFound(err) {
+	} else if oerr.IsNotFound(err) {
 		ms.Log.Debugf("device=%s is not enabled in config", devNameBill)
 	} else {
-		errs = append(errs, errors.Annotatef(err, "device=%s", devNameBill))
+		errs = append(errs, oerr.Annotatef(err, "device=%s", devNameBill))
 	}
 	if dev, err := g.GetDevice(devNameCoin); err == nil {
 		ms.coin = dev.(coin.Coiner)
-	} else if errors.IsNotFound(err) {
+	} else if oerr.IsNotFound(err) {
 		ms.Log.Debugf("device=%s is not enabled in config", devNameCoin)
 	} else {
-		errs = append(errs, errors.Annotatef(err, "device=%s", devNameCoin))
+		errs = append(errs, oerr.Annotatef(err, "device=%s", devNameCoin))
 	}
 	if e := helpers.FoldErrors(errs); e != nil {
 		return e
@@ -90,23 +93,43 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 	g.Engine.RegisterNewFunc(
 		"money.consume!",
 		func(ctx context.Context) error {
-			credit := ms.Credit(ctx)
+			credit := ms.GetCredit()
 			err := ms.WithdrawCommit(ctx, credit)
-			return errors.Annotatef(err, "consume=%s", credit.FormatCtx(ctx))
+			return oerr.Annotatef(err, "consume=%s", credit.FormatCtx(ctx))
 		},
 	)
 	g.Engine.RegisterNewFunc(
 		// testaaa
-		"aaa",
+		"aa",
 		func(ctx context.Context) error {
-			return ms.bill.BillRun()
+			eventch := make(chan types.Event)
+			go ms.AcceptCredit(ctx, 100000, g.Alive, eventch)
+			// ms.AcceptCredit(ctx, 100000, nil, nil)
+			// ms.bill.BillRun(nil, nil)
+			return nil
 		},
 	)
 	g.Engine.RegisterNewFunc(
 		// testaaa
-		"aaaStop",
+		"aas",
 		func(ctx context.Context) error {
-			ms.bill.Stop()
+			ms.bill.SendCommand(bill.Stop)
+			return nil
+		},
+	)
+	g.Engine.RegisterNewFunc(
+		// testaaa
+		"aaer",
+		func(ctx context.Context) error {
+			ms.bill.SendCommand(bill.Reject)
+			return nil
+		},
+	)
+	g.Engine.RegisterNewFunc(
+		// testaaa
+		"aaea",
+		func(ctx context.Context) error {
+			ms.bill.SendCommand(bill.Accept)
 			return nil
 		},
 	)
@@ -116,10 +139,10 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 		func(ctx context.Context) error {
 			curPrice := GetCurrentPrice(ctx)
 			err := ms.WithdrawCommit(ctx, curPrice)
-			return errors.Annotatef(err, "curPrice=%s", curPrice.FormatCtx(ctx))
+			return oerr.Annotatef(err, "curPrice=%s", curPrice.FormatCtx(ctx))
 		},
 	)
-	g.Engine.RegisterNewFunc("money.abort", ms.Abort)
+	g.Engine.RegisterNewFunc("money.abort", ms.ReturnMoney)
 
 	doAccept := engine.FuncArg{
 		Name: "money.accept(?)",
@@ -159,16 +182,16 @@ func (ms *MoneySystem) Stop(ctx context.Context) error {
 	const tag = "money.Stop"
 	g := state.GetGlobal(ctx)
 	errs := make([]error, 0, 8)
-	errs = append(errs, ms.Abort(ctx))
-	errs = append(errs, g.Engine.Exec(ctx, ms.bill.AcceptMax(0)))
+	errs = append(errs, ms.ReturnMoney(ctx))
+	// errs = append(errs, g.Engine.Exec(ctx, ms.bill.AcceptMax(0)))
 	errs = append(errs, g.Engine.Exec(ctx, ms.coin.AcceptMax(0)))
-	return errors.Annotate(helpers.FoldErrors(errs), tag)
+	return oerr.Annotate(helpers.FoldErrors(errs), tag)
 }
 
 // TeleCashbox Stored in one-way cashbox Telemetry_Money
 func (ms *MoneySystem) TeleCashbox(ctx context.Context) *tele_api.Telemetry_Money {
 	pb := &tele_api.Telemetry_Money{
-		Bills: make(map[uint32]uint32, bill.TypeCount),
+		Bills: make(map[uint32]uint32, 16),
 		Coins: make(map[uint32]uint32, coin.TypeCount),
 	}
 	ms.lk.Lock()
@@ -187,7 +210,7 @@ func (ms *MoneySystem) TeleChange(ctx context.Context) *tele_api.Telemetry_Money
 		Coins: make(map[uint32]uint32, coin.TypeCount),
 	}
 	if err := ms.coin.TubeStatus(); err != nil {
-		state.GetGlobal(ctx).Error(errors.Annotate(err, "TeleChange"))
+		state.GetGlobal(ctx).Error(oerr.Annotate(err, "TeleChange"))
 	}
 	ms.coin.Tubes().ToMapUint32(pb.Coins)
 	// ms.Log.Debugf("TeleChange pb=%s", proto.CompactTextString(pb))

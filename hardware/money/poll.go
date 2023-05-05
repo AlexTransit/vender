@@ -24,14 +24,18 @@ const (
 	StatusDispensed
 )
 
-type BillMoneyEvent struct {
-	Event MoneyEvent
-	Err   error
+type BillEvent struct {
+	Err         error
+	Event       BillEventName
+	BillNominal currency.Nominal
 }
-type MoneyEvent int
+
+type BillEventName byte
 
 const (
-	NoEvent MoneyEvent = iota
+	NoEvent BillEventName = iota
+	Reseted
+	PollerStoped
 	InEscrow
 	OutEscrow
 	Stacked

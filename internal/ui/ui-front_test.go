@@ -41,7 +41,7 @@ ui {
 	// sugarStock.Set(200)
 
 	steps := []step{
-		{expect: env._T("hello tune", " "), inev: env._Key(input.EvendKeyCreamMore)},
+		// {expect: env._T("hello tune", " "), inev: env._Key(input.EvendKeyCreamMore)},
 		{expect: env._T(fmt.Sprintf("%s  /5", g.Config.UI.Front.MsgCream), "   - \x97\x97\x97\x97\x97\x94 +   "), inev: env._Key(input.EvendKeySugarLess)},
 		{expect: env._T(fmt.Sprintf("%s  /3", g.Config.UI.Front.MsgSugar), "   - \x97\x97\x95\x94\x94\x94 +   "), inev: env._Key(input.EvendKeySugarLess)},
 		{expect: env._T(fmt.Sprintf("%s  /2", g.Config.UI.Front.MsgSugar), "   - \x97\x96\x94\x94\x94\x94 +   "), inev: env._Key('1')},

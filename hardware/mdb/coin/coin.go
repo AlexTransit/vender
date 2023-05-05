@@ -287,7 +287,7 @@ func (ca *CoinAcceptor) TubeStatus() error {
 			nominalString := currency.Amount(nominal).Format100I() // TODO use FormatCtx(ctx)
 			ca.Device.TeleError(fmt.Errorf("%s coinType=%d nominal=%s problem (jam/sensor/etc)", tag, coinType, nominalString))
 		} else if counts[coinType] != 0 {
-			if err := ca.tubes.Add(nominal, uint(counts[coinType])); err != nil {
+			if err := ca.tubes.AddMany(nominal, uint(counts[coinType])); err != nil {
 				return errors.Annotatef(err, "%s tubes.Add coinType=%d", tag, coinType)
 			}
 		}
@@ -319,7 +319,7 @@ func (ca *CoinAcceptor) CommandExpansionIdentification() error {
 	response := mdb.Packet{}
 	err := ca.Device.TxMaybe(request, &response)
 	if err != nil {
-		if errors.Cause(err) == mdb.ErrTimeout {
+		if errors.Cause(err) == mdb.ErrTimeoutMDB {
 			ca.Device.Log.Infof("%s request=%x not supported (timeout)", tag, request.Bytes())
 			return nil
 		}
@@ -352,7 +352,7 @@ func (ca *CoinAcceptor) ExpansionDiagStatus(result *DiagResult) error {
 	response := mdb.Packet{}
 	err := ca.Device.TxMaybe(packetDiagStatus, &response)
 	if err != nil {
-		if errors.Cause(err) == mdb.ErrTimeout {
+		if errors.Cause(err) == mdb.ErrTimeoutMDB {
 			ca.Device.Log.Infof("%s request=%x not supported (timeout)", tag, packetDiagStatus.Bytes())
 			return nil
 		}
@@ -373,7 +373,7 @@ func (ca *CoinAcceptor) CommandFeatureEnable(requested Features) error {
 	ca.Device.ByteOrder.PutUint32(buf[2:], uint32(f))
 	request := mdb.MustPacketFromBytes(buf[:], true)
 	err := ca.Device.TxMaybe(request, nil)
-	if errors.Cause(err) == mdb.ErrTimeout {
+	if errors.Cause(err) == mdb.ErrTimeoutMDB {
 		ca.Device.Log.Infof("%s request=%x not supported (timeout)", tag, request.Bytes())
 		return nil
 	}

@@ -168,7 +168,7 @@ func (ca *CoinAcceptor) dispenseGroup(ctx context.Context, request, success *cur
 			ca.Device.Log.Error(err)
 			return errors.Annotate(err, tag)
 		}
-		return success.Add(nominal, count)
+		return success.AddMany(nominal, count)
 	})
 }
 
@@ -271,7 +271,7 @@ func (ca *CoinAcceptor) NewPayout(amount currency.Amount, success *currency.Nomi
 		for i, count := range response.Bytes() {
 			if count > 0 {
 				nominal := ca.nominals[i]
-				if err := success.Add(nominal, uint(count)); err != nil {
+				if err := success.AddMany(nominal, uint(count)); err != nil {
 					return errors.Annotate(err, tag)
 				}
 			}

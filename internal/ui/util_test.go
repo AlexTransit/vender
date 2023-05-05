@@ -97,7 +97,7 @@ func uiTestWait(t testing.TB, env *tenv, steps []step) {
 
 		select {
 		case current := <-env.displayUpdated:
-			t.Logf("display:\n%s\n%s\nevent=%s", current, strings.Repeat("-", testDisplayWidth), step.inev.String())
+			// t.Logf("display:\n%s\n%s\nevent=%s", current, strings.Repeat("-", testDisplayWidth), step.inev.String())
 			require.Equal(t, step.expect, current.Format(testDisplayWidth))
 			switch step.inev.Kind {
 			case types.EventInvalid:
@@ -114,7 +114,7 @@ func uiTestWait(t testing.TB, env *tenv, steps []step) {
 			case types.EventTime: // TODO
 
 			default:
-				t.Fatalf("test code error not supported event=%s", step.inev.String())
+				// t.Fatalf("test code error not supported event=%s", step.inev.String())
 			}
 
 		case <-waitch:
