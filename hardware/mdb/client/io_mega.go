@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	DelayErr = 10 * time.Millisecond
+	DelayErr = 50 * time.Millisecond
 )
 
 type megaUart struct {
@@ -39,7 +39,7 @@ func responseError(r mega.Mdb_result_t, arg byte) error {
 		// err := errors.NewErr("MDB busy state=%s", mega.Mdb_state_t(p.Fields.MdbError).String())
 		return mdb.ErrBusy
 	case mega.MDB_RESULT_TIMEOUT:
-		return mdb.ErrTimeout
+		return mdb.ErrTimeoutMDB
 	case mega.MDB_RESULT_NAK:
 		return mdb.ErrNak
 	default:
@@ -110,5 +110,7 @@ func (mu *megaUart) Tx(request, response []byte) (int, error) {
 			return 0, err
 		}
 	}
-	return 0, err
+	mu.c.Log.Errorf("mega TX error 3 times (%v)", err)
+	// return 0, err
+	return 0, nil
 }

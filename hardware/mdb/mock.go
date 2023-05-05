@@ -85,7 +85,7 @@ func (mu *MockUart) txMap(request, response []byte) (int, error) {
 	responseHex, found := mu.m[requestHex]
 	if !found {
 		// must not call self.t.Error() here
-		return 0, ErrTimeout
+		return 0, ErrTimeoutMDB
 	}
 	delete(mu.m, requestHex)
 	rp := MustPacketFromHex(responseHex, true)

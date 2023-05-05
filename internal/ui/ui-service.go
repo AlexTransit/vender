@@ -379,7 +379,7 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) State {
 	accept := true
 	loaded := currency.Amount(0)
 	for {
-		credit := moneysys.Credit(ctx)
+		credit := moneysys.GetCredit()
 		if credit > 0 {
 			loaded += credit
 			ui.display.SetLines("money-load", loaded.FormatCtx(ctx))
@@ -389,7 +389,7 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) State {
 
 		if accept {
 			accept = false
-			go moneysys.AcceptCredit(ctx, currency.MaxAmount, alive.StopChan(), ui.eventch)
+			go moneysys.AcceptCredit(ctx, currency.MaxAmount, alive, ui.eventch)
 		}
 		switch e := ui.wait(ui.Service.resetTimeout); e.Kind {
 		case types.EventInput:
@@ -410,7 +410,7 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) State {
 		case types.EventTime:
 
 		default:
-			panic(fmt.Sprintf("code error onServiceMoneyLoad unhandled event=%s", e.String()))
+			panic(fmt.Sprintf("code error onServiceMoneyLoad unhandled event=%v", e))
 		}
 	}
 }
@@ -449,7 +449,7 @@ func (ui *UI) serviceWaitInput() (State, types.InputEvent) {
 		return StateDefault, e.Input
 
 	case types.EventMoneyCredit:
-		ui.g.Log.Debugf("serviceWaitInput event=%s", e.String())
+		ui.g.Log.Debugf("serviceWaitInput event=%v", e)
 		return StateDefault, types.InputEvent{}
 
 	case types.EventTime:

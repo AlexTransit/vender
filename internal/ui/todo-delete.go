@@ -5,10 +5,10 @@ package ui
 import "time"
 
 const (
-	DefaultCream = 4
-	MaxCream     = 6
-	DefaultSugar = 4
-	MaxSugar     = 8
+	DefaultCream uint8 = 4
+	MaxCream     uint8 = 6
+	DefaultSugar uint8 = 4
+	MaxSugar     uint8 = 8
 )
 
 const modTuneTimeout = 3 * time.Second

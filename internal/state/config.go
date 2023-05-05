@@ -68,9 +68,10 @@ type Config struct {
 
 	Engine engine_config.Config
 	Money  struct {
-		Scale                int `hcl:"scale"`
-		CreditMax            int `hcl:"credit_max"`
-		ChangeOverCompensate int `hcl:"change_over_compensate"`
+		Scale                  int  `hcl:"scale"`
+		CreditMax              int  `hcl:"credit_max"`
+		EnableChangeBillToCoin bool `hcl:"enable_change_bill_to_coin"`
+		ChangeOverCompensate   int  `hcl:"change_over_compensate"`
 	}
 	Persist struct {
 		Root string `hcl:"root"`
@@ -122,7 +123,8 @@ func (c *Config) read(log *log2.Log, fs FullReader, source ConfigSource, errs *[
 
 	err = hcl.Unmarshal(bs, c)
 	if err != nil {
-		err = errors.Annotatef(err, "config unmarshal source=%s content='%s'", source.Name, string(bs))
+		// err = errors.Annotatef(err, "config unmarshal source=%s content='%s'", source.Name, string(bs))
+		err = errors.Annotatef(err, "config (%s) read error", source.Name)
 		*errs = append(*errs, err)
 		return
 	}

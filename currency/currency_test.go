@@ -12,11 +12,11 @@ import (
 func newTestNominalGroup(t testing.TB) *NominalGroup {
 	ng := &NominalGroup{}
 	ng.SetValid([]Nominal{10, 5, 2, 1})
-	require.Error(t, ng.Add(101, 1), "expected invalid nominal")
-	require.NoError(t, ng.Add(10, 2))
-	require.NoError(t, ng.Add(5, 8))
-	require.NoError(t, ng.Add(2, 1))
-	require.NoError(t, ng.Add(1, 3))
+	require.Error(t, ng.AddMany(101, 1), "expected invalid nominal")
+	require.NoError(t, ng.AddMany(10, 2))
+	require.NoError(t, ng.AddMany(5, 8))
+	require.NoError(t, ng.AddMany(2, 1))
+	require.NoError(t, ng.AddMany(1, 3))
 	return ng
 }
 

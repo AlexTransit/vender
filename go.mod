@@ -23,8 +23,8 @@ require (
 	github.com/temoto/gpio-cdev-go v1.1.0
 	github.com/temoto/inputevent-go v1.0.0
 	github.com/temoto/iodin v0.0.0-20190211111721-99c87617ba86
-	golang.org/x/net v0.0.0-20221004154528-8021a29435af // indirect
-	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec
+	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/sys v0.7.0
 	google.golang.org/protobuf v1.28.0 // indirect
 	periph.io/x/periph v3.6.4+incompatible
 )
@@ -34,6 +34,6 @@ require (
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
-	golang.org/x/sync v0.0.0-20220929204114-8fcdb60fdcc0 // indirect
+	golang.org/x/sync v0.1.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )

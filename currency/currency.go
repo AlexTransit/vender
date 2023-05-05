@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/juju/errors"
+	oerr "github.com/juju/errors"
 )
 
 // Amount is integer counting lowest currency unit, e.g. $1.20 = 120
@@ -30,9 +30,12 @@ func (ng Amount) FormatCtx(ctx context.Context) string {
 // Nominal is value of one coin or bill
 type Nominal Amount
 
+func (n Nominal) Format100I() string { return fmt.Sprint(float32(n) / 100) }
+func (n Nominal) Amount() Amount     { return n.Amount() }
+
 var (
-	ErrNominalInvalid = errors.New("Nominal is not valid for this group")
-	ErrNominalCount   = errors.New("Not enough nominals for this amount")
+	ErrNominalInvalid = oerr.New("Nominal is not valid for this group")
+	ErrNominalCount   = oerr.New("Not enough nominals for this amount")
 )
 
 // NominalGroup operates money comprised of multiple nominals, like coins or bills.
@@ -63,9 +66,23 @@ func (ng *NominalGroup) SetValid(valid []Nominal) {
 	}
 }
 
-func (ng *NominalGroup) Add(n Nominal, count uint) error {
+func (ng *NominalGroup) Add(n Nominal) error {
 	if _, ok := ng.values[n]; !ok {
-		return errors.Annotatef(ErrNominalInvalid, "Add(n=%s, c=%d)", Amount(n).Format100I(), count)
+		return oerr.Annotatef(ErrNominalInvalid, "Add(n=%s)", Amount(n).Format100I())
+	}
+	ng.values[n]++
+	return nil
+}
+func (ng *NominalGroup) Sub(n Nominal) error {
+	if _, ok := ng.values[n]; !ok {
+		return oerr.Annotatef(ErrNominalInvalid, "Add(n=%s)", Amount(n).Format100I())
+	}
+	ng.values[n]--
+	return nil
+}
+func (ng *NominalGroup) AddMany(n Nominal, count uint) error {
+	if _, ok := ng.values[n]; !ok {
+		return oerr.Annotatef(ErrNominalInvalid, "Add(n=%s, c=%d)", Amount(n).Format100I(), count)
 	}
 	ng.MustAdd(n, count)
 	return nil
@@ -129,7 +146,7 @@ func (ng *NominalGroup) Diff(other *NominalGroup) Amount {
 	}
 	return result
 }
-func (ng *NominalGroup) Sub(other *NominalGroup) {
+func (ng *NominalGroup) SubOther(other *NominalGroup) {
 	for nominal := range ng.values {
 		ng.values[nominal] -= other.values[nominal]
 	}

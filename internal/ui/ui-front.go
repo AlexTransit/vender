@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/hardware/input"
 	"github.com/AlexTransit/vender/hardware/mdb/evend"
-	"github.com/AlexTransit/vender/hardware/text_display"
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/money"
@@ -28,19 +26,18 @@ import (
 func (ui *UI) onFrontBegin(ctx context.Context) State {
 	if types.VMC.NeedRestart {
 		ui.g.VmcStopWOInitRequared(ctx)
-	}
 
-	ms := money.GetGlobal(ctx)
-	credit := ms.Credit(ctx) / 100
+	}
+	// ms := money.GetGlobal(ctx)
+	credit := ui.ms.GetCredit() / 100
 	types.UI.FrontResult = types.UIMenuResult{
 		Cream: DefaultCream,
 		Sugar: DefaultSugar,
 	}
-
 	if credit != 0 {
 		ui.g.Error(errors.Errorf("money timeout lost (%v)", credit))
 	}
-	ms.ResetMoney()
+	ui.ms.ResetMoney()
 	// XXX FIXME custom business logic creeped into code TODO move to config
 	if doCheckTempHot := ui.g.Engine.Resolve("evend.valve.check_temp_hot"); doCheckTempHot != nil && !engine.IsNotResolved(doCheckTempHot) {
 		err := doCheckTempHot.Validate()
@@ -71,7 +68,6 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 			return StateBroken
 		}
 	}
-
 	ui.g.ClientEnd(ctx)
 	if errs := ui.g.Engine.ExecList(ctx, "on_front_begin", ui.g.Config.Engine.OnFrontBegin); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_front_begin"))
@@ -91,149 +87,49 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 }
 
 func (ui *UI) onFrontSelect(ctx context.Context) State {
-	moneysys := money.GetGlobal(ctx)
 	alive := alive.NewAlive()
 	defer func() {
 		alive.Stop() // stop pending AcceptCredit
 		alive.Wait()
 	}()
-	go moneysys.AcceptCredit(ctx, ui.FrontMaxPrice, alive.StopChan(), ui.eventch)
-
+	alive.Add(1)
+	go ui.ms.AcceptCredit(ctx, ui.FrontMaxPrice, alive, ui.eventch)
+	l1 := ui.g.Config.UI.Front.MsgStateIntro
+	l2 := " "
+	tuneScreen := false
 	for {
-	refresh:
-		// step 1: refresh display
-		credit := moneysys.Credit(ctx)
-		if ui.State() == StateFrontTune { // XXX onFrontTune
-			goto wait
-		}
-		ui.frontSelectShow(ctx, credit)
-
-		// step 2: wait for input/timeout
-	wait:
+		ui.display.SetLines(l1, l2)
 		timeout := ui.frontResetTimeout
-		if ui.State() == StateFrontTune {
+		if tuneScreen {
 			timeout = modTuneTimeout
 		}
 		e := ui.wait(timeout)
 		switch e.Kind {
 		case types.EventInput:
-			if input.IsMoneyAbort(&e.Input) {
-				ui.g.Log.Infof("money abort event.")
-				credit := moneysys.Credit(ctx) / 100
-				if credit > 0 {
-					ui.display.SetLines("  :-(", fmt.Sprintf(" -%v", credit))
-					ui.g.Error(errors.Trace(moneysys.Abort(ctx)))
-					ui.cancelQRPay(tele_api.State_Client)
-				}
-				return StateFrontEnd
+			if nextState := ui.parseKeyEvent(ctx, e, &l1, &l2, &tuneScreen); nextState != StateDoesNotChange {
+				return nextState
 			}
-			if input.IsReject(&e.Input) {
-				// backspace semantic
-				if len(ui.inputBuf) > 1 {
-					ui.inputBuf = ui.inputBuf[:len(ui.inputBuf)-1]
-					goto refresh
-				}
-				if moneysys.Credit(ctx) != 0 {
-					goto refresh
-				}
-				return StateFrontEnd
-			}
-
 			ui.g.ClientBegin(ctx)
-			switch e.Input.Key {
-			case input.EvendKeyCreamLess, input.EvendKeyCreamMore, input.EvendKeySugarLess, input.EvendKeySugarMore:
-				// could skip state machine transition and just State=StateFrontTune; goto refresh
-				return ui.onFrontTuneInput(e.Input)
-
+		case types.EventMoneyPreCredit, types.EventMoneyCredit:
+			if nextState := ui.parseMoneyEvent(e.Kind); nextState != StateDoesNotChange {
+				return nextState
 			}
-			switch {
-			case e.Input.IsDigit(), e.Input.IsDot():
-				ui.cancelQRPay(tele_api.State_Client)
-				ui.inputBuf = append(ui.inputBuf, byte(e.Input.Key))
-				// AlexM затычка 
-				ui.setState(StateFrontSelect)
-				goto refresh
-
-			case input.IsAccept(&e.Input):
-				if types.UI.FrontResult.QRPaymenID != "" {
-					goto wait
-				}
-				if len(ui.inputBuf) == 0 {
-					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuCodeEmpty)
-					goto wait
-				}
-				var checkVal bool
-				types.UI.FrontResult.Item, checkVal = types.UI.Menu[string(ui.inputBuf)]
-				if !checkVal {
-					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuCodeInvalid)
-					ui.inputBuf = []byte{}
-					goto wait
-				}
-				credit := moneysys.Credit(ctx)
-				mitemString := types.UI.FrontResult.Item.String()
-				ui.g.Log.Debugf("mitem=%s validate", mitemString)
-				if err := types.UI.FrontResult.Item.D.Validate(); err != nil {
-					// ui.g.Log.Errorf("ui-front selected=%s Validate err=%v", mitemString, err)
-					ui.display.SetLines(ui.g.Config.UI.Front.MsgError, ui.g.Config.UI.Front.MsgMenuNotAvailable)
-					ui.inputBuf = []byte{}
-					goto wait
-				}
-				ui.g.Log.Debugf("compare price=%v credit=%v", types.UI.FrontResult.Item.Price, credit)
-				if types.UI.FrontResult.Item.Price > credit {
-					var l1, l2 string
-					l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgInputCode+" "+ui.g.Config.UI.Front.MsgPrice, types.UI.FrontResult.Item.Code, types.UI.FrontResult.Item.Price.Format100I())
-					if credit == 0 {
-						l1 = *ui.sendRequestForQrPayment()
-					} else {
-						l1 = ui.g.Config.UI.Front.MsgMenuInsufficientCredit
-					}
-					ui.display.SetLines(l1, l2)
-					goto wait
-				}
-
-				return StateFrontAccept // success path
-
-			default:
-				ui.g.Log.Errorf("ui-front unhandled input=%v", e)
-				return StateFrontSelect
-			}
-
-		case types.EventMoneyCredit:
-			credit := moneysys.Credit(ctx)
-			if types.UI.FrontResult.QRPaymenID != "0" {
-				ui.cancelQRPay(tele_api.State_Client)
-			}
-			price := types.UI.FrontResult.Item.Price
-			if price != 0 && credit >= price {
-				if types.UI.FrontResult.Item.D == nil {
-					goto wait
-				}
-				if err := types.UI.FrontResult.Item.D.Validate(); err == nil {
-					return StateFrontAccept // success path
-				}
-			}
-
-			go moneysys.AcceptCredit(ctx, ui.FrontMaxPrice, alive.StopChan(), ui.eventch)
-
-		case types.EventService:
-			return StateServiceBegin
-
+			ui.linesCreate(&l1, &l2, &tuneScreen)
 		case types.EventTime:
-			if ui.State() == StateFrontTune { // XXX onFrontTune
-				return StateFrontSelect // "return to previous mode"
+			if tuneScreen {
+				ui.linesCreate(&l1, &l2, &tuneScreen) //disable tune screem
+			} else {
+				return StateFrontTimeout
 			}
-			return StateFrontTimeout
-
-		case types.EventFrontLock:
+		case types.EventService: // change state
+			return StateServiceBegin
+		case types.EventFrontLock: // change state
 			return StateFrontLock
-
-		case types.EventBroken:
+		case types.EventBroken: // change state
 			return StateBroken
-
-		case types.EventLock, types.EventStop:
+		case types.EventLock, types.EventStop: // change state
 			return StateFrontEnd
-
-		default:
+		default: // destroy program
 			panic(fmt.Sprintf("code error state=%v unhandled event=%v", ui.State(), e))
 		}
 	}
@@ -282,80 +178,53 @@ func (ui *UI) cancelQRPay(s tele_api.State) {
 	ui.g.Tele.RoboSend(&rm)
 }
 
-func (ui *UI) FrontSelectShowZero(ctx context.Context) {
-	ui.frontSelectShow(ctx, 0)
-}
-
-func (ui *UI) frontSelectShow(ctx context.Context, credit currency.Amount) {
-	config := ui.g.Config.UI.Front
-	l1 := config.MsgStateIntro
-	l2 := ""
-	if (credit != 0) || (len(ui.inputBuf) > 0) {
-		l1 = ui.g.Config.UI.Front.MsgCredit + credit.FormatCtx(ctx)
-		l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgInputCode, string(ui.inputBuf))
-	}
-	ui.display.SetLines(l1, l2)
-}
-
 func (ui *UI) onFrontTune(ctx context.Context) State {
 	// XXX FIXME
 	return ui.onFrontSelect(ctx)
 }
 
-func (ui *UI) onFrontTuneInput(e types.InputEvent) State {
+func (ui *UI) tuneScreen(e types.InputEvent) (l1, l2 string) {
 	switch e.Key {
 	case input.EvendKeyCreamLess:
 		if types.UI.FrontResult.Cream > 0 {
 			types.UI.FrontResult.Cream--
-			//lint:ignore SA9003 empty branch
-		} else {
-			// TODO notify "impossible input" (sound?)
 		}
 	case input.EvendKeyCreamMore:
 		if types.UI.FrontResult.Cream < MaxCream {
 			types.UI.FrontResult.Cream++
-			//lint:ignore SA9003 empty branch
-		} else {
-			// TODO notify "impossible input" (sound?)
 		}
 	case input.EvendKeySugarLess:
 		if types.UI.FrontResult.Sugar > 0 {
 			types.UI.FrontResult.Sugar--
-			//lint:ignore SA9003 empty branch
-		} else {
-			// TODO notify "impossible input" (sound?)
 		}
 	case input.EvendKeySugarMore:
 		if types.UI.FrontResult.Sugar < MaxSugar {
 			types.UI.FrontResult.Sugar++
-			//lint:ignore SA9003 empty branch
-		} else {
-			// TODO notify "impossible input" (sound?)
 		}
 	default:
-		return StateFrontSelect
 	}
-	var t1, t2 []byte
-	next := StateFrontSelect
+	var l2b [13]byte
 	switch e.Key {
 	case input.EvendKeyCreamLess, input.EvendKeyCreamMore:
-		t1 = ui.display.Translate(fmt.Sprintf("%s  /%d", ui.g.Config.UI.Front.MsgCream, types.UI.FrontResult.Cream))
-		t2 = formatScale(types.UI.FrontResult.Cream, 0, MaxCream, ScaleAlpha)
-		next = StateFrontTune
+		l1 = fmt.Sprintf("%s  /%d", ui.g.Config.UI.Front.MsgCream, types.UI.FrontResult.Cream)
+		l2b = createScale(types.UI.FrontResult.Cream, MaxCream, DefaultCream)
 	case input.EvendKeySugarLess, input.EvendKeySugarMore:
-		t1 = ui.display.Translate(fmt.Sprintf("%s  /%d", ui.g.Config.UI.Front.MsgSugar, types.UI.FrontResult.Sugar))
-		t2 = formatScale(types.UI.FrontResult.Sugar, 0, MaxSugar, ScaleAlpha)
-		next = StateFrontTune
+		l1 = fmt.Sprintf("%s  /%d", ui.g.Config.UI.Front.MsgSugar, types.UI.FrontResult.Sugar)
+		l2b = createScale(types.UI.FrontResult.Sugar, MaxSugar, DefaultSugar)
 	default:
-		fmt.Printf("\n\033[41m как он может сработать2? \033[0m\n\n")
-		return StateFrontSelect
 	}
-	t2 = append(append(append(make([]byte, 0, text_display.MaxWidth), '-', ' '), t2...), ' ', '+')
-	ui.display.SetLinesBytes(
-		ui.display.JustCenter(t1),
-		ui.display.JustCenter(t2),
-	)
-	return next
+	l2 = string(l2b[:])
+	return l1, l2
+}
+
+func createScale(currentValue uint8, maximumValue uint8, defaultValue uint8) (ba [13]byte) {
+	ba = [13]byte{'-', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', '+'}
+	for i := uint8(2); i <= maximumValue+2; i++ {
+		ba[i] = 0x3d
+	}
+	ba[defaultValue+2] = 0x23
+	ba[currentValue+2] = 0xff
+	return ba
 }
 
 func (ui *UI) onFrontAccept(ctx context.Context) State {
@@ -425,9 +294,9 @@ func (ui *UI) onFrontLock() State {
 	case types.EventService:
 		return StateServiceBegin
 	case types.EventTime:
-		if ui.State() == StateFrontTune { // XXX onFrontTune
-			return StateFrontSelect // "return to previous mode"
-		}
+		// if ui.State() == StateFrontTune { // XXX onFrontTune
+		// 	return StateFrontSelect // "return to previous mode"
+		// }
 		return StateFrontTimeout
 	case types.EventBroken:
 		return StateBroken

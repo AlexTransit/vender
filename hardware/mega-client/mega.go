@@ -239,7 +239,8 @@ func (c *Client) ioLoop() {
 				case kind == RESPONSE_TWI_LISTEN || kind == RESPONSE_RESET:
 
 				case kind == RESPONSE_OK && bgrecv.Fields.MdbResult == MDB_RESULT_UART_READ_UNEXPECTED:
-					c.Log.Infof("%s stray UART_READ_UNEXPECTED likely caused by electrical noise, add filter packet=%s", modName, bgrecv.ResponseString())
+					//AlexM FIXME попал сюда при тесте. ( циклично слал) и это точно не помехи
+					c.Log.Infof("%s stray UUUUUUUUUART_READ_UNEXPECTED likely caused by electrical noise, add filter packet=%s", modName, bgrecv.ResponseString())
 
 				default:
 					// So far this always has been a symptom of critical protocol error

@@ -7,4 +7,15 @@
     "[go]": {"editor.formatOnSave": true },
     "[json]": {"editor.formatOnSave": false },
 
+    // "workbench.colorCustomizations": {
+    //     // Gutter indicators (left)
+    //     "editorGutter.modifiedBackground": "#0000",
+    //     "editorGutter.addedBackground": "#0000",
+    //     "editorGutter.deletedBackground": "#0000",
+    //     // Scrollbar indicators (right)
+    //     "editorOverviewRuler.addedForeground": "#0000",
+    //     "editorOverviewRuler.modifiedForeground": "#0000",
+    //     "editorOverviewRuler.deletedForeground": "#0000"
+    // }
+    
 }

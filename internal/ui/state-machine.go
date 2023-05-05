@@ -49,6 +49,8 @@ const (
 	StateStop //21
 
 	StateFrontLock
+
+	StateDoesNotChange
 )
 
 func (ui *UI) State() State               { return State(atomic.LoadUint32((*uint32)(&ui.state))) }
