@@ -14,9 +14,9 @@ const (
 )
 
 var (
-	ErrNak     = fmt.Errorf("MDB NAK")
-	ErrBusy    = fmt.Errorf("MDB busy")
-	ErrTimeout = fmt.Errorf("MDB timeout")
+	ErrNak        = fmt.Errorf("MDB NAK")
+	ErrBusy       = fmt.Errorf("MDB busy")
+	ErrTimeoutMDB = fmt.Errorf("MDB timeout")
 )
 
 type Uarter interface {
@@ -70,7 +70,7 @@ func (b *Bus) Tx(request Packet, response *Packet) error {
 	response.l = n
 
 	if err != nil {
-		b.Log.Errorf("mega transmit error:%v",err)
+		b.Log.Errorf("mega transmit error:%v", err)
 		return errors.Annotatef(err, "mdb.Tx send=%x recv=%x", rbs, response.Bytes())
 	}
 	// explicit level check to save costly .Format()
@@ -82,5 +82,5 @@ func (b *Bus) Tx(request Packet, response *Packet) error {
 }
 
 func IsResponseTimeout(e error) bool {
-	return e != nil && errors.Cause(e) == ErrTimeout
+	return e != nil && errors.Cause(e) == ErrTimeoutMDB
 }
