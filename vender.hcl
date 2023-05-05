@@ -190,6 +190,7 @@ money {
   
   // limit to over-compensate change return when exact amount is not available
   change_over_compensate = 10
+  enable_change_bill_to_coin = true
 }
 
 persist {
@@ -222,19 +223,24 @@ ui {
     msg_wait       = "please wait"
     msg_no_network = "TODO_EDIT showed if no connect to server"
 
-    msg_menu_code_empty           = "Code empty" // "Закончился ингридиент. Выверите другой ."
-    msg_menu_code_invalid         = "Code invalid" // "Неправильный код"
-    msg_menu_insufficient_credit  = "Insufficient credit" // "Недостаточно денег"
-    msg_menu_not_available        = "Not available" // "Не доступен"
-    msg_cream                     = "Cream" // "Сливки"
-    msg_sugar                     = "Sugar" // "Caxap"
-    msg_credit                    = "Credit" //  "Кредит: "
-    msg_making1                   = "Making text line1" // "спасибо"
-    msg_making2                   = "Making text line2" // "готовлю"
-    msg_input_code                = "Code:%s\x00" // "Код: %s\x00"
-    msg_price                     = "price:%sp." // "цена:%sp."
-    msg_remote_pay                = "QR" // show this + msg_price
+    msg_menu_code_empty             = "Code empty" // "Закончился ингридиент. Выверите другой ."
+    msg_menu_code_invalid           = "Code invalid" // "Неправильный код"
+    msg_menu_insufficient_credit_l1 = "Мало денег"
+    msg_menu_insufficient_credit_l2 = "дали:%s нужно:%s"
+
+    msg_menu_not_available          = "Not available" // "Не доступен"
+    msg_cream                       = "Cream" // "Сливки"
+    msg_sugar                       = "Sugar" // "Caxap"
+    msg_credit                      = "Credit" //  "Кредит: "
+    msg_making1                     = "Making text line1" // "спасибо"
+    msg_making2                     = "Making text line2" // "готовлю"
+    msg_input_code                  = "Code:%s\x00" // "Код: %s\x00"
+    msg_price                       = "price:%sp." // "цена:%sp."
+    
+    msg_remote_pay_l1               = "QR цена:%sр."
+    msg_remote_pay_l2               = "нал. цена:%sр"
     msg_remote_pay_request        = "QR request sent" // "QR запрос отправлен"
+    msg_remote_pay_reject         = "Bank refused :(" // "Банк послал :("
 
     pic_boot         = "/path/boot-picture"
     pic_idle         = "/path/idle-picture"

@@ -13,11 +13,11 @@ type Config struct { //nolint:maligned
 		MsgWait        string `hcl:"msg_wait"`
 		MsgWaterTemp   string `hcl:"msg_water_temp"`
 
-		MsgMenuCodeEmpty          string `hcl:"msg_menu_code_empty"`
-		MsgMenuCodeInvalid        string `hcl:"msg_menu_code_invalid"`
-		MsgMenuInsufficientCredit string `hcl:"msg_menu_insufficient_credit_l1"`
-		// MsgMenuInsufficientCreditL2 string `hcl:"msg_menu_insufficient_credit_l2"`
-		MsgMenuNotAvailable string `hcl:"msg_menu_not_available"`
+		MsgMenuCodeEmpty            string `hcl:"msg_menu_code_empty"`
+		MsgMenuCodeInvalid          string `hcl:"msg_menu_code_invalid"`
+		MsgMenuInsufficientCredit   string `hcl:"msg_menu_insufficient_credit_l1"` // Мало денег
+		MsgMenuInsufficientCreditL2 string `hcl:"msg_menu_insufficient_credit_l2"` // дали:%s нужно:%s
+		MsgMenuNotAvailable         string `hcl:"msg_menu_not_available"`          //"Not available" // "Не доступен"
 
 		MsgCream   string `hcl:"msg_cream"`
 		MsgSugar   string `hcl:"msg_sugar"`
@@ -29,7 +29,8 @@ type Config struct { //nolint:maligned
 		MsgPrice     string `hcl:"msg_price"`
 
 		MsgRemotePay        string `hcl:"msg_remote_pay"`
-		MsgRemotePayRequest string `hcl:"msg_remote_pay_request"`
+		MsgRemotePayRequest string `hcl:"msg_remote_pay_request"` // "QR request sent" // "QR запрос отправлен"
+		MsgRemotePayReject  string `hcl:"msg_remote_pay_reject"`  // "Bank refused :(" // "Банк отказал :("
 
 		MsgNoNetwork string `hcl:"msg_no_network"`
 
