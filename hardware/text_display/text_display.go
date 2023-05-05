@@ -3,6 +3,7 @@ package text_display
 import (
 	"bytes"
 	"fmt"
+	"unsafe"
 
 	"sync"
 	"sync/atomic"
@@ -135,9 +136,10 @@ func (td *TextDisplay) SetLinesBytes(b1, b2 []byte) {
 }
 
 func (td *TextDisplay) SetLines(line1, line2 string) {
-	td.SetLinesBytes(
-		td.Translate(line1),
-		td.Translate(line2))
+	td.SetLinesBytes(String2ByteSlice(line1), String2ByteSlice(line2))
+	// td.SetLinesBytes(
+	// 	td.Translate(line1),
+	// 	td.Translate(line2))
 	if types.VMC.HW.Display.L1 != line1 {
 		types.VMC.HW.Display.L1 = line1
 		types.Log.NoticeF(fmt.Sprintf("Display.L1=%s", line1))
@@ -147,6 +149,13 @@ func (td *TextDisplay) SetLines(line1, line2 string) {
 		types.VMC.HW.Display.L2 = line2
 		types.Log.NoticeF(fmt.Sprintf("Display.L2=%s", line2))
 	}
+}
+
+func String2ByteSlice(str string) []byte {
+	if str == "" {
+		return nil
+	}
+	return unsafe.Slice(unsafe.StringData(str), len(str))
 }
 
 func (td *TextDisplay) Tick() {

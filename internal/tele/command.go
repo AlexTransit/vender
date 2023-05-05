@@ -170,7 +170,8 @@ func (t *tele) messageShowQr(ctx context.Context) {
 	case tele_api.ShowQR_error:
 		g.ShowPicture(state.PictureQRPayError)
 	case tele_api.ShowQR_errorOverdraft:
-		g.UI().FrontSelectShowZero(ctx)
+		g.Hardware.HD44780.Display.SetLines(g.Config.UI.Front.MsgMenuInsufficientCredit,
+			g.Config.UI.Front.MsgRemotePayReject)
 		g.ShowPicture(state.PicturePayReject)
 	}
 

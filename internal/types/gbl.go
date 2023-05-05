@@ -48,9 +48,7 @@ type VMCType struct {
 	MonSys MonSysStruct
 }
 type MonSysStruct struct {
-	Dirty   currency.Amount
-	BillOn  bool
-	BillRun bool
+	Dirty currency.Amount
 }
 
 type UItype struct { //nolint:maligned
@@ -120,8 +118,8 @@ func ShowEnvs() string {
 // 0 = дефолтные значение. если менялось то +1 для телеметрии
 // convert tuning to byte
 // 0 = default value. if changed then +1 for telemetry
-func TuneValueToByte(currentValue uint8, defaultValue int) []byte {
-	if currentValue == uint8(defaultValue) {
+func TuneValueToByte(currentValue uint8, defaultValue uint8) []byte {
+	if currentValue == defaultValue {
 		return nil
 	}
 	return []byte{currentValue + 1}

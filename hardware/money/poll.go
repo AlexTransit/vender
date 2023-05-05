@@ -24,6 +24,23 @@ const (
 	StatusDispensed
 )
 
+type BillEvent struct {
+	Err         error
+	Event       BillEventName
+	BillNominal currency.Nominal
+}
+
+type BillEventName byte
+
+const (
+	NoEvent BillEventName = iota
+	Reseted
+	PollerStoped
+	InEscrow
+	OutEscrow
+	Stacked
+)
+
 type PollItem struct {
 	// TODO avoid time.Time for easy GC (contains pointer)
 	// Time        time.Time

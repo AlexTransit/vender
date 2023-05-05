@@ -164,7 +164,7 @@ func TestServiceMoneyLoad(t *testing.T) {
 	env.g.Hardware.Input.Emit(env._KeyReject.Input)
 	env.requireState(t, ui.StateServiceMenu)
 	env.requireDisplay(t, "Menu", "1 inventory")
-	assert.Equal(t, currency.Amount(0), moneysys.Credit(ctx))
+	assert.Equal(t, currency.Amount(0), moneysys.GetCredit())
 	env.g.Hardware.Input.Emit(env._KeyReject.Input)
 	env.requireState(t, ui.StateServiceEnd)
 	env.g.Alive.Wait()

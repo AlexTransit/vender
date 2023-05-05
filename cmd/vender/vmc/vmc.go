@@ -82,7 +82,7 @@ func BrokenMain(ctx context.Context, config *state.Config) error {
 			err = errors.Annotate(err, "money system Start()")
 			g.Error(err)
 		} else {
-			g.Error(moneysys.Abort(ctx))
+			g.Error(moneysys.ReturnMoney(ctx))
 		}
 	}
 
