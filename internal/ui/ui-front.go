@@ -109,7 +109,6 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 			if nextState := ui.parseKeyEvent(ctx, e, &l1, &l2, &tuneScreen); nextState != StateDoesNotChange {
 				return nextState
 			}
-			ui.g.ClientBegin(ctx)
 		case types.EventMoneyPreCredit, types.EventMoneyCredit:
 			if nextState := ui.parseMoneyEvent(e.Kind); nextState != StateDoesNotChange {
 				return nextState
@@ -222,8 +221,8 @@ func createScale(currentValue uint8, maximumValue uint8, defaultValue uint8) (ba
 	for i := uint8(2); i <= maximumValue+2; i++ {
 		ba[i] = 0x3d
 	}
-	ba[defaultValue+2] = 0x23
-	ba[currentValue+2] = 0xff
+	ba[defaultValue+2] = []byte(`"`)[0] // default char
+	ba[currentValue+2] = []byte("#")[0] // current char
 	return ba
 }
 

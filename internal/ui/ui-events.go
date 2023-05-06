@@ -51,6 +51,7 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 		ui.linesCreate(l1, l2, tuneScreen)
 		return StateDoesNotChange
 	}
+	ui.g.ClientBegin(ctx)
 	if e.Input.IsTuneKey() {
 		*tuneScreen = true
 		*l1, *l2 = ui.tuneScreen(e.Input)
