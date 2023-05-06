@@ -15,7 +15,6 @@ import (
 	"github.com/AlexTransit/vender/hardware/money"
 	"github.com/AlexTransit/vender/internal/state"
 
-	// "github.com/AlexTransit/vender/internal/types"
 	oerr "github.com/juju/errors"
 	"github.com/temoto/alive/v2"
 )
@@ -131,7 +130,12 @@ func (bv *BillValidator) BillReset() (err error) {
 		return err
 	}
 	if !bv.reseted {
-		return errors.New("bill. no complete reset response")
+		err := errors.New("bill. no complete reset response")
+		// ICT validator will not reset until it returns data (ICT валиадатор не отработает сброс, пока не отдаст данные)
+		if e := bv.pollF(nil); err != nil || mbe.Err != nil {
+			err = errors.Join(e, mbe.Err)
+		}
+		return err
 	}
 	if err = bv.setup(); err != nil {
 		return err
@@ -409,14 +413,16 @@ func (bv *BillValidator) decodeByte(b byte) (e money.BillEvent) {
 		switch status {
 		case StatusRoutingBillStacked: // complete state.
 			// return nil, money.BillEvent{Event: money.Stacked, BillNominal: nominal}
+			bv.Log.Infof("bill stacked (%v)", nominal.Format100I())
 			return money.BillEvent{Event: money.Stacked, BillNominal: nominal}
 		case StatusRoutingEscrowPosition:
 			// bv.setState(process)
 			bv.setEscrowBill(bv.nominals[billType])
+			bv.Log.Infof("bill in escrow (%v)", nominal.Format100I())
 			return money.BillEvent{Event: money.InEscrow, BillNominal: nominal}
 			// return nil, money.BillEvent{Event: money.InEscrow, BillNominal: nominal}
 		case StatusRoutingBillReturned:
-			// bv.setState(work)
+			bv.Log.Infof("bill RoutingBillReturned (%v)", nominal.Format100I())
 			return money.BillEvent{Event: money.OutEscrow, BillNominal: nominal}
 			// return nil, money.BillEvent{Event: money.OutEscrow, BillNominal: nominal}
 		case StatusRoutingDisabledBillRejected:
@@ -556,7 +562,6 @@ const (
 // 	// config := state.GetConfig(ctx)
 // 	enableBitset := uint16(0)
 // 	escrowBitset := uint16(0)
-
 // 	if max != 0 {
 // 		for i, n := range bv.nominals {
 // 			if n == 0 {
@@ -571,7 +576,6 @@ const (
 // 			}
 // 		}
 // 	}
-
 // 	return bv.NewBillType(enableBitset, escrowBitset)
 // }
 
