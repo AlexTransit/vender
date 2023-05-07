@@ -162,7 +162,7 @@ func (t *tele) messageShowQr(ctx context.Context) {
 			types.UI.FrontResult.QRPaymenID = t.InMessage.ShowQR.DataStr
 			types.UI.FrontResult.QRPayAmount = uint32(t.InMessage.ShowQR.DataInt)
 			g.ShowQR(t.InMessage.ShowQR.QrText)
-			l1 := fmt.Sprintf(g.Config.UI.Front.MsgRemotePay+" "+g.Config.UI.Front.MsgPrice, currency.Amount(t.InMessage.ShowQR.DataInt).Format100I())
+			l1 := fmt.Sprintf(g.Config.UI.Front.MsgRemotePay+g.Config.UI.Front.MsgPrice, currency.Amount(t.InMessage.ShowQR.DataInt).Format100I())
 			g.Hardware.HD44780.Display.SetLines(l1, types.VMC.HW.Display.L2)
 		}
 	case tele_api.ShowQR_receipt:

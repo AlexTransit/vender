@@ -237,8 +237,7 @@ ui {
     msg_input_code                  = "Code:%s\x00" // "Код: %s\x00"
     msg_price                       = "price:%sp." // "цена:%sp."
     
-    msg_remote_pay_l1               = "QR цена:%sр."
-    msg_remote_pay_l2               = "нал. цена:%sр"
+    msg_remote_pay                = "QR " // show this + msg_price
     msg_remote_pay_request        = "QR request sent" // "QR запрос отправлен"
     msg_remote_pay_reject         = "Bank refused :(" // "Банк послал :("
 
