@@ -17,68 +17,33 @@ import (
 	tele_api "github.com/AlexTransit/vender/tele"
 )
 
-//go:generate stringer -type=State -trimprefix=State
-type State uint32
 
-const (
-	StateDefault State = iota
-
-	StateBoot   // 1 t=onstart +onstartOk=FrontHello +onstartError+retry=Boot +retryMax=Broken
-	StateBroken // 2 t=tele/input +inputService=ServiceBegin
-	StateLocked // 3 t=tele
-
-	StateFrontBegin   // 4 t=checkVariables +=FrontHello
-	StateFrontSelect  // 5 t=input/money/timeout +inputService=ServiceBegin +input=... +money=... +inputAccept=FrontAccept +timeout=FrontTimeout
-	StatePrepare      // 6
-	StateFrontTune    // 7 t=input/money/timeout +inputTune=FrontTune ->FrontSelect
-	StateFrontAccept  // 8 t=engine.Exec(Item) +OK=FrontEnd +err=Broken
-	StateFrontTimeout // 9 t=saveMoney ->FrontEnd
-	StateFrontEnd     // 10 ->FrontBegin
-
-	StateServiceBegin     // 11 t=input/timeout ->ServiceAuth
-	StateServiceAuth      // 12 +inputAccept+OK=ServiceMenu
-	StateServiceMenu      //13
-	StateServiceInventory //14
-	StateServiceTest
-	StateServiceReboot
-	StateServiceNetwork
-	StateServiceMoneyLoad
-	StateServiceReport
-	StateServiceEnd // 20 +askReport=ServiceReport ->FrontBegin
-
-	StateStop //21
-
-	StateFrontLock
-
-	StateDoesNotChange
-)
-
-func (ui *UI) State() State               { return State(atomic.LoadUint32((*uint32)(&ui.state))) }
-func (ui *UI) setState(new State)         { atomic.StoreUint32((*uint32)(&ui.state), uint32(new)) }
-func (ui *UI) XXX_testSetState(new State) { ui.setState(new) }
+func (ui *UI) State() types.UiState               { return types.UiState(atomic.LoadUint32((*uint32)(&ui.state))) }
+func (ui *UI) setState(new types.UiState)         { atomic.StoreUint32((*uint32)(&ui.state), uint32(new)) }
+func (ui *UI) XXX_testSetState(new types.UiState) { ui.setState(new) }
 
 func (ui *UI) Loop(ctx context.Context) {
 	ui.g.Alive.Add(1)
 	defer ui.g.Alive.Done()
-	next := StateDefault
-	for next != StateStop && ui.g.Alive.IsRunning() {
+	next := types.StateDefault
+	for next != types.StateStop && ui.g.Alive.IsRunning() {
 		current := ui.State()
 		types.VMC.UiState = uint32(current)
 		next = ui.enter(ctx, current)
-		if next == StateDefault {
+		if next == types.StateDefault {
 			ui.g.Log.Fatalf("ui state=%v next=default", current)
 		}
 		ui.exit(ctx, current, next)
 
-		if current != StateLocked && ui.checkInterrupt(next) {
+		if current != types.StateLocked && ui.checkInterrupt(next) {
 			ui.lock.next = next
 			ui.g.Log.Infof("ui lock interrupt")
-			next = StateLocked
+			next = types.StateLocked
 		}
 
 		if !ui.g.Alive.IsRunning() {
 			ui.g.Log.Debugf("ui Loop stopping because g.Alive")
-			next = StateStop
+			next = types.StateStop
 		}
 
 		ui.setState(next)
@@ -89,10 +54,10 @@ func (ui *UI) Loop(ctx context.Context) {
 	ui.g.Log.Debugf("ui loop end")
 }
 
-func (ui *UI) enter(ctx context.Context, s State) State {
+func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 	// ui.g.Log.Debugf("ui enter %s", s.String())
 	switch s {
-	case StateBoot:
+	case types.StateBoot:
 		ui.g.Tele.RoboSendState(tele_api.State_Boot)
 		ui.g.ShowPicture(state.PictureBoot)
 		watchdog.WatchDogEnable()
@@ -104,16 +69,16 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 		if errs := ui.g.Engine.ExecList(ctx, "on_boot", onBootScript); len(errs) != 0 {
 			ui.g.Tele.Error(errors.Annotatef(helpers.FoldErrors(errs), "on_boot "))
 			ui.g.Log.Error(errs)
-			return StateBroken
+			return types.StateBroken
 		}
 		if err := os.MkdirAll("/run/vender", 0700); err != nil {
 			ui.g.Tele.Error(errors.Annotatef(err, "create vender folder"))
 		}
 		ui.broken = false
 		ui.g.Tele.RoboSendState(tele_api.State_Nominal)
-		return StateFrontBegin
+		return types.StateFrontBegin
 
-	case StateBroken:
+	case types.StateBroken:
 		watchdog.WatchDogDisable()
 		types.InitRequared()
 		ui.g.Log.Infof("state=broken")
@@ -133,90 +98,90 @@ func (ui *UI) enter(ctx context.Context, s State) State {
 			e := ui.wait(time.Second)
 			// TODO receive tele command to reboot or change state
 			if e.Kind == types.EventService {
-				return StateServiceBegin
+				return types.StateServiceBegin
 			}
 		}
-		return StateDefault
+		return types.StateDefault
 
-	case StateLocked:
+	case types.StateLocked:
 		ui.display.SetLines(ui.g.Config.UI.Front.MsgStateLocked, "")
 		// ui.g.Tele.State(tele_api.State_Lock)
 		for ui.g.Alive.IsRunning() {
 			e := ui.wait(lockPoll)
 			// TODO receive tele command to reboot or change state
 			if e.Kind == types.EventService {
-				return StateServiceBegin
+				return types.StateServiceBegin
 			}
 			if !ui.lock.locked() {
 				return ui.lock.next
 			}
 		}
-		return StateDefault
+		return types.StateDefault
 
-	case StateFrontBegin:
+	case types.StateFrontBegin:
 		ui.inputBuf = ui.inputBuf[:0]
 		ui.broken = false
 		watchdog.WatchDogEnable()
 		return ui.onFrontBegin(ctx)
 
-	case StateFrontSelect:
+	case types.StateFrontSelect:
 		return ui.onFrontSelect(ctx)
 
-	case StateFrontTune:
+	case types.StateFrontTune:
 		return ui.onFrontTune(ctx)
 
-	case StateFrontAccept:
+	case types.StateFrontAccept:
 		return ui.onFrontAccept(ctx)
 
-	case StateFrontTimeout:
+	case types.StateFrontTimeout:
 		return ui.onFrontTimeout(ctx)
 
-	case StateFrontEnd:
+	case types.StateFrontEnd:
 		// ui.onFrontEnd(ctx)
-		return StateFrontBegin
+		return types.StateFrontBegin
 
-	case StateFrontLock:
+	case types.StateFrontLock:
 		return ui.onFrontLock()
 
-	case StateServiceBegin:
+	case types.StateServiceBegin:
 		watchdog.WatchDogDisable()
 		return ui.onServiceBegin(ctx)
-	case StateServiceMenu:
+	case types.StateServiceMenu:
 		return ui.onServiceMenu()
-	case StateServiceInventory:
+	case types.StateServiceInventory:
 		return ui.onServiceInventory()
-	case StateServiceTest:
+	case types.StateServiceTest:
 		return ui.onServiceTest(ctx)
-	case StateServiceReboot:
+	case types.StateServiceReboot:
 		return ui.onServiceReboot(ctx)
-	case StateServiceNetwork:
+	case types.StateServiceNetwork:
 		return ui.onServiceNetwork()
-	case StateServiceMoneyLoad:
+	case types.StateServiceMoneyLoad:
 		return ui.onServiceMoneyLoad(ctx)
-	case StateServiceReport:
+	case types.StateServiceReport:
 		return ui.onServiceReport(ctx)
-	case StateServiceEnd:
-		return replaceDefault(ui.onServiceEnd(ctx), StateFrontBegin)
+	case types.StateServiceEnd:
+		return replaceDefault(ui.onServiceEnd(ctx), types.StateFrontBegin)
 
-	case StateStop:
-		return StateStop
+	case types.StateStop:
+		return types.StateStop
 
 	default:
 		ui.g.Log.Fatalf("unhandled ui state=%v", s)
-		return StateDefault
+		return types.StateDefault
 	}
 }
 
-func (ui *UI) exit(ctx context.Context, current, next State) {
+func (ui *UI) exit(ctx context.Context, current, next types.UiState) {
 	// ui.g.Log.Debugf("ui exit %s -> %s", current.String(), next.String())
 
-	if next != StateBroken {
+	if next != types.StateBroken {
 		ui.broken = false
 	}
 }
 
-func replaceDefault(s, def State) State {
-	if s == StateDefault {
+func replaceDefault(s, def types.UiState) types.UiState {
+	if s == types.StateDefault {
 		return def
 	}
 	return s

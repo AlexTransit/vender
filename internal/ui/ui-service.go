@@ -77,7 +77,7 @@ func (ui *uiService) Init(ctx context.Context) {
 	}
 }
 
-func (ui *UI) onServiceBegin(ctx context.Context) State {
+func (ui *UI) onServiceBegin(ctx context.Context) types.UiState {
 	types.VMC.InputEnable = true
 	ui.inputBuf = ui.inputBuf[:0]
 	ui.Service.askReport = false
@@ -101,15 +101,15 @@ func (ui *UI) onServiceBegin(ctx context.Context) State {
 
 	if errs := ui.g.Engine.ExecList(ctx, "on_service_begin", ui.g.Config.Engine.OnServiceBegin); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_service_begin"))
-		return StateBroken
+		return types.StateBroken
 	}
 
 	ui.g.Log.Debugf("ui service begin")
 	ui.g.Tele.RoboSendState(tele_api.State_Service)
-	return StateServiceMenu
+	return types.StateServiceMenu
 }
 
-func (ui *UI) onServiceMenu() State {
+func (ui *UI) onServiceMenu() types.UiState {
 	menuName := serviceMenu[ui.Service.menuIdx]
 	ui.display.SetLines(
 		msgServiceMenu,
@@ -117,7 +117,7 @@ func (ui *UI) onServiceMenu() State {
 	)
 
 	next, e := ui.serviceWaitInput()
-	if next != StateDefault {
+	if next != types.StateDefault {
 		return next
 	}
 
@@ -130,27 +130,27 @@ func (ui *UI) onServiceMenu() State {
 	case input.IsAccept(&e):
 		if int(ui.Service.menuIdx) >= len(serviceMenu) {
 			ui.g.Fatal(errors.Errorf("code error service menuIdx out of range"))
-			return StateBroken
+			return types.StateBroken
 		}
 		switch serviceMenu[ui.Service.menuIdx] {
 		case serviceMenuInventory:
-			return StateServiceInventory
+			return types.StateServiceInventory
 		case serviceMenuTest:
-			return StateServiceTest
+			return types.StateServiceTest
 		case serviceMenuReboot:
-			return StateServiceReboot
+			return types.StateServiceReboot
 		case serviceMenuNetwork:
-			return StateServiceNetwork
+			return types.StateServiceNetwork
 		case serviceMenuMoneyLoad:
-			return StateServiceMoneyLoad
+			return types.StateServiceMoneyLoad
 		case serviceMenuReport:
-			return StateServiceReport
+			return types.StateServiceReport
 		default:
 			panic("code error")
 		}
 
 	case input.IsReject(&e):
-		return StateServiceEnd
+		return types.StateServiceEnd
 
 	case e.IsDigit():
 		x := byte(e.Key) - byte('0')
@@ -158,16 +158,16 @@ func (ui *UI) onServiceMenu() State {
 			ui.Service.menuIdx = x - 1
 		}
 	}
-	return StateServiceMenu
+	return types.StateServiceMenu
 }
 
 var lv bool
 
-func (ui *UI) onServiceInventory() State {
+func (ui *UI) onServiceInventory() types.UiState {
 	if len(ui.Service.invList) == 0 {
 		ui.display.SetLines(MsgError, "inv empty") // FIXME extract message string
 		ui.serviceWaitInput()
-		return StateServiceMenu
+		return types.StateServiceMenu
 	}
 	invCurrent := ui.Service.invList[ui.Service.invIdx]
 	if lv {
@@ -182,7 +182,7 @@ func (ui *UI) onServiceInventory() State {
 		)
 	}
 	next, e := ui.serviceWaitInput()
-	if next != StateDefault {
+	if next != types.StateDefault {
 		return next
 	}
 
@@ -192,7 +192,7 @@ func (ui *UI) onServiceInventory() State {
 		if len(ui.inputBuf) != 0 {
 			ui.display.SetLines(MsgError, "set or clear?") // FIXME extract message string
 			ui.serviceWaitInput()
-			return StateServiceInventory
+			return types.StateServiceInventory
 		}
 		if e.Key == input.EvendKeyCreamLess {
 			ui.Service.invIdx = addWrap(ui.Service.invIdx, invIdxMax, -1)
@@ -207,13 +207,13 @@ func (ui *UI) onServiceInventory() State {
 		} else {
 			lv = true
 		}
-		return StateServiceInventory
+		return types.StateServiceInventory
 	case input.IsAccept(&e):
 		if len(ui.inputBuf) == 0 {
 			ui.g.Log.Errorf("ui onServiceInventory input=accept inputBuf=empty")
 			ui.display.SetLines(MsgError, "empty") // FIXME extract message string
 			ui.serviceWaitInput()
-			return StateServiceInventory
+			return types.StateServiceInventory
 		}
 
 		xt, err := strconv.ParseFloat(string(ui.inputBuf), 64)
@@ -223,7 +223,7 @@ func (ui *UI) onServiceInventory() State {
 			ui.g.Log.Errorf("ui onServiceInventory input=accept inputBuf='%s'", string(ui.inputBuf))
 			ui.display.SetLines(MsgError, "number-invalid") // FIXME extract message string
 			ui.serviceWaitInput()
-			return StateServiceInventory
+			return types.StateServiceInventory
 		}
 
 		invCurrent := ui.Service.invList[ui.Service.invIdx]
@@ -239,19 +239,19 @@ func (ui *UI) onServiceInventory() State {
 		// backspace semantic
 		if len(ui.inputBuf) > 0 {
 			ui.inputBuf = ui.inputBuf[:len(ui.inputBuf)-1]
-			return StateServiceInventory
+			return types.StateServiceInventory
 		}
-		return StateServiceMenu
+		return types.StateServiceMenu
 	}
-	return StateServiceInventory
+	return types.StateServiceInventory
 }
 
-func (ui *UI) onServiceTest(ctx context.Context) State {
+func (ui *UI) onServiceTest(ctx context.Context) types.UiState {
 	ui.inputBuf = ui.inputBuf[:0]
 	if len(ui.Service.testList) == 0 {
 		ui.display.SetLines(MsgError, "no tests") // FIXME extract message string
 		ui.serviceWaitInput()
-		return StateServiceMenu
+		return types.StateServiceMenu
 	}
 	testCurrent := ui.Service.testList[ui.Service.testIdx]
 	line1 := fmt.Sprintf("T%d %s", ui.Service.testIdx+1, testCurrent.String())
@@ -259,7 +259,7 @@ func (ui *UI) onServiceTest(ctx context.Context) State {
 
 wait:
 	next, e := ui.serviceWaitInput()
-	if next != StateDefault {
+	if next != types.StateDefault {
 		return next
 	}
 
@@ -281,16 +281,16 @@ wait:
 		goto wait
 
 	case input.IsReject(&e):
-		return StateServiceMenu
+		return types.StateServiceMenu
 	}
-	return StateServiceTest
+	return types.StateServiceTest
 }
 
-func (ui *UI) onServiceReboot(ctx context.Context) State {
+func (ui *UI) onServiceReboot(ctx context.Context) types.UiState {
 	ui.display.SetLines("for reboot", "press 1") // FIXME extract message string
 
 	next, e := ui.serviceWaitInput()
-	if next != StateDefault {
+	if next != types.StateDefault {
 		return next
 	}
 
@@ -298,17 +298,17 @@ func (ui *UI) onServiceReboot(ctx context.Context) State {
 	case e.Key == '1':
 		ui.display.SetLines("reboot", "in progress") // FIXME extract message string
 		ui.g.VmcStop(ctx)
-		return StateStop
+		return types.StateStop
 	}
-	return StateServiceMenu
+	return types.StateServiceMenu
 }
 
-func (ui *UI) onServiceNetwork() State {
+func (ui *UI) onServiceNetwork() types.UiState {
 
 	ui.display.SetLines("for select net 0", "press 1") // FIXME extract message string
 
 	next, e := ui.serviceWaitInput()
-	if next != StateDefault {
+	if next != types.StateDefault {
 		return next
 	}
 
@@ -333,9 +333,9 @@ func (ui *UI) onServiceNetwork() State {
 			// panic(err)
 		}
 
-		return StateServiceEnd
+		return types.StateServiceEnd
 	}
-	return StateServiceMenu
+	return types.StateServiceMenu
 	// 	allAddrs, _ := net.InterfaceAddrs()
 	// 	addrs := make([]string, 0, len(allAddrs))
 	// 	// TODO parse ignored networks from config
@@ -365,7 +365,7 @@ func (ui *UI) onServiceNetwork() State {
 	// 	}
 }
 
-func (ui *UI) onServiceMoneyLoad(ctx context.Context) State {
+func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
 	moneysys := money.GetGlobal(ctx)
 
 	ui.display.SetLines("money-load", "0")
@@ -394,18 +394,18 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) State {
 		switch e := ui.wait(ui.Service.resetTimeout); e.Kind {
 		case types.EventInput:
 			if input.IsReject(&e.Input) {
-				return StateServiceMenu
+				return types.StateServiceMenu
 			}
 
 		case types.EventMoneyCredit:
 			accept = true
 
 		case types.EventLock:
-			return StateLocked
+			return types.StateLocked
 
 		case types.EventStop:
 			ui.g.Log.Debugf("onServiceMoneyLoad global stop")
-			return StateServiceEnd
+			return types.StateServiceEnd
 
 		case types.EventTime:
 
@@ -415,15 +415,15 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) State {
 	}
 }
 
-func (ui *UI) onServiceReport(ctx context.Context) State {
+func (ui *UI) onServiceReport(ctx context.Context) types.UiState {
 	_ = ui.g.Tele.Report(ctx, true)
 	if errs := ui.g.Engine.ExecList(ctx, "service-report", []string{"money.cashbox_zero"}); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "service-report"))
 	}
-	return StateServiceMenu
+	return types.StateServiceMenu
 }
 
-func (ui *UI) onServiceEnd(ctx context.Context) State {
+func (ui *UI) onServiceEnd(ctx context.Context) types.UiState {
 	_ = ui.g.Inventory.InventorySave()
 	ui.inputBuf = ui.inputBuf[:0]
 
@@ -437,36 +437,36 @@ func (ui *UI) onServiceEnd(ctx context.Context) State {
 
 	if errs := ui.g.Engine.ExecList(ctx, "on_service_end", ui.g.Config.Engine.OnServiceEnd); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_service_end"))
-		return StateBroken
+		return types.StateBroken
 	}
-	return StateDefault
+	return types.StateDefault
 }
 
-func (ui *UI) serviceWaitInput() (State, types.InputEvent) {
+func (ui *UI) serviceWaitInput() (types.UiState, types.InputEvent) {
 	e := ui.wait(ui.Service.resetTimeout)
 	switch e.Kind {
 	case types.EventInput:
-		return StateDefault, e.Input
+		return types.StateDefault, e.Input
 
 	case types.EventMoneyCredit:
 		ui.g.Log.Debugf("serviceWaitInput event=%v", e)
-		return StateDefault, types.InputEvent{}
+		return types.StateDefault, types.InputEvent{}
 
 	case types.EventTime:
 		// ui.g.Log.Infof("inactive=%v", inactive)
 		ui.g.Log.Debugf("serviceWaitInput resetTimeout")
-		return StateServiceEnd, types.InputEvent{}
+		return types.StateServiceEnd, types.InputEvent{}
 
 	case types.EventLock:
-		return StateLocked, types.InputEvent{}
+		return types.StateLocked, types.InputEvent{}
 
 	case types.EventService:
 		ui.g.Log.Debugf("service exit")
-		return StateServiceEnd, types.InputEvent{}
+		return types.StateServiceEnd, types.InputEvent{}
 
 	case types.EventStop:
 		ui.g.Log.Debugf("serviceWaitInput global stop")
-		return StateServiceEnd, types.InputEvent{}
+		return types.StateServiceEnd, types.InputEvent{}
 
 	default:
 		panic(fmt.Sprintf("code error serviceWaitInput unhandled event=%#v", e))
