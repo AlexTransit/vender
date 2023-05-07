@@ -33,7 +33,7 @@ ui {
 	require.NoError(t, moneysys.Start(ctx))
 	env := &tenv{ctx: ctx, g: g}
 	g.Config.UI.Front.MsgStateIntro = "hello tune"
-	uiTestSetup(t, env, ui.StateFrontBegin, ui.StateFrontEnd)
+	uiTestSetup(t, env, types.StateFrontBegin, types.StateFrontEnd)
 	go env.ui.Loop(ctx)
 	// creamStock := g.Inventory.MustGet(t, "cream")
 	// creamStock.Set(100)
@@ -73,7 +73,7 @@ ui {
 	require.NoError(t, moneysys.Start(ctx))
 	env := &tenv{ctx: ctx, g: g}
 	g.Config.UI.Front.MsgStateIntro = "money-abort"
-	uiTestSetup(t, env, ui.StateFrontBegin, ui.StateFrontEnd)
+	uiTestSetup(t, env, types.StateFrontBegin, types.StateFrontEnd)
 	go env.ui.Loop(ctx)
 	// creamStock := g.Inventory.MustGet(t, "cream")
 	// creamStock.Set(100)
