@@ -2,7 +2,7 @@ package coin
 
 import (
 	"encoding/binary"
-	"fmt"
+	"errors"
 	"strings"
 )
 
@@ -75,7 +75,8 @@ func parseDiagResult(b []byte, byteOrder binary.ByteOrder) (DiagResult, error) {
 		return nil, nil
 	}
 	if lb%2 != 0 {
-		return nil, fmt.Errorf("Diag response must be 0..8 words of 16 bit")
+		err := errors.New("diag response must be 0..8 words of 16 bit")
+		return nil, err
 	}
 	dr := make(DiagResult, lb/2)
 	for i := 0; i < lb/2; i++ {
