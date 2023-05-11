@@ -20,7 +20,6 @@ import (
 )
 
 type BillValidator struct { //nolint:maligned
-	Ready   bool
 	reseted bool
 	mdb.Device
 	pollmu        sync.Mutex // isolate active/idle polling
@@ -82,30 +81,16 @@ func (bv *BillValidator) init(ctx context.Context) error {
 		bv.configScaling = uint16(config.ScalingFactor)
 	}
 	bv.billCmd = make(chan BillCommand, 2)
-	// bv.DoEscrowAccept = bv.newEscrow(true)
-	// bv.DoEscrowReject = bv.newEscrow(false)
-	// bv.DoStacker = bv.newStacker()
-	// g.Engine.Register(bv.DoEscrowAccept.Name, bv.DoEscrowAccept)
-	// g.Engine.Register(bv.DoEscrowReject.Name, bv.DoEscrowReject)
-	// g.Engine.Register("bill.reset", bv.billResetOLD())
 	g.Engine.RegisterNewFunc(
 		"bill.reset",
 		func(ctx context.Context) error {
 			return bv.BillReset()
 		},
 	)
-	// bv.Device.DoInit = bv.newIniter()
-	// TODO remove IO from Init()
-	// if err = g.Engine.Exec(ctx, bv.Device.DoInit); err != nil {
-	// 	return errors.Annotate(err, tag)
-	// }
 	if err = bv.BillReset(); err != nil {
 		return err
 	}
-	time.Sleep(2 * time.Second)
-	// bv.BillRun()
 	return nil
-	// return bv.billReset()
 }
 
 func (bv *BillValidator) SendCommand(cmd BillCommand) {
@@ -334,11 +319,11 @@ func (bv *BillValidator) enableAccept() (err error) {
 }
 
 // poll function.
-// возвращает собития и объедененную ошибку
+// возвращает события и объедененную ошибку
 func (bv *BillValidator) pollF(returnEvent func(money.BillEvent)) (err error) {
 	var response mdb.Packet
 	if err := bv.Device.Tx(bv.Device.PacketPoll, &response); err != nil {
-		fmt.Printf("\033[41m pollFpollFerr%v \033[0m\n", err)
+		bv.Log.Errorf("bill boll TX error:%v", err)
 		return err
 	}
 	rb := response.Bytes()
