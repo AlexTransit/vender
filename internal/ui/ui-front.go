@@ -23,7 +23,7 @@ import (
 // 	Sugar uint8
 // }
 
-func (ui *UI) onFrontBegin(ctx context.Context) State {
+func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 	if types.VMC.NeedRestart {
 		ui.g.VmcStopWOInitRequared(ctx)
 
@@ -60,33 +60,33 @@ func (ui *UI) onFrontBegin(ctx context.Context) State {
 				ui.g.Tele.RoboSend(&rm)
 			}
 			if e := ui.wait(5 * time.Second); e.Kind == types.EventService {
-				return StateServiceBegin
+				return types.StateServiceBegin
 			}
-			return StateFrontEnd
+			return types.StateFrontEnd
 		} else if err != nil {
 			ui.g.Error(err)
-			return StateBroken
+			return types.StateBroken
 		}
 	}
 	ui.g.ClientEnd(ctx)
 	if errs := ui.g.Engine.ExecList(ctx, "on_front_begin", ui.g.Config.Engine.OnFrontBegin); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_front_begin"))
-		return StateBroken
+		return types.StateBroken
 	}
 
 	var err error
 	ui.FrontMaxPrice, err = menuMaxPrice()
 	if err != nil {
 		ui.g.Error(err)
-		return StateBroken
+		return types.StateBroken
 
 	}
 	ui.g.Tele.RoboSendState(tele_api.State_Nominal)
 
-	return StateFrontSelect
+	return types.StateFrontSelect
 }
 
-func (ui *UI) onFrontSelect(ctx context.Context) State {
+func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 	alive := alive.NewAlive()
 	defer func() {
 		alive.Stop() // stop pending AcceptCredit
@@ -106,11 +106,11 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 		e := ui.wait(timeout)
 		switch e.Kind {
 		case types.EventInput:
-			if nextState := ui.parseKeyEvent(ctx, e, &l1, &l2, &tuneScreen); nextState != StateDoesNotChange {
+			if nextState := ui.parseKeyEvent(ctx, e, &l1, &l2, &tuneScreen); nextState != types.StateDoesNotChange {
 				return nextState
 			}
 		case types.EventMoneyPreCredit, types.EventMoneyCredit:
-			if nextState := ui.parseMoneyEvent(e.Kind); nextState != StateDoesNotChange {
+			if nextState := ui.parseMoneyEvent(e.Kind); nextState != types.StateDoesNotChange {
 				return nextState
 			}
 			ui.linesCreate(&l1, &l2, &tuneScreen)
@@ -118,16 +118,16 @@ func (ui *UI) onFrontSelect(ctx context.Context) State {
 			if tuneScreen {
 				ui.linesCreate(&l1, &l2, &tuneScreen) //disable tune screem
 			} else {
-				return StateFrontTimeout
+				return types.StateFrontTimeout
 			}
 		case types.EventService: // change state
-			return StateServiceBegin
+			return types.StateServiceBegin
 		case types.EventFrontLock: // change state
-			return StateFrontLock
+			return types.StateFrontLock
 		case types.EventBroken: // change state
-			return StateBroken
+			return types.StateBroken
 		case types.EventLock, types.EventStop: // change state
-			return StateFrontEnd
+			return types.StateFrontEnd
 		default: // destroy program
 			panic(fmt.Sprintf("code error state=%v unhandled event=%v", ui.State(), e))
 		}
@@ -143,7 +143,7 @@ func (ui *UI) sendRequestForQrPayment() (message_for_display *string) {
 	}
 	types.UI.FrontResult.QRPaymenID = "0"
 	types.VMC.EvendKeyboardInput(false)
-	types.VMC.UiState = uint32(StatePrepare)
+	types.VMC.UiState = uint32(types.StatePrepare)
 	rm := tele_api.FromRoboMessage{
 		State:    tele_api.State_WaitingForExternalPayment,
 		RoboTime: time.Now().Unix(),
@@ -177,7 +177,7 @@ func (ui *UI) cancelQRPay(s tele_api.State) {
 	ui.g.Tele.RoboSend(&rm)
 }
 
-func (ui *UI) onFrontTune(ctx context.Context) State {
+func (ui *UI) onFrontTune(ctx context.Context) types.UiState {
 	// XXX FIXME
 	return ui.onFrontSelect(ctx)
 }
@@ -226,7 +226,7 @@ func createScale(currentValue uint8, maximumValue uint8, defaultValue uint8) (ba
 	return ba
 }
 
-func (ui *UI) onFrontAccept(ctx context.Context) State {
+func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	ui.g.Tele.RoboSendState(tele_api.State_Process)
 	// ui.g.Hardware.Input.Enable(false)
 	moneysys := money.GetGlobal(ctx)
@@ -245,7 +245,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 	if err == nil { // success path
 		rm.Order.OrderStatus = tele_api.OrderStatus_complete
 		rm.State = tele_api.State_Nominal
-		return StateFrontEnd
+		return types.StateFrontEnd
 	}
 	rm.State = tele_api.State_Broken
 	ui.display.SetLines(uiConfig.Front.MsgError, uiConfig.Front.MsgMenuError)
@@ -256,7 +256,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) State {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_menu_error"))
 	}
 
-	return StateBroken
+	return types.StateBroken
 }
 
 func CreateOrderMessageAndFillSelected() tele_api.FromRoboMessage {
@@ -276,14 +276,14 @@ func OrderMenuAndTune(o *tele_api.Order) {
 	o.Sugar = types.TuneValueToByte(types.UI.FrontResult.Sugar, DefaultSugar)
 }
 
-func (ui *UI) onFrontTimeout(ctx context.Context) State {
+func (ui *UI) onFrontTimeout(ctx context.Context) types.UiState {
 	// ui.g.Log.Debugf("ui state=%s result=%#v", ui.State().String(), ui.FrontResult)
 	// moneysys := money.GetGlobal(ctx)
 	// moneysys.save
-	return StateFrontEnd
+	return types.StateFrontEnd
 }
 
-func (ui *UI) onFrontLock() State {
+func (ui *UI) onFrontLock() types.UiState {
 	// ui.g.Hardware.Input.Enable(false)
 	// types.VMC.Lock = true
 	// ui.display.SetLines(ui.g.Config.UI.Front.MsgStateLocked, "")
@@ -291,22 +291,22 @@ func (ui *UI) onFrontLock() State {
 	e := ui.wait(timeout)
 	switch e.Kind {
 	case types.EventService:
-		return StateServiceBegin
+		return types.StateServiceBegin
 	case types.EventTime:
 		// if ui.State() == StateFrontTune { // XXX onFrontTune
 		// 	return StateFrontSelect // "return to previous mode"
 		// }
-		return StateFrontTimeout
+		return types.StateFrontTimeout
 	case types.EventBroken:
-		return StateBroken
+		return types.StateBroken
 	case types.EventFrontLock:
 		if types.VMC.UiState == 2 { // broken. fix this
-			return StateBroken
+			return types.StateBroken
 		}
 		types.VMC.Lock = false
-		return StateFrontEnd
+		return types.StateFrontEnd
 	}
-	return StateFrontEnd
+	return types.StateFrontEnd
 }
 
 // tightly coupled to len(alphabet)=4

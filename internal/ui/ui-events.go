@@ -26,7 +26,7 @@ func (ui *UI) linesCreate(l1 *string, l2 *string, tuneScreen *bool) {
 	*tuneScreen = false
 }
 
-func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *string, tuneScreen *bool) State {
+func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *string, tuneScreen *bool) types.UiState {
 	if input.IsMoneyAbort(&e.Input) {
 		ui.g.Log.Infof("money abort event.")
 		credit := ui.ms.GetCredit()
@@ -36,42 +36,42 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 			ui.g.Error(errors.Trace(err))
 			ui.cancelQRPay(tele_api.State_Client)
 		}
-		return StateFrontEnd
+		return types.StateFrontEnd
 	}
 	if input.IsReject(&e.Input) {
 		// 	// backspace semantic
 		if len(ui.inputBuf) == 0 {
 			if ui.ms.GetCredit() == 0 {
-				return StateFrontEnd
+				return types.StateFrontEnd
 			}
 		}
 		if len(ui.inputBuf) >= 1 {
 			ui.inputBuf = ui.inputBuf[:len(ui.inputBuf)-1]
 		}
 		ui.linesCreate(l1, l2, tuneScreen)
-		return StateDoesNotChange
+		return types.StateDoesNotChange
 	}
 	ui.g.ClientBegin(ctx)
 	if e.Input.IsTuneKey() {
 		*tuneScreen = true
 		*l1, *l2 = ui.tuneScreen(e.Input)
-		return StateDoesNotChange
+		return types.StateDoesNotChange
 	}
 	if e.Input.IsDigit() || e.Input.IsDot() {
 		ui.cancelQRPay(tele_api.State_Client)
 		ui.inputBuf = append(ui.inputBuf, byte(e.Input.Key))
 		ui.linesCreate(l1, l2, tuneScreen)
-		return StateDoesNotChange
+		return types.StateDoesNotChange
 	}
 	if input.IsAccept(&e.Input) {
 		*tuneScreen = false
 		if types.UI.FrontResult.QRPaymenID != "" {
-			return StateDoesNotChange
+			return types.StateDoesNotChange
 		}
 		if len(ui.inputBuf) == 0 {
 			*l1 = ui.g.Config.UI.Front.MsgError
 			*l2 = ui.g.Config.UI.Front.MsgMenuCodeEmpty
-			return StateDoesNotChange
+			return types.StateDoesNotChange
 		}
 		var checkValidCode bool
 		types.UI.FrontResult.Item, checkValidCode = types.UI.Menu[string(ui.inputBuf)]
@@ -79,14 +79,14 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 			*l1 = ui.g.Config.UI.Front.MsgMenuError
 			*l2 = ui.g.Config.UI.Front.MsgMenuCodeInvalid
 			ui.inputBuf = []byte{}
-			return StateDoesNotChange
+			return types.StateDoesNotChange
 		}
 		if err := types.UI.FrontResult.Item.D.Validate(); err != nil {
 			ui.g.Log.Warning("code not valid. code invalid or little ingridient")
 			*l1 = ui.g.Config.UI.Front.MsgMenuError
 			*l2 = ui.g.Config.UI.Front.MsgMenuNotAvailable
 			ui.inputBuf = []byte{}
-			return StateDoesNotChange
+			return types.StateDoesNotChange
 		}
 		credit := ui.ms.GetCredit()
 		if types.UI.FrontResult.Item.Price > credit {
@@ -96,17 +96,17 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 			} else {
 				*l1 = ui.g.Config.UI.Front.MsgMenuInsufficientCredit
 			}
-			return StateDoesNotChange
+			return types.StateDoesNotChange
 		}
 		if ui.ms.WaitEscrowAccept(types.UI.FrontResult.Item.Price) {
-			return StateDoesNotChange
+			return types.StateDoesNotChange
 		}
-		return StateFrontAccept // success path
+		return types.StateFrontAccept // success path
 	}
-	return StateDoesNotChange
+	return types.StateDoesNotChange
 }
 
-func (ui *UI) parseMoneyEvent(ek types.EventKind) State {
+func (ui *UI) parseMoneyEvent(ek types.EventKind) types.UiState {
 	// switch
 	if types.UI.FrontResult.QRPaymenID != "0" {
 		ui.cancelQRPay(tele_api.State_Client)
@@ -120,10 +120,10 @@ func (ui *UI) parseMoneyEvent(ek types.EventKind) State {
 			if ek == types.EventMoneyPreCredit {
 				// send command escrow to stacker and wait
 				ui.ms.BillEscrowToStacker()
-				return StateDoesNotChange
+				return types.StateDoesNotChange
 			}
-			return StateFrontAccept // success path
+			return types.StateFrontAccept // success path
 		}
 	}
-	return StateDoesNotChange
+	return types.StateDoesNotChange
 }

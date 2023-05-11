@@ -110,24 +110,21 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 		},
 	)
 	g.Engine.RegisterNewFunc(
-		// testaaa
-		"aas",
+		"bill.stop",
 		func(ctx context.Context) error {
 			ms.bill.SendCommand(bill.Stop)
 			return nil
 		},
 	)
 	g.Engine.RegisterNewFunc(
-		// testaaa
-		"aaer",
+		"bill.reject",
 		func(ctx context.Context) error {
 			ms.bill.SendCommand(bill.Reject)
 			return nil
 		},
 	)
 	g.Engine.RegisterNewFunc(
-		// testaaa
-		"aaea",
+		"bill.accept",
 		func(ctx context.Context) error {
 			ms.bill.SendCommand(bill.Accept)
 			return nil

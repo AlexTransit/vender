@@ -13,7 +13,7 @@ import (
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
-	"github.com/juju/errors"
+	oerr "github.com/juju/errors"
 	"github.com/temoto/alive/v2"
 )
 
@@ -64,16 +64,16 @@ var (
 	packetTubeStatus   = mdb.MustPacketFromHex("0a", true)
 	packetExpIdent     = mdb.MustPacketFromHex("0f00", true)
 	packetDiagStatus   = mdb.MustPacketFromHex("0f05", true)
-	packetPayoutPoll   = mdb.MustPacketFromHex("0f04", true)
+	// packetPayoutPoll   = mdb.MustPacketFromHex("0f04", true)
 	packetPayoutStatus = mdb.MustPacketFromHex("0f03", true)
 )
 
 var (
-	ErrNoCredit      = errors.Errorf("No Credit")
-	ErrDoubleArrival = errors.Errorf("Double Arrival")
-	ErrCoinRouting   = errors.Errorf("Coin Routing")
-	ErrCoinJam       = errors.Errorf("Coin Jam")
-	ErrSlugs         = errors.Errorf("Slugs")
+	ErrNoCredit      = oerr.Errorf("No Credit")
+	ErrDoubleArrival = oerr.Errorf("Double Arrival")
+	ErrCoinRouting   = oerr.Errorf("Coin Routing")
+	ErrCoinJam       = oerr.Errorf("Coin Jam")
+	ErrSlugs         = oerr.Errorf("Slugs")
 )
 
 func (ca *CoinAcceptor) init(ctx context.Context) error {
@@ -82,7 +82,7 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	mdbus, err := g.Mdb()
 	if err != nil {
-		return errors.Annotate(err, tag)
+		return oerr.Annotate(err, tag)
 	}
 	ca.Device.Init(mdbus, 0x08, "coin", binary.BigEndian)
 	config := &g.Config.Hardware.Mdb.Coin
@@ -97,7 +97,7 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 
 	// TODO (Enum idea) no IO in Init()
 	err = g.Engine.Exec(ctx, ca.Device.DoInit)
-	return errors.Annotate(err, tag)
+	return oerr.Annotate(err, tag)
 }
 
 func (ca *CoinAcceptor) AcceptMax(max currency.Amount) engine.Doer {
@@ -180,9 +180,9 @@ func (ca *CoinAcceptor) pollFun(fun func(money.PollItem) bool) mdb.PollRequestFu
 				ca.Device.Log.Infof("%s/info: %s", tag, pi.String())
 				// TODO telemetry
 			case money.StatusError:
-				ca.Device.TeleError(errors.Annotate(pi.Error, tag))
+				ca.Device.TeleError(oerr.Annotate(pi.Error, tag))
 			case money.StatusFatal:
-				ca.Device.TeleError(errors.Annotate(pi.Error, tag))
+				ca.Device.TeleError(oerr.Annotate(pi.Error, tag))
 			case money.StatusBusy:
 			case money.StatusWasReset:
 				ca.Device.Log.Infof("coin was reset")
@@ -226,11 +226,11 @@ func (ca *CoinAcceptor) newSetuper() engine.Doer {
 	return engine.Func{Name: tag, F: func(ctx context.Context) error {
 		const expectLengthMin = 7
 		if err := ca.Device.TxSetup(); err != nil {
-			return errors.Annotate(err, tag)
+			return oerr.Annotate(err, tag)
 		}
 		bs := ca.Device.SetupResponse.Bytes()
 		if len(bs) < expectLengthMin {
-			return errors.Errorf("%s response=%s expected >= %d bytes",
+			return oerr.Errorf("%s response=%s expected >= %d bytes",
 				tag, ca.Device.SetupResponse.Format(), expectLengthMin)
 		}
 		ca.featureLevel = bs[0]
@@ -264,12 +264,12 @@ func (ca *CoinAcceptor) TubeStatus() error {
 	response := mdb.Packet{}
 	err := ca.Device.TxKnown(packetTubeStatus, &response)
 	if err != nil {
-		return errors.Annotate(err, tag)
+		return oerr.Annotate(err, tag)
 	}
 	ca.Device.Log.Debugf("%s response=(%d)%s", tag, response.Len(), response.Format())
 	bs := response.Bytes()
 	if len(bs) < expectLengthMin {
-		return errors.Errorf("%s response=%s expected >= %d bytes",
+		return oerr.Errorf("%s response=%s expected >= %d bytes",
 			tag, response.Format(), expectLengthMin)
 	}
 	fulls := ca.Device.ByteOrder.Uint16(bs[0:2])
@@ -288,7 +288,7 @@ func (ca *CoinAcceptor) TubeStatus() error {
 			ca.Device.TeleError(fmt.Errorf("%s coinType=%d nominal=%s problem (jam/sensor/etc)", tag, coinType, nominalString))
 		} else if counts[coinType] != 0 {
 			if err := ca.tubes.AddMany(nominal, uint(counts[coinType])); err != nil {
-				return errors.Annotatef(err, "%s tubes.Add coinType=%d", tag, coinType)
+				return oerr.Annotatef(err, "%s tubes.Add coinType=%d", tag, coinType)
 			}
 		}
 	}
@@ -319,16 +319,16 @@ func (ca *CoinAcceptor) CommandExpansionIdentification() error {
 	response := mdb.Packet{}
 	err := ca.Device.TxMaybe(request, &response)
 	if err != nil {
-		if errors.Cause(err) == mdb.ErrTimeoutMDB {
+		if oerr.Cause(err) == mdb.ErrTimeoutMDB {
 			ca.Device.Log.Infof("%s request=%x not supported (timeout)", tag, request.Bytes())
 			return nil
 		}
-		return errors.Annotate(err, tag)
+		return oerr.Annotate(err, tag)
 	}
 	ca.Device.Log.Debugf("%s response=(%d)%s", tag, response.Len(), response.Format())
 	bs := response.Bytes()
 	if len(bs) < expectLength {
-		return errors.Errorf("%s response=%s expected %d bytes", tag, response.Format(), expectLength)
+		return oerr.Errorf("%s response=%s expected %d bytes", tag, response.Format(), expectLength)
 	}
 	ca.supportedFeatures = Features(ca.Device.ByteOrder.Uint32(bs[29 : 29+4]))
 	ca.Device.Log.Infof("%s Manufacturer Code: '%s'", tag, bs[0:0+3])
@@ -352,18 +352,18 @@ func (ca *CoinAcceptor) ExpansionDiagStatus(result *DiagResult) error {
 	response := mdb.Packet{}
 	err := ca.Device.TxMaybe(packetDiagStatus, &response)
 	if err != nil {
-		if errors.Cause(err) == mdb.ErrTimeoutMDB {
+		if oerr.Cause(err) == mdb.ErrTimeoutMDB {
 			ca.Device.Log.Infof("%s request=%x not supported (timeout)", tag, packetDiagStatus.Bytes())
 			return nil
 		}
-		return errors.Annotate(err, tag)
+		return oerr.Annotate(err, tag)
 	}
 	dr, err := parseDiagResult(response.Bytes(), ca.Device.ByteOrder)
 	ca.Device.Log.Debugf("%s result=%s", tag, dr.Error())
 	if result != nil {
 		*result = dr
 	}
-	return errors.Annotate(err, tag)
+	return oerr.Annotate(err, tag)
 }
 
 func (ca *CoinAcceptor) CommandFeatureEnable(requested Features) error {
@@ -373,11 +373,11 @@ func (ca *CoinAcceptor) CommandFeatureEnable(requested Features) error {
 	ca.Device.ByteOrder.PutUint32(buf[2:], uint32(f))
 	request := mdb.MustPacketFromBytes(buf[:], true)
 	err := ca.Device.TxMaybe(request, nil)
-	if errors.Cause(err) == mdb.ErrTimeoutMDB {
+	if oerr.Cause(err) == mdb.ErrTimeoutMDB {
 		ca.Device.Log.Infof("%s request=%x not supported (timeout)", tag, request.Bytes())
 		return nil
 	}
-	return errors.Annotate(err, tag)
+	return oerr.Annotate(err, tag)
 }
 
 func (ca *CoinAcceptor) coinTypeNominal(b byte) currency.Nominal {
@@ -457,14 +457,14 @@ func (ca *CoinAcceptor) parsePollItem(b, b2 byte) (money.PollItem, bool) {
 			pi.Status = money.StatusCredit
 		case RoutingNotUsed:
 			pi.Status = money.StatusError
-			pi.Error = errors.Errorf("routing=notused b=%x pi=%s", b, pi.String())
+			pi.Error = oerr.Errorf("routing=notused b=%x pi=%s", b, pi.String())
 		case RoutingReject:
 			pi.Status = money.StatusRejected
 		default:
 			// pi.Status = money.StatusFatal
-			panic(errors.Errorf("code error b=%x routing=%b", b, routing))
+			panic(oerr.Errorf("code error b=%x routing=%b", b, routing))
 		}
-		ca.Device.Log.Debugf("deposited coinType=%d routing=%s pi=%s", coinType, routing.String(), pi.String())
+		ca.Device.Log.Debugf("deposited coinType=%d routing=%s pi=%s", coinType, routing, pi.String())
 		return pi, true
 	}
 	if b&0x80 != 0 { // Coins Dispensed Manually
@@ -476,6 +476,6 @@ func (ca *CoinAcceptor) parsePollItem(b, b2 byte) (money.PollItem, bool) {
 		return money.PollItem{Status: money.StatusDispensed, DataNominal: nominal, DataCount: count}, true
 	}
 
-	err := errors.Errorf("parsePollItem unknown=%x", b)
+	err := oerr.Errorf("parsePollItem unknown=%x", b)
 	return money.PollItem{Status: money.StatusFatal, Error: err}, false
 }

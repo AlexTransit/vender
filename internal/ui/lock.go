@@ -8,6 +8,8 @@ package ui
 import (
 	"sync/atomic"
 	"time"
+
+	"github.com/AlexTransit/vender/internal/types"
 )
 
 const lockPoll = 300 * time.Millisecond
@@ -16,7 +18,7 @@ type uiLock struct {
 	// ch   chan struct{}
 	// pri  uint32
 	sem  int32
-	next State
+	next types.UiState
 }
 
 func (ui *UI) LockFunc(fun func()) bool {
@@ -33,7 +35,7 @@ func (ui *UI) LockDecrementWait() {
 		new = 0
 	}
 	if new == 0 {
-		for ui.g.Alive.IsRunning() && (ui.State() == StateLocked) {
+		for ui.g.Alive.IsRunning() && (ui.State() == types.StateLocked) {
 			time.Sleep(lockPoll)
 		}
 	}
@@ -43,12 +45,12 @@ func (ui *UI) LockDecrementWait() {
 func (ui *UI) LockEnd() {
 	ui.g.Log.Debugf("LockEnd")
 	atomic.StoreInt32(&ui.lock.sem, 0)
-	for ui.g.Alive.IsRunning() && (ui.State() == StateLocked) {
+	for ui.g.Alive.IsRunning() && (ui.State() == types.StateLocked) {
 		time.Sleep(lockPoll)
 	}
 }
 
-func (ui *UI) checkInterrupt(s State) bool {
+func (ui *UI) checkInterrupt(s types.UiState) bool {
 	if !ui.lock.locked() {
 		return false
 	}

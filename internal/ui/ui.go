@@ -23,7 +23,7 @@ type UI struct { //nolint:maligned
 	config *ui_config.Config
 	g      *state.Global
 	ms     *money.MoneySystem
-	state  State
+	state  types.UiState
 	broken bool
 	// menu     Menu
 	display  *text_display.TextDisplay // FIXME
@@ -34,16 +34,19 @@ type UI struct { //nolint:maligned
 
 	frontResetTimeout time.Duration
 
-	XXX_testHook func(State)
+	XXX_testHook func(types.UiState)
 }
 
 var _ types.UIer = &UI{} // compile-time interface test
 
+func (ui *UI) GetUiState() uint32 {
+	return 0
+}
 func (ui *UI) Init(ctx context.Context) error {
 	// func (ui *types.UI) Init(ctx context.Context) error {
 	ui.g = state.GetGlobal(ctx)
 	ui.config = &ui.g.Config.UI
-	ui.setState(StateBoot)
+	ui.setState(types.StateBoot)
 
 	// ui.menu = make(Menu)
 	types.UI.Menu = make(map[string]types.MenuItemType)

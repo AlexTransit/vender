@@ -9,7 +9,6 @@ package money
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/hardware/mdb/bill"
@@ -165,18 +164,15 @@ func (ms *MoneySystem) ReturnMoney(ctx context.Context) error {
 	const tag = "money-abort"
 	cash := ms.billCredit.Total() + ms.coinCredit.Total() - ms.bill.EscrowAmount()
 	// escrow bill return before stop bill
-	fmt.Printf("\033[41m coin return %v \033[0m\n", cash)
 	if err := ms.locked_payout(ctx, cash); err != nil {
 		err = oerr.Annotate(err, tag)
 		ms.Log.Errorf("%s CRITICAL change err=%v", tag, err)
 		state.GetGlobal(ctx).Tele.Error(err)
 	}
-
 	ms.SetDirty(0)
 	ms.billCredit.Clear()
 	ms.coinCredit.Clear()
 	ms.giftCredit = 0
-
 	return nil
 }
 
