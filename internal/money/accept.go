@@ -45,7 +45,7 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 	if ms.bill.GetState() != bill.Broken {
 		go ms.bill.BillRun(validatorAlive, func(be money.BillEvent) {
 			if be.Err != nil {
-				ms.Log.Warning(be.Err)
+				g.Error(be.Err)
 				return
 			}
 			event := types.Event{}

@@ -388,7 +388,12 @@ func (bv *BillValidator) decodeByte(b byte) (e money.BillEvent) {
 	case StatusBillRejected:
 		return bv.escrowOutEvent(nil, bv.EscrowBill)
 	case StatusCreditedBillRemoval: // fishing attempt
-		return bv.escrowOutEvent(fmt.Errorf("credited bill removed"), bv.EscrowBill)
+		if bv.EscrowBill != 0 {
+			err := errors.New("fishing!!! credited bill removed: " + bv.EscrowBill.Format100I())
+			return bv.escrowOutEvent(err, bv.EscrowBill)
+		}
+		bv.Log.Error("StatusCreditedBillRemoval. ecsrow = 0")
+		return
 	}
 
 	if b&0x80 != 0 { //route status
