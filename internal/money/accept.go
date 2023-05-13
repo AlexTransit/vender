@@ -124,8 +124,8 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 	again := true
 	for again {
 		select {
-		// case <-validatorAlive.WaitChan():
-		// 	again = false
+		case <-validatorAlive.WaitChan():
+			again = false
 		case <-stopAccept:
 			validatorAlive.Stop()
 			ms.lk.Lock()
