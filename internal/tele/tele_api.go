@@ -50,15 +50,9 @@ func (t *tele) Error(e error) {
 		t.log.Infof(logMsgDisabled)
 		return
 	}
-	if e == nil {
-		t.log.Error("tele nil error")
-		return
+	if e != nil {
+		t.ErrorStr(e.Error())
 	}
-
-	// t.log.Debugf("tele.Error: " + errors.ErrorStack(e))
-	// alexm-comment duplicate
-	// t.log.Err(errors.ErrorStack(e))
-	t.ErrorStr(e.Error())
 }
 
 func (t *tele) Log(s string) {
