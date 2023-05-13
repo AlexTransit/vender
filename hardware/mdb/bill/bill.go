@@ -47,13 +47,17 @@ type BillValidator struct { //nolint:maligned
 type BllStateType byte
 
 const (
-	noStatae BllStateType = iota
+	noState BllStateType = iota
 	Broken
 	reseted
 	WaitConfigure
 	notReady
 	ready
 )
+
+func (b BllStateType) String() string {
+	return [...]string{"noState", "Broken", "reseted", "WaitConfigure", "notReady", "ready"}[b]
+}
 
 type BillCommand byte
 
@@ -455,7 +459,7 @@ func (bv *BillValidator) BillRun(alive *alive.Alive, returnEvent func(money.Bill
 	defer bv.pollmu.Unlock()
 	defer alive.Done()
 	if bv.billstate != WaitConfigure {
-		returnEvent(money.BillEvent{Err: errors.New("bill state not valid:" + fmt.Sprint(bv.billstate) + " need reset")})
+		returnEvent(money.BillEvent{Err: errors.New("bill state not valid:" + bv.billstate.String() + " need reset")})
 		return
 	}
 	if err := bv.enableAccept(); err != nil { // enable accept all posible
