@@ -42,6 +42,7 @@ type BillValidator struct { //nolint:maligned
 	EscrowBill   currency.Nominal // assume only one bill may be in escrow position
 	stackerFull  bool
 	stackerCount uint32
+	teleError    func(error)
 }
 
 type BllStateType byte
@@ -75,6 +76,10 @@ func (bv *BillValidator) init(ctx context.Context) error {
 	const tag = deviceName + ".init"
 	g := state.GetGlobal(ctx)
 	mdbus, err := g.Mdb()
+	bv.teleError = func(err error) {
+		// bv.Log.Error(err)
+		g.Tele.Error(err)
+	}
 	if err != nil {
 		return oerr.Annotate(err, tag)
 	}
@@ -109,7 +114,13 @@ func (bv *BillValidator) BillReset() (err error) {
 	bv.setState(Broken)
 	bv.SendCommand(Stop) // stop pre-polling. if running
 	bv.pollmu.Lock()
-	defer bv.pollmu.Unlock()
+	defer func() {
+		bv.pollmu.Unlock()
+		bv.teleError(err)
+		// if err != nil {
+		// bv.teleError(err)
+		// }
+	}()
 	if err = bv.Device.Tx(bv.Device.PacketReset, nil); err != nil {
 		return err
 	}
@@ -357,7 +368,7 @@ func (bv *BillValidator) setState(bc BllStateType) {
 }
 
 func (bv *BillValidator) setBroken(err error) money.BillEvent {
-	bv.Log.Errorf("bill broken:%v", err)
+	bv.teleError(errors.Join(errors.New("bill broken:"), err))
 	bv.setState(Broken)
 	return money.BillEvent{Err: err}
 }
