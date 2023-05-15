@@ -135,5 +135,6 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 		}
 	}
 	validatorAlive.Wait()
+	ms.bill.DisableAccept()
 	return nil
 }

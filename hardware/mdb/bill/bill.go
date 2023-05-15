@@ -303,6 +303,10 @@ func (bv *BillValidator) disableAccept() (mbe money.BillEvent) {
 	return mbe
 }
 
+func (bv *BillValidator) DisableAccept() {
+	_ = bv.disableAccept()
+}
+
 func (bv *BillValidator) escrowAccept() (mbe money.BillEvent) {
 	request := mdb.MustPacketFromHex("3501", true)
 	if err := bv.Device.Tx(request, nil); err != nil {
