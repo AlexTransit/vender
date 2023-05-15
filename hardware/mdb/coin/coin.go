@@ -63,9 +63,9 @@ type CoinAcceptor struct { //nolint:maligned
 }
 
 var (
-	packetTubeStatus = mdb.MustPacketFromHex("0a", true)
-	packetExpIdent   = mdb.MustPacketFromHex("0f00", true)
-	packetDiagStatus = mdb.MustPacketFromHex("0f05", true)
+	// packetTubeStatus = mdb.MustPacketFromHex("0a", true)
+	// packetExpIdent   = mdb.MustPacketFromHex("0f00", true)
+	// packetDiagStatus = mdb.MustPacketFromHex("0f05", true)
 	// packetPayoutPoll   = mdb.MustPacketFromHex("0f04", true)
 	packetPayoutStatus = mdb.MustPacketFromHex("0f03", true)
 )
@@ -79,25 +79,23 @@ var (
 )
 
 func (ca *CoinAcceptor) init(ctx context.Context) error {
-	const tag = deviceName + ".init"
-
 	g := state.GetGlobal(ctx)
 	mdbus, err := g.Mdb()
 	if err != nil {
-		return oerr.Annotate(err, tag)
+		return err
 	}
 	ca.Device.Init(mdbus, 0x08, "coin", binary.BigEndian)
 	config := &g.Config.Hardware.Mdb.Coin
 	ca.giveSmart = config.GiveSmart || config.XXX_Deprecated_DispenseSmart
 	ca.dispenseTimeout = helpers.IntSecondDefault(config.DispenseTimeoutSec, defaultDispenseTimeout)
 	ca.scalingFactor = 1
-	ca.CoinReset()
+	err = ca.CoinReset()
 	// ca.Device.DoInit = ca.newIniter()
 	// // engine := state.GetGlobal(ctx).Engine
 	// // TODO register payout,etc
 	// // TODO (Enum idea) no IO in Init()
 	// err = g.Engine.Exec(ctx, ca.Device.DoInit)
-	return oerr.Annotate(err, tag)
+	return err
 }
 
 func (ca *CoinAcceptor) CoinReset() (err error) {
@@ -107,10 +105,28 @@ func (ca *CoinAcceptor) CoinReset() (err error) {
 		return err
 	}
 	mbe := money.BillEvent{}
-	if err := ca.pollF(nil); err != nil || mbe.Err != nil {
-		err = errors.Join(err, mbe.Err)
+	if mbe.Err = ca.pollF(nil); mbe.Err != nil {
+		return mbe.Err
+	}
+	if err = ca.setup(); err != nil {
 		return err
 	}
+	if err = ca.CommandExpansionIdentification(); err != nil {
+		return err
+	}
+
+	if err = ca.CommandFeatureEnable(FeatureExtendedDiagnostic); err != nil {
+		return err
+	}
+	diagResult := new(DiagResult)
+	if err = ca.ExpansionDiagStatus(diagResult); err != nil {
+		return err
+	}
+
+	if err = ca.TubeStatus(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -158,6 +174,7 @@ func (ca *CoinAcceptor) decodeByte(b byte) money.CoinEvent {
 	case 0x0a: // Changer Busy
 		// 	return money.PollItem{Status: money.StatusBusy}
 	case 0x0b: // Changer was Reset
+		ca.Log.Info("coin reset complete")
 		ca.reseted = true
 		// 	return money.PollItem{Status: money.StatusWasReset}
 	case 0x0c: // Coin Jam
@@ -236,13 +253,133 @@ func (ca *CoinAcceptor) setup() error {
 	}
 	ca.tubes.SetValid(ca.nominals[:])
 
-	ca.Device.Log.Debugf("%s Changer Feature Level: %d", tag, ca.featureLevel)
-	ca.Device.Log.Debugf("%s Country / Currency Code: %x", tag, bs[1:1+2])
-	ca.Device.Log.Debugf("%s Coin Scaling Factor: %d", tag, ca.scalingFactor)
+	// ca.Device.Log.Debugf("%s Changer Feature Level: %d", tag, ca.featureLevel)
+	// ca.Device.Log.Debugf("%s Country / Currency Code: %x", tag, bs[1:1+2])
+	// ca.Device.Log.Debugf("%s Coin Scaling Factor: %d", tag, ca.scalingFactor)
 	// ca.Device.Log.Debugf("%s Decimal Places: %d", tag, bs[4])
-	ca.Device.Log.Debugf("%s Coin Type Routing: %b", tag, ca.typeRouting)
-	ca.Device.Log.Debugf("%s Coin Type Credit: %x %v", tag, bs[7:], ca.nominals)
+	// ca.Device.Log.Debugf("%s Coin Type Routing: %b", tag, ca.typeRouting)
+	// ca.Device.Log.Debugf("%s Coin Type Credit: %x %v", tag, bs[7:], ca.nominals)
+
+	ca.Device.Log.Infof("%s Changer Feature Level: %d", tag, ca.featureLevel)
+	ca.Device.Log.Infof("%s Country / Currency Code: %x", tag, bs[1:1+2])
+	ca.Device.Log.Infof("%s Coin Scaling Factor: %d", tag, ca.scalingFactor)
+	ca.Device.Log.Infof("%s Decimal Places: %d", tag, bs[4])
+	ca.Device.Log.Infof("%s Coin Type Routing: %b", tag, ca.typeRouting)
+	ca.Device.Log.Infof("%s Coin Type Credit: %x %v", tag, bs[7:], ca.nominals)
 	return nil
+}
+
+func (ca *CoinAcceptor) CommandExpansionIdentification() error {
+	const tag = deviceName + ".ExpId"
+	const expectLength = 33
+	request := mdb.MustPacketFromHex("0f00", true)
+	response := mdb.Packet{}
+	err := ca.Device.Tx(request, &response)
+	if err != nil {
+		return errors.New(tag + err.Error())
+	}
+	ca.Device.Log.Debugf("%s response=(%d)%s", tag, response.Len(), response.Format())
+	bs := response.Bytes()
+	if len(bs) < expectLength {
+		return errors.New("coin command get ExpansionIdentification return: " + response.Format())
+	}
+	ca.supportedFeatures = Features(ca.Device.ByteOrder.Uint32(bs[29 : 29+4]))
+	ca.Device.Log.Infof("%s Manufacturer Code: '%s'", tag, bs[0:0+3])
+	// ca.Device.Log.Debugf("%s Serial Number: '%s'", tag, string(bs[3:3+12]))
+	// ca.Device.Log.Debugf("%s Model #/Tuning Revision: '%s'", tag, string(bs[15:15+12]))
+	// ca.Device.Log.Debugf("%s Software Version: %x", tag, bs[27:27+2])
+	// ca.Device.Log.Debugf("%s Optional Features: %b", tag, ca.supportedFeatures)
+
+	ca.Device.Log.Infof("%s Serial Number: '%s'", tag, string(bs[3:3+12]))
+	ca.Device.Log.Infof("%s Model #/Tuning Revision: '%s'", tag, string(bs[15:15+12]))
+	ca.Device.Log.Infof("%s Software Version: %x", tag, bs[27:27+2])
+	ca.Device.Log.Infof("%s Optional Features: %b", tag, ca.supportedFeatures)
+
+	return nil
+}
+
+func (ca *CoinAcceptor) CommandFeatureEnable(requested Features) error {
+	const tag = deviceName + ".FeatureEnable"
+	f := requested & ca.supportedFeatures
+	buf := [6]byte{0x0f, 0x01}
+	ca.Device.ByteOrder.PutUint32(buf[2:], uint32(f))
+	request := mdb.MustPacketFromBytes(buf[:], true)
+	if err := ca.Device.Tx(request, nil); err != nil {
+		return errors.New(tag + err.Error())
+	}
+
+	// request := mdb.MustPacketFromHex("0f01", true)
+	// response := mdb.Packet{}
+	// err := ca.Device.Tx(request, &response)
+	// if err != nil {
+	// 	return errors.New(tag + err.Error())
+	// }
+
+	return nil
+}
+
+func (ca *CoinAcceptor) TubeStatus() error {
+	const tag = deviceName + ".tubestatus"
+	const expectLengthMin = 2
+	request := mdb.MustPacketFromHex("0a", true)
+	response := mdb.Packet{}
+	if err := ca.Device.Tx(request, &response); err != nil {
+		return err
+	}
+	bs := response.Bytes()
+	if len(bs) < expectLengthMin {
+		return errors.New("tube status response small. response: " + response.String())
+	}
+	fulls := ca.Device.ByteOrder.Uint16(bs[0:2])
+	counts := bs[2:18]
+	ca.Device.Log.Infof("%s fulls=%b counts=%v", tag, fulls, counts)
+	ca.tubesmu.Lock()
+	defer ca.tubesmu.Unlock()
+	ca.tubes.Clear()
+	for coinType := uint8(0); coinType < TypeCount; coinType++ {
+		full := (fulls & (1 << coinType)) != 0
+		nominal := ca.coinTypeNominal(coinType)
+		if full && counts[coinType] == 0 {
+			nominalString := currency.Amount(nominal).Format100I() // TODO use FormatCtx(ctx)
+			_ = nominalString
+			// ca.Device.TeleError(fmt.Errorf("%s coinType=%d nominal=%s problem (jam/sensor/etc)", tag, coinType, nominalString))
+		} else if counts[coinType] != 0 {
+			if err := ca.tubes.AddMany(nominal, uint(counts[coinType])); err != nil {
+				return err
+			}
+		}
+	}
+	ca.Device.Log.Debugf("%s tubes=%s", tag, ca.tubes.String())
+	return nil
+}
+
+func (ca *CoinAcceptor) coinTypeNominal(b byte) currency.Nominal {
+	if b >= TypeCount {
+		ca.Device.Log.Errorf("invalid coin type: %d", b)
+		return 0
+	}
+	return ca.nominals[b]
+}
+
+func (ca *CoinAcceptor) ExpansionDiagStatus(result *DiagResult) error {
+	const tag = deviceName + ".ExpansionSendDiagStatus"
+
+	if ca.supportedFeatures&FeatureExtendedDiagnostic == 0 {
+		ca.Device.Log.Debugf("%s feature is not supported", tag)
+		return nil
+	}
+	request := mdb.MustPacketFromHex("0f05", true)
+	response := mdb.Packet{}
+	err := ca.Device.Tx(request, &response)
+	if err != nil {
+		return err
+	}
+	dr, err := parseDiagResult(response.Bytes(), ca.Device.ByteOrder)
+	ca.Device.Log.Infof("%s result=%s", tag, dr.Error())
+	if result != nil {
+		*result = dr
+	}
+	return oerr.Annotate(err, tag)
 }
 
 // -----------------------------------------------------------------
@@ -343,105 +480,102 @@ func (ca *CoinAcceptor) pollFun(fun func(money.PollItem) bool) mdb.PollRequestFu
 	}
 }
 
-func (ca *CoinAcceptor) newIniter() engine.Doer {
-	const tag = deviceName + ".init"
-	return engine.NewSeq(tag).
-		Append(ca.Device.DoReset).
-		Append(engine.Func{Name: tag + "/poll", F: func(ctx context.Context) error {
-			ca.Run(ctx, nil, func(money.PollItem) bool { return false })
-			return nil
-		}}).
-		Append(ca.newSetuper()).
-		Append(engine.Func0{Name: tag + "/expid-diag", F: func() error {
-			if err := ca.CommandExpansionIdentification(); err != nil {
-				return err
-			}
-			if err := ca.CommandFeatureEnable(FeatureExtendedDiagnostic); err != nil {
-				return err
-			}
-			diagResult := new(DiagResult)
-			if err := ca.ExpansionDiagStatus(diagResult); err != nil {
-				return err
-			}
-			return nil
-		}}).
-		Append(engine.Func0{Name: tag + "/tube-status", F: ca.TubeStatus})
-}
+// func (ca *CoinAcceptor) newIniter() engine.Doer {
+// 	const tag = deviceName + ".init"
+// 	return engine.NewSeq(tag).
+// 		Append(ca.Device.DoReset).
+// 		Append(engine.Func{Name: tag + "/poll", F: func(ctx context.Context) error {
+// 			ca.Run(ctx, nil, func(money.PollItem) bool { return false })
+// 			return nil
+// 		}}).
+// 		// Append(ca.newSetuper()).
+// 		Append(engine.Func0{Name: tag + "/expid-diag", F: func() error {
+// 			if err := ca.CommandExpansionIdentification(); err != nil {
+// 				return err
+// 			}
+// 			if err := ca.CommandFeatureEnable(FeatureExtendedDiagnostic); err != nil {
+// 				return err
+// 			}
+// 			diagResult := new(DiagResult)
+// 			if err := ca.ExpansionDiagStatus(diagResult); err != nil {
+// 				return err
+// 			}
+// 			return nil
+// 		}}).
+// 		Append(engine.Func0{Name: tag + "/tube-status", F: ca.TubeStatus})
+// }
 
-func (ca *CoinAcceptor) newSetuper() engine.Doer {
-	const tag = deviceName + ".setup"
-	return engine.Func{Name: tag, F: func(ctx context.Context) error {
-		const expectLengthMin = 7
-		if err := ca.Device.TxSetup(); err != nil {
-			return oerr.Annotate(err, tag)
-		}
-		bs := ca.Device.SetupResponse.Bytes()
-		if len(bs) < expectLengthMin {
-			return oerr.Errorf("%s response=%s expected >= %d bytes",
-				tag, ca.Device.SetupResponse.Format(), expectLengthMin)
-		}
-		ca.featureLevel = bs[0]
-		ca.scalingFactor = bs[3]
-		ca.typeRouting = ca.Device.ByteOrder.Uint16(bs[5 : 5+2])
-		for i, sf := range bs[7 : 7+TypeCount] {
-			if sf == 0 {
-				continue
-			}
-			n := currency.Nominal(sf) * currency.Nominal(ca.scalingFactor)
-			ca.Device.Log.Debugf("%s [%d] sf=%d nominal=(%d)%s",
-				tag, i, sf, n, currency.Amount(n).FormatCtx(ctx))
-			ca.nominals[i] = n
-		}
-		ca.tubes.SetValid(ca.nominals[:])
+// func (ca *CoinAcceptor) newSetuper() engine.Doer {
+// 	const tag = deviceName + ".setup"
+// 	return engine.Func{Name: tag, F: func(ctx context.Context) error {
+// 		const expectLengthMin = 7
+// 		if err := ca.Device.TxSetup(); err != nil {
+// 			return oerr.Annotate(err, tag)
+// 		}
+// 		bs := ca.Device.SetupResponse.Bytes()
+// 		if len(bs) < expectLengthMin {
+// 			return oerr.Errorf("%s response=%s expected >= %d bytes",
+// 				tag, ca.Device.SetupResponse.Format(), expectLengthMin)
+// 		}
+// 		ca.featureLevel = bs[0]
+// 		ca.scalingFactor = bs[3]
+// 		ca.typeRouting = ca.Device.ByteOrder.Uint16(bs[5 : 5+2])
+// 		for i, sf := range bs[7 : 7+TypeCount] {
+// 			if sf == 0 {
+// 				continue
+// 			}
+// 			n := currency.Nominal(sf) * currency.Nominal(ca.scalingFactor)
+// 			ca.Device.Log.Debugf("%s [%d] sf=%d nominal=(%d)%s",
+// 				tag, i, sf, n, currency.Amount(n).FormatCtx(ctx))
+// 			ca.nominals[i] = n
+// 		}
+// 		ca.tubes.SetValid(ca.nominals[:])
+// 		ca.Device.Log.Debugf("%s Changer Feature Level: %d", tag, ca.featureLevel)
+// 		ca.Device.Log.Debugf("%s Country / Currency Code: %x", tag, bs[1:1+2])
+// 		ca.Device.Log.Debugf("%s Coin Scaling Factor: %d", tag, ca.scalingFactor)
+// 		// ca.Device.Log.Debugf("%s Decimal Places: %d", tag, bs[4])
+// 		ca.Device.Log.Debugf("%s Coin Type Routing: %b", tag, ca.typeRouting)
+// 		ca.Device.Log.Debugf("%s Coin Type Credit: %x %v", tag, bs[7:], ca.nominals)
+// 		return nil
+// 	}}
+// }
 
-		ca.Device.Log.Debugf("%s Changer Feature Level: %d", tag, ca.featureLevel)
-		ca.Device.Log.Debugf("%s Country / Currency Code: %x", tag, bs[1:1+2])
-		ca.Device.Log.Debugf("%s Coin Scaling Factor: %d", tag, ca.scalingFactor)
-		// ca.Device.Log.Debugf("%s Decimal Places: %d", tag, bs[4])
-		ca.Device.Log.Debugf("%s Coin Type Routing: %b", tag, ca.typeRouting)
-		ca.Device.Log.Debugf("%s Coin Type Credit: %x %v", tag, bs[7:], ca.nominals)
-		return nil
-	}}
-}
+// func (ca *CoinAcceptor) TubeStatus() error {
+// 	const tag = deviceName + ".tubestatus"
+// 	const expectLengthMin = 2
+// 	response := mdb.Packet{}
+// 	err := ca.Device.TxKnown(packetTubeStatus, &response)
+// 	if err != nil {
+// 		return oerr.Annotate(err, tag)
+// 	}
+// 	ca.Device.Log.Debugf("%s response=(%d)%s", tag, response.Len(), response.Format())
+// 	bs := response.Bytes()
+// 	if len(bs) < expectLengthMin {
+// 		return oerr.Errorf("%s response=%s expected >= %d bytes",
+// 			tag, response.Format(), expectLengthMin)
+// 	}
+// 	fulls := ca.Device.ByteOrder.Uint16(bs[0:2])
+// 	counts := bs[2:18]
+// 	ca.Device.Log.Debugf("%s fulls=%b counts=%v", tag, fulls, counts)
+// 	ca.tubesmu.Lock()
+// 	defer ca.tubesmu.Unlock()
+//		ca.tubes.Clear()
+//		for coinType := uint8(0); coinType < TypeCount; coinType++ {
+//			full := (fulls & (1 << coinType)) != 0
+//			nominal := ca.coinTypeNominal(coinType)
+//			if full && counts[coinType] == 0 {
+//				nominalString := currency.Amount(nominal).Format100I() // TODO use FormatCtx(ctx)
+//				ca.Device.TeleError(fmt.Errorf("%s coinType=%d nominal=%s problem (jam/sensor/etc)", tag, coinType, nominalString))
+//			} else if counts[coinType] != 0 {
+//				if err := ca.tubes.AddMany(nominal, uint(counts[coinType])); err != nil {
+//					return oerr.Annotatef(err, "%s tubes.Add coinType=%d", tag, coinType)
+//				}
+//			}
+//		}
+//		ca.Device.Log.Debugf("%s tubes=%s", tag, ca.tubes.String())
+//		return nil
+//	}
 
-func (ca *CoinAcceptor) TubeStatus() error {
-	const tag = deviceName + ".tubestatus"
-	const expectLengthMin = 2
-
-	response := mdb.Packet{}
-	err := ca.Device.TxKnown(packetTubeStatus, &response)
-	if err != nil {
-		return oerr.Annotate(err, tag)
-	}
-	ca.Device.Log.Debugf("%s response=(%d)%s", tag, response.Len(), response.Format())
-	bs := response.Bytes()
-	if len(bs) < expectLengthMin {
-		return oerr.Errorf("%s response=%s expected >= %d bytes",
-			tag, response.Format(), expectLengthMin)
-	}
-	fulls := ca.Device.ByteOrder.Uint16(bs[0:2])
-	counts := bs[2:18]
-	ca.Device.Log.Debugf("%s fulls=%b counts=%v", tag, fulls, counts)
-
-	ca.tubesmu.Lock()
-	defer ca.tubesmu.Unlock()
-
-	ca.tubes.Clear()
-	for coinType := uint8(0); coinType < TypeCount; coinType++ {
-		full := (fulls & (1 << coinType)) != 0
-		nominal := ca.coinTypeNominal(coinType)
-		if full && counts[coinType] == 0 {
-			nominalString := currency.Amount(nominal).Format100I() // TODO use FormatCtx(ctx)
-			ca.Device.TeleError(fmt.Errorf("%s coinType=%d nominal=%s problem (jam/sensor/etc)", tag, coinType, nominalString))
-		} else if counts[coinType] != 0 {
-			if err := ca.tubes.AddMany(nominal, uint(counts[coinType])); err != nil {
-				return oerr.Annotatef(err, "%s tubes.Add coinType=%d", tag, coinType)
-			}
-		}
-	}
-	ca.Device.Log.Debugf("%s tubes=%s", tag, ca.tubes.String())
-	return nil
-}
 func (ca *CoinAcceptor) Tubes() *currency.NominalGroup {
 	ca.tubesmu.Lock()
 	result := ca.tubes.Copy()
@@ -459,81 +593,81 @@ func (ca *CoinAcceptor) NewCoinType(accept, dispense uint16) engine.Doer {
 	}}
 }
 
-func (ca *CoinAcceptor) CommandExpansionIdentification() error {
-	const tag = deviceName + ".ExpId"
-	const expectLength = 33
-	request := packetExpIdent
-	response := mdb.Packet{}
-	err := ca.Device.TxMaybe(request, &response)
-	if err != nil {
-		if oerr.Cause(err) == mdb.ErrTimeoutMDB {
-			ca.Device.Log.Infof("%s request=%x not supported (timeout)", tag, request.Bytes())
-			return nil
-		}
-		return oerr.Annotate(err, tag)
-	}
-	ca.Device.Log.Debugf("%s response=(%d)%s", tag, response.Len(), response.Format())
-	bs := response.Bytes()
-	if len(bs) < expectLength {
-		return oerr.Errorf("%s response=%s expected %d bytes", tag, response.Format(), expectLength)
-	}
-	ca.supportedFeatures = Features(ca.Device.ByteOrder.Uint32(bs[29 : 29+4]))
-	ca.Device.Log.Infof("%s Manufacturer Code: '%s'", tag, bs[0:0+3])
-	ca.Device.Log.Debugf("%s Serial Number: '%s'", tag, string(bs[3:3+12]))
-	ca.Device.Log.Debugf("%s Model #/Tuning Revision: '%s'", tag, string(bs[15:15+12]))
-	ca.Device.Log.Debugf("%s Software Version: %x", tag, bs[27:27+2])
-	ca.Device.Log.Debugf("%s Optional Features: %b", tag, ca.supportedFeatures)
-	return nil
-}
+// func (ca *CoinAcceptor) CommandExpansionIdentification() error {
+// 	const tag = deviceName + ".ExpId"
+// 	const expectLength = 33
+// 	request := packetExpIdent
+// 	response := mdb.Packet{}
+// 	err := ca.Device.TxMaybe(request, &response)
+// 	if err != nil {
+// 		if oerr.Cause(err) == mdb.ErrTimeoutMDB {
+// 			ca.Device.Log.Infof("%s request=%x not supported (timeout)", tag, request.Bytes())
+// 			return nil
+// 		}
+// 		return oerr.Annotate(err, tag)
+// 	}
+// 	ca.Device.Log.Debugf("%s response=(%d)%s", tag, response.Len(), response.Format())
+// 	bs := response.Bytes()
+// 	if len(bs) < expectLength {
+// 		return oerr.Errorf("%s response=%s expected %d bytes", tag, response.Format(), expectLength)
+// 	}
+// 	ca.supportedFeatures = Features(ca.Device.ByteOrder.Uint32(bs[29 : 29+4]))
+// 	ca.Device.Log.Infof("%s Manufacturer Code: '%s'", tag, bs[0:0+3])
+// 	ca.Device.Log.Debugf("%s Serial Number: '%s'", tag, string(bs[3:3+12]))
+// 	ca.Device.Log.Debugf("%s Model #/Tuning Revision: '%s'", tag, string(bs[15:15+12]))
+// 	ca.Device.Log.Debugf("%s Software Version: %x", tag, bs[27:27+2])
+// 	ca.Device.Log.Debugf("%s Optional Features: %b", tag, ca.supportedFeatures)
+// 	return nil
+// }
 
 // CommandExpansionSendDiagStatus returns:
 // - `nil` if command is not supported by device, result is not modified
 // - otherwise returns nil or MDB/parse error, result set to valid DiagResult
-func (ca *CoinAcceptor) ExpansionDiagStatus(result *DiagResult) error {
-	const tag = deviceName + ".ExpansionSendDiagStatus"
+// func (ca *CoinAcceptor) ExpansionDiagStatus(result *DiagResult) error {
+// 	const tag = deviceName + ".ExpansionSendDiagStatus"
 
-	if ca.supportedFeatures&FeatureExtendedDiagnostic == 0 {
-		ca.Device.Log.Debugf("%s feature is not supported", tag)
-		return nil
-	}
-	response := mdb.Packet{}
-	err := ca.Device.TxMaybe(packetDiagStatus, &response)
-	if err != nil {
-		if oerr.Cause(err) == mdb.ErrTimeoutMDB {
-			ca.Device.Log.Infof("%s request=%x not supported (timeout)", tag, packetDiagStatus.Bytes())
-			return nil
-		}
-		return oerr.Annotate(err, tag)
-	}
-	dr, err := parseDiagResult(response.Bytes(), ca.Device.ByteOrder)
-	ca.Device.Log.Debugf("%s result=%s", tag, dr.Error())
-	if result != nil {
-		*result = dr
-	}
-	return oerr.Annotate(err, tag)
-}
+// 	if ca.supportedFeatures&FeatureExtendedDiagnostic == 0 {
+// 		ca.Device.Log.Debugf("%s feature is not supported", tag)
+// 		return nil
+// 	}
+// 	response := mdb.Packet{}
+// 	err := ca.Device.TxMaybe(packetDiagStatus, &response)
+// 	if err != nil {
+// 		if oerr.Cause(err) == mdb.ErrTimeoutMDB {
+// 			ca.Device.Log.Infof("%s request=%x not supported (timeout)", tag, packetDiagStatus.Bytes())
+// 			return nil
+// 		}
+// 		return oerr.Annotate(err, tag)
+// 	}
+// 	dr, err := parseDiagResult(response.Bytes(), ca.Device.ByteOrder)
+// 	ca.Device.Log.Debugf("%s result=%s", tag, dr.Error())
+// 	if result != nil {
+// 		*result = dr
+// 	}
+// 	return oerr.Annotate(err, tag)
+// }
 
-func (ca *CoinAcceptor) CommandFeatureEnable(requested Features) error {
-	const tag = deviceName + ".FeatureEnable"
-	f := requested & ca.supportedFeatures
-	buf := [6]byte{0x0f, 0x01}
-	ca.Device.ByteOrder.PutUint32(buf[2:], uint32(f))
-	request := mdb.MustPacketFromBytes(buf[:], true)
-	err := ca.Device.TxMaybe(request, nil)
-	if oerr.Cause(err) == mdb.ErrTimeoutMDB {
-		ca.Device.Log.Infof("%s request=%x not supported (timeout)", tag, request.Bytes())
-		return nil
-	}
-	return oerr.Annotate(err, tag)
-}
+// func (ca *CoinAcceptor) CommandFeatureEnable(requested Features) error {
+// 	const tag = deviceName + ".FeatureEnable"
+// 	f := requested & ca.supportedFeatures
+// 	buf := [6]byte{0x0f, 0x01}
+// 	ca.Device.ByteOrder.PutUint32(buf[2:], uint32(f))
+// 	request := mdb.MustPacketFromBytes(buf[:], true)
+// 	err := ca.Device.TxMaybe(request, nil)
+// 	if oerr.Cause(err) == mdb.ErrTimeoutMDB {
+// 		ca.Device.Log.Infof("%s request=%x not supported (timeout)", tag, request.Bytes())
+// 		return nil
+// 	}
+// 	return oerr.Annotate(err, tag)
+// }
 
-func (ca *CoinAcceptor) coinTypeNominal(b byte) currency.Nominal {
-	if b >= TypeCount {
-		ca.Device.Log.Errorf("invalid coin type: %d", b)
-		return 0
-	}
-	return ca.nominals[b]
-}
+// func (ca *CoinAcceptor) coinTypeNominal(b byte) currency.Nominal {
+// 	if b >= TypeCount {
+// 		ca.Device.Log.Errorf("invalid coin type: %d", b)
+// 		return 0
+// 	}
+// 	return ca.nominals[b]
+// }
 
 func (ca *CoinAcceptor) nominalCoinType(nominal currency.Nominal) int8 {
 	for ct, n := range ca.nominals {
