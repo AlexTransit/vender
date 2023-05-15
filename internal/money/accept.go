@@ -45,7 +45,7 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 	if ms.bill.GetState() != bill.Broken {
 		go ms.bill.BillRun(validatorAlive, func(be money.BillEvent) {
 			if be.Err != nil {
-				g.Error(be.Err)
+				ms.Log.Warning(be.Err)
 				return
 			}
 			event := types.Event{}
@@ -124,8 +124,8 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 	again := true
 	for again {
 		select {
-		// case <-validatorAlive.WaitChan():
-		// 	again = false
+		case <-validatorAlive.WaitChan():
+			again = false
 		case <-stopAccept:
 			validatorAlive.Stop()
 			ms.lk.Lock()
@@ -135,5 +135,6 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 		}
 	}
 	validatorAlive.Wait()
+	ms.bill.DisableAccept()
 	return nil
 }

@@ -374,7 +374,7 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
 		alive.Stop() // stop pending AcceptCredit
 		alive.Wait()
 	}()
-
+	alive.Add(1)
 	ui.Service.askReport = true
 	accept := true
 	loaded := currency.Amount(0)
@@ -386,7 +386,6 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
 			// reset loaded credit
 			_ = moneysys.WithdrawCommit(ctx, credit)
 		}
-
 		if accept {
 			accept = false
 			go moneysys.AcceptCredit(ctx, currency.MaxAmount, alive, ui.eventch)
@@ -396,13 +395,10 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
 			if input.IsReject(&e.Input) {
 				return types.StateServiceMenu
 			}
-
 		case types.EventMoneyCredit:
 			accept = true
-
 		case types.EventLock:
 			return types.StateLocked
-
 		case types.EventStop:
 			ui.g.Log.Debugf("onServiceMoneyLoad global stop")
 			return types.StateServiceEnd
