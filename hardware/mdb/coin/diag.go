@@ -75,7 +75,7 @@ func parseDiagResult(b []byte, byteOrder binary.ByteOrder) (DiagResult, error) {
 		return nil, nil
 	}
 	if lb%2 != 0 {
-		err := errors.New("diag response must be 0..8 words of 16 bit")
+		err := errors.New("diag response must be 0..8 words of 16 bit. byte:" + string(b))
 		return nil, err
 	}
 	dr := make(DiagResult, lb/2)

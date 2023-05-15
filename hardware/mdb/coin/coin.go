@@ -90,11 +90,6 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 	ca.dispenseTimeout = helpers.IntSecondDefault(config.DispenseTimeoutSec, defaultDispenseTimeout)
 	ca.scalingFactor = 1
 	err = ca.CoinReset()
-	// ca.Device.DoInit = ca.newIniter()
-	// // engine := state.GetGlobal(ctx).Engine
-	// // TODO register payout,etc
-	// // TODO (Enum idea) no IO in Init()
-	// err = g.Engine.Exec(ctx, ca.Device.DoInit)
 	return err
 }
 
@@ -122,7 +117,7 @@ func (ca *CoinAcceptor) CoinReset() (err error) {
 	if err = ca.ExpansionDiagStatus(diagResult); err != nil {
 		return err
 	}
-
+	ca.TeleError(errors.New("coin reset error:" + diagResult.Error()))
 	if err = ca.TubeStatus(); err != nil {
 		return err
 	}
@@ -379,7 +374,7 @@ func (ca *CoinAcceptor) ExpansionDiagStatus(result *DiagResult) error {
 	if result != nil {
 		*result = dr
 	}
-	return oerr.Annotate(err, tag)
+	return err
 }
 
 // -----------------------------------------------------------------
