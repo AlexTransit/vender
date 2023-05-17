@@ -58,7 +58,9 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 				}
 			case money.OutEscrow:
 				event.Kind = types.EventMoneyPreCredit
-				ms.billCredit.Sub(be.BillNominal)
+				if ms.billCredit.Total() > 0 {
+					ms.billCredit.Sub(be.BillNominal)
+				}
 			case money.Stacked:
 				event.Kind = types.EventMoneyCredit
 				if !ms.bill.BillStacked() {

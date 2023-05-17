@@ -372,7 +372,8 @@ func (bv *BillValidator) setState(bc BllStateType) {
 }
 
 func (bv *BillValidator) setBroken(err error) money.BillEvent {
-	bv.teleError(errors.Join(errors.New("bill broken:"), err))
+	e := errors.New("bill broken - ")
+	bv.teleError(errors.Join(e, err))
 	bv.setState(Broken)
 	return money.BillEvent{Err: err}
 }
@@ -414,7 +415,6 @@ func (bv *BillValidator) decodeByte(b byte) (e money.BillEvent) {
 		bv.Log.Error("StatusCreditedBillRemoval. ecsrow = 0")
 		return
 	}
-
 	if b&0x80 != 0 { //route status
 		status, billType := b&0xf0, b&0x0f
 		nominal := bv.nominals[billType]
@@ -442,7 +442,8 @@ func (bv *BillValidator) decodeByte(b byte) (e money.BillEvent) {
 		case StatusRoutingBillToRecycler, StatusRoutingBillToRecyclerManualFill, StatusRoutingManualDispense, StatusRoutingTransferredFromRecyclerToCashbox:
 			bv.Log.Infof("non implement bill recycler status ")
 		default:
-			fmt.Printf("\033[41m unknow bill poll status%v \033[0m\n", status)
+			errs := fmt.Sprintf("unknow bill poll status:%x", status)
+			bv.Device.TeleError(errors.New(errs))
 		}
 	}
 	if b&0x5f == b { // Number of attempts to input a bill while validator is disabled.
@@ -471,8 +472,10 @@ func (bv *BillValidator) escrowOutEvent(err error, nominal currency.Nominal) mon
 // останавливаем по времени.
 func (bv *BillValidator) BillRun(alive *alive.Alive, returnEvent func(money.BillEvent)) {
 	bv.pollmu.Lock()
-	defer bv.pollmu.Unlock()
-	defer alive.Done()
+	defer func() {
+		bv.pollmu.Unlock()
+		alive.Done()
+	}()
 	if bv.billstate != WaitConfigure {
 		returnEvent(money.BillEvent{Err: errors.New("bill state not valid:" + bv.billstate.String() + " need reset")})
 		return
@@ -498,7 +501,13 @@ func (bv *BillValidator) BillRun(alive *alive.Alive, returnEvent func(money.Bill
 				bv.disableAccept()
 				if bv.EscrowBill > 0 {
 					bv.escrowReject()
-					_ = bv.pollF(returnEvent)
+					for i := 0; i < 5*20; i++ {
+						_ = bv.pollF(returnEvent)
+						if bv.billstate == ready {
+							break
+						}
+						time.Sleep(200 * time.Millisecond)
+					}
 				}
 				bv.setState(WaitConfigure)
 				again = false

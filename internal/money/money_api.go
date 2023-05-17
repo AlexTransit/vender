@@ -161,6 +161,8 @@ func (ms *MoneySystem) WithdrawCommit(ctx context.Context, amount currency.Amoun
 }
 
 func (ms *MoneySystem) ReturnMoney(ctx context.Context) error {
+	ms.lk.Lock()
+	defer ms.lk.Unlock()
 	const tag = "money-abort"
 	cash := ms.billCredit.Total() + ms.coinCredit.Total() - ms.bill.EscrowAmount()
 	// escrow bill return before stop bill
