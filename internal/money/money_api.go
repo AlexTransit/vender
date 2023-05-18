@@ -9,6 +9,7 @@ package money
 
 import (
 	"context"
+	"errors"
 
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/hardware/mdb/bill"
@@ -17,8 +18,8 @@ import (
 )
 
 var (
-	ErrNeedMoreMoney        = oerr.New("add-money")
-	ErrChangeRetainOverflow = oerr.New("ReturnChange(retain>total)")
+	ErrNeedMoreMoney        = errors.New("add-money")
+	ErrChangeRetainOverflow = errors.New("ReturnChange(retain>total)")
 )
 
 func (ms *MoneySystem) WaitEscrowAccept(amount currency.Amount) (wait bool) {

@@ -96,10 +96,7 @@ func (bv *BillValidator) init(ctx context.Context) error {
 			return bv.BillReset()
 		},
 	)
-	if err = bv.BillReset(); err != nil {
-		return err
-	}
-	return nil
+	return bv.BillReset()
 }
 
 func (bv *BillValidator) SendCommand(cmd BillCommand) {
@@ -124,7 +121,7 @@ func (bv *BillValidator) BillReset() (err error) {
 	if err = bv.Device.Tx(bv.Device.PacketReset, nil); err != nil {
 		return err
 	}
-	mbe := money.BillEvent{}
+	mbe := money.ValidatorEvent{}
 	if err := bv.pollF(nil); err != nil || mbe.Err != nil {
 		err = errors.Join(err, mbe.Err)
 		return err
@@ -294,29 +291,29 @@ func (bv *BillValidator) BillStacked() bool {
 	return true
 }
 
-func (bv *BillValidator) disableAccept() (mbe money.BillEvent) {
+func (bv *BillValidator) disableAccept() (e money.ValidatorEvent) {
 	buf := [5]byte{0x34, 00, 00, 00, 00}
 	request := mdb.MustPacketFromBytes(buf[:], true)
-	if mbe.Err = bv.Device.Tx(request, nil); mbe.Err != nil {
+	if e.Err = bv.Device.Tx(request, nil); e.Err != nil {
 		return
 	}
-	return mbe
+	return e
 }
 
-func (bv *BillValidator) escrowAccept() (mbe money.BillEvent) {
+func (bv *BillValidator) escrowAccept() (e money.ValidatorEvent) {
 	request := mdb.MustPacketFromHex("3501", true)
 	if err := bv.Device.Tx(request, nil); err != nil {
-		mbe.Err = err
+		e.Err = err
 	}
-	return mbe
+	return e
 }
 
-func (bv *BillValidator) escrowReject() (mbe money.BillEvent) {
+func (bv *BillValidator) escrowReject() (e money.ValidatorEvent) {
 	request := mdb.MustPacketFromHex("3500", true)
 	if err := bv.Device.Tx(request, nil); err != nil {
-		mbe.Err = err
+		e.Err = err
 	}
-	return mbe
+	return e
 }
 
 func (bv *BillValidator) enableAccept() (err error) {
@@ -335,7 +332,7 @@ func (bv *BillValidator) enableAccept() (err error) {
 
 // poll function.
 // возвращает события и объедененную ошибку
-func (bv *BillValidator) pollF(returnEvent func(money.BillEvent)) (err error) {
+func (bv *BillValidator) pollF(returnEvent func(money.ValidatorEvent)) (err error) {
 	var response mdb.Packet
 	if err := bv.Device.Tx(bv.Device.PacketPoll, &response); err != nil {
 		bv.Log.Errorf("bill boll TX error:%v", err)
@@ -367,13 +364,13 @@ func (bv *BillValidator) setState(bc BllStateType) {
 	bv.billstate = bc
 }
 
-func (bv *BillValidator) setBroken(err error) money.BillEvent {
+func (bv *BillValidator) setBroken(err error) money.ValidatorEvent {
 	bv.teleError(errors.Join(errors.New("bill broken:"), err))
 	bv.setState(Broken)
-	return money.BillEvent{Err: err}
+	return money.ValidatorEvent{Err: err}
 }
 
-func (bv *BillValidator) decodeByte(b byte) (e money.BillEvent) {
+func (bv *BillValidator) decodeByte(b byte) (e money.ValidatorEvent) {
 	switch b { // status
 	case StatusDefectiveMotor:
 		return bv.setBroken(fmt.Errorf("defective motor"))
@@ -419,20 +416,20 @@ func (bv *BillValidator) decodeByte(b byte) (e money.BillEvent) {
 		case StatusRoutingBillStacked: // complete state.
 			// return nil, money.BillEvent{Event: money.Stacked, BillNominal: nominal}
 			bv.Log.Infof("bill stacked (%v)", nominal.Format100I())
-			return money.BillEvent{Event: money.Stacked, BillNominal: nominal}
+			return money.ValidatorEvent{Event: money.Stacked, Nominal: nominal}
 		case StatusRoutingEscrowPosition:
 			// bv.setState(process)
 			bv.setEscrowBill(bv.nominals[billType])
 			bv.Log.Infof("bill in escrow (%v)", nominal.Format100I())
-			return money.BillEvent{Event: money.InEscrow, BillNominal: nominal}
+			return money.ValidatorEvent{Event: money.InEscrow, Nominal: nominal}
 			// return nil, money.BillEvent{Event: money.InEscrow, BillNominal: nominal}
 		case StatusRoutingBillReturned:
 			bv.Log.Infof("bill RoutingBillReturned (%v)", nominal.Format100I())
-			return money.BillEvent{Event: money.OutEscrow, BillNominal: nominal}
+			return money.ValidatorEvent{Event: money.OutEscrow, Nominal: nominal}
 			// return nil, money.BillEvent{Event: money.OutEscrow, BillNominal: nominal}
 		case StatusRoutingDisabledBillRejected:
 			bv.Log.Infof("reject disabled bill (%v)", nominal.Format100I())
-			return money.BillEvent{Event: money.OutEscrow, BillNominal: nominal}
+			return money.ValidatorEvent{Event: money.OutEscrow, Nominal: nominal}
 			// return nil, money.BillEvent{Event: money.OutEscrow, BillNominal: nominal}
 		//recycler status
 		case StatusRoutingBillToRecycler, StatusRoutingBillToRecyclerManualFill, StatusRoutingManualDispense, StatusRoutingTransferredFromRecyclerToCashbox:
@@ -458,23 +455,23 @@ func (bv *BillValidator) decodeByte(b byte) (e money.BillEvent) {
 	return
 }
 
-func (bv *BillValidator) escrowOutEvent(err error, nominal currency.Nominal) money.BillEvent {
+func (bv *BillValidator) escrowOutEvent(err error, nominal currency.Nominal) money.ValidatorEvent {
 	bv.setEscrowBill(0)
-	return money.BillEvent{Err: err, Event: money.OutEscrow, BillNominal: nominal}
+	return money.ValidatorEvent{Err: err, Event: money.OutEscrow, Nominal: nominal}
 }
 
 // прием банкнот ( если не принимал ранее).
 // останавливаем по времени.
-func (bv *BillValidator) BillRun(alive *alive.Alive, returnEvent func(money.BillEvent)) {
+func (bv *BillValidator) BillRun(alive *alive.Alive, returnEvent func(money.ValidatorEvent)) {
 	bv.pollmu.Lock()
 	defer bv.pollmu.Unlock()
 	defer alive.Done()
 	if bv.billstate != WaitConfigure {
-		returnEvent(money.BillEvent{Err: errors.New("bill state not valid:" + bv.billstate.String() + " need reset")})
+		returnEvent(money.ValidatorEvent{Err: errors.New("bill state not valid:" + bv.billstate.String() + " need reset")})
 		return
 	}
 	if err := bv.enableAccept(); err != nil { // enable accept all posible
-		returnEvent(money.BillEvent{Err: errors.New("config enable accept")})
+		returnEvent(money.ValidatorEvent{Err: errors.New("config enable accept")})
 		return
 	}
 	for len(bv.billCmd) > 0 {

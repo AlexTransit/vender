@@ -43,27 +43,27 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 	validatorAlive := alive.NewAlive()
 	validatorAlive.Add(1)
 	if ms.bill.GetState() != bill.Broken {
-		go ms.bill.BillRun(validatorAlive, func(be money.BillEvent) {
-			if be.Err != nil {
-				ms.Log.Warning(be.Err)
+		go ms.bill.BillRun(validatorAlive, func(e money.ValidatorEvent) {
+			if e.Err != nil {
+				ms.Log.Warning(e.Err)
 				return
 			}
 			event := types.Event{}
-			switch be.Event {
+			switch e.Event {
 			case money.InEscrow:
 				event.Kind = types.EventMoneyPreCredit
-				ms.billCredit.Add(be.BillNominal)
+				ms.billCredit.Add(e.Nominal)
 				if ms.GetCredit() < maxPrice {
 					ms.bill.SendCommand(bill.Accept)
 				}
 			case money.OutEscrow:
 				event.Kind = types.EventMoneyPreCredit
-				ms.billCredit.Sub(be.BillNominal)
+				ms.billCredit.Sub(e.Nominal)
 			case money.Stacked:
 				event.Kind = types.EventMoneyCredit
 				if !ms.bill.BillStacked() {
 					ms.Log.Error("bill not stacked. substruct bill credit")
-					ms.billCredit.Sub(be.BillNominal)
+					ms.billCredit.Sub(e.Nominal)
 				}
 			default:
 				return

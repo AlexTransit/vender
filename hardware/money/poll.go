@@ -24,27 +24,22 @@ const (
 	StatusDispensed
 )
 
-type CoinEvent struct {
+type ValidatorEvent struct {
 	Err         error
-	Event       CashEventName
-	BillNominal currency.Nominal
+	Event       ValidatorEventName
+	Nominal currency.Nominal
 }
 
-type BillEvent struct {
-	Err         error
-	Event       CashEventName
-	BillNominal currency.Nominal
-}
-
-type CashEventName byte
+type ValidatorEventName byte
 
 const (
-	NoEvent CashEventName = iota
+	NoEvent ValidatorEventName = iota
 	Reseted
 	PollerStoped
 	InEscrow
 	OutEscrow
 	Stacked
+	CoinRejectKey
 )
 
 type PollItem struct {

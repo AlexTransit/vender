@@ -89,6 +89,12 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 	ca.giveSmart = config.GiveSmart || config.XXX_Deprecated_DispenseSmart
 	ca.dispenseTimeout = helpers.IntSecondDefault(config.DispenseTimeoutSec, defaultDispenseTimeout)
 	ca.scalingFactor = 1
+	g.Engine.RegisterNewFunc(
+		"coin.reset",
+		func(ctx context.Context) error {
+			return ca.CoinReset()
+		},
+	)
 	err = ca.CoinReset()
 	return err
 }
@@ -99,9 +105,9 @@ func (ca *CoinAcceptor) CoinReset() (err error) {
 	if err = ca.Device.Tx(ca.Device.PacketReset, nil); err != nil {
 		return err
 	}
-	mbe := money.BillEvent{}
-	if mbe.Err = ca.pollF(nil); mbe.Err != nil {
-		return mbe.Err
+	e := money.ValidatorEvent{}
+	if e.Err = ca.pollF(nil); e.Err != nil {
+		return e.Err
 	}
 	if err = ca.setup(); err != nil {
 		return err
@@ -121,11 +127,10 @@ func (ca *CoinAcceptor) CoinReset() (err error) {
 	if err = ca.TubeStatus(); err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func (ca *CoinAcceptor) pollF(returnEvent func(money.CoinEvent)) (err error) {
+func (ca *CoinAcceptor) pollF(returnEvent func(money.ValidatorEvent)) (err error) {
 	var response mdb.Packet
 	if err := ca.Device.Tx(ca.Device.PacketPoll, &response); err != nil {
 		ca.Log.Errorf("bill boll TX error:%v", err)
@@ -145,7 +150,7 @@ func (ca *CoinAcceptor) pollF(returnEvent func(money.CoinEvent)) (err error) {
 	return err
 }
 
-func (ca *CoinAcceptor) decodeByte(b byte) money.CoinEvent {
+func (ca *CoinAcceptor) decodeByte(b byte) money.ValidatorEvent {
 	fmt.Printf("\033[41m coin byte %v \033[0m\n", b)
 	switch b {
 	case 0x01: // Escrow request
@@ -221,7 +226,7 @@ func (ca *CoinAcceptor) decodeByte(b byte) money.CoinEvent {
 	// }
 
 	// err := oerr.Errorf("parsePollItem unknown=%x", b)
-	return money.CoinEvent{}
+	return money.ValidatorEvent{}
 }
 
 func (ca *CoinAcceptor) setup() error {
@@ -302,14 +307,6 @@ func (ca *CoinAcceptor) CommandFeatureEnable(requested Features) error {
 	if err := ca.Device.Tx(request, nil); err != nil {
 		return errors.New(tag + err.Error())
 	}
-
-	// request := mdb.MustPacketFromHex("0f01", true)
-	// response := mdb.Packet{}
-	// err := ca.Device.Tx(request, &response)
-	// if err != nil {
-	// 	return errors.New(tag + err.Error())
-	// }
-
 	return nil
 }
 
