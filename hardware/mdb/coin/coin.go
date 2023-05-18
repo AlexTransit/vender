@@ -123,7 +123,9 @@ func (ca *CoinAcceptor) CoinReset() (err error) {
 	if err = ca.ExpansionDiagStatus(diagResult); err != nil {
 		return err
 	}
-	ca.TeleError(errors.New("coin reset error:" + diagResult.Error()))
+	if !diagResult.OK(){
+		ca.TeleError(errors.New("coin reset error:" + diagResult.Error()))
+	}
 	if err = ca.TubeStatus(); err != nil {
 		return err
 	}
@@ -154,6 +156,7 @@ func (ca *CoinAcceptor) decodeByte(b byte) money.ValidatorEvent {
 	fmt.Printf("\033[41m coin byte %v \033[0m\n", b)
 	switch b {
 	case 0x01: // Escrow request
+		return money.ValidatorEvent{Event: money.CoinRejectKey}
 	// 	return money.PollItem{Status: money.StatusReturnRequest}
 	case 0x02: // Changer Payout Busy
 	// 	return money.PollItem{Status: money.StatusBusy}
@@ -355,7 +358,6 @@ func (ca *CoinAcceptor) coinTypeNominal(b byte) currency.Nominal {
 
 func (ca *CoinAcceptor) ExpansionDiagStatus(result *DiagResult) error {
 	const tag = deviceName + ".ExpansionSendDiagStatus"
-
 	if ca.supportedFeatures&FeatureExtendedDiagnostic == 0 {
 		ca.Device.Log.Debugf("%s feature is not supported", tag)
 		return nil
@@ -372,6 +374,21 @@ func (ca *CoinAcceptor) ExpansionDiagStatus(result *DiagResult) error {
 		*result = dr
 	}
 	return err
+}
+
+func (ca *CoinAcceptor) EnableAccept(maximumNominal currency.Amount) {
+	enableBitset := uint16(0)
+	if maximumNominal != 0 {
+		for i, n := range ca.nominals {
+			if n == 0 {
+				continue
+			}
+			if currency.Amount(n) <= maximumNominal {
+				enableBitset |= 1 << uint(i)
+			}
+		}
+	}
+
 }
 
 // -----------------------------------------------------------------
