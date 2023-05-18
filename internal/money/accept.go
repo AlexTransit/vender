@@ -52,9 +52,15 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 			switch be.Event {
 			case money.InEscrow:
 				event.Kind = types.EventMoneyPreCredit
-				ms.billCredit.Add(be.BillNominal)
-				if ms.GetCredit() < maxPrice {
-					ms.bill.SendCommand(bill.Accept)
+				if be.BillNominal <= currency.Nominal(g.Config.Money.CreditMax) {
+					ms.billCredit.Add(be.BillNominal)
+					if ms.GetCredit() < maxPrice {
+						ms.bill.SendCommand(bill.Accept)
+					}
+				} else {
+					ms.Log.Infof("reject big money (%v)",be.BillNominal.Format100I())
+					ms.bill.SendCommand(bill.Reject)
+					return
 				}
 			case money.OutEscrow:
 				event.Kind = types.EventMoneyPreCredit
