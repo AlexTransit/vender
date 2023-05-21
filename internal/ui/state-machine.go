@@ -17,7 +17,6 @@ import (
 	tele_api "github.com/AlexTransit/vender/tele"
 )
 
-
 func (ui *UI) State() types.UiState               { return types.UiState(atomic.LoadUint32((*uint32)(&ui.state))) }
 func (ui *UI) setState(new types.UiState)         { atomic.StoreUint32((*uint32)(&ui.state), uint32(new)) }
 func (ui *UI) XXX_testSetState(new types.UiState) { ui.setState(new) }

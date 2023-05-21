@@ -61,9 +61,9 @@ type CoinAcceptor struct { //nolint:maligned
 }
 
 var (
-	packetTubeStatus   = mdb.MustPacketFromHex("0a", true)
-	packetExpIdent     = mdb.MustPacketFromHex("0f00", true)
-	packetDiagStatus   = mdb.MustPacketFromHex("0f05", true)
+	packetTubeStatus = mdb.MustPacketFromHex("0a", true)
+	packetExpIdent   = mdb.MustPacketFromHex("0f00", true)
+	packetDiagStatus = mdb.MustPacketFromHex("0f05", true)
 	// packetPayoutPoll   = mdb.MustPacketFromHex("0f04", true)
 	packetPayoutStatus = mdb.MustPacketFromHex("0f03", true)
 )

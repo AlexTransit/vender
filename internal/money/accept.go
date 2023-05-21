@@ -58,7 +58,7 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 						ms.bill.SendCommand(bill.Accept)
 					}
 				} else {
-					ms.Log.Infof("reject big money (%v)",be.BillNominal.Format100I())
+					ms.Log.Infof("reject big money (%v)", be.BillNominal.Format100I())
 					ms.bill.SendCommand(bill.Reject)
 					return
 				}
