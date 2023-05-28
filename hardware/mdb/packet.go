@@ -75,6 +75,11 @@ func (p *Packet) Bytes() []byte {
 	return p.b[:p.l]
 }
 
+func (p *Packet) String() string {
+	s := string(p.b[:])
+	return s
+}
+
 func (p *Packet) Equal(p2 *Packet) bool {
 	return p.l == p2.l && bytes.Equal(p.Bytes(), p2.Bytes())
 }

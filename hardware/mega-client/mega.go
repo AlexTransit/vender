@@ -240,11 +240,13 @@ func (c *Client) ioLoop() {
 
 				case kind == RESPONSE_OK && bgrecv.Fields.MdbResult == MDB_RESULT_UART_READ_UNEXPECTED:
 					//AlexM FIXME попал сюда при тесте. ( циклично слал) и это точно не помехи
-					c.Log.Infof("%s stray UUUUUUUUUART_READ_UNEXPECTED likely caused by electrical noise, add filter packet=%s", modName, bgrecv.ResponseString())
+					// если на coinco отключить бошку и ресетнуть, то получим все типа помехим
+					c.Log.Infof("mega stray1 king(%v) MdbResult(%v) response(%s)", kind, bgrecv.Fields.MdbResult, bgrecv.ResponseString())
 
 				default:
 					// So far this always has been a symptom of critical protocol error
-					c.Log.Infof("%s stray packet %s", modName, bgrecv.ResponseString())
+					c.Log.Infof("mega stray2 king(%v) MdbResult(%v) response(%s)", kind, bgrecv.Fields.MdbResult, bgrecv.ResponseString())
+					// c.Log.Infof("%s stray packet %s", modName, bgrecv.ResponseString())
 				}
 			case ErrResponseEmpty:
 				// XXX TODO FIXME error is still present, it only wastes time, not critical

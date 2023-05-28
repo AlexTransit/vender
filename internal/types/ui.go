@@ -9,7 +9,6 @@ type UIer interface {
 	Scheduler
 }
 
-
 type UiState uint32
 
 const (

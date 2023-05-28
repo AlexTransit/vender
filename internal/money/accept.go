@@ -2,19 +2,14 @@ package money
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/hardware/input"
 	"github.com/AlexTransit/vender/hardware/mdb/bill"
 	"github.com/AlexTransit/vender/hardware/money"
-
-	"github.com/AlexTransit/vender/hardware/input"
-
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
-
-	tele_api "github.com/AlexTransit/vender/tele"
 	oerr "github.com/juju/errors"
 	"github.com/temoto/alive/v2"
 )
@@ -33,23 +28,21 @@ func (ms *MoneySystem) SetAcceptMax(ctx context.Context, limit currency.Amount) 
 }
 
 func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amount, mainAlive *alive.Alive, out chan<- types.Event) error {
-	const tag = "money.accept-credit"
 	g := state.GetGlobal(ctx)
-
-	coinmax := currency.Amount(1000)
-
-	g.Engine.Exec(ctx, ms.coin.AcceptMax(coinmax))
-	stopAccept := mainAlive.StopChan()
-	validatorAlive := alive.NewAlive()
-	validatorAlive.Add(1)
+	// coinmax := currency.Amount(1000)
+	// g.Engine.Exec(ctx, ms.coin.AcceptMax(coinmax))
+	var stopAccept <-chan struct{}
+	if mainAlive != nil {
+		stopAccept = mainAlive.StopChan()
+	}
 	if ms.bill.GetState() != bill.Broken {
-		go ms.bill.BillRun(validatorAlive, func(be money.BillEvent) {
-			if be.Err != nil {
-				ms.Log.Warning(be.Err)
+		go ms.bill.BillRun(mainAlive, func(e money.ValidatorEvent) {
+			if e.Err != nil {
+				ms.Log.Warning(e.Err)
 				return
 			}
 			event := types.Event{}
-			switch be.Event {
+			switch e.Event {
 			case money.InEscrow:
 				event.Kind = types.EventMoneyPreCredit
 				if be.BillNominal <= currency.Nominal(g.Config.Money.CreditMax) {
@@ -58,7 +51,7 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 						ms.bill.SendCommand(bill.Accept)
 					}
 				} else {
-					ms.Log.Infof("reject big money (%v)",be.BillNominal.Format100I())
+					ms.Log.Infof("reject big money (%v)", be.BillNominal.Format100I())
 					ms.bill.SendCommand(bill.Reject)
 					return
 				}
@@ -71,7 +64,7 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 				event.Kind = types.EventMoneyCredit
 				if !ms.bill.BillStacked() {
 					ms.Log.Error("bill not stacked. substruct bill credit")
-					ms.billCredit.Sub(be.BillNominal)
+					ms.billCredit.Sub(e.Nominal)
 				}
 			default:
 				return
@@ -80,69 +73,27 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 		})
 	} else {
 		ms.Log.Warning("bill not work")
-		validatorAlive.Done()
+		mainAlive.Done()
 	}
-
 	// ----------------------coin ------------------------------------------------------------------
-	go ms.coin.Run(ctx, mainAlive, func(pi money.PollItem) bool {
-		ms.lk.Lock()
-		defer ms.lk.Unlock()
-		switch pi.Status {
-		case money.StatusDispensed:
-			ms.Log.Debugf("%s manual dispense: %s", tag, pi.String())
-			_ = ms.coin.TubeStatus()
-			_ = ms.coin.ExpansionDiagStatus(nil)
-		case money.StatusReturnRequest:
-			// XXX maybe this should be in coin driver
+	go ms.coin.CoinRun(mainAlive, func(e money.ValidatorEvent) {
+		event := types.Event{}
+		switch e.Event {
+		case money.CoinRejectKey:
 			g.Hardware.Input.Emit(types.InputEvent{Source: input.MoneySourceTag, Key: input.MoneyKeyAbort})
-		case money.StatusRejected:
-			g.Tele.StatModify(func(s *tele_api.Stat) {
-				s.CoinRejected[uint32(pi.DataNominal)] += uint32(pi.DataCount)
-			})
-		case money.StatusCredit:
-			g.ClientBegin(ctx)
-			if pi.DataCashbox {
-				if err := ms.coinCashbox.AddMany(pi.DataNominal, uint(pi.DataCount)); err != nil {
-					g.Error(oerr.Annotatef(err, "%s cashbox.Add n=%v c=%d", tag, pi.DataNominal, pi.DataCount))
-					break
-				}
-			}
-			err := ms.coinCredit.AddMany(pi.DataNominal, uint(pi.DataCount))
-			if err != nil {
-				g.Error(oerr.Annotatef(err, "%s credit.Add n=%v c=%d", tag, pi.DataNominal, pi.DataCount))
-				break
-			}
-			_ = ms.coin.TubeStatus()
-			_ = ms.coin.ExpansionDiagStatus(nil)
-			// ms.dirty += pi.Amount()
-			ms.AddDirty(pi.Amount())
-			ms.Log.Infof("coin accepted:%v", pi.Amount().Format100I())
-			// validatorAlive.Done()
-			if out != nil {
-				event := types.Event{Kind: types.EventMoneyCredit, Amount: pi.Amount()}
-				// async channel send to avoid deadlock lk.Lock vs <-out
-				go func() { out <- event }()
+		case money.CoinCredit:
+			event.Kind = types.EventMoneyCredit
+			ms.coinCredit.Add(e.Nominal)
+			x := ms.GetCredit()
+			if x >= maxPrice {
+				ms.coin.DisableAccept()
 			}
 		default:
-			g.Error(fmt.Errorf("CRITICAL code error unhandled coin POLL item=%#v", pi))
 		}
-		return false
+		go func() { out <- event }()
+		// out <- event
 	})
-	//
-	again := true
-	for again {
-		select {
-		case <-validatorAlive.WaitChan():
-			again = false
-		case <-stopAccept:
-			validatorAlive.Stop()
-			ms.lk.Lock()
-			defer ms.lk.Unlock()
-			ms.bill.SendCommand(bill.Stop)
-			again = false
-		}
-	}
-	validatorAlive.Wait()
-	ms.bill.DisableAccept()
+	<-stopAccept
+	ms.bill.SendCommand(bill.Stop)
 	return nil
 }
