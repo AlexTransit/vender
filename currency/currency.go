@@ -16,22 +16,23 @@ type Amount uint32
 
 const MaxAmount = Amount(math.MaxUint32)
 
-func (ng Amount) Format100I() string { return fmt.Sprint(float32(ng) / 100) }
-func (ng Amount) AddPersent(persent float64) Amount {
-	vf := float64(ng) * persent
+func (a Amount) Format100I() string { return fmt.Sprint(float32(a) / 100) }
+func (a Amount) AddPersent(persent float64) Amount {
+	vf := float64(a) * persent
 	vi := int32(math.Round(vf))
 	return Amount(vi)
 }
-func (ng Amount) FormatCtx(ctx context.Context) string {
+func (a Amount) FormatCtx(ctx context.Context) string {
 	// XXX FIXME
-	return ng.Format100I()
+	return a.Format100I()
 }
 
 // Nominal is value of one coin or bill
 type Nominal Amount
 
 func (n Nominal) Format100I() string { return fmt.Sprint(float32(n) / 100) }
-func (n Nominal) Amount() Amount     { return n.Amount() }
+
+// func (n Nominal) Amount() Amount     { return n.Amount() }
 
 var (
 	ErrNominalInvalid = oerr.New("Nominal is not valid for this group")
@@ -113,6 +114,13 @@ func (ng *NominalGroup) Get(n Nominal) (uint, error) {
 		return 0, ErrNominalInvalid
 	} else {
 		return stored, nil
+	}
+}
+func (ng *NominalGroup) InTube(n Nominal) uint {
+	if stored, ok := ng.values[n]; !ok {
+		return 0
+	} else {
+		return stored
 	}
 }
 

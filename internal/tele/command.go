@@ -253,14 +253,14 @@ func (t *tele) RemCook(ctx context.Context, o tele_api.FromRoboMessage) (err err
 	if err == nil {
 		o.Order.OrderStatus = tele_api.OrderStatus_complete
 		o.State = tele_api.State_Nominal
-		types.VMC.UiState = 10 //FIXME StateFrontEnd     // 10 ->FrontBegin
+		types.VMC.UiState = uint32(types.StateFrontEnd)
 	} else {
 		o.State = tele_api.State_Broken
 		if types.VMC.MonSys.Dirty != 0 {
 			o.Order.OrderStatus = tele_api.OrderStatus_orderError
 		}
 		o.Err = &tele_api.Err{Message: err.Error()}
-		types.VMC.UiState = 2 //FIXME  StateBroken
+		types.VMC.UiState = uint32(types.StateBroken)
 	}
 	t.RoboSend(&o)
 	return nil

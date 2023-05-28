@@ -3,6 +3,7 @@ package mdb
 import (
 	"context"
 	"encoding/binary"
+	errorsn "errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -133,6 +134,14 @@ func (dev *Device) Tx(request Packet, response *Packet) error {
 	dev.cmdLk.Lock()
 	defer dev.cmdLk.Unlock()
 	return dev.bus.Tx(request, response)
+}
+
+func (dev *Device) Rst() (err error) {
+	dev.LastOff.SetNowIfZero() // consider device offline from now till successful response
+	dev.lastReset.SetNow()
+	err = errorsn.Join(dev.tx(dev.PacketReset, new(Packet), txOptReset),
+		dev.TxSetup())
+	return err
 }
 
 // Please make sure it is called under cmdLk or don't use it.

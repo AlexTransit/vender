@@ -32,7 +32,7 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 		credit := ui.ms.GetCredit()
 		if credit > 0 {
 			ui.display.SetLines("  :-(", fmt.Sprintf(" -%v", credit.Format100I()))
-			err := ui.ms.ReturnMoney(ctx)
+			err := ui.ms.ReturnMoney()
 			ui.g.Error(errors.Trace(err))
 			ui.cancelQRPay(tele_api.State_Client)
 		}

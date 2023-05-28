@@ -29,7 +29,7 @@ type Biller interface {
 	// EscrowReject() engine.Doer
 
 	SendCommand(BillCommand)
-	BillRun(*alive.Alive, func(money.BillEvent))
+	BillRun(*alive.Alive, func(money.ValidatorEvent))
 	BillReset() error
 	BillStacked() bool
 	GetState() BllStateType
@@ -71,7 +71,7 @@ func (Stub) SendCommand(BillCommand) {}
 // func (Stub) EscrowAccept() engine.Doer { return engine.Nothing{} }
 // func (Stub) EscrowReject() engine.Doer { return engine.Nothing{} }
 
-func (Stub) BillRun(*alive.Alive, func(money.BillEvent)) {}
+func (Stub) BillRun(*alive.Alive, func(money.ValidatorEvent)) {}
 
 // func (Stub) BillRun(*alive.Alive, func(money.BillEvent)) {}
 // func (Stub) BillRun(chan<- money.BillEvent, *alive.Alive) {}

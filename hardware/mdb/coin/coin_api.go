@@ -23,12 +23,16 @@ func Enum(ctx context.Context) error {
 
 type Coiner interface {
 	AcceptMax(currency.Amount) engine.Doer
-	Run(context.Context, *alive.Alive, func(money.PollItem) bool)
+	// Run(context.Context, *alive.Alive, func(money.PollItem) bool)
 	ExpansionDiagStatus(*DiagResult) error
 	SupportedNominals() []currency.Nominal
 	NewGive(currency.Amount, bool, *currency.NominalGroup) engine.Doer
 	TubeStatus() error
 	Tubes() *currency.NominalGroup
+
+	CoinRun(*alive.Alive, func(money.ValidatorEvent))
+	DisableAccept()
+	Dispence(currency.Amount) error
 }
 
 var _ Coiner = &CoinAcceptor{}
@@ -36,19 +40,24 @@ var _ Coiner = Stub{}
 
 type Stub struct{}
 
+func (Stub) CoinRun(*alive.Alive, func(money.ValidatorEvent)) {}
+
+func (Stub) DisableAccept()                 {}
+func (Stub) Dispence(currency.Amount) error { return nil }
+
 func (Stub) AcceptMax(currency.Amount) engine.Doer {
 	return engine.Fail{E: errors.NotSupportedf("coin.Stub.AcceptMax")}
 }
 
-func (Stub) Run(ctx context.Context, alive *alive.Alive, fun func(money.PollItem) bool) {
-	fun(money.PollItem{
-		Status: money.StatusFatal,
-		Error:  errors.NotSupportedf("coin.Stub.Run"),
-	})
-	if alive != nil {
-		alive.Done()
-	}
-}
+// func (Stub) Run(ctx context.Context, alive *alive.Alive, fun func(money.PollItem) bool) {
+// 	fun(money.PollItem{
+// 		Status: money.StatusFatal,
+// 		Error:  errors.NotSupportedf("coin.Stub.Run"),
+// 	})
+// 	if alive != nil {
+// 		alive.Done()
+// 	}
+// }
 
 func (Stub) ExpansionDiagStatus(*DiagResult) error {
 	return errors.NotSupportedf("coin.Stub.ExpansionDiagStatus")

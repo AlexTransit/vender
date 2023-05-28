@@ -40,7 +40,7 @@ func TestAbort(t *testing.T) {
 		{"0b", ""},
 		{"0f03", "0b00"},
 	})
-	require.NoError(t, ms.ReturnMoney(ctx))
+	require.NoError(t, ms.ReturnMoney())
 
 	mock.ExpectMap(map[string]string{
 		"0c0000ffff": "",

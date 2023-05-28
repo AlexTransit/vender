@@ -12,7 +12,7 @@ import (
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
-	"github.com/juju/errors"
+	oerr "github.com/juju/errors"
 )
 
 const (
@@ -99,8 +99,16 @@ func (dv *DeviceValve) init(ctx context.Context) error {
 	g.Engine.Register("evend.valve.pump_start", dv.NewPump(true))
 	g.Engine.Register("evend.valve.pump_stop", dv.NewPump(false))
 
-	err = dv.Generic.FIXME_initIO(ctx)
-	return errors.Annotate(err, dv.name+".init")
+	// err = dv.Generic.FIXME_initIO(ctx)
+	// errn := errors.New("a")
+	// err = dv.dev.Tx(dv.dev.PacketReset, nil)
+	// errn1 := errors.Join(err)
+	// err = dv.dev.TxSetup()
+	// errn1 = errors.Join(err)
+	errn1 := dv.dev.Rst()
+	return errn1
+	//  dev.tx(dev.PacketReset, new(Packet), txOptReset)
+	// return oerr.Annotate(err, dv.name+".init")
 }
 
 // func (dv *DeviceValve) UnitToTimeout(unit uint8) time.Duration {
@@ -118,12 +126,12 @@ func (dv *DeviceValve) newGetTempHot() engine.Func {
 		response := mdb.Packet{}
 		err := dv.Generic.dev.TxKnown(request, &response)
 		if err != nil {
-			return errors.Annotate(err, tag)
+			return oerr.Annotate(err, tag)
 		}
 		bs = response.Bytes()
 		dv.dev.Log.Debugf("%s request=%s response=(%d)%s", tag, request.Format(), response.Len(), response.Format())
 		if len(bs) != 1 {
-			return errors.NotValidf("%s response=%x", tag, bs)
+			return oerr.NotValidf("%s response=%x", tag, bs)
 		}
 
 		temp := int32(bs[0])
@@ -132,7 +140,7 @@ func (dv *DeviceValve) newGetTempHot() engine.Func {
 			if doSetZero, _, _ := engine.ArgApply(dv.DoSetTempHot, 0); doSetZero != nil {
 				_ = engine.GetGlobal(ctx).Exec(ctx, doSetZero)
 			}
-			sensorErr := errors.Errorf("%s current=0 sensor problem", tag)
+			sensorErr := oerr.Errorf("%s current=0 sensor problem", tag)
 			if !dv.tempHotReported {
 				g := state.GetGlobal(ctx)
 				g.Error(sensorErr)
@@ -156,7 +164,7 @@ func (dv *DeviceValve) newSetTempHot() engine.FuncArg {
 		response := mdb.Packet{}
 		err := dv.dev.TxCustom(request, &response, mdb.TxOpt{})
 		if err != nil {
-			return errors.Annotatef(err, "%s target=%d request=%x", tag, temp, request.Bytes())
+			return oerr.Annotatef(err, "%s target=%d request=%x", tag, temp, request.Bytes())
 		}
 		dv.tempHotTarget = temp
 		dv.dev.Log.Debugf("%s target=%d request=%x response=%x", tag, temp, request.Bytes(), response.Bytes())
@@ -172,7 +180,7 @@ func (dv *DeviceValve) newPourCareful(name string, arg1 byte, abort engine.Doer)
 		Name: tag + "/careful",
 		F: func(ctx context.Context, arg engine.Arg) error {
 			if arg >= 256 {
-				return errors.Errorf("arg=%d overflows hardware units", arg)
+				return oerr.Errorf("arg=%d overflows hardware units", arg)
 			}
 			e := engine.GetGlobal(ctx)
 			units := uint8(arg)
@@ -281,7 +289,7 @@ func (dv *DeviceValve) newCheckTempHotValidate(ctx context.Context) func() error
 		temp := dv.tempHot.GetOrUpdate(func() {
 			// Alexm - если отключить давчик температуры, после инита, то ошибок не будет и температура не меняется.
 			if getErr = g.Engine.Exec(ctx, dv.doGetTempHot); getErr != nil {
-				getErr = errors.Annotate(getErr, tag)
+				getErr = oerr.Annotate(getErr, tag)
 				dv.dev.Log.Error(getErr)
 			}
 		})
@@ -299,7 +307,7 @@ func (dv *DeviceValve) newCheckTempHotValidate(ctx context.Context) func() error
 		dv.dev.Log.Debugf(msg)
 		if diff > tempHotMargin {
 			if !dv.tempHotReported {
-				g.Error(errors.New(msg))
+				g.Error(oerr.New(msg))
 				dv.tempHotReported = true
 			}
 			return &ErrWaterTemperature{
