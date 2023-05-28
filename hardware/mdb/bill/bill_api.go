@@ -30,12 +30,10 @@ type Biller interface {
 
 	SendCommand(BillCommand)
 	BillRun(*alive.Alive, func(money.ValidatorEvent))
-	// BillRun(*alive.Alive, func(money.BillEvent))
-	// BillRun(chan<- money.BillEvent, *alive.Alive)
-
 	BillReset() error
 	BillStacked() bool
 	GetState() BllStateType
+	DisableAccept()
 }
 
 var _ Biller = &BillValidator{}
@@ -83,3 +81,5 @@ func (Stub) BillReset() error { return nil }
 func (Stub) BillStacked() bool { return false }
 
 func (Stub) GetState() BllStateType { return 0 }
+
+func (Stub) DisableAccept() {}

@@ -31,6 +31,7 @@ func (a Amount) FormatCtx(ctx context.Context) string {
 type Nominal Amount
 
 func (n Nominal) Format100I() string { return fmt.Sprint(float32(n) / 100) }
+
 // func (n Nominal) Amount() Amount     { return n.Amount() }
 
 var (
