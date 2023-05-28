@@ -325,7 +325,7 @@ func (bv *BillValidator) enableAccept() (err error) {
 	}
 	request := mdb.MustPacketFromBytes(buf[:], true)
 	if err = bv.Device.Tx(request, nil); err != nil {
-		return fmt.Errorf("bill. send disable accept packet not complete. (%v)", err)
+		return fmt.Errorf("bill. send enable accept packet not complete. (%v)", err)
 	}
 	return bv.pollF(nil)
 }

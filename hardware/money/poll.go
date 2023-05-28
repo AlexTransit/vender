@@ -25,8 +25,8 @@ const (
 )
 
 type ValidatorEvent struct {
-	Err         error
-	Event       ValidatorEventName
+	Err     error
+	Event   ValidatorEventName
 	Nominal currency.Nominal
 }
 
@@ -40,6 +40,7 @@ const (
 	OutEscrow
 	Stacked
 	CoinRejectKey
+	CoinCredit
 )
 
 type PollItem struct {

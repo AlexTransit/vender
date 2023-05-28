@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -14,7 +15,6 @@ import (
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
-	oerr "github.com/juju/errors"
 	"github.com/temoto/alive/v2"
 )
 
@@ -44,7 +44,6 @@ const (
 )
 
 type CoinAcceptor struct { //nolint:maligned
-	reseted bool
 	mdb.Device
 	giveSmart       bool
 	dispenseTimeout time.Duration
@@ -59,8 +58,21 @@ type CoinAcceptor struct { //nolint:maligned
 
 	// dynamic state useful for external code
 	tubesmu sync.Mutex
+	tub     []tube
 	tubes   currency.NominalGroup
 }
+type tube struct {
+	nominal  currency.Nominal
+	count    uint
+	tubeFull bool
+}
+
+type CoinCommand byte
+
+const (
+	noCommand CoinCommand = iota
+	Stop
+)
 
 var (
 	// packetTubeStatus = mdb.MustPacketFromHex("0a", true)
@@ -71,11 +83,11 @@ var (
 )
 
 var (
-	ErrNoCredit      = oerr.Errorf("No Credit")
-	ErrDoubleArrival = oerr.Errorf("Double Arrival")
-	ErrCoinRouting   = oerr.Errorf("Coin Routing")
-	ErrCoinJam       = oerr.Errorf("Coin Jam")
-	ErrSlugs         = oerr.Errorf("Slugs")
+	ErrNoCredit      = errors.New("no Credit")
+	ErrDoubleArrival = errors.New("double Arrival")
+	ErrCoinRouting   = errors.New("coin Routing")
+	ErrCoinJam       = errors.New("coin Jam")
+	ErrSlugs         = errors.New("slugs")
 )
 
 func (ca *CoinAcceptor) init(ctx context.Context) error {
@@ -95,8 +107,162 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 			return ca.CoinReset()
 		},
 	)
+	g.Engine.RegisterNewFunc(
+		"d.1",
+		func(ctx context.Context) error {
+			v, de := ca.DispenceCoin(100)
+			fmt.Printf("\033[41m dispensed(%v) error(%v)\033[0m\n", v, de)
+			return de
+		},
+	)
+	g.Engine.RegisterNewFunc(
+		"d.2",
+		func(ctx context.Context) error {
+			v, de := ca.DispenceCoin(200)
+			fmt.Printf("\033[41m dispensed(%v) error(%v)\033[0m\n", v, de)
+			return de
+		},
+	)
+	g.Engine.RegisterNewFunc(
+		"d.5",
+		func(ctx context.Context) error {
+			v, de := ca.DispenceCoin(500)
+			fmt.Printf("\033[41m dispensed(%v) error(%v)\033[0m\n", v, de)
+			return de
+		},
+	)
+	g.Engine.RegisterNewFunc(
+		"d.10",
+		func(ctx context.Context) error {
+			v, de := ca.DispenceCoin(1000)
+			fmt.Printf("\033[41m dispensed(%v) error(%v)\033[0m\n", v, de)
+			return de
+		},
+	)
+
+	g.Engine.Register("coin.dispence(?)",
+		engine.FuncArg{Name: "coin.dispence", F: func(ctx context.Context, arg engine.Arg) (err error) {
+			err = ca.Dispence(currency.Amount(arg))
+			return err
+		}})
+
 	err = ca.CoinReset()
 	return err
+}
+
+func (ca *CoinAcceptor) Dispence(amount currency.Amount) (err error) {
+	dispenceAmount := amount
+	m := "dispense coin: "
+	for {
+		dispenseNominal, e := ca.maximumAvailableNominal(dispenceAmount, true)
+		// AlexM FIXME
+		if dispenseNominal == 1000 && ca.tubes.InTube(500) > ca.tubes.InTube(1000) {
+			dispenseNominal = 500
+		}
+		// END AlexM FIXME
+		if e != nil {
+			ca.Log.Error(e)
+			err = errors.Join(err, e)
+			dispenceAmount = currency.Amount(dispenseNominal)
+		}
+		_, e = ca.DispenceCoin(dispenseNominal)
+		m = m + dispenseNominal.Format100I() + " "
+		err = errors.Join(err, e)
+		dispenceAmount -= currency.Amount(dispenseNominal)
+		if dispenceAmount <= 0 {
+			break
+		}
+	}
+	ca.Log.Info(m)
+	return err
+}
+
+func (ca *CoinAcceptor) maximumAvailableNominal(notMore currency.Amount, priorityFullTubes bool) (n currency.Nominal, err error) {
+	if len(ca.tub) <= 1 {
+		return 0, fmt.Errorf("no money to dispense (%s)", notMore.Format100I())
+	}
+	if priorityFullTubes {
+		for _, v := range ca.tub {
+			if notMore >= currency.Amount(v.nominal) && v.tubeFull {
+				return v.nominal, nil
+			}
+		}
+	}
+	for _, v := range ca.tub {
+		if notMore >= currency.Amount(v.nominal) {
+			if v.nominal == 0 {
+				n = ca.tub[len(ca.tub)-2].nominal // get maximum avalible
+				return n, fmt.Errorf("return bigged need:%s returned:%s", notMore.Format100I(), n.Format100I())
+			}
+			return v.nominal, nil
+		}
+	}
+	return n, nil
+}
+
+func (ca *CoinAcceptor) DispenceCoin(nominal currency.Nominal) (complete bool, err error) {
+	inTubeBefore := ca.tubes.InTube(nominal)
+	if inTubeBefore == 0 {
+		return false, fmt.Errorf("can`t dispense, tube value = 0")
+	}
+	if err = ca.TubeStatus(); err != nil {
+		return false, err
+	}
+	if inTubeBefore != ca.tubes.InTube(nominal) {
+		ca.Log.Errorf("nominal %v preview and now tubes dismash preview value (%v) now(%v)", nominal, inTubeBefore, ca.tubes)
+	}
+	coinType := ca.nominalCoinType(nominal)
+	request := mdb.MustPacketFromBytes([]byte{0x0d, (1 << 4) + uint8(coinType)}, true)
+	if e := ca.Device.Tx(request, nil); e != nil {
+		return false, fmt.Errorf("coin tx command. error:%v", e)
+	}
+	// timeout poll dispense 1 coin
+	var errp error
+	for i := 0; i < 50; i++ {
+		time.Sleep(500 * time.Millisecond)
+		var emptyResponse bool
+		emptyResponse, errp = ca.pollF(nil)
+		err = errors.Join(err, errp)
+		if emptyResponse {
+			// stop poll
+			if ert := ca.TubeStatus(); err != nil {
+				err = errors.Join(err, ert)
+				return false, err
+			}
+			InTubeNow := ca.tubes.InTube(nominal)
+			if inTubeBefore-1 == ca.tubes.InTube(nominal) {
+				return true, err
+			}
+			ee := fmt.Errorf("dispense one coin error. tube dismach nominal %v value before(%v) now(%v)", nominal.Format100I(), inTubeBefore, InTubeNow)
+			ca.Log.Warning(ee)
+			return false, ee
+		}
+	}
+	return false, fmt.Errorf("coin dispense poll timeout t tube statuserror:%v", err)
+}
+
+func (ca *CoinAcceptor) CoinRun(alive *alive.Alive, returnEvent func(money.ValidatorEvent)) {
+	ca.EnableAccept(1000)
+	refreshTime := time.Duration(200 * time.Millisecond)
+	refreshTimer := time.NewTimer(refreshTime)
+	ca.pollmu.Lock()
+	stopRun := alive.StopChan()
+	defer func() {
+		refreshTimer.Stop()
+		ca.DisableAccept()
+		ca.pollmu.Unlock()
+		alive.Done()
+	}()
+	again := true
+	for again {
+		select {
+		case <-stopRun:
+			again = false
+		case <-refreshTimer.C:
+			_, _ = ca.pollF(returnEvent)
+			refreshTimer.Reset(refreshTime)
+		}
+	}
 }
 
 func (ca *CoinAcceptor) CoinReset() (err error) {
@@ -106,16 +272,18 @@ func (ca *CoinAcceptor) CoinReset() (err error) {
 		return err
 	}
 	e := money.ValidatorEvent{}
-	if e.Err = ca.pollF(nil); e.Err != nil {
-		return e.Err
-	}
+	_, e.Err = ca.pollF(nil)
+	// if recive "changer was Reset" then read setup and status
+	return e.Err
+}
+
+func (ca *CoinAcceptor) readSetupAndStatus() (err error) {
 	if err = ca.setup(); err != nil {
 		return err
 	}
 	if err = ca.CommandExpansionIdentification(); err != nil {
 		return err
 	}
-
 	if err = ca.CommandFeatureEnable(FeatureExtendedDiagnostic); err != nil {
 		return err
 	}
@@ -123,7 +291,7 @@ func (ca *CoinAcceptor) CoinReset() (err error) {
 	if err = ca.ExpansionDiagStatus(diagResult); err != nil {
 		return err
 	}
-	if !diagResult.OK(){
+	if !diagResult.OK() {
 		ca.TeleError(errors.New("coin reset error:" + diagResult.Error()))
 	}
 	if err = ca.TubeStatus(); err != nil {
@@ -132,104 +300,112 @@ func (ca *CoinAcceptor) CoinReset() (err error) {
 	return nil
 }
 
-func (ca *CoinAcceptor) pollF(returnEvent func(money.ValidatorEvent)) (err error) {
+func (ca *CoinAcceptor) pollF(returnEvent func(money.ValidatorEvent)) (empty bool, err error) {
 	var response mdb.Packet
 	if err := ca.Device.Tx(ca.Device.PacketPoll, &response); err != nil {
 		ca.Log.Errorf("bill boll TX error:%v", err)
-		return err
+		return false, err
 	}
 	rb := response.Bytes()
 	if len(rb) == 0 {
-		return
+		return true, nil
 	}
-	for _, b := range rb {
-		e := ca.decodeByte(b)
+	for i := 0; i < len(rb); i++ {
+		var e money.ValidatorEvent
+		if rb[i]>>6 > 0 {
+			e = ca.decodeByte(rb[i], rb[i+1])
+			i++
+		} else {
+			e = ca.decodeByte(rb[i])
+		}
 		if returnEvent != nil && e.Event != money.NoEvent {
 			returnEvent(e)
 		}
 		err = errors.Join(err, e.Err)
 	}
-	return err
+	return false, err
 }
 
-func (ca *CoinAcceptor) decodeByte(b byte) money.ValidatorEvent {
-	fmt.Printf("\033[41m coin byte %v \033[0m\n", b)
+func (ca *CoinAcceptor) decodeByte(b byte, b2 ...byte) (ve money.ValidatorEvent) {
 	switch b {
 	case 0x01: // Escrow request
 		return money.ValidatorEvent{Event: money.CoinRejectKey}
-	// 	return money.PollItem{Status: money.StatusReturnRequest}
 	case 0x02: // Changer Payout Busy
-	// 	return money.PollItem{Status: money.StatusBusy}
 	case 0x03: // No Credit
-	// 	return money.PollItem{Status: money.StatusError, Error: ErrNoCredit}
+		return money.ValidatorEvent{Err: fmt.Errorf("coin. no credit. coin valid and not arrived")}
 	case 0x04: // Defective Tube Sensor
-	// 	return money.PollItem{Status: money.StatusFatal, Error: money.ErrSensor}
+		return money.ValidatorEvent{Err: fmt.Errorf("coin defective tube sensor")}
 	case 0x05: // Double Arrival
+		ca.Log.Warning("coin double arrival")
 	// 	return money.PollItem{Status: money.StatusInfo, Error: ErrDoubleArrival}
 	case 0x06: // Acceptor Unplugged
-		// 	return money.PollItem{Status: money.StatusFatal, Error: money.ErrNoStorage}
+		return money.ValidatorEvent{Err: fmt.Errorf("coin acceptor unplugged")}
 	case 0x07: // Tube Jam
-		// 	return money.PollItem{Status: money.StatusFatal, Error: money.ErrJam}
+		return money.ValidatorEvent{Err: fmt.Errorf("tube jam")}
 	case 0x08: // ROM checksum error
-		// 	return money.PollItem{Status: money.StatusFatal, Error: money.ErrROMChecksum}
+		return money.ValidatorEvent{Err: fmt.Errorf("ROM checksum error")}
 	case 0x09: // Coin Routing Error
-		// 	return money.PollItem{Status: money.StatusError, Error: ErrCoinRouting}
+		return money.ValidatorEvent{Err: fmt.Errorf("coin Routing Error")}
 	case 0x0a: // Changer Busy
-		// 	return money.PollItem{Status: money.StatusBusy}
 	case 0x0b: // Changer was Reset
+		if err := ca.readSetupAndStatus(); err != nil {
+			return money.ValidatorEvent{Err: fmt.Errorf("coin read setupConfig Error (%v)", err)}
+		}
 		ca.Log.Info("coin reset complete")
-		ca.reseted = true
-		// 	return money.PollItem{Status: money.StatusWasReset}
 	case 0x0c: // Coin Jam
-		// 	return money.PollItem{Status: money.StatusFatal, Error: ErrCoinJam}
+		return money.ValidatorEvent{Err: fmt.Errorf("coin jam")}
 	case 0x0d: // Possible Credited Coin Removal
-		// 	return money.PollItem{Status: money.StatusError, Error: money.ErrFraud}
+		return money.ValidatorEvent{Err: fmt.Errorf("possible Credited Coin Removal")}
 	}
 
-	// if b>>5 == 1 { // Slug count 001xxxxx
-	// 	slugs := b & 0x1f
-	// 	ca.Device.Log.Debugf("Number of slugs: %d", slugs)
-	// 	return money.PollItem{Status: money.StatusInfo, Error: ErrSlugs, DataCount: slugs}
-	// }
-	// if b>>6 == 1 { // Coins Deposited
-	// 	// b=01yyxxxx b2=number of coins in tube
-	// 	// yy = coin routing
-	// 	// xxxx = coin type
-	// 	coinType := b & 0xf
-	// 	routing := CoinRouting((b >> 4) & 3)
-	// 	pi := money.PollItem{
-	// 		DataNominal: ca.coinTypeNominal(coinType),
-	// 		DataCount:   1,
-	// 	}
-	// 	switch routing {
-	// 	case RoutingCashBox:
-	// 		pi.Status = money.StatusCredit
-	// 		pi.DataCashbox = true
-	// 	case RoutingTubes:
-	// 		pi.Status = money.StatusCredit
-	// 	case RoutingNotUsed:
-	// 		pi.Status = money.StatusError
-	// 		pi.Error = oerr.Errorf("routing=notused b=%x pi=%s", b, pi.String())
-	// 	case RoutingReject:
-	// 		pi.Status = money.StatusRejected
-	// 	default:
-	// 		// pi.Status = money.StatusFatal
-	// 		panic(oerr.Errorf("code error b=%x routing=%b", b, routing))
-	// 	}
-	// 	ca.Device.Log.Debugf("deposited coinType=%d routing=%s pi=%s", coinType, routing, pi.String())
-	// 	return pi
-	// }
-	// if b&0x80 != 0 { // Coins Dispensed Manually
-	// 	// b=1yyyxxxx b2=number of coins in tube
-	// 	// yyy = coins dispensed
-	// 	// xxxx = coin type
-	// 	count := (b >> 4) & 7
-	// 	nominal := ca.coinTypeNominal(b & 0xf)
-	// 	return money.PollItem{Status: money.StatusDispensed, DataNominal: nominal, DataCount: count}
-	// }
+	if b>>5 == 1 { // Slug count 001xxxxx
+		slugs := b & 0x1f
+		ca.Log.WarningF("slug count(%v)", slugs)
+	}
+	if b>>6 == 1 { // Coins Deposited
+		// 	// b=01yyxxxx b2=number of coins in tube
+		// 	// yy = coin routing
+		// 	// xxxx = coin type
+		coinType := b & 0xf
+		routing := CoinRouting((b >> 4) & 3)
+		ve.Nominal = ca.coinTypeNominal(coinType)
+		ve.Event = money.Stacked
+		// 	pi := money.PollItem{
+		// 		DataNominal: ca.coinTypeNominal(coinType),
+		// 		DataCount:   1,
+		// 	}
+		switch routing {
+		case RoutingCashBox, RoutingTubes:
+			ve.Event = money.CoinCredit
+			// 		pi.Status = money.StatusCredit
+		case RoutingNotUsed:
+			ve.Event = money.NoEvent
+			// 		pi.Status = money.StatusError
+			// 		pi.Error = oerr.Errorf("routing=notused b=%x pi=%s", b, pi.String())
+		case RoutingReject:
+			ve.Event = money.NoEvent
+			// 		pi.Status = money.StatusRejected
+		default:
+			fmt.Printf("\033[41m panic \033[0m\n")
+			// 		// pi.Status = money.StatusFatal
+			// 		panic(oerr.Errorf("code error b=%x routing=%b", b, routing))
+		}
+		// // 	ca.Device.Log.Debugf("deposited coinType=%d routing=%s pi=%s", coinType, routing, pi.String())
+		// // 	return pi
+	}
+	if b&0x80 != 0 { // Coins Dispensed Manually
+		// b=1yyyxxxx b2=number of coins in tube
+		// yyy = coins dispensed
+		// xxxx = coin type
+		count := (b >> 4) & 7
+		nominal := ca.coinTypeNominal(b & 0xf)
+		// return money.PollItem{Status: money.StatusDispensed, DataNominal: nominal, DataCount: count}
+		fmt.Printf("\033[41m dispense count(%v) nominal(%v) tubevoint(%v) \033[0m\n", count, nominal, b2)
+		return money.ValidatorEvent{}
+	}
 
 	// err := oerr.Errorf("parsePollItem unknown=%x", b)
-	return money.ValidatorEvent{}
+	return ve
 }
 
 func (ca *CoinAcceptor) setup() error {
@@ -255,20 +431,12 @@ func (ca *CoinAcceptor) setup() error {
 		ca.nominals[i] = n
 	}
 	ca.tubes.SetValid(ca.nominals[:])
-
-	// ca.Device.Log.Debugf("%s Changer Feature Level: %d", tag, ca.featureLevel)
-	// ca.Device.Log.Debugf("%s Country / Currency Code: %x", tag, bs[1:1+2])
-	// ca.Device.Log.Debugf("%s Coin Scaling Factor: %d", tag, ca.scalingFactor)
-	// ca.Device.Log.Debugf("%s Decimal Places: %d", tag, bs[4])
-	// ca.Device.Log.Debugf("%s Coin Type Routing: %b", tag, ca.typeRouting)
-	// ca.Device.Log.Debugf("%s Coin Type Credit: %x %v", tag, bs[7:], ca.nominals)
-
-	ca.Device.Log.Infof("%s Changer Feature Level: %d", tag, ca.featureLevel)
-	ca.Device.Log.Infof("%s Country / Currency Code: %x", tag, bs[1:1+2])
-	ca.Device.Log.Infof("%s Coin Scaling Factor: %d", tag, ca.scalingFactor)
-	ca.Device.Log.Infof("%s Decimal Places: %d", tag, bs[4])
-	ca.Device.Log.Infof("%s Coin Type Routing: %b", tag, ca.typeRouting)
-	ca.Device.Log.Infof("%s Coin Type Credit: %x %v", tag, bs[7:], ca.nominals)
+	ca.Device.Log.Debugf("%s Changer Feature Level: %d", tag, ca.featureLevel)
+	ca.Device.Log.Debugf("%s Country / Currency Code: %x", tag, bs[1:1+2])
+	ca.Device.Log.Debugf("%s Coin Scaling Factor: %d", tag, ca.scalingFactor)
+	ca.Device.Log.Debugf("%s Decimal Places: %d", tag, bs[4])
+	ca.Device.Log.Debugf("%s Coin Type Routing: %b", tag, ca.typeRouting)
+	ca.Device.Log.Debugf("%s Coin Type Credit: %x %v", tag, bs[7:], ca.nominals)
 	return nil
 }
 
@@ -288,16 +456,10 @@ func (ca *CoinAcceptor) CommandExpansionIdentification() error {
 	}
 	ca.supportedFeatures = Features(ca.Device.ByteOrder.Uint32(bs[29 : 29+4]))
 	ca.Device.Log.Infof("%s Manufacturer Code: '%s'", tag, bs[0:0+3])
-	// ca.Device.Log.Debugf("%s Serial Number: '%s'", tag, string(bs[3:3+12]))
-	// ca.Device.Log.Debugf("%s Model #/Tuning Revision: '%s'", tag, string(bs[15:15+12]))
-	// ca.Device.Log.Debugf("%s Software Version: %x", tag, bs[27:27+2])
-	// ca.Device.Log.Debugf("%s Optional Features: %b", tag, ca.supportedFeatures)
-
-	ca.Device.Log.Infof("%s Serial Number: '%s'", tag, string(bs[3:3+12]))
-	ca.Device.Log.Infof("%s Model #/Tuning Revision: '%s'", tag, string(bs[15:15+12]))
-	ca.Device.Log.Infof("%s Software Version: %x", tag, bs[27:27+2])
-	ca.Device.Log.Infof("%s Optional Features: %b", tag, ca.supportedFeatures)
-
+	ca.Device.Log.Debugf("%s Serial Number: '%s'", tag, string(bs[3:3+12]))
+	ca.Device.Log.Debugf("%s Model #/Tuning Revision: '%s'", tag, string(bs[15:15+12]))
+	ca.Device.Log.Debugf("%s Software Version: %x", tag, bs[27:27+2])
+	ca.Device.Log.Debugf("%s Optional Features: %b", tag, ca.supportedFeatures)
 	return nil
 }
 
@@ -327,23 +489,30 @@ func (ca *CoinAcceptor) TubeStatus() error {
 	}
 	fulls := ca.Device.ByteOrder.Uint16(bs[0:2])
 	counts := bs[2:18]
-	ca.Device.Log.Infof("%s fulls=%b counts=%v", tag, fulls, counts)
 	ca.tubesmu.Lock()
 	defer ca.tubesmu.Unlock()
 	ca.tubes.Clear()
+	ca.tub = make([]tube, 1)
 	for coinType := uint8(0); coinType < TypeCount; coinType++ {
 		full := (fulls & (1 << coinType)) != 0
 		nominal := ca.coinTypeNominal(coinType)
+		if counts[coinType] != 0 {
+			ca.tub = append(ca.tub, tube{nominal, uint(counts[coinType]), full})
+		}
+		// old
 		if full && counts[coinType] == 0 {
-			nominalString := currency.Amount(nominal).Format100I() // TODO use FormatCtx(ctx)
-			_ = nominalString
-			// ca.Device.TeleError(fmt.Errorf("%s coinType=%d nominal=%s problem (jam/sensor/etc)", tag, coinType, nominalString))
+			// nominalString := currency.Amount(nominal).Format100I() // TODO use FormatCtx(ctx)
+			// _ = nominalString
+			// // ca.Device.TeleError(fmt.Errorf("%s coinType=%d nominal=%s problem (jam/sensor/etc)", tag, coinType, nominalString))
 		} else if counts[coinType] != 0 {
 			if err := ca.tubes.AddMany(nominal, uint(counts[coinType])); err != nil {
 				return err
 			}
 		}
 	}
+	sort.Slice(ca.tub[:], func(i, j int) bool {
+		return ca.tub[i].nominal > ca.tub[j].nominal
+	})
 	ca.Device.Log.Debugf("%s tubes=%s", tag, ca.tubes.String())
 	return nil
 }
@@ -376,7 +545,7 @@ func (ca *CoinAcceptor) ExpansionDiagStatus(result *DiagResult) error {
 	return err
 }
 
-func (ca *CoinAcceptor) EnableAccept(maximumNominal currency.Amount) {
+func (ca *CoinAcceptor) EnableAccept(maximumNominal currency.Amount) (err error) {
 	enableBitset := uint16(0)
 	if maximumNominal != 0 {
 		for i, n := range ca.nominals {
@@ -388,7 +557,22 @@ func (ca *CoinAcceptor) EnableAccept(maximumNominal currency.Amount) {
 			}
 		}
 	}
+	buf := [5]byte{0x0c}
+	ca.Device.ByteOrder.PutUint16(buf[1:], enableBitset)
+	ca.Device.ByteOrder.PutUint16(buf[3:], enableBitset)
+	request := mdb.MustPacketFromBytes(buf[:], true)
+	if err = ca.Device.Tx(request, nil); err != nil {
+		return fmt.Errorf("bill. send enable accept packet not complete. (%v)", err)
+	}
+	return nil
+}
 
+func (ca *CoinAcceptor) DisableAccept() {
+	buf := [5]byte{0x0c, 00, 00, 00, 00}
+	request := mdb.MustPacketFromBytes(buf[:], true)
+	if err := ca.Device.Tx(request, nil); err != nil {
+		ca.Device.TeleError(fmt.Errorf("bill. send disable accept packet not complete. (%v)", err))
+	}
 }
 
 // -----------------------------------------------------------------
@@ -423,71 +607,69 @@ func (ca *CoinAcceptor) SupportedNominals() []currency.Nominal {
 	return ns
 }
 
-func (ca *CoinAcceptor) Run(ctx context.Context, alive *alive.Alive, fun func(money.PollItem) bool) {
-	var stopch <-chan struct{}
-	if alive != nil {
-		defer alive.Done()
-		stopch = alive.StopChan()
-	}
-	pd := mdb.PollDelay{}
-	parse := ca.pollFun(fun)
-	var active bool
-	var err error
-	again := true
-	for again {
-		response := mdb.Packet{}
-		ca.pollmu.Lock()
-		err = ca.Device.TxKnown(ca.Device.PacketPoll, &response)
-		if err == nil {
-			active, err = parse(response)
-		}
-		ca.pollmu.Unlock()
+// func (ca *CoinAcceptor) Run(ctx context.Context, alive *alive.Alive, fun func(money.PollItem) bool) {
+// 	var stopch <-chan struct{}
+// 	if alive != nil {
+// 		defer alive.Done()
+// 		stopch = alive.StopChan()
+// 	}
+// 	pd := mdb.PollDelay{}
+// 	parse := ca.pollFun(fun)
+// 	var active bool
+// 	var err error
+// 	again := true
+// 	for again {
+// 		response := mdb.Packet{}
+// 		ca.pollmu.Lock()
+// 		err = ca.Device.TxKnown(ca.Device.PacketPoll, &response)
+// 		if err == nil {
+// 			active, err = parse(response)
+// 		}
+// 		ca.pollmu.Unlock()
+// 		again = (alive != nil) && (alive.IsRunning()) && pd.Delay(&ca.Device, active, err != nil, stopch)
+// 		// TODO try pollmu.Unlock() here
+// 	}
+// }
 
-		again = (alive != nil) && (alive.IsRunning()) && pd.Delay(&ca.Device, active, err != nil, stopch)
-		// TODO try pollmu.Unlock() here
-	}
-}
-func (ca *CoinAcceptor) pollFun(fun func(money.PollItem) bool) mdb.PollRequestFunc {
-	const tag = deviceName + ".poll"
-
-	return func(p mdb.Packet) (bool, error) {
-		bs := p.Bytes()
-		if len(bs) == 0 {
-			return false, nil
-		}
-
-		var pi money.PollItem
-		skip := false
-		for i, b := range bs {
-			if skip {
-				skip = false
-				continue
-			}
-			b2 := byte(0)
-			if i+1 < len(bs) {
-				b2 = bs[i+1]
-			}
-			pi, skip = ca.parsePollItem(b, b2)
-			switch pi.Status {
-			case money.StatusInfo:
-				ca.Device.Log.Infof("%s/info: %s", tag, pi.String())
-				// TODO telemetry
-			case money.StatusError:
-				ca.Device.TeleError(oerr.Annotate(pi.Error, tag))
-			case money.StatusFatal:
-				ca.Device.TeleError(oerr.Annotate(pi.Error, tag))
-			case money.StatusBusy:
-			case money.StatusWasReset:
-				ca.Device.Log.Infof("coin was reset")
-				return false, nil
-				// TODO telemetry
-			default:
-				fun(pi)
-			}
-		}
-		return true, nil
-	}
-}
+// func (ca *CoinAcceptor) pollFun(fun func(money.PollItem) bool) mdb.PollRequestFunc {
+// 	const tag = deviceName + ".poll"
+// 	return func(p mdb.Packet) (bool, error) {
+// 		bs := p.Bytes()
+// 		if len(bs) == 0 {
+// 			return false, nil
+// 		}
+// 		var pi money.PollItem
+// 		skip := false
+// 		for i, b := range bs {
+// 			if skip {
+// 				skip = false
+// 				continue
+// 			}
+// 			b2 := byte(0)
+// 			if i+1 < len(bs) {
+// 				b2 = bs[i+1]
+// 			}
+// 			pi, skip = ca.parsePollItem(b, b2)
+// 			switch pi.Status {
+// 			case money.StatusInfo:
+// 				ca.Device.Log.Infof("%s/info: %s", tag, pi.String())
+// 				// TODO telemetry
+// 			case money.StatusError:
+// 				ca.Device.TeleError(oerr.Annotate(pi.Error, tag))
+// 			case money.StatusFatal:
+// 				ca.Device.TeleError(oerr.Annotate(pi.Error, tag))
+// 			case money.StatusBusy:
+// 			case money.StatusWasReset:
+// 				ca.Device.Log.Infof("coin was reset")
+// 				return false, nil
+// 				// TODO telemetry
+// 			default:
+// 				fun(pi)
+// 			}
+// 		}
+// 		return true, nil
+// 	}
+// }
 
 // func (ca *CoinAcceptor) newIniter() engine.Doer {
 // 	const tag = deviceName + ".init"
@@ -723,7 +905,6 @@ func (ca *CoinAcceptor) parsePollItem(b, b2 byte) (money.PollItem, bool) {
 	case 0x0d: // Possible Credited Coin Removal
 		return money.PollItem{Status: money.StatusError, Error: money.ErrFraud}, false
 	}
-
 	if b>>5 == 1 { // Slug count 001xxxxx
 		slugs := b & 0x1f
 		ca.Device.Log.Debugf("Number of slugs: %d", slugs)
@@ -747,12 +928,15 @@ func (ca *CoinAcceptor) parsePollItem(b, b2 byte) (money.PollItem, bool) {
 			pi.Status = money.StatusCredit
 		case RoutingNotUsed:
 			pi.Status = money.StatusError
-			pi.Error = oerr.Errorf("routing=notused b=%x pi=%s", b, pi.String())
+			// pi.Error = oerr.Errorf("routing=notused b=%x pi=%s", b, pi.String())
+			ers := fmt.Sprintf("routing=notused b=%x pi=%s", b, pi.String())
+			pi.Error = errors.New(ers)
 		case RoutingReject:
 			pi.Status = money.StatusRejected
 		default:
 			// pi.Status = money.StatusFatal
-			panic(oerr.Errorf("code error b=%x routing=%b", b, routing))
+			ers := fmt.Sprintf("code error b=%x routing=%b", b, routing)
+			panic(errors.New(ers))
 		}
 		ca.Device.Log.Debugf("deposited coinType=%d routing=%s pi=%s", coinType, routing, pi.String())
 		return pi, true
@@ -765,7 +949,7 @@ func (ca *CoinAcceptor) parsePollItem(b, b2 byte) (money.PollItem, bool) {
 		nominal := ca.coinTypeNominal(b & 0xf)
 		return money.PollItem{Status: money.StatusDispensed, DataNominal: nominal, DataCount: count}, true
 	}
-
-	err := oerr.Errorf("parsePollItem unknown=%x", b)
+	ers := fmt.Sprintf("parsePollItem unknown=%x", b)
+	err := errors.New(ers)
 	return money.PollItem{Status: money.StatusFatal, Error: err}, false
 }

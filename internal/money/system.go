@@ -139,12 +139,16 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 			return oerr.Annotatef(err, "curPrice=%s", curPrice.FormatCtx(ctx))
 		},
 	)
-	g.Engine.RegisterNewFunc("money.abort", ms.ReturnMoney)
+	// g.Engine.RegisterNewFunc("money.abort", ms.ReturnMoney)
+	g.Engine.RegisterNewFunc("money.abort",
+		func(ctx context.Context) error {
+			return ms.ReturnMoney()
+		})
 
 	doAccept := engine.FuncArg{
 		Name: "money.accept(?)",
 		F: func(ctx context.Context, arg engine.Arg) error {
-			ms.AcceptCredit(ctx, g.Config.ScaleU(uint32(arg)), nil, nil)
+			ms.AcceptCredit(ctx, g.Config.ScaleU(uint32(arg)), g.Alive, nil)
 			return nil
 		},
 	}
@@ -179,7 +183,7 @@ func (ms *MoneySystem) Stop(ctx context.Context) error {
 	const tag = "money.Stop"
 	g := state.GetGlobal(ctx)
 	errs := make([]error, 0, 8)
-	errs = append(errs, ms.ReturnMoney(ctx))
+	errs = append(errs, ms.ReturnMoney())
 	// errs = append(errs, g.Engine.Exec(ctx, ms.bill.AcceptMax(0)))
 	errs = append(errs, g.Engine.Exec(ctx, ms.coin.AcceptMax(0)))
 	return oerr.Annotate(helpers.FoldErrors(errs), tag)

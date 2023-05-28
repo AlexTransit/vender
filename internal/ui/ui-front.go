@@ -39,33 +39,35 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 	}
 	ui.ms.ResetMoney()
 	// XXX FIXME custom business logic creeped into code TODO move to config
-	if doCheckTempHot := ui.g.Engine.Resolve("evend.valve.check_temp_hot"); doCheckTempHot != nil && !engine.IsNotResolved(doCheckTempHot) {
-		err := doCheckTempHot.Validate()
-		if errtemp, ok := err.(*evend.ErrWaterTemperature); ok {
-			line1 := fmt.Sprintf(ui.g.Config.UI.Front.MsgWaterTemp, errtemp.Current)
-			ui.g.ShowPicture(state.PictureBroken)
-			if types.VMC.Client.Light {
-				_ = ui.g.Engine.ExecList(ctx, "water-temp", []string{"evend.cup.light_off"})
-			}
-			if types.VMC.HW.Display.L1 != line1 {
-				ui.display.SetLines(line1, ui.g.Config.UI.Front.MsgWait)
-				rm := tele_api.FromRoboMessage{
-					State:    tele_api.State_TemperatureProblem,
-					RoboTime: 0,
-					RoboHardware: &tele_api.RoboHardware{
-						Temperature: int32(errtemp.Current),
-					},
+	if ui.g.Config.Hardware.Evend.Valve.TemperatureHot != 0 {
+		if doCheckTempHot := ui.g.Engine.Resolve("evend.valve.check_temp_hot"); doCheckTempHot != nil && !engine.IsNotResolved(doCheckTempHot) {
+			err := doCheckTempHot.Validate()
+			if errtemp, ok := err.(*evend.ErrWaterTemperature); ok {
+				line1 := fmt.Sprintf(ui.g.Config.UI.Front.MsgWaterTemp, errtemp.Current)
+				ui.g.ShowPicture(state.PictureBroken)
+				if types.VMC.Client.Light {
+					_ = ui.g.Engine.ExecList(ctx, "water-temp", []string{"evend.cup.light_off"})
 				}
+				if types.VMC.HW.Display.L1 != line1 {
+					ui.display.SetLines(line1, ui.g.Config.UI.Front.MsgWait)
+					rm := tele_api.FromRoboMessage{
+						State:    tele_api.State_TemperatureProblem,
+						RoboTime: 0,
+						RoboHardware: &tele_api.RoboHardware{
+							Temperature: int32(errtemp.Current),
+						},
+					}
 
-				ui.g.Tele.RoboSend(&rm)
+					ui.g.Tele.RoboSend(&rm)
+				}
+				if e := ui.wait(5 * time.Second); e.Kind == types.EventService {
+					return types.StateServiceBegin
+				}
+				return types.StateFrontEnd
+			} else if err != nil {
+				ui.g.Error(err)
+				return types.StateBroken
 			}
-			if e := ui.wait(5 * time.Second); e.Kind == types.EventService {
-				return types.StateServiceBegin
-			}
-			return types.StateFrontEnd
-		} else if err != nil {
-			ui.g.Error(err)
-			return types.StateBroken
 		}
 	}
 	ui.g.ClientEnd(ctx)
@@ -88,12 +90,12 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 
 func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 	alive := alive.NewAlive()
+	alive.Add(2)
+	go ui.ms.AcceptCredit(ctx, ui.FrontMaxPrice, alive, ui.eventch)
 	defer func() {
 		alive.Stop() // stop pending AcceptCredit
 		alive.Wait()
 	}()
-	alive.Add(1)
-	go ui.ms.AcceptCredit(ctx, ui.FrontMaxPrice, alive, ui.eventch)
 	l1 := ui.g.Config.UI.Front.MsgStateIntro
 	l2 := " "
 	tuneScreen := false
@@ -105,6 +107,8 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 		}
 		e := ui.wait(timeout)
 		switch e.Kind {
+		case types.EventInvalid:
+			// AlexM FIXME при нажатии выдачи на монетнике, прилетает нажатие. а потом инвалиное событие
 		case types.EventInput:
 			if nextState := ui.parseKeyEvent(ctx, e, &l1, &l2, &tuneScreen); nextState != types.StateDoesNotChange {
 				return nextState
@@ -247,6 +251,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 		rm.State = tele_api.State_Nominal
 		return types.StateFrontEnd
 	}
+	moneysys.ReturnDirty()
 	rm.State = tele_api.State_Broken
 	ui.display.SetLines(uiConfig.Front.MsgError, uiConfig.Front.MsgMenuError)
 	rm.Err = &tele_api.Err{

@@ -8,7 +8,7 @@ import (
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
-	"github.com/juju/errors"
+	oerr "github.com/juju/errors"
 )
 
 const DefaultShakeSpeed uint8 = 100
@@ -58,10 +58,10 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 			m.dev.Reset()
 			if err = g.Engine.Exec(ctx, m.move(uint8(arg))); err == nil {
 				m.cPos = int8(arg)
-				m.dev.TeleError(errors.Errorf("restart fix preview error"))
+				m.dev.TeleError(oerr.Errorf("restart fix preview error"))
 				return nil
 			}
-			m.dev.TeleError(errors.Annotatef(err, "two times error"))
+			m.dev.TeleError(oerr.Annotatef(err, "two times error"))
 			return err
 		}})
 	g.Engine.Register(m.name+".fan_on", m.NewFan(true))
@@ -79,12 +79,13 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 			return nil
 		},
 	)
-
-	err := m.Generic.FIXME_initIO(ctx)
+	// err := m.Generic.FIXME_initIO(ctx)
+	err := m.dev.Rst()
 	if keepaliveInterval > 0 {
 		go m.Generic.dev.Keepalive(keepaliveInterval, g.Alive.StopChan())
 	}
-	return errors.Annotate(err, m.name+".init")
+	return err
+	// return oerr.Annotate(err, m.name+".init")
 }
 
 // 1step = 100ms
