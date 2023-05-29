@@ -377,24 +377,24 @@ func (ca *CoinAcceptor) decodeByte(b byte, b2 ...byte) (ve money.ValidatorEvent)
 		// 		DataNominal: ca.coinTypeNominal(coinType),
 		// 		DataCount:   1,
 		// 	}
+		m := fmt.Sprintf("coin (%s) ", ve.Nominal.Format100I())
 		switch routing {
-		case RoutingCashBox, RoutingTubes:
+		case RoutingCashBox:
 			ve.Event = money.CoinCredit
-			// 		pi.Status = money.StatusCredit
+			m = m + "income to cashbox"
+		case RoutingTubes:
+			ve.Event = money.CoinCredit
+			m = m + "income to tube"
 		case RoutingNotUsed:
 			ve.Event = money.NoEvent
-			// 		pi.Status = money.StatusError
-			// 		pi.Error = oerr.Errorf("routing=notused b=%x pi=%s", b, pi.String())
+			m = m + " !!! routingNotUsed HZ what it"
 		case RoutingReject:
 			ve.Event = money.NoEvent
-			// 		pi.Status = money.StatusRejected
+			m = m + " !!! reject"
 		default:
 			fmt.Printf("\033[41m panic \033[0m\n")
-			// 		// pi.Status = money.StatusFatal
-			// 		panic(oerr.Errorf("code error b=%x routing=%b", b, routing))
 		}
-		// // 	ca.Device.Log.Debugf("deposited coinType=%d routing=%s pi=%s", coinType, routing, pi.String())
-		// // 	return pi
+		ca.Log.Info(m)
 	}
 	if b&0x80 != 0 { // Coins Dispensed Manually
 		// b=1yyyxxxx b2=number of coins in tube
