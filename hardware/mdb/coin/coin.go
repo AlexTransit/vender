@@ -191,7 +191,7 @@ func (ca *CoinAcceptor) maximumAvailableNominal(notMore currency.Amount, priorit
 	for _, v := range ca.tub {
 		if notMore >= currency.Amount(v.nominal) {
 			if v.nominal == 0 {
-				n = ca.tub[len(ca.tub)-2].nominal // get maximum avalible
+				// n = ca.tub[len(ca.tub)-2].nominal // get maximum avalible
 				return n, fmt.Errorf("return bigged need:%s returned:%s", notMore.Format100I(), n.Format100I())
 			}
 			return v.nominal, nil
