@@ -151,6 +151,9 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 }
 
 func (ca *CoinAcceptor) Dispence(amount currency.Amount) (err error) {
+	if amount == 0 {
+		return nil
+	}
 	dispenceAmount := amount
 	m := "dispense coin: "
 	for {
@@ -190,10 +193,10 @@ func (ca *CoinAcceptor) maximumAvailableNominal(notMore currency.Amount, priorit
 	}
 	for _, v := range ca.tub {
 		if notMore >= currency.Amount(v.nominal) {
-			// if v.nominal == 0 {
-			// 	n = ca.tub[len(ca.tub)-2].nominal // get maximum avalible
-			// 	return n, fmt.Errorf("return bigged need:%s returned:%s", notMore.Format100I(), n.Format100I())
-			// }
+			if v.nominal == 0 {
+				n = ca.tub[len(ca.tub)-2].nominal // get maximum avalible
+				return n, fmt.Errorf("return bigged need:%s returned:%s", notMore.Format100I(), n.Format100I())
+			}
 			return v.nominal, nil
 		}
 	}
