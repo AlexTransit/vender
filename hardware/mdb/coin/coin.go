@@ -156,6 +156,7 @@ func (ca *CoinAcceptor) Dispence(amount currency.Amount) (err error) {
 	}
 	dispenceAmount := amount
 	m := "dispense coin: "
+	ca.Log.Infof("dispence (%s) tubes (%v)", amount.Format100I(), ca.tub)
 	for {
 		dispenseNominal, e := ca.maximumAvailableNominal(dispenceAmount, true)
 		// AlexM FIXME
