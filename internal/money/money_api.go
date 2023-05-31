@@ -26,7 +26,7 @@ func (ms *MoneySystem) WaitEscrowAccept(amount currency.Amount) (wait bool) {
 	cc := ms.coinCredit.Total()
 	ec := ms.bill.EscrowAmount()
 	if amount > bc-ec+cc {
-		ms.Log.Infof("bill credit:%v coin credit:%v, escrow bill:%v. send command accept escrow", bc, cc, ec)
+		ms.Log.Infof("bill credit:%v coin credit:%v, escrow bill:%v. send command accept escrow", bc.Format100I(), cc.Format100I(), ec.Format100I())
 		ms.BillEscrowToStacker()
 		return true
 	}
@@ -54,7 +54,7 @@ func (ms *MoneySystem) WithdrawPrepare(ctx context.Context, amount currency.Amou
 		return ErrNeedMoreMoney
 	}
 	change := available - amount
-	ms.Log.Debugf("%s. return short change=%s", tag, change.FormatCtx(ctx))
+	// ms.Log.Debugf("%s. return short change=%s", tag, change.FormatCtx(ctx))
 	ms.billCredit.Clear()
 	ms.coinCredit.Clear()
 	go func() {
