@@ -68,7 +68,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 }
 func (t *tele) mesageMakeOrger(ctx context.Context) {
 	if t.InMessage.MakeOrder == nil || types.UI.FrontResult.PaymenId == t.InMessage.MakeOrder.OwnerInt {
-		t.log.Err("ignore mesageMakeOrger (%v)", t.InMessage.MakeOrder)
+		t.log.Errf("ignore mesageMakeOrger (%v)", t.InMessage.MakeOrder)
 		return
 	}
 	// prepare output message

@@ -219,6 +219,6 @@ func (tm *transportMqtt) runNetworkRestartScript() {
 	cmd := exec.Command(tm.config.NetworkRestartScript)
 	execOutput, execErr := cmd.CombinedOutput()
 	if execErr != nil {
-		tm.log.Errorf("script execute=%s\noutput=%s\nerror=%v\nscript=%s", tm.config.NetworkRestartScript, execOutput, execErr)
+		tm.log.Errorf("script execute=%s output=%s error=%v", tm.config.NetworkRestartScript, execOutput, execErr)
 	}
 }
