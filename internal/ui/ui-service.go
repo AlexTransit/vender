@@ -374,7 +374,7 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
 		alive.Stop() // stop pending AcceptCredit
 		alive.Wait()
 	}()
-	alive.Add(1)
+	alive.Add(2)
 	ui.Service.askReport = true
 	accept := true
 	loaded := currency.Amount(0)
