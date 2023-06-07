@@ -101,8 +101,6 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 		}
 		e := ui.wait(timeout)
 		switch e.Kind {
-		case types.EventInvalid:
-			// AlexM FIXME при нажатии выдачи на монетнике, прилетает нажатие. а потом инвалиное событие
 		case types.EventInput:
 			if nextState := ui.parseKeyEvent(ctx, e, &l1, &l2, &tuneScreen); nextState != types.StateDoesNotChange {
 				return nextState

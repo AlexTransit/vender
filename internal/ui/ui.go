@@ -80,7 +80,7 @@ func (ui *UI) ScheduleSync(ctx context.Context, fun types.TaskFunc) error {
 func (ui *UI) wait(timeout time.Duration) types.Event {
 	tmr := time.NewTimer(timeout)
 	defer tmr.Stop()
-	// again:
+again:
 	select {
 
 	case e := <-ui.eventch:
@@ -103,5 +103,5 @@ func (ui *UI) wait(timeout time.Duration) types.Event {
 	case <-ui.g.Alive.StopChan():
 		return types.Event{Kind: types.EventStop}
 	}
-	return types.Event{Kind: types.EventInvalid}
+	goto again
 }
