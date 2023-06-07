@@ -110,7 +110,7 @@ func (mu *megaUart) Tx(request, response []byte) (int, error) {
 			return 0, err
 		}
 	}
-	mu.c.Log.Errorf("mega TX error 3 times (%v)", err)
+	mu.c.Log.WarningF("mega TX error 3 times (%v)", err)
 	// return 0, err
 	return 0, nil
 }
