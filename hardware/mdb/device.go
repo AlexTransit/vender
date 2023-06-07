@@ -3,7 +3,6 @@ package mdb
 import (
 	"context"
 	"encoding/binary"
-	errorsn "errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -139,8 +138,10 @@ func (dev *Device) Tx(request Packet, response *Packet) error {
 func (dev *Device) Rst() (err error) {
 	dev.LastOff.SetNowIfZero() // consider device offline from now till successful response
 	dev.lastReset.SetNow()
-	err = errorsn.Join(dev.tx(dev.PacketReset, new(Packet), txOptReset),
-		dev.TxSetup())
+	err = dev.Tx(dev.PacketReset, nil)
+	if err == nil {
+		return dev.TxSetup()
+	}
 	return err
 }
 

@@ -33,17 +33,12 @@ type VMCType struct {
 		Light    bool
 	}
 	HW struct {
-		Input   bool
 		Display struct {
 			L1            string
 			L2            string
 			GdisplayValid bool
 			Gdisplay      string
 		}
-		Elevator struct {
-			Position uint8
-		}
-		Temperature int
 	}
 	MonSys MonSysStruct
 }

@@ -2,17 +2,16 @@ package evend
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
 	"github.com/AlexTransit/vender/hardware/mdb"
 	"github.com/AlexTransit/vender/helpers"
-	"github.com/AlexTransit/vender/helpers/cacheval"
 	"github.com/AlexTransit/vender/internal/engine"
+	"github.com/AlexTransit/vender/internal/engine/inventory"
 	"github.com/AlexTransit/vender/internal/state"
-	"github.com/AlexTransit/vender/internal/types"
-	oerr "github.com/juju/errors"
 )
 
 const (
@@ -43,29 +42,27 @@ type DeviceValve struct { //nolint:maligned
 	DoPourCold      engine.Doer
 	DoPourHot       engine.Doer
 	DoPourEspresso  engine.Doer
-	tempHot         cacheval.Int32
+	tempHot         int32
 	tempHotTarget   uint8
 	tempHotReported bool
 }
 
-func (dv *DeviceValve) init(ctx context.Context) error {
+var EValve DeviceValve
+
+func (dv *DeviceValve) init(ctx context.Context) (err error) {
 	g := state.GetGlobal(ctx)
 	valveConfig := &g.Config.Hardware.Evend.Valve
 	dv.pourTimeout = helpers.IntSecondDefault(valveConfig.PourTimeoutSec, 10*time.Minute) // big default timeout is fine, depend on valve hardware
-	tempValid := helpers.IntMillisecondDefault(valveConfig.TemperatureValidMs, 30*time.Second)
-	dv.tempHot.Init(tempValid)
 	dv.proto2BusyMask = valvePollBusy
 	dv.proto2IgnoreMask = valvePollNotHot
 	dv.Generic.Init(ctx, 0xc0, "valve", proto2)
-
 	dv.doGetTempHot = dv.newGetTempHot()
 	dv.doCheckTempHot = engine.Func0{F: func() error { return nil }, V: dv.newCheckTempHotValidate(ctx)}
-	dv.DoSetTempHot = dv.newSetTempHot()
 	dv.DoPourCold = dv.newPourCold()
 	dv.DoPourHot = dv.newPourHot()
 	dv.DoPourEspresso = dv.newPourEspresso()
-
-	waterStock, err := g.Inventory.Get("water")
+	var waterStock *inventory.Stock
+	waterStock, err = g.Inventory.Get("water")
 	if err == nil {
 		g.Engine.Register("add.water_hot(?)", waterStock.Wrap(dv.DoPourHot))
 		g.Engine.Register("add.water_cold(?)", waterStock.Wrap(dv.DoPourCold))
@@ -74,17 +71,20 @@ func (dv *DeviceValve) init(ctx context.Context) error {
 	} else {
 		dv.dev.Log.Errorf("invalid config, stock water not found err=%v", err)
 	}
-
 	g.Engine.Register("evend.valve.check_temp_hot", dv.doCheckTempHot)
-	g.Engine.Register("evend.valve.get_temp_hot", dv.doGetTempHot)
-	g.Engine.Register("evend.valve.set_temp_hot(?)", dv.DoSetTempHot)
-	g.Engine.Register("evend.valve.set_temp_hot_config", engine.Func{F: func(ctx context.Context) error {
-		d, _, err := dv.DoSetTempHot.Apply(engine.Arg(valveConfig.TemperatureHot))
-		if err != nil {
-			return err
-		}
-		return g.Engine.Exec(ctx, d)
-	}})
+	g.Engine.RegisterNewFunc("evend.valve.get_temp_hot", func(ctx context.Context) error { return dv.readTemp() })
+	g.Engine.RegisterNewFunc("evend.valve.reset", func(ctx context.Context) error { return dv.dev.Rst() })
+	g.Engine.Register("evend.valve.set_temp_hot(?)",
+		engine.FuncArg{Name: "evend.valve.set_temp_hot", F: func(ctx context.Context, arg engine.Arg) error {
+			dv.SetTemp(uint8(arg))
+			return nil
+		}})
+	g.Engine.RegisterNewFunc("evend.valve.set_temp_hot_config", func(ctx context.Context) error { return dv.SetTemp(uint8(valveConfig.TemperatureHot)) })
+	g.Engine.RegisterNewFunc("evend.valve.status", func(ctx context.Context) error {
+		ct, err := dv.GetTemperature()
+		g.Log.Infof("current temp=%v target temp=%v", ct, EValve.tempHotTarget)
+		return err
+	})
 	g.Engine.Register("evend.valve.pour_espresso(?)", dv.DoPourEspresso.(engine.Doer))
 	g.Engine.Register("evend.valve.pour_cold(?)", dv.DoPourCold.(engine.Doer))
 	g.Engine.Register("evend.valve.pour_hot(?)", dv.DoPourHot.(engine.Doer))
@@ -98,76 +98,123 @@ func (dv *DeviceValve) init(ctx context.Context) error {
 	g.Engine.Register("evend.valve.pump_espresso_stop", dv.NewPumpEspresso(false))
 	g.Engine.Register("evend.valve.pump_start", dv.NewPump(true))
 	g.Engine.Register("evend.valve.pump_stop", dv.NewPump(false))
-
-	// err = dv.Generic.FIXME_initIO(ctx)
-	// errn := errors.New("a")
-	// err = dv.dev.Tx(dv.dev.PacketReset, nil)
-	// errn1 := errors.Join(err)
-	// err = dv.dev.TxSetup()
-	// errn1 = errors.Join(err)
-	errn1 := dv.dev.Rst()
-	return errn1
-	//  dev.tx(dev.PacketReset, new(Packet), txOptReset)
-	// return oerr.Annotate(err, dv.name+".init")
+	err = dv.dev.Rst()
+	dv.poll()
+	return err
 }
 
-// func (dv *DeviceValve) UnitToTimeout(unit uint8) time.Duration {
-// 	const min = 500 * time.Millisecond
-// 	const perUnit = 50 * time.Millisecond // FIXME
-// 	return min + time.Duration(unit)*perUnit
-// }
+func (dv *DeviceValve) GetTemperature() (int32, error) {
+	if e := dv.readTemp(); e != nil {
+		e = errors.Join(e, dv.dev.Rst())
+		return -1, e
+	}
+	return dv.tempHot, nil
+}
+
+func (dv *DeviceValve) readTemp() (err error) {
+	tag := dv.name + ".get_temp_hot"
+	bs := []byte{dv.dev.Address + 4, 0x11}
+	request := mdb.MustPacketFromBytes(bs, true)
+	response := mdb.Packet{}
+	err = dv.Generic.dev.Tx(request, &response)
+	if err != nil {
+		return fmt.Errorf("%s %v", tag, err)
+	}
+	bs = response.Bytes()
+	dv.dev.Log.Debugf("%s request=%s response=(%d)%s", tag, request.Format(), response.Len(), response.Format())
+	if len(bs) != 1 {
+		return fmt.Errorf("%s response=%x", tag, bs)
+	}
+	temp := int32(bs[0])
+	if temp >= 100 {
+		dv.dev.Rst()
+		return fmt.Errorf("overhead temp=%v", temp)
+	}
+	defer func() {
+		dv.tempHot = temp
+	}()
+	if temp == 0 {
+		if err = dv.getError(); err != nil {
+			temp = -1
+			return err
+		}
+	}
+	return nil
+}
+
+func (dv *DeviceValve) getError() error {
+	bs := []byte{dv.dev.Address + 4, 0x02}
+	request := mdb.MustPacketFromBytes(bs, true)
+	response := mdb.Packet{}
+	err := dv.Generic.dev.Tx(request, &response)
+	if err != nil {
+		return fmt.Errorf("error read error :) err=%v", err)
+	}
+	if response.Bytes()[0] == 0 {
+		return nil
+	}
+	return fmt.Errorf("valve error=%v", response.Bytes()[0])
+}
+
+func (dv *DeviceValve) SetTemp(temp uint8) (err error) {
+	if e := dv.setT(temp); e != nil {
+		defer dv.dev.Log.Err(err)
+		err = fmt.Errorf("set tempeture:%v error(%v)", temp, e)
+		time.Sleep(3 * time.Second)
+		if e := dv.setT(temp); e != nil {
+			em := fmt.Errorf("two time set tempeture:%v error(%v)", temp, e)
+			err = errors.Join(err, em)
+			return err
+		}
+	}
+	return nil
+}
+func (dv *DeviceValve) poll() {
+	bs := []byte{dv.dev.Address + 3}
+	request := mdb.MustPacketFromBytes(bs, true)
+	response := mdb.Packet{}
+	if err := dv.dev.Tx(request, &response); err != nil {
+		dv.dev.Log.WarningF("valev pool error(%v)", err)
+	}
+	if len(response.Bytes()) != 0 {
+		dv.dev.Log.Errorf("init valve pool response not nil (%v)", response.Bytes())
+	}
+}
+
+func (dv *DeviceValve) setT(temp uint8) (err error) {
+	bs := []byte{dv.dev.Address + 5, 0x10, temp}
+	request := mdb.MustPacketFromBytes(bs, true)
+	response := mdb.Packet{}
+	err = dv.dev.Tx(request, &response)
+	dv.tempHotTarget = temp
+	return err
+}
 
 func (dv *DeviceValve) newGetTempHot() engine.Func {
 	tag := dv.name + ".get_temp_hot"
-
 	return engine.Func{Name: tag, F: func(ctx context.Context) error {
 		bs := []byte{dv.dev.Address + 4, 0x11}
 		request := mdb.MustPacketFromBytes(bs, true)
 		response := mdb.Packet{}
 		err := dv.Generic.dev.TxKnown(request, &response)
 		if err != nil {
-			return oerr.Annotate(err, tag)
+			return fmt.Errorf("%s %v", tag, err)
 		}
 		bs = response.Bytes()
 		dv.dev.Log.Debugf("%s request=%s response=(%d)%s", tag, request.Format(), response.Len(), response.Format())
 		if len(bs) != 1 {
-			return oerr.NotValidf("%s response=%x", tag, bs)
+			return fmt.Errorf("%s response=%x", tag, bs)
 		}
-
 		temp := int32(bs[0])
-		if temp == 0 {
-			// dv.dev.SetErrorCode(1)
+		// if temp == 0 || temp >= 100 {
+		if temp >= 100 {
 			if doSetZero, _, _ := engine.ArgApply(dv.DoSetTempHot, 0); doSetZero != nil {
 				_ = engine.GetGlobal(ctx).Exec(ctx, doSetZero)
 			}
-			sensorErr := oerr.Errorf("%s current=0 sensor problem", tag)
-			if !dv.tempHotReported {
-				g := state.GetGlobal(ctx)
-				g.Error(sensorErr)
-				dv.tempHotReported = true
-			}
+			sensorErr := fmt.Errorf("%s current temp=%v", tag, temp)
 			return sensorErr
 		}
-
-		dv.tempHot.Set(temp)
-		return nil
-	}}
-}
-
-func (dv *DeviceValve) newSetTempHot() engine.FuncArg {
-	tag := dv.name + ".set_temp_hot"
-
-	return engine.FuncArg{Name: tag, F: func(ctx context.Context, arg engine.Arg) error {
-		temp := uint8(arg)
-		bs := []byte{dv.dev.Address + 5, 0x10, temp}
-		request := mdb.MustPacketFromBytes(bs, true)
-		response := mdb.Packet{}
-		err := dv.dev.TxCustom(request, &response, mdb.TxOpt{})
-		if err != nil {
-			return oerr.Annotatef(err, "%s target=%d request=%x", tag, temp, request.Bytes())
-		}
-		dv.tempHotTarget = temp
-		dv.dev.Log.Debugf("%s target=%d request=%x response=%x", tag, temp, request.Bytes(), response.Bytes())
+		dv.tempHot = temp
 		return nil
 	}}
 }
@@ -175,12 +222,11 @@ func (dv *DeviceValve) newSetTempHot() engine.FuncArg {
 func (dv *DeviceValve) newPourCareful(name string, arg1 byte, abort engine.Doer) engine.Doer {
 	tagPour := "pour_" + name
 	tag := fmt.Sprintf("%s.%s", dv.name, tagPour)
-
 	doPour := engine.FuncArg{
 		Name: tag + "/careful",
 		F: func(ctx context.Context, arg engine.Arg) error {
 			if arg >= 256 {
-				return oerr.Errorf("arg=%d overflows hardware units", arg)
+				return fmt.Errorf("arg=%d overflows hardware units", arg)
 			}
 			e := engine.GetGlobal(ctx)
 			units := uint8(arg)
@@ -286,14 +332,7 @@ func (dv *DeviceValve) newCheckTempHotValidate(ctx context.Context) func() error
 	return func() error {
 		tag := dv.name + ".check_temp_hot"
 		var getErr error
-		temp := dv.tempHot.GetOrUpdate(func() {
-			// Alexm - если отключить давчик температуры, после инита, то ошибок не будет и температура не меняется.
-			if getErr = g.Engine.Exec(ctx, dv.doGetTempHot); getErr != nil {
-				getErr = oerr.Annotate(getErr, tag)
-				dv.dev.Log.Error(getErr)
-			}
-		})
-		types.VMC.HW.Temperature = int(temp)
+		temp := dv.tempHot
 		if getErr != nil {
 			if doSetZero, _, _ := engine.ArgApply(dv.DoSetTempHot, 0); doSetZero != nil {
 				_ = g.Engine.Exec(ctx, doSetZero)
@@ -307,7 +346,7 @@ func (dv *DeviceValve) newCheckTempHotValidate(ctx context.Context) func() error
 		dv.dev.Log.Debugf(msg)
 		if diff > tempHotMargin {
 			if !dv.tempHotReported {
-				g.Error(oerr.New(msg))
+				g.Error(fmt.Errorf(msg))
 				dv.tempHotReported = true
 			}
 			return &ErrWaterTemperature{
