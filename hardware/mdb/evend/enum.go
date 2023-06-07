@@ -23,7 +23,8 @@ func EnumMultiHopper(ctx context.Context) error {
 
 func EnumValve(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
-	dev := &DeviceValve{}
+	// dev := &DeviceValve{}
+	dev := &EValve
 	return g.RegisterDevice("evend.valve", dev, func() error { return dev.init(ctx) })
 }
 
