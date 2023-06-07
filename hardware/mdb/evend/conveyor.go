@@ -77,7 +77,8 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 			return nil
 		},
 	)
-	err := c.Generic.FIXME_initIO(ctx)
+
+	err := c.dev.Rst()
 	if keepaliveInterval > 0 {
 		go c.Generic.dev.Keepalive(keepaliveInterval, g.Alive.StopChan())
 	}
