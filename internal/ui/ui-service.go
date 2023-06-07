@@ -13,12 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/hardware/input"
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
-	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
 	tele_api "github.com/AlexTransit/vender/tele"
@@ -366,9 +364,6 @@ func (ui *UI) onServiceNetwork() types.UiState {
 }
 
 func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
-	moneysys := money.GetGlobal(ctx)
-
-	ui.display.SetLines("money-load", "0")
 	alive := alive.NewAlive()
 	defer func() {
 		alive.Stop() // stop pending AcceptCredit
@@ -376,38 +371,53 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
 	}()
 	alive.Add(2)
 	ui.Service.askReport = true
-	accept := true
-	loaded := currency.Amount(0)
+	ui.display.SetLines("money-load", "0")
+	go ui.ms.AcceptCredit(ctx, 500000, alive, ui.eventch)
 	for {
-		credit := moneysys.GetCredit()
-		if credit > 0 {
-			loaded += credit
-			ui.display.SetLines("money-load", loaded.FormatCtx(ctx))
-			// reset loaded credit
-			_ = moneysys.WithdrawCommit(ctx, credit)
-		}
-		if accept {
-			accept = false
-			go moneysys.AcceptCredit(ctx, currency.MaxAmount, alive, ui.eventch)
-		}
+		ui.display.SetLines("money-load", ui.ms.GetCredit().FormatCtx(ctx))
 		switch e := ui.wait(ui.Service.resetTimeout); e.Kind {
 		case types.EventInput:
+			if e.Input.Source == "money" {
+				ui.ms.BillEscrowReject()
+				continue
+			}
 			if input.IsReject(&e.Input) {
 				return types.StateServiceMenu
 			}
-		case types.EventMoneyCredit:
-			accept = true
-		case types.EventLock:
-			return types.StateLocked
-		case types.EventStop:
-			ui.g.Log.Debugf("onServiceMoneyLoad global stop")
+		case types.EventMoneyCredit,types.EventMoneyPreCredit:
+		case types.EventStop, types.EventTime, types.EventService:
 			return types.StateServiceEnd
-
-		case types.EventTime:
-
 		default:
-			panic(fmt.Sprintf("code error onServiceMoneyLoad unhandled event=%v", e))
+			fmt.Printf("\033[41m %v \033[0m\n", e.Kind)
+			// panic(fmt.Sprintf("code error onServiceMoneyLoad unhandled event=%v", e))
 		}
+
+		// 	loaded = moneysys.GetCredit()
+		// 	ui.display.SetLines("money-load", loaded.FormatCtx(ctx))
+		// 		_ = moneysys.WithdrawCommit(ctx, credit)
+		// 	}
+		// 	if accept {
+		// 		accept = false
+		// 		go moneysys.AcceptCredit(ctx, 200000, alive, ui.eventch)
+		// 	}
+		// 	switch e := ui.wait(ui.Service.resetTimeout); e.Kind {
+		// 	case types.EventInput:
+		// 		if input.IsReject(&e.Input) {
+		// 			return types.StateServiceMenu
+		// 		}
+		// 	case types.EventMoneyCredit:
+		// 		accept = true
+		// 	case types.EventLock:
+		// 		return types.StateLocked
+		// 	case types.EventStop:
+		// 		ui.g.Log.Debugf("onServiceMoneyLoad global stop")
+		// 		return types.StateServiceEnd
+
+		// 	case types.EventTime:
+
+		// 	default:
+		// 		panic(fmt.Sprintf("code error onServiceMoneyLoad unhandled event=%v", e))
+		// 	}
 	}
 }
 

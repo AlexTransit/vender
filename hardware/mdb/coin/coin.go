@@ -942,7 +942,7 @@ func (ca *CoinAcceptor) parsePollItem(b, b2 byte) (money.PollItem, bool) {
 			ers := fmt.Sprintf("code error b=%x routing=%b", b, routing)
 			panic(errors.New(ers))
 		}
-		ca.Device.Log.Debugf("deposited coinType=%d routing=%s pi=%s", coinType, routing, pi.String())
+		ca.Device.Log.Debugf("deposited coinType=%d routing=%v pi=%s", coinType, routing, pi.String())
 		return pi, true
 	}
 	if b&0x80 != 0 { // Coins Dispensed Manually
