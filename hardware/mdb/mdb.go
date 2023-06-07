@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/AlexTransit/vender/log2"
-	"github.com/juju/errors"
+	oerr "github.com/juju/errors"
 )
 
 const (
@@ -45,12 +45,12 @@ func NewBus(u Uarter, log *log2.Log, errfun func(error)) *Bus {
 }
 
 func (b *Bus) ResetDefault() error {
-	return errors.Trace(b.Reset(DefaultBusResetKeep, DefaultBusResetSleep))
+	return b.Reset(DefaultBusResetKeep, DefaultBusResetSleep)
 }
 
 func (b *Bus) Reset(keep, sleep time.Duration) error {
 	b.Log.Debugf("mdb.bus.Reset keep=%v sleep=%v", keep, sleep)
-	return errors.Trace(b.u.Break(keep, sleep))
+	return b.u.Break(keep, sleep)
 }
 
 func (b *Bus) Tx(request Packet, response *Packet) error {
@@ -71,7 +71,7 @@ func (b *Bus) Tx(request Packet, response *Packet) error {
 
 	if err != nil {
 		b.Log.Errorf("mega transmit error:%v", err)
-		return errors.Annotatef(err, "mdb.Tx send=%x recv=%x", rbs, response.Bytes())
+		return fmt.Errorf("error=%v mdb.Tx send=%x recv=%x", err, rbs, response.Bytes())
 	}
 	// explicit level check to save costly .Format()
 	if b.Log.Enabled(log2.LOG_DEBUG) {
@@ -82,5 +82,5 @@ func (b *Bus) Tx(request Packet, response *Packet) error {
 }
 
 func IsResponseTimeout(e error) bool {
-	return e != nil && errors.Cause(e) == ErrTimeoutMDB
+	return e != nil && oerr.Cause(e) == ErrTimeoutMDB
 }
