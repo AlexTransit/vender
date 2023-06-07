@@ -8,7 +8,6 @@ import (
 	"github.com/AlexTransit/vender/hardware/input"
 	"github.com/AlexTransit/vender/hardware/mdb/evend"
 	"github.com/AlexTransit/vender/helpers"
-	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
@@ -38,36 +37,31 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 		ui.g.Error(errors.Errorf("money timeout lost (%v)", credit))
 	}
 	ui.ms.ResetMoney()
-	// XXX FIXME custom business logic creeped into code TODO move to config
 	if ui.g.Config.Hardware.Evend.Valve.TemperatureHot != 0 {
-		if doCheckTempHot := ui.g.Engine.Resolve("evend.valve.check_temp_hot"); doCheckTempHot != nil && !engine.IsNotResolved(doCheckTempHot) {
-			err := doCheckTempHot.Validate()
-			if errtemp, ok := err.(*evend.ErrWaterTemperature); ok {
-				line1 := fmt.Sprintf(ui.g.Config.UI.Front.MsgWaterTemp, errtemp.Current)
-				ui.g.ShowPicture(state.PictureBroken)
-				if types.VMC.Client.Light {
-					_ = ui.g.Engine.ExecList(ctx, "water-temp", []string{"evend.cup.light_off"})
+		curTemp, e := evend.EValve.GetTemperature()
+		if e != nil {
+			ui.g.Log.Error(e)
+			return types.StateBroken
+		}
+		if curTemp < int32(ui.g.Config.Hardware.Evend.Valve.TemperatureHot-10) {
+			line1 := fmt.Sprintf(ui.g.Config.UI.Front.MsgWaterTemp, curTemp)
+			ui.g.ShowPicture(state.PictureBroken)
+			_ = ui.g.Engine.ExecList(ctx, "water-temp", []string{"evend.cup.light_off"})
+			if types.VMC.HW.Display.L1 != line1 {
+				ui.display.SetLines(line1, ui.g.Config.UI.Front.MsgWait)
+				rm := tele_api.FromRoboMessage{
+					State:    tele_api.State_TemperatureProblem,
+					RoboTime: 0,
+					RoboHardware: &tele_api.RoboHardware{
+						Temperature: curTemp,
+					},
 				}
-				if types.VMC.HW.Display.L1 != line1 {
-					ui.display.SetLines(line1, ui.g.Config.UI.Front.MsgWait)
-					rm := tele_api.FromRoboMessage{
-						State:    tele_api.State_TemperatureProblem,
-						RoboTime: 0,
-						RoboHardware: &tele_api.RoboHardware{
-							Temperature: int32(errtemp.Current),
-						},
-					}
-
-					ui.g.Tele.RoboSend(&rm)
-				}
-				if e := ui.wait(5 * time.Second); e.Kind == types.EventService {
-					return types.StateServiceBegin
-				}
-				return types.StateFrontEnd
-			} else if err != nil {
-				ui.g.Error(err)
-				return types.StateBroken
+				ui.g.Tele.RoboSend(&rm)
 			}
+			if e := ui.wait(5 * time.Second); e.Kind == types.EventService {
+				return types.StateServiceBegin
+			}
+			return types.StateFrontEnd
 		}
 	}
 	ui.g.ClientEnd(ctx)
