@@ -384,7 +384,7 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
 			if input.IsReject(&e.Input) {
 				return types.StateServiceMenu
 			}
-		case types.EventMoneyCredit,types.EventMoneyPreCredit:
+		case types.EventMoneyCredit, types.EventMoneyPreCredit:
 		case types.EventStop, types.EventTime, types.EventService:
 			return types.StateServiceEnd
 		default:

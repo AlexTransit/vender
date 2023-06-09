@@ -45,7 +45,6 @@ func (ms *MoneySystem) BillEscrowReject() {
 	}
 }
 
-
 func (ms *MoneySystem) GetCredit() currency.Amount {
 	ms.lk.RLock()
 	defer ms.lk.RUnlock()
