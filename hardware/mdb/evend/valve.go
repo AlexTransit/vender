@@ -174,7 +174,7 @@ func (dv *DeviceValve) poll() {
 	request := mdb.MustPacketFromBytes(bs, true)
 	response := mdb.Packet{}
 	if err := dv.dev.Tx(request, &response); err != nil {
-		dv.dev.Log.WarningF("valev pool error(%v)", err)
+		dv.dev.Log.WarningF("valve pool error(%v)", err)
 	}
 	if len(response.Bytes()) != 0 {
 		dv.dev.Log.Errorf("init valve pool response not nil (%v)", response.Bytes())
