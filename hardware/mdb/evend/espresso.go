@@ -46,7 +46,7 @@ func (d *DeviceEspresso) init(ctx context.Context) error {
 	g.Engine.Register(d.name+".heat_on", d.NewHeat(true))
 	g.Engine.Register(d.name+".heat_off", d.NewHeat(false))
 
-	err := d.Generic.FIXME_initIO(ctx)
+	err := d.dev.Rst()
 	return errors.Annotate(err, d.name+".init")
 }
 

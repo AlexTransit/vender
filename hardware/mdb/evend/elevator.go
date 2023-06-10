@@ -57,7 +57,7 @@ func (e *DeviceElevator) init(ctx context.Context) error {
 		},
 	)
 
-	err := e.Generic.FIXME_initIO(ctx)
+	err := e.dev.Rst()
 	if keepaliveInterval > 0 {
 		go e.Generic.dev.Keepalive(keepaliveInterval, g.Alive.StopChan())
 	}
