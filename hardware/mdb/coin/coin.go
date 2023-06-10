@@ -156,7 +156,7 @@ func (ca *CoinAcceptor) Dispence(amount currency.Amount) (err error) {
 	}
 	dispenceAmount := amount
 	m := "dispense coin: "
-	ca.Log.Infof("dispence (%s) tubes (%v)", amount.Format100I(), ca.tub)
+	ca.Log.Infof("dispence (%s) tubes (%v)", amount.Format100I(), ca.tubes)
 	for {
 		dispenseNominal, e := ca.maximumAvailableNominal(dispenceAmount, true)
 		// AlexM FIXME
@@ -205,12 +205,12 @@ func (ca *CoinAcceptor) maximumAvailableNominal(notMore currency.Amount, priorit
 }
 
 func (ca *CoinAcceptor) DispenceCoin(nominal currency.Nominal) (complete bool, err error) {
+	if err = ca.TubeStatus(); err != nil {
+		return false, err
+	}
 	inTubeBefore := ca.tubes.InTube(nominal)
 	if inTubeBefore == 0 {
 		return false, fmt.Errorf("can`t dispense, tube value = 0")
-	}
-	if err = ca.TubeStatus(); err != nil {
-		return false, err
 	}
 	if inTubeBefore != ca.tubes.InTube(nominal) {
 		ca.Log.Errorf("nominal %v preview and now tubes dismash preview value (%v) now(%v)", nominal, inTubeBefore, ca.tubes)
@@ -385,6 +385,7 @@ func (ca *CoinAcceptor) decodeByte(b byte, b2 ...byte) (ve money.ValidatorEvent)
 			m = m + "income to cashbox"
 		case RoutingTubes:
 			ve.Event = money.CoinCredit
+			ca.tubes.Add(ve.Nominal)
 			m = m + "income to tube"
 		case RoutingNotUsed:
 			ve.Event = money.NoEvent
