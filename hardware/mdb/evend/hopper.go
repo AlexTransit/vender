@@ -26,7 +26,7 @@ func (devHop *DeviceHopper) init(ctx context.Context, addr uint8, nameSuffix str
 	do := newHopperRun(&devHop.Generic, fmt.Sprintf("%s.run", devHop.name), nil)
 	g.Engine.Register(fmt.Sprintf("%s.run(?)", devHop.name), devHop.Generic.WithRestart(do))
 
-	err := devHop.Generic.FIXME_initIO(ctx)
+	err := devHop.dev.Rst()
 	return errors.Annotate(err, devHop.name+".init")
 }
 
@@ -48,7 +48,7 @@ func (devHop *DeviceMultiHopper) init(ctx context.Context) error {
 		g.Engine.Register(fmt.Sprintf("%s%d.run(?)", devHop.name, i), devHop.Generic.WithRestart(do))
 	}
 
-	err := devHop.Generic.FIXME_initIO(ctx)
+	err := devHop.dev.Rst()
 	return errors.Annotate(err, devHop.name+".init")
 }
 

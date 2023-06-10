@@ -53,7 +53,30 @@ func (b *Bus) Reset(keep, sleep time.Duration) error {
 	return b.u.Break(keep, sleep)
 }
 
-func (b *Bus) Tx(request Packet, response *Packet) error {
+func (b *Bus) Tx(request Packet, response *Packet) (err error) {
+	if request.l == 0 {
+		return nil
+	}
+	rp := &Packet{}
+	if response != nil {
+		if response.readonly {
+			return ErrPacketReadonly
+		}
+		rp = response
+	}
+
+	reqBs := request.Bytes()
+	rp.l, err = b.u.Tx(reqBs, rp.b[:])
+	if err != nil {
+		err = fmt.Errorf("error=%v mdb.Tx send=%x recv=%x", err, reqBs, rp.Bytes())
+	}
+	// if response != nil && rp.l == 0 { // need answer
+	// 	err = fmt.Errorf("device not anwer")
+	// } 
+	return err
+}
+
+func (b *Bus) TxOld(request Packet, response *Packet) error {
 	if response == nil {
 		response = &Packet{}
 		b.Log.Debugf("mdb.Tx request=%x response=nil -> allocate temporary", request.Bytes())

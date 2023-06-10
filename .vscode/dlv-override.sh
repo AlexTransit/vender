@@ -1,6 +1,7 @@
 #!/bin/sh
 
-DLV="/home/vmc/go/bin/dlv"
+# DLV="/home/vmc/go/bin/dlv"
+DLV="$GOPATH/bin/dlv"
 
 if [ "$DEBUG_AS_ROOT" = "true" ]; then
 	echo Run as Root

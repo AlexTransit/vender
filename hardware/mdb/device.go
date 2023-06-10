@@ -139,8 +139,9 @@ func (dev *Device) Rst() (err error) {
 	dev.LastOff.SetNowIfZero() // consider device offline from now till successful response
 	dev.lastReset.SetNow()
 	err = dev.Tx(dev.PacketReset, nil)
+	time.Sleep(200 * time.Millisecond)
 	if err == nil {
-		return dev.TxSetup()
+		return dev.TxReadSetup()
 	}
 	return err
 }

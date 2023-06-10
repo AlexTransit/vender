@@ -418,24 +418,18 @@ func (bv *BillValidator) decodeByte(b byte) (e money.ValidatorEvent) {
 		bv.setEscrowBill(0)
 		switch status {
 		case StatusRoutingBillStacked: // complete state.
-			// return nil, money.BillEvent{Event: money.Stacked, BillNominal: nominal}
 			bv.Log.Infof("bill stacked (%v)", nominal.Format100I())
 			return money.ValidatorEvent{Event: money.Stacked, Nominal: nominal}
 		case StatusRoutingEscrowPosition:
-			// bv.setState(process)
 			bv.setEscrowBill(bv.nominals[billType])
 			bv.Log.Infof("bill in escrow (%v)", nominal.Format100I())
 			return money.ValidatorEvent{Event: money.InEscrow, Nominal: nominal}
-			// return nil, money.BillEvent{Event: money.InEscrow, BillNominal: nominal}
 		case StatusRoutingBillReturned:
 			bv.Log.Infof("bill RoutingBillReturned (%v)", nominal.Format100I())
 			return money.ValidatorEvent{Event: money.OutEscrow, Nominal: nominal}
-			// return nil, money.BillEvent{Event: money.OutEscrow, BillNominal: nominal}
 		case StatusRoutingDisabledBillRejected:
 			bv.Log.Infof("reject disabled bill (%v)", nominal.Format100I())
 			return money.ValidatorEvent{Event: money.OutEscrow, Nominal: nominal}
-			// return nil, money.BillEvent{Event: money.OutEscrow, BillNominal: nominal}
-		//recycler status
 		case StatusRoutingBillToRecycler, StatusRoutingBillToRecyclerManualFill, StatusRoutingManualDispense, StatusRoutingTransferredFromRecyclerToCashbox:
 			bv.Log.Infof("non implement bill recycler status ")
 		default:

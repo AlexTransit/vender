@@ -39,6 +39,12 @@ func (ms *MoneySystem) BillEscrowToStacker() {
 	}
 }
 
+func (ms *MoneySystem) BillEscrowReject() {
+	if ms.bill.EscrowAmount() > 0 {
+		ms.bill.SendCommand(bill.Reject)
+	}
+}
+
 func (ms *MoneySystem) GetCredit() currency.Amount {
 	ms.lk.RLock()
 	defer ms.lk.RUnlock()

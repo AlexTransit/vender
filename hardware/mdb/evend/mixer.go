@@ -79,7 +79,6 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 			return nil
 		},
 	)
-	// err := m.Generic.FIXME_initIO(ctx)
 	err := m.dev.Rst()
 	if keepaliveInterval > 0 {
 		go m.Generic.dev.Keepalive(keepaliveInterval, g.Alive.StopChan())

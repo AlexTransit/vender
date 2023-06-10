@@ -64,7 +64,7 @@ func (devCup *DeviceCup) init(ctx context.Context) error {
 
 	g.Engine.Register(devCup.name+".ensure", devCup.NewEnsure())
 
-	err := devCup.Generic.FIXME_initIO(ctx)
+	err := devCup.dev.Rst()
 	return errors.Annotate(err, devCup.name+".init")
 }
 
