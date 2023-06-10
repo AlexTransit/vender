@@ -1,7 +1,6 @@
 package mdb_client
 
 import (
-	"fmt"
 	"sync"
 	"time"
 
