@@ -126,7 +126,8 @@ func (dv *DeviceValve) readTemp() (err error) {
 		return fmt.Errorf("%s response=%x", tag, bs)
 	}
 	temp := int32(bs[0])
-	if temp >= 100 {
+	// AlexM FIXME  (temp != 255) - затычка
+	if temp >= 100 && temp != 255 {
 		dv.dev.Rst()
 		return fmt.Errorf("overhead temp=%v", temp)
 	}
