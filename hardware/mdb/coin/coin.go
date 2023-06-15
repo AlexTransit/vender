@@ -107,39 +107,6 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 			return ca.CoinReset()
 		},
 	)
-	g.Engine.RegisterNewFunc(
-		"d.1",
-		func(ctx context.Context) error {
-			v, de := ca.DispenceCoin(100)
-			fmt.Printf("\033[41m dispensed(%v) error(%v)\033[0m\n", v, de)
-			return de
-		},
-	)
-	g.Engine.RegisterNewFunc(
-		"d.2",
-		func(ctx context.Context) error {
-			v, de := ca.DispenceCoin(200)
-			fmt.Printf("\033[41m dispensed(%v) error(%v)\033[0m\n", v, de)
-			return de
-		},
-	)
-	g.Engine.RegisterNewFunc(
-		"d.5",
-		func(ctx context.Context) error {
-			v, de := ca.DispenceCoin(500)
-			fmt.Printf("\033[41m dispensed(%v) error(%v)\033[0m\n", v, de)
-			return de
-		},
-	)
-	g.Engine.RegisterNewFunc(
-		"d.10",
-		func(ctx context.Context) error {
-			v, de := ca.DispenceCoin(1000)
-			fmt.Printf("\033[41m dispensed(%v) error(%v)\033[0m\n", v, de)
-			return de
-		},
-	)
-
 	g.Engine.Register("coin.dispence(?)",
 		engine.FuncArg{Name: "coin.dispence", F: func(ctx context.Context, arg engine.Arg) (err error) {
 			err = ca.Dispence(currency.Amount(arg))
