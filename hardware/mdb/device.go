@@ -141,7 +141,11 @@ func (dev *Device) Rst() (err error) {
 	err = dev.Tx(dev.PacketReset, nil)
 	time.Sleep(200 * time.Millisecond)
 	if err == nil {
-		return dev.TxReadSetup()
+		err = dev.TxReadSetup()
+		if err == nil {
+			dev.SetState(DeviceOnline)
+			return nil
+		}
 	}
 	return err
 }
