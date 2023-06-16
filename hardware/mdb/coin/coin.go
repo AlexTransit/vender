@@ -245,7 +245,10 @@ func (ca *CoinAcceptor) CoinReset() (err error) {
 	e := money.ValidatorEvent{}
 	_, e.Err = ca.pollF(nil)
 	// if recive "changer was Reset" then read setup and status
-	return e.Err
+	if e.Err != nil {
+		return e.Err
+	}
+	return ca.readSetupAndStatus()
 }
 
 func (ca *CoinAcceptor) readSetupAndStatus() (err error) {
@@ -319,9 +322,9 @@ func (ca *CoinAcceptor) decodeByte(b byte, b2 ...byte) (ve money.ValidatorEvent)
 		return money.ValidatorEvent{Err: fmt.Errorf("coin Routing Error")}
 	case 0x0a: // Changer Busy
 	case 0x0b: // Changer was Reset
-		if err := ca.readSetupAndStatus(); err != nil {
-			return money.ValidatorEvent{Err: fmt.Errorf("coin read setupConfig Error (%v)", err)}
-		}
+		// if err := ca.readSetupAndStatus(); err != nil {
+		// 	return money.ValidatorEvent{Err: fmt.Errorf("coin read setupConfig Error (%v)", err)}
+		// }
 		ca.Log.Info("coin reset complete")
 	case 0x0c: // Coin Jam
 		return money.ValidatorEvent{Err: fmt.Errorf("coin jam")}

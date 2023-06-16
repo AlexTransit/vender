@@ -107,7 +107,6 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 }
 
 func (ui *UI) parseMoneyEvent(ek types.EventKind) types.UiState {
-	// switch
 	if types.UI.FrontResult.QRPaymenID != "0" {
 		ui.cancelQRPay(tele_api.State_Client)
 	}
