@@ -77,7 +77,6 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 	}
 	// ----------------------coin ------------------------------------------------------------------
 	go ms.coin.CoinRun(mainAlive, func(e money.ValidatorEvent) {
-		ms.Log.Infof("coin event (%v)", e)
 		event := types.Event{}
 		switch e.Event {
 		case money.CoinRejectKey:
