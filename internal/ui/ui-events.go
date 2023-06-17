@@ -40,6 +40,10 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 	}
 	if input.IsReject(&e.Input) {
 		// 	// backspace semantic
+		if types.UI.FrontResult.QRPaymenID != "" {
+			ui.cancelQRPay(tele_api.State_Client)
+			return types.StateFrontEnd
+		}
 		if len(ui.inputBuf) == 0 {
 			if ui.ms.GetCredit() == 0 {
 				return types.StateFrontEnd
@@ -49,6 +53,11 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 			ui.inputBuf = ui.inputBuf[:len(ui.inputBuf)-1]
 		}
 		ui.linesCreate(l1, l2, tuneScreen)
+		return types.StateDoesNotChange
+	}
+	if types.UI.FrontResult.QRPaymenID != "" { // ignore key press
+		ui.g.Log.Info("qr selected. ignore key")
+		*l1 = types.VMC.HW.Display.L1
 		return types.StateDoesNotChange
 	}
 	ui.g.ClientBegin(ctx)

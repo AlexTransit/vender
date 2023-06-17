@@ -103,7 +103,6 @@ func (t *tele) mesageMakeOrger(ctx context.Context) {
 		// make selected code. payment via QR, etc
 		t.log.Infof("message make doSelected. robo state:%v", t.currentState)
 		if t.currentState != tele_api.State_WaitingForExternalPayment {
-			// if t.currentState != tele_api.State_WaitingForExternalPayment || types.UI.FrontResult.QRPaymenID != t.InMessage.MakeOrder.OwnerStr {
 			t.log.Errorf("doSelected t.currentState != tele_api.State_WaitingForExternalPayment (%v != %v) or types.UI.FrontResult.QRPaymenID != t.InMessage.MakeOrder.OwnerStr (%v !=%v)", t.currentState, tele_api.State_WaitingForExternalPayment, types.UI.FrontResult.QRPaymenID, t.InMessage.MakeOrder.OwnerStr)
 			t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_orderError
 			return
