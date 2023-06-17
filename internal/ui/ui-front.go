@@ -138,7 +138,6 @@ func (ui *UI) sendRequestForQrPayment() (message_for_display *string) {
 		return &ui.g.Config.UI.Front.MsgNoNetwork
 	}
 	types.UI.FrontResult.QRPaymenID = "0"
-	types.VMC.EvendKeyboardInput(false)
 	types.VMC.UiState = uint32(types.StatePrepare)
 	rm := tele_api.FromRoboMessage{
 		State:    tele_api.State_WaitingForExternalPayment,
@@ -156,8 +155,8 @@ func (ui *UI) sendRequestForQrPayment() (message_for_display *string) {
 func (ui *UI) cancelQRPay(s tele_api.State) {
 	defer func() {
 		types.UI.FrontResult.QRPaymenID = ""
+		types.VMC.EvendKeyboardInput(true)
 	}()
-	types.VMC.EvendKeyboardInput(true)
 	if types.UI.FrontResult.QRPaymenID == "" || types.UI.FrontResult.QRPaymenID == "0" {
 		return
 	}
@@ -224,7 +223,6 @@ func createScale(currentValue uint8, maximumValue uint8, defaultValue uint8) (ba
 
 func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	ui.g.Tele.RoboSendState(tele_api.State_Process)
-	// ui.g.Hardware.Input.Enable(false)
 	moneysys := money.GetGlobal(ctx)
 	uiConfig := &ui.g.Config.UI
 

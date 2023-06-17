@@ -74,9 +74,7 @@ func Init(ctx context.Context) error {
 // func Cook(ctx context.Context, rm *tele_api.FromRoboMessage) error {
 func Cook(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
-	// moneysys := money.GetGlobal(ctx)
 	state.VmcLock(ctx)
-	// defer state.VmcUnLock(ctx)
 
 	itemCtx := money.SetCurrentPrice(ctx, types.UI.FrontResult.Item.Price)
 	if tuneCream := ScaleTuneRate(&types.UI.FrontResult.Cream, CreamMax(), DefaultCream); tuneCream != 1 {
