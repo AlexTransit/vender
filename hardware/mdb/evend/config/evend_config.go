@@ -3,12 +3,6 @@
 package evend_config
 
 type Config struct { //nolint:maligned
-	Conveyor struct { //nolint:maligned
-		KeepaliveMs int  `hcl:"keepalive_ms"`
-		LogDebug    bool `hcl:"log_debug"`
-		MinSpeed    int  `hcl:"min_speed"`
-		PositionMax int  `hcl:"position_max"`
-	} `hcl:"conveyor"`
 	Cup struct { //nolint:maligned
 		AssertBusyDelayMs  int `hcl:"assert_busy_delay_ms"`
 		DispenseTimeoutSec int `hcl:"dispense_timeout_sec"`
