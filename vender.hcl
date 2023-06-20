@@ -80,11 +80,6 @@ hardware {
   // device "evend.hopper5" { }
 
   evend {
-    conveyor {
-      keepalive_ms = 0
-      min_speed    = 200
-      position_max = 0
-    }
 
     cup {
       assert_busy_delay_ms = 30
