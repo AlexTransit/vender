@@ -99,17 +99,6 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 		},
 	)
 	g.Engine.RegisterNewFunc(
-		// testaaa
-		"aa",
-		func(ctx context.Context) error {
-			eventch := make(chan types.Event)
-			go ms.AcceptCredit(ctx, 100000, g.Alive, eventch)
-			// ms.AcceptCredit(ctx, 100000, nil, nil)
-			// ms.bill.BillRun(nil, nil)
-			return nil
-		},
-	)
-	g.Engine.RegisterNewFunc(
 		"bill.stop",
 		func(ctx context.Context) error {
 			ms.bill.SendCommand(bill.Stop)

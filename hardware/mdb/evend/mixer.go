@@ -8,7 +8,6 @@ import (
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
-	oerr "github.com/juju/errors"
 )
 
 const DefaultShakeSpeed uint8 = 100
@@ -17,7 +16,7 @@ type DeviceMixer struct { //nolint:maligned
 	Generic
 
 	cPos         int8
-	nPos         uint8
+	nPos         int8
 	moveTimeout  time.Duration
 	shakeTimeout time.Duration
 	shakeSpeed   uint8
@@ -28,42 +27,39 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 	m.shakeSpeed = DefaultShakeSpeed
 	g := state.GetGlobal(ctx)
 	config := &g.Config.Hardware.Evend.Mixer
-	keepaliveInterval := helpers.IntMillisecondDefault(config.KeepaliveMs, 0)
 	m.moveTimeout = helpers.IntSecondDefault(config.MoveTimeoutSec, 10*time.Second)
 	m.shakeTimeout = helpers.IntMillisecondDefault(config.ShakeTimeoutMs, 300*time.Millisecond)
 	m.Generic.Init(ctx, 0xc8, "mixer", proto1)
 
 	g.Engine.Register(m.name+".shake(?)",
-		engine.FuncArg{Name: m.name + ".shake", F: func(ctx context.Context, arg engine.Arg) error {
-			return g.Engine.Exec(ctx, m.Generic.WithRestart(m.shake(uint8(arg))))
-		}})
-
-	g.Engine.Register(m.name+".shakeNoWait(?)",
-		engine.FuncArg{Name: m.name + ".shakeNoWait", F: func(ctx context.Context, arg engine.Arg) error {
-			return g.Engine.Exec(ctx, m.shakeNoWait(uint8(arg)))
+		engine.FuncArg{Name: m.name + ".shake", F: func(ctx context.Context, arg engine.Arg) (err error) {
+			// return g.Engine.Exec(ctx, m.Generic.WithRestart(m.shake(uint8(arg))))
+			err = m.shake(uint8(arg))
+			return err
 		}})
 
 	g.Engine.Register(m.name+".moveNoWait(?)",
 		engine.FuncArg{Name: m.name + ".moveNoWait", F: func(ctx context.Context, arg engine.Arg) error {
-			return g.Engine.Exec(ctx, m.moveNoWait(uint8(arg)))
+			return m.mv(int8(arg))
 		}})
 
-	g.Engine.Register(m.name+".move(?)",
-		engine.FuncArg{Name: m.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
-			if err = g.Engine.Exec(ctx, m.move(uint8(arg))); err == nil {
-				m.cPos = int8(arg)
-				return nil
+	g.Engine.RegisterNewFunc(m.name+".movingComplete", func(ctx context.Context) error { return m.mvComplete() })
+
+	g.Engine.Register(m.name+".move(?)", engine.FuncArg{Name: m.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
+		for i := 1; i <= 2; i++ {
+			if err = m.move(int8(arg)); err == nil {
+				if i > 1 {
+					m.dev.TeleError(fmt.Errorf("restart fix error"))
+				}
+				return
 			}
-			m.dev.TeleError(err)
-			m.dev.Reset()
-			if err = g.Engine.Exec(ctx, m.move(uint8(arg))); err == nil {
-				m.cPos = int8(arg)
-				m.dev.TeleError(oerr.Errorf("restart fix preview error"))
-				return nil
-			}
-			m.dev.TeleError(oerr.Annotatef(err, "two times error"))
-			return err
-		}})
+			m.cPos = -1
+			// FIXME тут можно добавть скрипт действий после ошибки
+			m.dev.Rst()
+			time.Sleep(5 * time.Second)
+		}
+		return err
+	}})
 	g.Engine.Register(m.name+".fan_on", m.NewFan(true))
 	g.Engine.Register(m.name+".fan_off", m.NewFan(false))
 	g.Engine.Register(m.name+".shake_set_speed(?)",
@@ -72,36 +68,57 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 			return nil
 		}})
 
-	g.Engine.RegisterNewFunc(
-		"mixer.status",
-		func(ctx context.Context) error {
-			g.Log.Infof("%s.position:%d", m.name, m.cPos)
-			return nil
-		},
-	)
+	g.Engine.RegisterNewFunc("mixer.status", func(ctx context.Context) error {
+		g.Log.Infof("%s.position:%d shake speed:%d", m.name, m.cPos, m.shakeSpeed)
+		return nil
+	})
 	err := m.dev.Rst()
-	if keepaliveInterval > 0 {
-		go m.Generic.dev.Keepalive(keepaliveInterval, g.Alive.StopChan())
+	return err
+}
+
+func (m *DeviceMixer) move(position int8) (err error) {
+	m.dev.Action = fmt.Sprintf("mixer move %d=>%d", m.cPos, position)
+	if err = m.mv(position); err != nil {
+		return fmt.Errorf("send command(%v) error(%v)", m.dev.Action, err)
+	}
+	return m.mvComplete()
+}
+
+func (m *DeviceMixer) mvComplete() (err error) {
+	err = m.Proto1PollWaitSuccess(100) // FIXME timeout to config
+	if err == nil {
+		m.cPos = m.nPos
+		m.dev.Action = ""
 	}
 	return err
-	// return oerr.Annotate(err, m.name+".init")
+}
+
+func (m *DeviceMixer) mv(position int8) (err error) {
+	m.cPos = -1
+	m.nPos = position
+	return m.Command([]byte{0x03, byte(position), 0x64})
+}
+
+func (m *DeviceMixer) sh(steps uint8) (err error) {
+	if err = m.Command([]byte{0x01, byte(steps), m.shakeSpeed}); err != nil {
+		return err
+	}
+	return m.Proto1PollWaitSuccess(1)
 }
 
 // 1step = 100ms
-func (m *DeviceMixer) shake(steps uint8) engine.Doer {
-	tag := fmt.Sprintf("%s.shake:%d,%d", m.name, steps, m.shakeSpeed)
-	return engine.NewSeq(tag).
-		Append(m.NewWaitReady(tag)).
-		Append(m.NewAction(tag, 0x01, steps, m.shakeSpeed)).
-		Append(engine.Sleep{Duration: time.Duration(1+steps) * 100 * time.Millisecond}).
-		Append(m.NewWaitDone(tag, m.shakeTimeout*time.Duration(1+steps)))
+func (m *DeviceMixer) shake(steps uint8) (err error) {
+	if err = m.sh(steps); err != nil {
+		return
+	}
+	if err = m.Proto1PollWaitSuccess(1); err != nil {
+		return err
+	}
+	time.Sleep(time.Duration(steps-4) * 100 * time.Millisecond)
+	return m.Proto1PollWaitSuccess(1)
 }
 
-func (m *DeviceMixer) shakeNoWait(steps uint8) engine.Doer {
-	tag := fmt.Sprintf("%s.shake:%d,%d", m.name, steps, m.shakeSpeed)
-	return engine.NewSeq(tag).
-		Append(m.NewAction(tag, 0x01, steps, m.shakeSpeed))
-}
+// --------------------------------------------------------
 
 func (m *DeviceMixer) NewFan(on bool) engine.Doer {
 	tag := fmt.Sprintf("%s.fan:%t", m.name, on)
@@ -110,34 +127,4 @@ func (m *DeviceMixer) NewFan(on bool) engine.Doer {
 		arg = 1
 	}
 	return m.NewAction(tag, 0x02, arg, 0x00)
-}
-
-func (m *DeviceMixer) moveNoWait(position uint8) engine.Doer {
-	tag := fmt.Sprintf("%s.move:%d->%d", m.name, m.cPos, position)
-	return engine.NewSeq(tag).
-		Append(m.Generic.NewAction(tag, 0x03, position, 0x64))
-}
-
-func (m *DeviceMixer) move(position uint8) engine.Doer {
-	tag := fmt.Sprintf("%s.move:%d->%d", m.name, m.cPos, position)
-	d := engine.NewSeq(tag)
-	if m.cPos == int8(position) {
-		d.Append(engine.Func0{F: func() error { return nil }})
-		return d
-	}
-	d.Append(m.NewWaitReady(tag))
-	switch position {
-	case 0, 100:
-		d.Append(m.Generic.NewAction(tag, 0x03, position, 0x64))
-	default:
-		if m.cPos == -1 { // if unknow position then go via zero
-			d.Append(m.NewAction(tag, 0x03, 0, 0x64))
-			d.Append(m.NewWaitDone(tag, m.moveTimeout))
-		}
-		d.Append(m.Generic.NewAction(tag, 0x03, position, 0x64))
-	}
-	d.Append(m.NewWaitDone(tag, m.moveTimeout))
-	m.cPos = -1
-	m.nPos = position
-	return d
 }
