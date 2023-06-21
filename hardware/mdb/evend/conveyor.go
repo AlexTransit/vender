@@ -52,10 +52,13 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 				if err = c.moveNoWaitReadyNoWaitDone(int16(arg)).Do(ctx); err == nil {
 					if err = c.moveWaitDone().Do(ctx); err == nil {
 						c.position = int16(arg)
+						if i > 1 {
+							c.dev.TeleError(fmt.Errorf("restart fix problem"))
+						}
 						return
 					}
 				}
-				err = fmt.Errorf("conveyor move %d->%d error (%v) try(%d)", c.position, arg, err, i)
+				err = fmt.Errorf("conveyor move %d=>%d error (%v) try(%d)", c.position, arg, err, i)
 				c.dev.TeleError(err)
 				c.position = -1
 			}
