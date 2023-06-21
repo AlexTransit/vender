@@ -43,6 +43,7 @@ type Device struct { //nolint:maligned
 	PacketReset Packet
 	PacketSetup Packet
 	PacketPoll  Packet
+	Action      string
 	DoReset     engine.Doer
 	DoInit      engine.Doer // likely Seq starting with DoReset
 
@@ -190,6 +191,9 @@ func (dev *Device) SetError(e error) {
 }
 
 func (dev *Device) ErrorCode() int32 { return atomic.LoadInt32(&dev.errCode) }
+func (dev *Device) SetErrorCode(code int32) {
+	dev.errCode = code
+}
 
 // func (dev *Device) SetErrorCode(c int32) {
 // 	// prev := atomic.SwapInt32(&dev.errCode, c)
@@ -259,11 +263,12 @@ func (dev *Device) NewFunLoop(tag string, fun PollFunc, timeout time.Duration) e
 			// dev.Log.Debugf("%s timeout=%v elapsed=%v", tag, timeout, time.Since(tbegin))
 			stop, err := fun()
 			if err != nil {
+
+				// dev.errCode = fmt.Sprintf("%d", err)
 				return errors.Annotate(err, tag)
 			} else if stop { // success
 				return nil
 			}
-
 			// err==nil && stop==false -> try again
 			if timeout == 0 {
 				return errors.Errorf("tag=%s timeout=0 invalid", tag)

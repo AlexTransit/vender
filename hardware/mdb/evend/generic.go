@@ -12,7 +12,7 @@ import (
 	"github.com/AlexTransit/vender/hardware/mdb"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
-	"github.com/juju/errors"
+	oerr "github.com/juju/errors"
 )
 
 // Mostly affects POLL response, see doc.
@@ -74,22 +74,22 @@ func (gen *Generic) FIXME_initIO(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	_, err := g.Mdb()
 	if err != nil {
-		return errors.Annotate(err, tag)
+		return oerr.Annotate(err, tag)
 	}
 	if err = gen.dev.Reset(); err != nil {
-		return errors.Annotate(err, tag)
+		return oerr.Annotate(err, tag)
 	}
 	err = gen.dev.TxSetup()
-	return errors.Annotate(err, tag)
+	return oerr.Annotate(err, tag)
 }
 
 func (gen *Generic) Name() string { return gen.name }
 
 func (gen *Generic) NewErrPollProblem(p mdb.Packet) error {
-	return errors.Errorf("%s POLL=%x -> need to ask problem code", gen.name, p.Bytes())
+	return oerr.Errorf("%s POLL=%x -> need to ask problem code", gen.name, p.Bytes())
 }
 func (gen *Generic) NewErrPollUnexpected(p mdb.Packet) error {
-	return errors.Errorf("%s POLL=%x unexpected", gen.name, p.Bytes())
+	return oerr.Errorf("%s POLL=%x unexpected", gen.name, p.Bytes())
 }
 
 func (gen *Generic) NewAction(tag string, args ...byte) engine.Doer {
@@ -123,11 +123,11 @@ func (gen *Generic) Diagnostic() (byte, error) {
 	err := gen.dev.Locked_TxKnown(request, &response)
 	if err != nil {
 		gen.dev.SetError(err)
-		return 0, errors.Annotate(err, tag)
+		return 0, oerr.Annotate(err, tag)
 	}
 	rs := response.Bytes()
 	if len(rs) < 1 {
-		err = errors.Errorf("%s request=%x response=%x", tag, request.Bytes(), rs)
+		err = oerr.Errorf("%s request=%x response=%x", tag, request.Bytes(), rs)
 		gen.dev.SetError(err)
 		return 0, err
 	}
@@ -156,7 +156,7 @@ func (gen *Generic) NewWaitReady(tag string) engine.Doer {
 				return true, DeviceErrorCode(code)
 
 			default:
-				err := errors.Errorf("%s unknown response=%x", tag, bs)
+				err := oerr.Errorf("%s unknown response=%x", tag, bs)
 				gen.dev.Log.Error(err)
 				return false, err
 			}
@@ -224,7 +224,7 @@ func (gen *Generic) NewWaitDone(tag string, timeout time.Duration) engine.Doer {
 			// 04 during WaitDone is "oops, device reboot in operation"
 			if value&genericPollMiss != 0 {
 				gen.dev.SetState(mdb.DeviceOnline)
-				return true, errors.Errorf("%s POLL=%x ignore=%02x continous connection lost, (TODO decide reset?)", tag, bs, gen.proto2IgnoreMask)
+				return true, oerr.Errorf("%s POLL=%x ignore=%02x continous connection lost, (TODO decide reset?)", tag, bs, gen.proto2IgnoreMask)
 			}
 
 			// busy during WaitDone is correct path
@@ -260,7 +260,7 @@ func (gen *Generic) newProto1PollWaitSuccess(tag string, timeout time.Duration) 
 		}
 		if bs[0] == 0x04 {
 			code := bs[1]
-			// gen.dev.SetErrorCode(int32(code))
+			gen.dev.SetErrorCode(int32(code))
 			return true, DeviceErrorCode(code)
 		}
 		return true, gen.NewErrPollUnexpected(p)
@@ -273,7 +273,7 @@ func (gen *Generic) proto2PollCommon(tag string, bs []byte) (bool, error) {
 		return true, nil
 	}
 	if len(bs) > 1 {
-		return true, errors.Errorf("%s POLL=%x -> too long", tag, bs)
+		return true, oerr.Errorf("%s POLL=%x -> too long", tag, bs)
 	}
 	value := bs[0]
 	value &^= gen.proto2IgnoreMask
@@ -284,7 +284,7 @@ func (gen *Generic) proto2PollCommon(tag string, bs []byte) (bool, error) {
 	if value&genericPollProblem != 0 {
 		code, err := gen.Diagnostic()
 		if err != nil {
-			err = errors.Annotate(err, tag)
+			err = oerr.Annotate(err, tag)
 			return true, err
 		}
 		return true, DeviceErrorCode(code)
@@ -296,7 +296,7 @@ func (gen *Generic) WithRestart(d engine.Doer) *engine.RestartError {
 	return &engine.RestartError{
 		Doer: d,
 		Check: func(e error) bool {
-			_, ok := errors.Cause(e).(DeviceErrorCode)
+			_, ok := oerr.Cause(e).(DeviceErrorCode)
 			return ok
 		},
 		Reset: engine.Func0{
@@ -304,4 +304,45 @@ func (gen *Generic) WithRestart(d engine.Doer) *engine.RestartError {
 			F:    gen.dev.Reset,
 		},
 	}
+}
+
+//-------------------------------------------------------------------------
+
+// timeout count every 200 ms
+func (gen *Generic) Proto1PollWaitSuccess(timeout uint8) (err error) {
+	response := mdb.Packet{}
+	for timeout > 0 {
+		timeout--
+		time.Sleep(200 * time.Millisecond)
+		_ = gen.dev.Tx(gen.dev.PacketPoll, &response)
+		rb := response.Bytes()
+		if len(rb) == 0 {
+			continue
+		}
+		switch rb[0] {
+		case 0x0d: // complete execute
+			gen.dev.Action = ""
+			return
+		case 0x04:
+			errCode := rb[1]
+			e := fmt.Errorf("execute command(%s) error(%v)", gen.dev.Action, errCode)
+			gen.dev.TeleError(e)
+			return e
+		default:
+			e := fmt.Errorf("unknow answer(%v) on command(%s)", rb, gen.dev.Action)
+			gen.dev.TeleError(e)
+		}
+	}
+	if gen.dev.Action != "" {
+		err = fmt.Errorf("execute command (%v) timeout", gen.dev.Action)
+	}
+	return err
+}
+
+func (gen *Generic) Command(args []byte) error {
+	bs := make([]byte, len(args)+1)
+	bs[0] = gen.dev.Address + 2
+	copy(bs[1:], args)
+	request := mdb.MustPacketFromBytes(bs, true)
+	return gen.dev.Tx(request, nil)
 }
