@@ -61,6 +61,13 @@ func (e *Engine) RegisterNewFunc(name string, fun func(context.Context) error) {
 	})
 }
 
+func (e *Engine) RegisterNewFuncAgr(name string, fun func(ctx context.Context, arg Arg) error) {
+	e.Register(name, FuncArg{
+		Name: name,
+		F:    fun,
+	})
+}
+
 func (e *Engine) RegisterNewSeq(name string, ds ...Doer) {
 	tx := NewSeq(name)
 	for _, d := range ds {
