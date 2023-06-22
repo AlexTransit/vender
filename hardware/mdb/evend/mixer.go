@@ -33,18 +33,21 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 
 	g.Engine.Register(m.name+".shake(?)",
 		engine.FuncArg{Name: m.name + ".shake", F: func(ctx context.Context, arg engine.Arg) (err error) {
-			// return g.Engine.Exec(ctx, m.Generic.WithRestart(m.shake(uint8(arg))))
-			err = m.shake(uint8(arg))
+			for i := 1; i <= 2; i++ {
+				if err = m.shake(uint8(arg)); err == nil {
+					if i > 1 {
+						m.dev.TeleError(fmt.Errorf("restart fix error"))
+					}
+					return
+				}
+				// FIXME тут можно добавть скрипт действий после ошибки
+				m.dev.Rst()
+				time.Sleep(5 * time.Second)
+			}
 			return err
 		}})
-
-	g.Engine.Register(m.name+".moveNoWait(?)",
-		engine.FuncArg{Name: m.name + ".moveNoWait", F: func(ctx context.Context, arg engine.Arg) error {
-			return m.mv(int8(arg))
-		}})
-
+	g.Engine.RegisterNewFuncAgr(m.name+".moveNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return m.mv(int8(arg)) })
 	g.Engine.RegisterNewFunc(m.name+".movingComplete", func(ctx context.Context) error { return m.mvComplete() })
-
 	g.Engine.Register(m.name+".move(?)", engine.FuncArg{Name: m.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
 		for i := 1; i <= 2; i++ {
 			if err = m.move(int8(arg)); err == nil {
@@ -114,7 +117,9 @@ func (m *DeviceMixer) shake(steps uint8) (err error) {
 	if err = m.Proto1PollWaitSuccess(1); err != nil {
 		return err
 	}
-	time.Sleep(time.Duration(steps-4) * 100 * time.Millisecond)
+	if steps > 4 {
+		time.Sleep(time.Duration(steps-4) * 100 * time.Millisecond)
+	}
 	return m.Proto1PollWaitSuccess(1)
 }
 
