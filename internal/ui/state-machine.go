@@ -63,6 +63,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 
 		onBootScript := ui.g.Config.Engine.OnBoot
 		if types.FirstInit() {
+			time.Sleep(3 * time.Second) // wait device init after reset
 			onBootScript = append(ui.g.Config.Engine.FirstInit, onBootScript[:]...)
 		}
 		if errs := ui.g.Engine.ExecList(ctx, "on_boot", onBootScript); len(errs) != 0 {
@@ -185,53 +186,3 @@ func replaceDefault(s, def types.UiState) types.UiState {
 	}
 	return s
 }
-
-// func filterErrors(errs []error, take func(error) bool) []error {
-// 	if len(errs) == 0 {
-// 		return nil
-// 	}
-// 	new := errs[:0]
-// 	for _, e := range errs {
-// 		if e != nil && take(e) {
-// 			new = append(new, e)
-// 		}
-// 	}
-// 	for i := len(new); i < len(errs); i++ {
-// 		errs[i] = nil
-// 	}
-// 	return new
-// }
-
-// func removeOptionalOffline(g *state.Global, errs []error) []error {
-// 	take := func(e error) bool {
-// 		if errOffline, ok := errors.Cause(e).(types.DeviceOfflineError); ok {
-// 			if devconf, err := g.GetDeviceConfig(errOffline.Device.Name()); err == nil {
-// 				return devconf.Required
-// 			}
-// 		}
-// 		return true
-// 	}
-// 	return filterErrors(errs, take)
-// }
-
-// func executeScript(ctx context.Context, onstate string, data string) {
-// 	g := state.GetGlobal(ctx)
-// 	g.Log.Debugf("execute script (%s)", onstate)
-// 	if g.Config.Engine.Profile.StateScript != "" {
-// 		cmd := exec.Command(g.Config.Engine.Profile.StateScript) //nolint:gosec
-// 		cmd.Env = []string{
-// 			fmt.Sprintf("state=%s", onstate),
-// 			fmt.Sprintf("data=%s", data),
-// 		}
-// 		g.Alive.Add(1)
-// 		go func() {
-// 			defer g.Alive.Done()
-// 			execOutput, execErr := cmd.CombinedOutput()
-// 			prettyEnv := strings.Join(cmd.Env, " ")
-// 			if execErr != nil {
-// 				execErr = errors.Annotatef(execErr, "state_script %s (%s) output=%s", cmd.Path, prettyEnv, execOutput)
-// 				g.Log.Error(execErr)
-// 			}
-// 		}()
-// 	}
-// }
