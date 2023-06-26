@@ -102,6 +102,9 @@ func initOverWriteStocks(c *engine_config.Inventory) (m map[uint32]engine_config
 
 func (inv *Inventory) InventoryLoad() {
 	f, _ := os.Open(inv.file)
+	if f == nil {
+		return
+	}
 	stat, _ := f.Stat()
 	defer f.Close()
 	td := make([]int32, stat.Size()/4)
