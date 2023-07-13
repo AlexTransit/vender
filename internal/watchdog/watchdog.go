@@ -14,7 +14,17 @@ func WatchDogEnable() {
 	if wdTics == "0" {
 		return
 	}
-	f, _ := os.Create(heartBeatFile)
+	// cmd := exec.Command("/usr/bin/sudo", "/usr/bin/touch", heartBeatFile, "&", "/usr/bin/sudo", "/usr/bin/chown", "vmc:vmc", heartBeatFile)
+	// if err := cmd.Run(); err != nil {
+	// 	types.Log.Errorf("cant creat heartBeatFile (%v)", err)
+	// }
+	// cmd = exec.Command("/usr/bin/sudo", "/usr/bin/chown", "vmc:vmc", heartBeatFile)
+	// if err := cmd.Run(); err != nil {
+	// 	types.Log.Errorf("cant change heartBeatFile owner (%v)", err)
+	// }
+
+	f, err := os.Create(heartBeatFile)
+	_ = err
 	if _, err := f.WriteString(wdTics); err != nil {
 		types.Log.Errorf("error create watchdog heartBeatFile (%v)", err)
 		return
