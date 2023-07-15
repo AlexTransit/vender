@@ -34,10 +34,7 @@ func WatchDogEnable() {
 
 func WatchDogDisable() {
 	types.Log.Notice("watchdog disabled.")
-	err := os.Remove(heartBeatFile)
-	if err != nil {
-		types.Log.Errorf("error disable watchdog. can`t delete heartBeatFile (%v)", err)
-	}
+	_ = os.Remove(heartBeatFile)
 }
 
 func WatchDogSetTics(tics int) {
