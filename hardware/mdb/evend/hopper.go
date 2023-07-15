@@ -39,7 +39,7 @@ func (devHop *DeviceMultiHopper) init(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	devHop.Generic.Init(ctx, addr, "multihopper", proto1)
 
-	for i := uint8(1); i <= 8; i++ {
+	for i := uint8(1); i <= 10; i++ {
 		do := newHopperRun(
 			&devHop.Generic,
 			fmt.Sprintf("%s%d.run", devHop.name, i),

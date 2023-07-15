@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
@@ -102,6 +103,9 @@ func initOverWriteStocks(c *engine_config.Inventory) (m map[uint32]engine_config
 
 func (inv *Inventory) InventoryLoad() {
 	f, _ := os.Open(inv.file)
+	if f == nil {
+		return
+	}
 	stat, _ := f.Stat()
 	defer f.Close()
 	td := make([]int32, stat.Size()/4)
@@ -119,12 +123,22 @@ func (inv *Inventory) InventorySave() error {
 		td[int32(cl.Code-1)] = int32(cl.value)
 	}
 	binary.Write(buf, binary.BigEndian, td)
-
-	return os.WriteFile(inv.file, buf.Bytes(), 0600)
+	err := os.WriteFile(inv.file, buf.Bytes(), 0600)
+	// check writen data
+	go func(memoryValue []int32) {
+		time.Sleep(5 * time.Second)
+		f, _ := os.Open(inv.file)
+		// stat, _ := f.Stat()
+		storedValue := make([]int32, 10)
+		binary.Read(f, binary.BigEndian, &storedValue)
+		for i, v := range storedValue {
+			if memoryValue[i] != storedValue[i] {
+				inv.log.Errorf("error stored stock inventory:%d memory value(%v) stored value(%v)", i, memoryValue[i], v)
+			}
+		}
+	}(td)
+	return err
 }
-
-// func (inv *Inventory) EnableAll()  { inv.Iter(func(s *Stock) { s.Enable() }) }
-// func (inv *Inventory) DisableAll() { inv.Iter(func(s *Stock) { s.Disable() }) }
 
 func (inv *Inventory) Get(name string) (*Stock, error) {
 	inv.mu.RLock()
@@ -134,15 +148,6 @@ func (inv *Inventory) Get(name string) (*Stock, error) {
 	}
 	return nil, errors.Errorf("stock=%s is not registered", name)
 }
-
-// func (inv *Inventory) MustGet(f interface{ Fatal(...interface{}) }, name string) *Stock {
-// 	s, err := inv.Get(name)
-// 	if err != nil {
-// 		f.Fatal(err)
-// 		return nil
-// 	}
-// 	return s
-// }
 
 func (inv *Inventory) Iter(fun func(s *Stock)) {
 	inv.mu.Lock()
