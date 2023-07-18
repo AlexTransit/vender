@@ -43,7 +43,6 @@ func (ui *UI) GetUiState() uint32 {
 	return 0
 }
 func (ui *UI) Init(ctx context.Context) error {
-	// func (ui *types.UI) Init(ctx context.Context) error {
 	ui.g = state.GetGlobal(ctx)
 	ui.config = &ui.g.Config.UI
 	ui.setState(types.StateBoot)
@@ -51,11 +50,6 @@ func (ui *UI) Init(ctx context.Context) error {
 	// ui.menu = make(Menu)
 	types.UI.Menu = make(map[string]types.MenuItemType)
 	FillMenu(ctx)
-	// if err := ui.menu.Init(ctx); err != nil {
-	// 	err = errors.Annotate(err, "ui.menu.Init")
-	// 	return err
-	// }
-	// ui.g.Log.Debugf("menu len=%d", len(ui.menu))
 	ui.g.Log.Debugf("menu len=%d", len(types.UI.Menu))
 
 	ui.display = ui.g.MustTextDisplay()
