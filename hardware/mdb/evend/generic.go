@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"time"
 
@@ -338,6 +339,25 @@ func (gen *Generic) Proto1PollWaitSuccess(timeout uint8) (err error) {
 	}
 	return err
 }
+func (gen *Generic) Proto2PollWaitSuccess(timeout uint8) (err error) {
+	response := mdb.Packet{}
+	for timeout > 0 {
+		timeout--
+		time.Sleep(200 * time.Millisecond)
+		_ = gen.dev.Tx(gen.dev.PacketPoll, &response)
+		rb := response.Bytes()
+		if len(rb) == 0 {
+			return err
+		}
+		if rb[0]&0x08 == 0x08 {
+			err = errors.Join(err, fmt.Errorf("device %s error %v", gen.name, gen.ReadError_proto2()))
+		}
+		if rb[0]&0x50 == 0x50 { // executing
+			continue
+		}
+	}
+	return nil
+}
 
 func (gen *Generic) Command(args []byte) error {
 	bs := make([]byte, len(args)+1)
@@ -345,4 +365,12 @@ func (gen *Generic) Command(args []byte) error {
 	copy(bs[1:], args)
 	request := mdb.MustPacketFromBytes(bs, true)
 	return gen.dev.Tx(request, nil)
+}
+
+func (gen *Generic) ReadError_proto2() (errb byte) {
+	bs := []byte{gen.dev.Address + 4, 2}
+	request := mdb.MustPacketFromBytes(bs, true)
+	response := mdb.Packet{}
+	gen.dev.Tx(request, &response)
+	return response.Bytes()[0]
 }
