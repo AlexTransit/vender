@@ -51,8 +51,9 @@ func (d *DeviceEspresso) cmd(byteCmd byte) error {
 
 func (d *DeviceEspresso) grindNoWait() error {
 	d.Proto2PollWaitSuccess(5)
-	d.cmd(0x05)
-	return d.cmd(0x01)
+	d.Command([]byte{0x01})
+	d.Command([]byte{0x05})
+	return d.Command([]byte{0x05})
 }
 
 func (d *DeviceEspresso) grind() (err error) {
