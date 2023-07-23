@@ -26,7 +26,7 @@ func (ui *UI) linesCreate(l1 *string, l2 *string, tuneScreen *bool) {
 	*tuneScreen = false
 }
 
-func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *string, tuneScreen *bool) types.UiState {
+func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *string, tuneScreen *bool) (nextState types.UiState) {
 	if input.IsMoneyAbort(&e.Input) {
 		ui.g.Log.Infof("money abort event.")
 		credit := ui.ms.GetCredit()
@@ -44,13 +44,13 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 			ui.cancelQRPay(tele_api.State_Client)
 			return types.StateFrontEnd
 		}
+		if len(ui.inputBuf) >= 1 {
+			ui.inputBuf = ui.inputBuf[:len(ui.inputBuf)-1]
+		}
 		if len(ui.inputBuf) == 0 {
 			if ui.ms.GetCredit() == 0 {
 				return types.StateFrontEnd
 			}
-		}
-		if len(ui.inputBuf) >= 1 {
-			ui.inputBuf = ui.inputBuf[:len(ui.inputBuf)-1]
 		}
 		ui.linesCreate(l1, l2, tuneScreen)
 		return types.StateDoesNotChange

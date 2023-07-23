@@ -88,7 +88,7 @@ func (m *DeviceMixer) move(position int8) (err error) {
 }
 
 func (m *DeviceMixer) mvComplete() (err error) {
-	err = m.Proto1PollWaitSuccess(100) // FIXME timeout to config
+	err = m.WaitSuccess(100, true) // FIXME timeout to config
 	if err == nil {
 		m.cPos = m.nPos
 		m.dev.Action = ""
@@ -99,14 +99,15 @@ func (m *DeviceMixer) mvComplete() (err error) {
 func (m *DeviceMixer) mv(position int8) (err error) {
 	m.cPos = -1
 	m.nPos = position
-	return m.Command([]byte{0x03, byte(position), 0x64})
+	// return m.Command([]byte{0x03, byte(position), 0x64})
+	return m.Command(0x03, byte(position), 0x64)
 }
 
 func (m *DeviceMixer) sh(steps uint8) (err error) {
-	if err = m.Command([]byte{0x01, byte(steps), m.shakeSpeed}); err != nil {
+	if err = m.Command(0x01, byte(steps), m.shakeSpeed); err != nil {
 		return err
 	}
-	return m.Proto1PollWaitSuccess(1)
+	return m.WaitSuccess(1, false)
 }
 
 // 1step = 100ms
@@ -114,13 +115,13 @@ func (m *DeviceMixer) shake(steps uint8) (err error) {
 	if err = m.sh(steps); err != nil {
 		return
 	}
-	if err = m.Proto1PollWaitSuccess(1); err != nil {
+	if err = m.Proto1PollWaitSuccess(1, false); err != nil {
 		return err
 	}
 	if steps > 4 {
 		time.Sleep(time.Duration(steps-4) * 100 * time.Millisecond)
 	}
-	return m.Proto1PollWaitSuccess(1)
+	return m.Proto1PollWaitSuccess(1, false)
 }
 
 // --------------------------------------------------------

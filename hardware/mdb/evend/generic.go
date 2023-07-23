@@ -310,10 +310,10 @@ func (gen *Generic) WithRestart(d engine.Doer) *engine.RestartError {
 //-------------------------------------------------------------------------
 
 // timeout count every 200 ms
-func (gen *Generic) Proto1PollWaitSuccess(timeout uint8) (err error) {
+func (gen *Generic) Proto1PollWaitSuccess(count uint8, timeOut bool) (err error) {
 	response := mdb.Packet{}
-	for timeout > 0 {
-		timeout--
+	for count > 0 {
+		count--
 		time.Sleep(200 * time.Millisecond)
 		_ = gen.dev.Tx(gen.dev.PacketPoll, &response)
 		rb := response.Bytes()
@@ -334,15 +334,17 @@ func (gen *Generic) Proto1PollWaitSuccess(timeout uint8) (err error) {
 			gen.dev.TeleError(e)
 		}
 	}
-	if gen.dev.Action != "" {
-		err = fmt.Errorf("execute command (%v) timeout", gen.dev.Action)
+	if timeOut {
+		if gen.dev.Action != "" {
+			err = fmt.Errorf("execute command (%v) timeout", gen.dev.Action)
+		}
 	}
 	return err
 }
-func (gen *Generic) Proto2PollWaitSuccess(timeout uint8) (err error) {
+func (gen *Generic) Proto2PollWaitSuccess(count uint8, timeOut bool) (err error) {
 	response := mdb.Packet{}
-	for timeout > 0 {
-		timeout--
+	for count > 0 {
+		count--
 		time.Sleep(200 * time.Millisecond)
 		_ = gen.dev.Tx(gen.dev.PacketPoll, &response)
 		rb := response.Bytes()
@@ -351,20 +353,48 @@ func (gen *Generic) Proto2PollWaitSuccess(timeout uint8) (err error) {
 		}
 		if rb[0]&0x08 == 0x08 {
 			err = errors.Join(err, fmt.Errorf("device %s error %v", gen.name, gen.ReadError_proto2()))
+			gen.dev.TeleError(err)
 		}
 		if rb[0]&0x50 == 0x50 { // executing
 			continue
 		}
 	}
+	if timeOut {
+		return errors.New("time out pool")
+	}
 	return nil
 }
 
-func (gen *Generic) Command(args []byte) error {
+func (gen *Generic) WaitSuccess(count uint8, timeOut bool) error {
+	if gen.proto == proto1 {
+		return gen.Proto1PollWaitSuccess(count, timeOut)
+	}
+	return gen.Proto2PollWaitSuccess(count, timeOut)
+}
+
+func (gen *Generic) CommandNoWait(cmd ...byte) (err error) {
+	if err = gen.Command(cmd...); err != nil {
+		return
+	}
+	return gen.WaitSuccess(1, false)
+}
+
+func (gen *Generic) CommandWaitSuccess(count uint8, cmd ...byte) (err error) {
+	if err = gen.Command(cmd...); err != nil {
+		return
+	}
+	return gen.WaitSuccess(count, true)
+}
+
+func (gen *Generic) Command(args ...byte) (err error) {
 	bs := make([]byte, len(args)+1)
 	bs[0] = gen.dev.Address + 2
 	copy(bs[1:], args)
 	request := mdb.MustPacketFromBytes(bs, true)
-	return gen.dev.Tx(request, nil)
+	if e := gen.dev.Tx(request, nil); e != nil {
+		err = fmt.Errorf("%v send command (%v) error(%v) ", gen.name, args, err)
+	}
+	return err
 }
 
 func (gen *Generic) ReadError_proto2() (errb byte) {
