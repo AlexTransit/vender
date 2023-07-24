@@ -67,7 +67,13 @@ func (c *DeviceCup) dispense() error {
 	// c.dev.Log.Info("cup dispense")
 	// return c.CommandNoWait(100, 0x01)
 }
-func (c *DeviceCup) ensure() error { return c.CommandWaitSuccess(c.timeout, 0x04) }
+func (c *DeviceCup) ensure() error {
+	c.WaitSuccess(5, false)
+	c.Command(0x04)
+	c.WaitSuccess(5, false)
+	return nil
+	// return c.CommandWaitSuccess(c.timeout, 0x04)
+}
 
 // sheduler front light
 
