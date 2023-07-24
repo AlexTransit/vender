@@ -14,14 +14,14 @@ const defaultEspressoTimeout = 30
 type DeviceEspresso struct {
 	Generic
 
-	timeout uint8
+	timeout uint16
 }
 
 func (d *DeviceEspresso) init(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
-	d.timeout = uint8(helpers.IntConfigDefault(g.Config.Hardware.Evend.Espresso.TimeoutSec, defaultEspressoTimeout)) * 5 //every 200 ms
+	d.timeout = uint16(helpers.IntConfigDefault(g.Config.Hardware.Evend.Espresso.TimeoutSec, defaultEspressoTimeout)) * 5 //every 200 ms
 	d.Generic.Init(ctx, 0xe8, "espresso", proto2)
-	g.Engine.RegisterNewFunc(d.name+".waitDone", func(ctx context.Context) error { return d.Proto2PollWaitSuccess(d.timeout, true) })
+	g.Engine.RegisterNewFunc(d.name+".waitDone", func(ctx context.Context) error { return d.Proto2PollWaitSuccess(d.timeout, true, false) })
 	g.Engine.RegisterNewFunc(d.name+".grindNoWait", func(ctx context.Context) error { return d.grindNoWait() })
 	g.Engine.RegisterNewFunc(d.name+".grind", func(ctx context.Context) error { return d.grind() })
 	g.Engine.RegisterNewFunc(d.name+".pressNoWait", func(ctx context.Context) error { return d.pressNoWait() })
