@@ -15,7 +15,7 @@ const DefaultTimeout = 60
 
 type DeviceCup struct {
 	Generic
-	timeout      uint8
+	timeout      uint16
 	Light        bool
 	lightShedule struct {
 		weekDay [7]worktime
@@ -31,8 +31,9 @@ func (c *DeviceCup) init(ctx context.Context) error {
 	c.Generic.Init(ctx, 0xe0, "cup", proto2)
 	g := state.GetGlobal(ctx)
 	c.initLightSheduler(g.Config.UI.Front.LightShedule)
-	c.timeout = uint8(helpers.IntConfigDefault(g.Config.Hardware.Evend.Cup.DispenseTimeoutSec, DefaultTimeout)) * 5
+	c.timeout = uint16(helpers.IntConfigDefault(g.Config.Hardware.Evend.Cup.TimeoutSec, DefaultTimeout)) * 5
 	g.Engine.RegisterNewFunc(c.name+".ensure", func(ctx context.Context) error { return c.ensure() })
+	g.Engine.RegisterNewFunc(c.name+".wait_complete", func(ctx context.Context) error { return c.WaitSuccess(c.timeout, true) })
 	g.Engine.RegisterNewFunc(c.name+".dispense", func(ctx context.Context) error { return c.dispense() })
 	g.Engine.RegisterNewFunc(c.name+".light_on", func(ctx context.Context) error { return c.lightOn() })
 	g.Engine.RegisterNewFunc(c.name+".light_off", func(ctx context.Context) error { return c.lightOff() })
@@ -50,29 +51,31 @@ func (c *DeviceCup) init(ctx context.Context) error {
 }
 
 func (c *DeviceCup) lightOn() error {
-	c.dev.Log.Info("light on")
+	if !c.Light {
+		c.dev.Log.Info("light on")
+	}
+	c.Command(0x02)
 	c.Light = true
-	return c.CommandNoWait(5, 0x02)
+	return c.WaitSuccess(c.timeout, false)
 }
+
 func (c *DeviceCup) lightOff() error {
-	c.dev.Log.Info("light off")
+	if c.Light {
+		c.dev.Log.Info("light off")
+	}
 	c.Light = false
-	return c.CommandNoWait(5, 0x03)
+	c.Command(0x03)
+	return c.WaitSuccess(c.timeout, false)
 }
+
 func (c *DeviceCup) dispense() error {
-	c.WaitSuccess(5, false)
-	c.Command(0x01)
-	c.WaitSuccess(20, false)
-	return nil
-	// c.dev.Log.Info("cup dispense")
-	// return c.CommandNoWait(100, 0x01)
+	defer c.dev.Log.Info("cup dispensed")
+	return c.CommandWaitExecute(c.timeout, 0x01)
 }
+
 func (c *DeviceCup) ensure() error {
-	c.WaitSuccess(5, false)
 	c.Command(0x04)
-	c.WaitSuccess(5, false)
-	return nil
-	// return c.CommandWaitSuccess(c.timeout, 0x04)
+	return c.WaitSuccess(c.timeout, false)
 }
 
 // sheduler front light

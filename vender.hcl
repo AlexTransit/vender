@@ -82,9 +82,7 @@ hardware {
   evend {
 
     cup {
-      assert_busy_delay_ms = 30
-      dispense_timeout_sec = 10
-      ensure_timeout_sec   = 70
+      timeout_sec = 45
     }
 
     elevator {
