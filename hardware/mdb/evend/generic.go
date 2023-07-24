@@ -310,7 +310,7 @@ func (gen *Generic) WithRestart(d engine.Doer) *engine.RestartError {
 //-------------------------------------------------------------------------
 
 // timeout count every 200 ms
-func (gen *Generic) Proto1PollWaitSuccess(count uint8, timeOut bool) (err error) {
+func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error) {
 	response := mdb.Packet{}
 	for count > 0 {
 		count--
@@ -341,8 +341,9 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint8, timeOut bool) (err error)
 	}
 	return err
 }
-func (gen *Generic) Proto2PollWaitSuccess(count uint8, timeOut bool) (err error) {
+func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool, waitExetute bool) (err error) {
 	response := mdb.Packet{}
+	var needReset bool
 	for count > 0 {
 		count--
 		time.Sleep(200 * time.Millisecond)
@@ -355,9 +356,19 @@ func (gen *Generic) Proto2PollWaitSuccess(count uint8, timeOut bool) (err error)
 			err = errors.Join(err, fmt.Errorf("device %s error %v", gen.name, gen.ReadError_proto2()))
 			gen.dev.TeleError(err)
 		}
+		if rb[0]&0x20 == 0x20 {
+			needReset = true
+		}
 		if rb[0]&0x50 == 0x50 { // executing
+			if waitExetute {
+				return nil
+			}
 			continue
 		}
+	}
+	if needReset {
+		gen.dev.Rst()
+		gen.dev.Log.Errorf("device %v reseted", gen.dev.Name())
 	}
 	if timeOut {
 		return errors.New("time out pool")
@@ -365,11 +376,11 @@ func (gen *Generic) Proto2PollWaitSuccess(count uint8, timeOut bool) (err error)
 	return nil
 }
 
-func (gen *Generic) WaitSuccess(count uint8, timeOut bool) error {
+func (gen *Generic) WaitSuccess(count uint16, timeOut bool) error {
 	if gen.proto == proto1 {
 		return gen.Proto1PollWaitSuccess(count, timeOut)
 	}
-	return gen.Proto2PollWaitSuccess(count, timeOut)
+	return gen.Proto2PollWaitSuccess(count, timeOut, false)
 }
 
 func (gen *Generic) CommandNoWait(cmd ...byte) (err error) {
@@ -379,11 +390,21 @@ func (gen *Generic) CommandNoWait(cmd ...byte) (err error) {
 	return gen.WaitSuccess(5, false)
 }
 
-func (gen *Generic) CommandWaitSuccess(count uint8, cmd ...byte) (err error) {
+func (gen *Generic) CommandWaitSuccess(count uint16, cmd ...byte) (err error) {
 	if err = gen.Command(cmd...); err != nil {
 		return
 	}
 	return gen.WaitSuccess(count, true)
+}
+
+func (gen *Generic) CommandWaitExecute(count uint16, cmd ...byte) (err error) {
+	if gen.proto != proto2 {
+		return errors.New("proto1 not support")
+	}
+	if err = gen.Command(cmd...); err != nil {
+		return
+	}
+	return gen.Proto2PollWaitSuccess(count, true, true)
 }
 
 func (gen *Generic) Command(args ...byte) (err error) {

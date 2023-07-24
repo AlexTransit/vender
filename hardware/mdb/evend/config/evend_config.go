@@ -4,9 +4,7 @@ package evend_config
 
 type Config struct { //nolint:maligned
 	Cup struct { //nolint:maligned
-		AssertBusyDelayMs  int `hcl:"assert_busy_delay_ms"`
-		DispenseTimeoutSec int `hcl:"dispense_timeout_sec"`
-		EnsureTimeoutSec   int `hcl:"ensure_timeout_sec"`
+		TimeoutSec int `hcl:"timeout_sec"`
 	} `hcl:"cup"`
 	Elevator struct { //nolint:maligned
 		KeepaliveMs    int `hcl:"keepalive_ms"`
