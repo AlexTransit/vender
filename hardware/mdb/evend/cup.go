@@ -11,7 +11,7 @@ import (
 	"github.com/juju/errors"
 )
 
-const DefaultTimeout = 30
+const DefaultTimeout = 60
 
 type DeviceCup struct {
 	Generic
@@ -31,7 +31,7 @@ func (c *DeviceCup) init(ctx context.Context) error {
 	c.Generic.Init(ctx, 0xe0, "cup", proto2)
 	g := state.GetGlobal(ctx)
 	c.initLightSheduler(g.Config.UI.Front.LightShedule)
-	c.timeout = uint8(helpers.IntConfigDefault(g.Config.Hardware.Evend.Cup.DispenseTimeoutSec, 10)) * 5
+	c.timeout = uint8(helpers.IntConfigDefault(g.Config.Hardware.Evend.Cup.DispenseTimeoutSec, DefaultTimeout)) * 5
 	g.Engine.RegisterNewFunc(c.name+".ensure", func(ctx context.Context) error { return c.ensure() })
 	g.Engine.RegisterNewFunc(c.name+".dispense", func(ctx context.Context) error { return c.dispense() })
 	g.Engine.RegisterNewFunc(c.name+".light_on", func(ctx context.Context) error { return c.lightOn() })
