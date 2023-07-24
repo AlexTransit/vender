@@ -60,8 +60,12 @@ func (c *DeviceCup) lightOff() error {
 	return c.CommandNoWait(5, 0x03)
 }
 func (c *DeviceCup) dispense() error {
-	c.dev.Log.Info("cup dispense")
-	return c.CommandWaitSuccess(c.timeout, 0x01)
+	c.WaitSuccess(5, false)
+	c.Command(0x01)
+	c.WaitSuccess(20, false)
+	return nil
+	// c.dev.Log.Info("cup dispense")
+	// return c.CommandNoWait(100, 0x01)
 }
 func (c *DeviceCup) ensure() error { return c.CommandWaitSuccess(c.timeout, 0x04) }
 
