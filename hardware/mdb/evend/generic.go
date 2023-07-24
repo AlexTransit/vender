@@ -376,7 +376,7 @@ func (gen *Generic) CommandNoWait(cmd ...byte) (err error) {
 	if err = gen.Command(cmd...); err != nil {
 		return
 	}
-	return gen.WaitSuccess(1, false)
+	return gen.WaitSuccess(5, false)
 }
 
 func (gen *Generic) CommandWaitSuccess(count uint8, cmd ...byte) (err error) {
