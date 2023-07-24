@@ -22,9 +22,6 @@ type DeviceCup struct {
 	}
 }
 
-//	type lightShedule struct {
-//		weekDay [7]worktime
-//	}
 type worktime struct {
 	BeginOfWork time.Duration
 	EndOfWork   time.Duration
@@ -32,7 +29,6 @@ type worktime struct {
 
 func (c *DeviceCup) init(ctx context.Context) error {
 	c.Generic.Init(ctx, 0xe0, "cup", proto2)
-
 	g := state.GetGlobal(ctx)
 	c.initLightSheduler(g.Config.UI.Front.LightShedule)
 	c.timeout = uint8(helpers.IntConfigDefault(g.Config.Hardware.Evend.Cup.DispenseTimeoutSec, 10)) * 5
@@ -40,6 +36,7 @@ func (c *DeviceCup) init(ctx context.Context) error {
 	g.Engine.RegisterNewFunc(c.name+".dispense", func(ctx context.Context) error { return c.dispense() })
 	g.Engine.RegisterNewFunc(c.name+".light_on", func(ctx context.Context) error { return c.lightOn() })
 	g.Engine.RegisterNewFunc(c.name+".light_off", func(ctx context.Context) error { return c.lightOff() })
+	g.Engine.RegisterNewFunc(c.name+".reset", func(ctx context.Context) error { return c.dev.Rst() })
 	g.Engine.RegisterNewFunc(c.name+".light_on_schedule", func(ctx context.Context) error {
 		if !c.lightShouldWork() {
 			if c.Light {
@@ -48,19 +45,19 @@ func (c *DeviceCup) init(ctx context.Context) error {
 		}
 		return c.lightOn()
 	})
-
 	err := c.dev.Rst()
 	return errors.Annotate(err, c.name+".init")
 }
 
 func (c *DeviceCup) lightOn() error {
+	c.dev.Log.Info("light on")
 	c.Light = true
-	return c.CommandWaitSuccess(5, 0x02)
+	return c.CommandNoWait(5, 0x02)
 }
 func (c *DeviceCup) lightOff() error {
-	c.dev.Log.Info("light on")
+	c.dev.Log.Info("light off")
 	c.Light = false
-	return c.CommandWaitSuccess(5, 0x03)
+	return c.CommandNoWait(5, 0x03)
 }
 func (c *DeviceCup) dispense() error {
 	c.dev.Log.Info("cup dispense")
@@ -106,7 +103,6 @@ func (c *DeviceCup) initLightSheduler(sh string) {
 			}
 		}
 	}
-
 }
 func (s *DeviceCup) writeShedule(w int, v []string) {
 	s.lightShedule.weekDay[w].BeginOfWork = textTimeToDudation(v[3], v[4])
@@ -118,15 +114,6 @@ func textTimeToDudation(hours string, minutes string) time.Duration {
 	m, _ := strconv.Atoi(minutes)
 	return time.Hour*time.Duration(h) + time.Minute*time.Duration(m)
 }
-
-// func (s *DeviceCup) textTimeToDudation(week int, v []string) {
-// 	h, _ := strconv.Atoi(v[3])
-// 	m, _ := strconv.Atoi(v[4])
-// 	s.lightShedule.weekDay[week].BeginOfWork = time.Hour*time.Duration(h) + time.Minute*time.Duration(m)
-// 	h, _ = strconv.Atoi(v[5])
-// 	m, _ = strconv.Atoi(v[6])
-// 	s.lightShedule.weekDay[week].EndOfWork = time.Hour*time.Duration(h) + time.Minute*time.Duration(m)
-// }
 
 func (s *DeviceCup) lightShouldWork() bool {
 	t := time.Now()
