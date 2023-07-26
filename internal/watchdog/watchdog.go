@@ -28,9 +28,12 @@ func WatchDogEnable() {
 	b, err := os.ReadFile(heartBeatFile)
 	hbfd := string(b)
 	if err != nil || hbfd != wdTics {
-		types.Log.Errorf("error check watchdog heartBeatFile read data:%v error:%v", hbfd, err)
+		types.Log.Errorf("error check watchdog heartBeatFile read data(%v) error(%v)", hbfd, err)
 		go func() {
 			time.Sleep(1 * time.Second)
+			if e := os.Remove(heartBeatFile); e != nil {
+				types.Log.Errorf("error delete incorect heartBeat File. error(%v)", e)
+			}
 			createWatchDogFile()
 		}()
 	}
