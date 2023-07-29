@@ -95,7 +95,7 @@ func checkUarterTx(t testing.TB, u mdb.Uarter, send string, bw *bytes.Buffer, ex
 	buf = buf[:n]
 	if expectErr != nil {
 		if err.Error() != expectErr.Error() {
-			t.Fatalf("error=%v expected=%v stack:\n%s", err, expectErr, errors.ErrorStack(err))
+			t.Fatalf("error=%v expected=%v stack(%s)", err, expectErr, errors.ErrorStack(err))
 		}
 	} else {
 		if err != nil {
