@@ -43,6 +43,7 @@ func (c *DeviceCup) init(ctx context.Context) error {
 			if c.Light {
 				return c.lightOff()
 			}
+			return nil
 		}
 		return c.lightOn()
 	})
@@ -89,7 +90,7 @@ func (c *DeviceCup) ensure() error {
 // 3,4 - begin hours, minutes
 // 5,6 - end hours, minutes
 func (c *DeviceCup) initLightSheduler(sh string) {
-	wd := `([0-6]|\*)[-]?([0-6])? ([01][0-9]|2[0-3]):([0-5][0-9])-([01][0-9]|2[0-3]):([0-5][0-9])`
+	wd := `([0-6]|\*)[-]?([0-6])? ([01]?[0-9]|2[0-3]):([0-5][0-9])-([01]?[0-9]|2[0-3]):([0-5][0-9])`
 	cmd := regexp.MustCompile(wd)
 
 	parts := cmd.FindAllStringSubmatch(sh, 7)
