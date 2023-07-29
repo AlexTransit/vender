@@ -100,7 +100,7 @@ func (g *Global) ShowPicture(pict Pic) {
 }
 
 func (g *Global) VmcStop(ctx context.Context) {
-	if types.VMC.UiState != 5 { // FixMe состояние ожидания
+	if types.VMC.UiState != uint32(types.StateFrontSelect) {
 		types.InitRequared()
 	}
 	g.VmcStopWOInitRequared(ctx)
@@ -379,7 +379,7 @@ func VmcLock(ctx context.Context) {
 	g.Log.Info("Vmc Locked")
 	types.VMC.Lock = true
 	types.VMC.EvendKeyboardInput(false)
-	if types.VMC.UiState == 5 || types.VMC.UiState == 6 {
+	if types.VMC.UiState == uint32(types.StateFrontSelect) || types.VMC.UiState == uint32(types.StatePrepare) {
 		g.LockCh <- struct{}{}
 	}
 }
@@ -389,7 +389,7 @@ func VmcUnLock(ctx context.Context) {
 	g.Log.Info("Vmc UnLocked")
 	types.VMC.Lock = false
 	types.VMC.EvendKeyboardInput(true)
-	if types.VMC.UiState == 22 {
+	if types.VMC.UiState == uint32(types.StateFrontLock) {
 		g.LockCh <- struct{}{}
 	}
 }

@@ -295,7 +295,7 @@ func (ui *UI) onFrontLock() types.UiState {
 	case types.EventBroken:
 		return types.StateBroken
 	case types.EventFrontLock:
-		if types.VMC.UiState == 2 { // broken. fix this
+		if types.VMC.UiState == uint32(types.StateBroken) {
 			return types.StateBroken
 		}
 		types.VMC.Lock = false
