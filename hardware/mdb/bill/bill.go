@@ -89,7 +89,7 @@ func (bv *BillValidator) init(ctx context.Context) error {
 	if config.ScalingFactor != 0 {
 		bv.configScaling = uint16(config.ScalingFactor)
 	}
-	bv.billCmd = make(chan BillCommand, 2)
+	bv.billCmd = make(chan BillCommand, 1)
 	g.Engine.RegisterNewFunc(
 		"bill.reset",
 		func(ctx context.Context) error {
@@ -463,6 +463,10 @@ func (bv *BillValidator) escrowOutEvent(err error, nominal currency.Nominal) mon
 // останавливаем по времени.
 func (bv *BillValidator) BillRun(alive *alive.Alive, returnEvent func(money.ValidatorEvent)) {
 	bv.pollmu.Lock()
+	var stopRun <-chan struct{}
+	if alive != nil {
+		stopRun = alive.StopChan()
+	}
 	defer func() {
 		bv.pollmu.Unlock()
 		alive.Done()
@@ -486,21 +490,13 @@ func (bv *BillValidator) BillRun(alive *alive.Alive, returnEvent func(money.Vali
 	again := true
 	for again {
 		select {
+		case <-stopRun:
+			bv.billStop(returnEvent)
+			again = false
 		case cmd = <-bv.billCmd:
 			switch cmd {
 			case Stop:
-				bv.disableAccept()
-				if bv.EscrowBill > 0 {
-					bv.escrowReject()
-					for i := 0; i < 5*20; i++ {
-						_ = bv.pollF(returnEvent)
-						if bv.billstate == ready {
-							break
-						}
-						time.Sleep(200 * time.Millisecond)
-					}
-				}
-				bv.setState(WaitConfigure)
+				bv.billStop(returnEvent)
 				again = false
 			case Accept:
 				returnEvent(bv.escrowAccept())
@@ -518,6 +514,21 @@ func (bv *BillValidator) BillRun(alive *alive.Alive, returnEvent func(money.Vali
 		}
 	}
 	refreshTimer.Stop()
+}
+
+func (bv *BillValidator) billStop(returnEvent func(money.ValidatorEvent)) {
+	bv.disableAccept()
+	if bv.EscrowBill > 0 {
+		bv.escrowReject()
+		for i := 0; i < 5*20; i++ {
+			_ = bv.pollF(returnEvent)
+			if bv.billstate == ready {
+				break
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
+	bv.setState(WaitConfigure)
 }
 
 func (bv *BillValidator) setEscrowBill(n currency.Nominal) {
