@@ -62,7 +62,7 @@ func SaveAndShowDoError(li []string, err error) {
 	for _, val := range li {
 		d = d + val + "\n"
 	}
-	d = d + fmt.Sprintf("err: %v\n", err)
+	d = d + fmt.Sprintf("err: %v ", err)
 	fmt.Printf("------------------- begin \n%v\n------------------- end\n", d)
 
 	f, _ := os.Create(sf)

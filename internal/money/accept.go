@@ -29,12 +29,6 @@ func (ms *MoneySystem) SetAcceptMax(ctx context.Context, limit currency.Amount) 
 
 func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amount, mainAlive *alive.Alive, out chan<- types.Event) error {
 	g := state.GetGlobal(ctx)
-	// coinmax := currency.Amount(1000)
-	// g.Engine.Exec(ctx, ms.coin.AcceptMax(coinmax))
-	var stopAccept <-chan struct{}
-	if mainAlive != nil {
-		stopAccept = mainAlive.StopChan()
-	}
 	if ms.bill.GetState() != bill.Broken {
 		go ms.bill.BillRun(mainAlive, func(e money.ValidatorEvent) {
 			if e.Err != nil {
@@ -94,7 +88,5 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 		go func() { out <- event }()
 		// out <- event
 	})
-	<-stopAccept
-	ms.bill.SendCommand(bill.Stop)
 	return nil
 }
