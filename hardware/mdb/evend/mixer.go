@@ -46,7 +46,9 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 			}
 			return err
 		}})
-	g.Engine.RegisterNewFuncAgr(m.name+".moveNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return m.mv(int8(arg)) })
+	g.Engine.RegisterNewFuncAgr(m.name+".moveNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return m.moveNoWait(int8(arg)) })
+	g.Engine.RegisterNewFuncAgr(m.name+".shakeNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return m.shakeNoWait(uint8(arg)) })
+	g.Engine.RegisterNewFuncAgr(m.name+".WaitSuccess(?)", func(ctx context.Context, arg engine.Arg) error { return m.WaitSuccess(uint16(arg*5+5), true) })
 	g.Engine.RegisterNewFunc(m.name+".movingComplete", func(ctx context.Context) error { return m.mvComplete() })
 	g.Engine.Register(m.name+".move(?)", engine.FuncArg{Name: m.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
 		for i := 1; i <= 2; i++ {
@@ -81,7 +83,7 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 
 func (m *DeviceMixer) move(position int8) (err error) {
 	m.dev.Action = fmt.Sprintf("mixer move %d=>%d", m.cPos, position)
-	if err = m.mv(position); err != nil {
+	if err = m.moveNoWait(position); err != nil {
 		return fmt.Errorf("send command(%v) error(%v)", m.dev.Action, err)
 	}
 	return m.mvComplete()
@@ -96,14 +98,14 @@ func (m *DeviceMixer) mvComplete() (err error) {
 	return err
 }
 
-func (m *DeviceMixer) mv(position int8) (err error) {
+func (m *DeviceMixer) moveNoWait(position int8) (err error) {
 	m.cPos = -1
 	m.nPos = position
 	// return m.Command([]byte{0x03, byte(position), 0x64})
 	return m.Command(0x03, byte(position), 0x64)
 }
 
-func (m *DeviceMixer) sh(steps uint8) (err error) {
+func (m *DeviceMixer) shakeNoWait(steps uint8) (err error) {
 	if err = m.Command(0x01, byte(steps), m.shakeSpeed); err != nil {
 		return err
 	}
@@ -112,16 +114,13 @@ func (m *DeviceMixer) sh(steps uint8) (err error) {
 
 // 1step = 100ms
 func (m *DeviceMixer) shake(steps uint8) (err error) {
-	if err = m.sh(steps); err != nil {
+	if err = m.shakeNoWait(steps); err != nil {
 		return
-	}
-	if err = m.Proto1PollWaitSuccess(1, false); err != nil {
-		return err
 	}
 	if steps > 4 {
 		time.Sleep(time.Duration(steps-4) * 100 * time.Millisecond)
 	}
-	return m.Proto1PollWaitSuccess(1, false)
+	return m.WaitSuccess(20, false)
 }
 
 // --------------------------------------------------------
