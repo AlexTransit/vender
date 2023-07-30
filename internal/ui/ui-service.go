@@ -368,6 +368,7 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
 	defer func() {
 		alive.Stop() // stop pending AcceptCredit
 		alive.Wait()
+		ui.ms.ResetMoney()
 	}()
 	alive.Add(2)
 	ui.Service.askReport = true
@@ -391,33 +392,6 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
 			fmt.Printf("\033[41m %v \033[0m\n", e.Kind)
 			// panic(fmt.Sprintf("code error onServiceMoneyLoad unhandled event=%v", e))
 		}
-
-		// 	loaded = moneysys.GetCredit()
-		// 	ui.display.SetLines("money-load", loaded.FormatCtx(ctx))
-		// 		_ = moneysys.WithdrawCommit(ctx, credit)
-		// 	}
-		// 	if accept {
-		// 		accept = false
-		// 		go moneysys.AcceptCredit(ctx, 200000, alive, ui.eventch)
-		// 	}
-		// 	switch e := ui.wait(ui.Service.resetTimeout); e.Kind {
-		// 	case types.EventInput:
-		// 		if input.IsReject(&e.Input) {
-		// 			return types.StateServiceMenu
-		// 		}
-		// 	case types.EventMoneyCredit:
-		// 		accept = true
-		// 	case types.EventLock:
-		// 		return types.StateLocked
-		// 	case types.EventStop:
-		// 		ui.g.Log.Debugf("onServiceMoneyLoad global stop")
-		// 		return types.StateServiceEnd
-
-		// 	case types.EventTime:
-
-		// 	default:
-		// 		panic(fmt.Sprintf("code error onServiceMoneyLoad unhandled event=%v", e))
-		// 	}
 	}
 }
 
