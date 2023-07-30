@@ -15,5 +15,7 @@
     //     "editorOverviewRuler.modifiedForeground": "#0000",
     //     "editorOverviewRuler.deletedForeground": "#0000"
     // }
+
+    "scm.alwaysShowRepositories": true,
     
 }
