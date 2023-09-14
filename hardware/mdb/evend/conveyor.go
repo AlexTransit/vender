@@ -76,8 +76,17 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 			return nil
 		},
 	)
-	err := c.dev.Rst()
+	g.Engine.RegisterNewFunc(c.name+".reset", func(ctx context.Context) error {
+		return c.reset()
+	})
+	err := c.reset()
 	return errors.Annotate(err, c.name+".init")
+}
+
+func (c *DeviceConveyor) reset() error {
+	c.dev.SetupResponse = mdb.Packet{}
+	c.position = -1
+	return c.dev.Rst()
 }
 
 func (c *DeviceConveyor) moveWaitReadyWaitDone(position int16) engine.Doer {
