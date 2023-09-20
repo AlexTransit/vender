@@ -54,8 +54,10 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 		return c.CommandWaitSuccess(uint16(cnt)*2*5, commandShake, byte(cnt), 0)
 	})
 
-	err := c.reset()
-	return errors.Join(fmt.Errorf(c.name+".init"), err)
+	if err := c.reset(); err != nil {
+		return errors.Join(fmt.Errorf(c.name+".init"), err)
+	}
+	return nil
 }
 
 func (c *DeviceConveyor) move(position int16) (err error) {

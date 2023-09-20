@@ -424,6 +424,7 @@ func (gen *Generic) ReadError_proto2() (errb byte) {
 
 func (gen *Generic) ReadError() (err error) {
 	if errb := gen.ReadError_proto2(); errb != 0 {
+		gen.dev.Rst()
 		return fmt.Errorf("device:%s error:%v", gen.name, errb)
 	}
 	return nil
