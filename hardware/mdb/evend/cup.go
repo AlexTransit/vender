@@ -2,13 +2,13 @@ package evend
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"strconv"
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/state"
-	"github.com/juju/errors"
 )
 
 const DefaultTimeout = 60
@@ -32,9 +32,9 @@ func (c *DeviceCup) init(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	c.initLightSheduler(g.Config.UI.Front.LightShedule)
 	c.timeout = uint16(helpers.IntConfigDefault(g.Config.Hardware.Evend.Cup.TimeoutSec, DefaultTimeout)) * 5
-	g.Engine.RegisterNewFunc(c.name+".ensure", func(ctx context.Context) error { return c.ensure() })
+	g.Engine.RegisterNewFunc(c.name+".ensure", func(ctx context.Context) error { return c.CommandWaitSuccess(c.timeout, 0x04) })
+	g.Engine.RegisterNewFunc(c.name+".dispense", func(ctx context.Context) error { return c.CommandWaitSuccess(c.timeout, 0x01) })
 	g.Engine.RegisterNewFunc(c.name+".wait_complete", func(ctx context.Context) error { return c.WaitSuccess(c.timeout, true) })
-	g.Engine.RegisterNewFunc(c.name+".dispense", func(ctx context.Context) error { return c.dispense() })
 	g.Engine.RegisterNewFunc(c.name+".light_on", func(ctx context.Context) error { return c.lightOn() })
 	g.Engine.RegisterNewFunc(c.name+".light_off", func(ctx context.Context) error { return c.lightOff() })
 	g.Engine.RegisterNewFunc(c.name+".reset", func(ctx context.Context) error { return c.dev.Rst() })
@@ -47,8 +47,10 @@ func (c *DeviceCup) init(ctx context.Context) error {
 		}
 		return c.lightOn()
 	})
-	err := c.dev.Rst()
-	return errors.Annotate(err, c.name+".init")
+	if err := c.dev.Rst(); err != nil {
+		return fmt.Errorf("%s init error:%v", c.name, err)
+	}
+	return nil
 }
 
 func (c *DeviceCup) lightOn() error {
@@ -66,16 +68,6 @@ func (c *DeviceCup) lightOff() error {
 	}
 	c.Light = false
 	c.Command(0x03)
-	return c.WaitSuccess(c.timeout, false)
-}
-
-func (c *DeviceCup) dispense() error {
-	defer c.dev.Log.Info("cup dispensed")
-	return c.CommandWaitExecute(c.timeout, 0x01)
-}
-
-func (c *DeviceCup) ensure() error {
-	c.Command(0x04)
 	return c.WaitSuccess(c.timeout, false)
 }
 
