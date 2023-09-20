@@ -347,14 +347,17 @@ func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool, waitExetut
 	for count > 0 {
 		count--
 		time.Sleep(200 * time.Millisecond)
-		_ = gen.dev.Tx(gen.dev.PacketPoll, &response)
-		rb := response.Bytes()
-		if len(rb) == 0 {
+		if err = gen.dev.Tx(gen.dev.PacketPoll, &response); err != nil {
 			return err
 		}
+		rb := response.Bytes()
+		if len(rb) == 0 {
+			return gen.ReadError()
+		}
 		if rb[0]&0x08 == 0x08 {
-			err = errors.Join(err, fmt.Errorf("device %s error %v", gen.name, gen.ReadError_proto2()))
-			gen.dev.TeleError(err)
+			err = gen.ReadError()
+			// gen.dev.TeleError(err)
+			return
 		}
 		if rb[0]&0x20 == 0x20 {
 			needReset = true
@@ -368,7 +371,7 @@ func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool, waitExetut
 	}
 	if needReset {
 		gen.dev.Rst()
-		gen.dev.Log.Errorf("device %v reseted", gen.dev.Name())
+		return fmt.Errorf("device %v reseted", gen.dev.Name())
 	}
 	if timeOut {
 		return errors.New("time out pool")
@@ -397,16 +400,6 @@ func (gen *Generic) CommandWaitSuccess(count uint16, cmd ...byte) (err error) {
 	return gen.WaitSuccess(count, true)
 }
 
-func (gen *Generic) CommandWaitExecute(count uint16, cmd ...byte) (err error) {
-	if gen.proto != proto2 {
-		return errors.New("proto1 not support")
-	}
-	if err = gen.Command(cmd...); err != nil {
-		return
-	}
-	return gen.Proto2PollWaitSuccess(count, true, true)
-}
-
 func (gen *Generic) Command(args ...byte) (err error) {
 	bs := make([]byte, len(args)+1)
 	bs[0] = gen.dev.Address + 2
@@ -423,5 +416,16 @@ func (gen *Generic) ReadError_proto2() (errb byte) {
 	request := mdb.MustPacketFromBytes(bs, true)
 	response := mdb.Packet{}
 	gen.dev.Tx(request, &response)
+	if response.Len() == 0 {
+		return 255
+	}
 	return response.Bytes()[0]
+}
+
+func (gen *Generic) ReadError() (err error) {
+	if errb := gen.ReadError_proto2(); errb != 0 {
+		gen.dev.Rst()
+		return fmt.Errorf("device:%s error:%v", gen.name, errb)
+	}
+	return nil
 }
