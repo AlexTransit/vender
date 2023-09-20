@@ -352,7 +352,7 @@ func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool, waitExetut
 		}
 		rb := response.Bytes()
 		if len(rb) == 0 {
-			return err
+			return gen.ReadError()
 		}
 		if rb[0]&0x08 == 0x08 {
 			err = gen.ReadError()
@@ -371,8 +371,7 @@ func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool, waitExetut
 	}
 	if needReset {
 		gen.dev.Rst()
-		gen.dev.Log.Errorf("device %v reseted", gen.dev.Name())
-		return nil
+		return fmt.Errorf("device %v reseted", gen.dev.Name())
 	}
 	if timeOut {
 		return errors.New("time out pool")

@@ -37,36 +37,25 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 	c.dev.DelayNext = 200 * time.Millisecond // empirically found lower total WaitReady
 	c.Generic.Init(ctx, 0xd8, "conveyor", proto2)
 	g.Engine.RegisterNewFuncAgr(c.name+".set_speed(?)", func(ctx context.Context, speed engine.Arg) error { return c.setSpeed(uint8(speed)) })
-	g.Engine.Register(c.name+".moveNoWait(?)",
-		engine.FuncArg{Name: c.name + ".moveNoWait", F: func(ctx context.Context, arg engine.Arg) error {
-			return c.moveNoWaitReadyNoWaitDone(int16(arg)).Do(ctx)
-		}})
-	g.Engine.Register(c.name+".movingDone", c.moveWaitDone())
+	g.Engine.RegisterNewFuncAgr(c.name+".moveNoWait(?)", func(ctx context.Context, position engine.Arg) error {
+		return c.CommandNoWait(commandMove, byte(position&0xff), byte(position>>8))
+	})
+	g.Engine.RegisterNewFunc(c.name+".movingDone", func(ctx context.Context) error { return c.WaitSuccess(c.timeout, true) })
 	g.Engine.RegisterNewFunc("conveyor.status", func(ctx context.Context) error {
 		g.Log.Infof("%s.position:%d speed:%d", c.name, c.position, c.speed)
 		return nil
 	})
 	g.Engine.RegisterNewFunc(c.name+".reset", func(ctx context.Context) error { return c.reset() })
-	g.Engine.RegisterNewFuncAgr(c.name+".move(?)", func(ctx context.Context, arg engine.Arg) error { return c.move(int16(arg)) })
-	g.Engine.RegisterNewFuncAgr(c.name+".shake(?)", func(ctx context.Context, arg engine.Arg) error { return c.shake(int8(arg)) })
-	g.Engine.RegisterNewFuncAgr(c.name+".vibrate(?)", func(ctx context.Context, arg engine.Arg) error { return c.vibrate(int8(arg)) })
+	g.Engine.RegisterNewFuncAgr(c.name+".move(?)", func(ctx context.Context, position engine.Arg) error { return c.move(int16(position)) })
+	g.Engine.RegisterNewFuncAgr(c.name+".shake(?)", func(ctx context.Context, cnt engine.Arg) error {
+		return c.CommandWaitSuccess(uint16(cnt)*2*5, commandWaitAndShake, byte(cnt), 0)
+	})
+	g.Engine.RegisterNewFuncAgr(c.name+".vibrate(?)", func(ctx context.Context, cnt engine.Arg) error {
+		return c.CommandWaitSuccess(uint16(cnt)*2*5, commandShake, byte(cnt), 0)
+	})
 
 	err := c.reset()
 	return errors.Join(fmt.Errorf(c.name+".init"), err)
-}
-
-func (c *DeviceConveyor) shake(cnt int8) (err error) {
-	if err = c.CommandWaitSuccess(uint16(cnt)*2*5, commandWaitAndShake, byte(cnt), 0); err == nil {
-		return c.ReadError()
-	}
-	return
-}
-
-func (c *DeviceConveyor) vibrate(cnt int8) (err error) {
-	if err = c.CommandWaitSuccess(uint16(cnt)*2*5, commandShake, byte(cnt), 0); err == nil {
-		return c.ReadError()
-	}
-	return
 }
 
 func (c *DeviceConveyor) move(position int16) (err error) {
@@ -79,11 +68,11 @@ func (c *DeviceConveyor) move(position int16) (err error) {
 	if err = c.mv(position); err == nil {
 		return
 	}
+	c.reset()
 	return err
 }
 
 func (c *DeviceConveyor) mv(position int16) (err error) {
-	c.dev.Action = fmt.Sprintf("%s move %v=>%v ", c.name, c.position, position)
 	defer func() {
 		if err != nil {
 			err = errors.Join(fmt.Errorf(c.dev.Action), err)
@@ -95,6 +84,7 @@ func (c *DeviceConveyor) mv(position int16) (err error) {
 			return err
 		}
 	}
+	c.dev.Action = fmt.Sprintf("%s move %v=>%v ", c.name, c.position, position)
 	if position == c.position {
 		return nil
 	}
@@ -125,24 +115,6 @@ func (c *DeviceConveyor) reset() error {
 	c.dev.SetupResponse = mdb.Packet{}
 	c.position = -1
 	return c.dev.Rst()
-}
-
-func (c *DeviceConveyor) moveWaitReadyWaitDone(position int16) engine.Doer {
-	tag := fmt.Sprintf("%s.move:%d->%d", c.name, c.position, position)
-	return engine.NewSeq(tag).
-		Append(c.NewWaitReady(tag)).
-		Append(c.NewAction(tag, 0x01, byte(position&0xff), byte(position>>8))).
-		Append(c.NewWaitDone(tag, c.maxTimeout))
-}
-
-func (c *DeviceConveyor) moveWaitDone() engine.Doer {
-	return engine.NewSeq("").
-		Append(c.NewWaitReady("moving")).
-		Append(c.NewWaitDone("moiving", c.maxTimeout))
-}
-
-func (c *DeviceConveyor) moveNoWaitReadyNoWaitDone(position int16) engine.Doer {
-	return engine.NewSeq("").Append(c.Generic.NewAction("send move command", 0x01, byte(position&0xff), byte(position>>8)))
 }
 
 func (c *DeviceConveyor) setSpeed(speed uint8) (err error) {
