@@ -60,7 +60,7 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 		*l1 = types.VMC.HW.Display.L1
 		return types.StateDoesNotChange
 	}
-	ui.g.ClientBegin(ctx)
+	go ui.g.ClientBegin(ctx)
 	if e.Input.IsTuneKey() {
 		*tuneScreen = true
 		*l1, *l2 = ui.tuneScreen(e.Input)
