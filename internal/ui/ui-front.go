@@ -102,7 +102,6 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 		e := ui.wait(timeout)
 		switch e.Kind {
 		case types.EventInput:
-			ui.g.Log.Info("key")
 			if nextState := ui.parseKeyEvent(ctx, e, &l1, &l2, &tuneScreen); nextState != types.StateDoesNotChange {
 				return nextState
 			}
