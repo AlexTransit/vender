@@ -108,7 +108,6 @@ func (bv *BillValidator) SendCommand(cmd BillCommand) {
 
 func (bv *BillValidator) BillReset() (err error) {
 	bv.reseted = false
-	bv.setState(Broken)
 	bv.SendCommand(Stop) // stop pre-polling. if running
 	bv.pollmu.Lock()
 	defer func() {
@@ -126,11 +125,13 @@ func (bv *BillValidator) BillReset() (err error) {
 		err = errors.Join(err, mbe.Err)
 		return err
 	}
+	bv.setState(Broken)
 	if !bv.reseted {
 		err := errors.New("bill. no complete reset response")
 		// ICT validator will not reset until it returns data (ICT валиадатор не отработает сброс, пока не отдаст данные)
 		if e := bv.pollF(nil); err != nil || mbe.Err != nil {
-			err = errors.Join(e, mbe.Err)
+			err = errors.Join(err, e, mbe.Err)
+			bv.setState(Broken)
 		}
 		return err
 	}
