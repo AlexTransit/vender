@@ -242,10 +242,10 @@ func (ca *CoinAcceptor) CoinReset() (err error) {
 	if err = ca.Device.Tx(ca.Device.PacketReset, nil); err != nil {
 		return err
 	}
-	time.Sleep(200 * time.Microsecond)
+	time.Sleep(200 * time.Millisecond)
 	e := money.ValidatorEvent{}
 	_, e.Err = ca.pollF(nil)
-	time.Sleep(200 * time.Microsecond)
+	time.Sleep(200 * time.Millisecond)
 	_, e.Err = ca.pollF(nil)
 	// if recive "changer was Reset" then read setup and status
 	if e.Err != nil {

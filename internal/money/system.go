@@ -28,9 +28,10 @@ type MoneySystem struct { //nolint:maligned
 	lk    sync.RWMutex
 	dirty currency.Amount // uncommited
 
-	bill        bill.Biller
-	billCashbox currency.NominalGroup
-	billCredit  currency.NominalGroup
+	bill         bill.Biller
+	billCashbox  currency.NominalGroup
+	billCredit   currency.NominalGroup
+	billReinited bool
 	// enableBillChanger bool
 
 	coin        coin.Coiner
