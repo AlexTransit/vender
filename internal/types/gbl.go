@@ -27,7 +27,6 @@ type VMCType struct {
 	UiState     uint32
 	ReportInv   uint32
 	Client      struct {
-		Prepare  bool
 		WorkTime time.Time
 		Input    string
 		Light    bool

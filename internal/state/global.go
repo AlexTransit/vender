@@ -131,7 +131,6 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 func (g *Global) ClientBegin(ctx context.Context) {
 	_ = g.Engine.ExecList(ctx, "client-light", []string{"evend.cup.light_on"})
 	g.ShowPicture(PictureClient)
-	types.VMC.Client.Prepare = true
 	if !types.VMC.Lock {
 		// g.TimerUIStop <- struct{}{}
 		types.VMC.Lock = true
@@ -143,7 +142,6 @@ func (g *Global) ClientBegin(ctx context.Context) {
 
 func (g *Global) ClientEnd(ctx context.Context) {
 	types.VMC.EvendKeyboardInput(true)
-	types.VMC.Client.Prepare = false
 	if types.VMC.Lock {
 		types.VMC.Lock = false
 		types.VMC.Client.WorkTime = time.Now()

@@ -280,7 +280,7 @@ func (ca *CoinAcceptor) readSetupAndStatus() (err error) {
 func (ca *CoinAcceptor) pollF(returnEvent func(money.ValidatorEvent)) (empty bool, err error) {
 	var response mdb.Packet
 	if err := ca.Device.Tx(ca.Device.PacketPoll, &response); err != nil {
-		ca.Log.Errorf("bill boll TX error:%v", err)
+		ca.Log.Errorf("coin poll TX error:%v", err)
 		return false, err
 	}
 	rb := response.Bytes()
