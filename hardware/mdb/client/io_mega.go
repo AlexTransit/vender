@@ -76,17 +76,20 @@ func (mu *megaUart) Break(d, sleep time.Duration) error {
 	return err
 }
 
-func (mu *megaUart) Tx(request, response []byte) (int, error) {
+func (mu *megaUart) Tx(request, response []byte) (n int, err error) {
 	const tag = "mdb.mega.Tx"
 	mu.lk.Lock()
 	defer mu.lk.Unlock()
 	var f mega.Frame
-	var err error
 	f, err = mu.c.DoMdbTxSimple(request)
 	switch errors.Cause(err) {
 	case nil: // success path
+		if f.Fields.MdbResult != mega.MDB_RESULT_SUCCESS {
+			err = errors.Errorf("mdb request (%v)", f.Fields.MdbResult.String())
+			return 0, err
+		}
 		mu.c.Log.Debugf("%s request=%x f=%s", tag, request, f.ResponseString())
-		n := copy(response, f.Fields.MdbData)
+		n = copy(response, f.Fields.MdbData)
 		return n, nil
 	case mega.ErrCriticalProtocol:
 		// Alexm - падает все. бабло не возвращает.
