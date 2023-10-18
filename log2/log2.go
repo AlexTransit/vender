@@ -264,8 +264,15 @@ func (lg *Log) Error(args ...interface{}) {
 		}
 	}
 }
+
+var ErrStr string
+
 func (lg *Log) Errorf(format string, args ...interface{}) {
 	s := fmt.Sprintf(format, args...)
+	if ErrStr == s {
+		return
+	}
+	ErrStr = s
 	lg.Log(LOG_ERR, s)
 	if lg == nil {
 		return
