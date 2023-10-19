@@ -27,6 +27,12 @@ func (ui *UI) linesCreate(l1 *string, l2 *string, tuneScreen *bool) {
 }
 
 func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *string, tuneScreen *bool) (nextState types.UiState) {
+	rm := tele_api.FromRoboMessage{}
+	defer func() {
+		if rm.State != 0 {
+			go ui.g.Tele.RoboSend(&rm)
+		}
+	}()
 	if input.IsMoneyAbort(&e.Input) {
 		ui.g.Log.Infof("money abort event.")
 		credit := ui.ms.GetCredit()
@@ -34,14 +40,15 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 			ui.display.SetLines("  :-(", fmt.Sprintf(" -%v", credit.Format100I()))
 			err := ui.ms.ReturnMoney()
 			ui.g.Error(errors.Trace(err))
-			ui.cancelQRPay(tele_api.State_Client)
+			ui.canselQrOrder(&rm)
 		}
 		return types.StateFrontEnd
 	}
+	currentState := ui.g.Tele.GetState()
 	if input.IsReject(&e.Input) {
 		// 	// backspace semantic
-		if types.UI.FrontResult.QRPaymenID != "" {
-			ui.cancelQRPay(tele_api.State_Client)
+		if currentState == tele_api.State_WaitingForExternalPayment {
+			ui.canselQrOrder(&rm)
 			return types.StateFrontEnd
 		}
 		if len(ui.inputBuf) >= 1 {
@@ -55,28 +62,27 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 		ui.linesCreate(l1, l2, tuneScreen)
 		return types.StateDoesNotChange
 	}
-	if types.UI.FrontResult.QRPaymenID != "" { // ignore key press
+	if currentState == tele_api.State_WaitingForExternalPayment { // ignore key press
 		ui.g.Log.Info("qr selected. ignore key")
 		*l1 = types.VMC.HW.Display.L1
 		return types.StateDoesNotChange
 	}
-	ui.g.ClientBegin(ctx)
+	if currentState != tele_api.State_Client {
+		rm.State = tele_api.State_Client
+	}
+	// ui.g.ClientBegin(ctx)
 	if e.Input.IsTuneKey() {
 		*tuneScreen = true
 		*l1, *l2 = ui.tuneScreen(e.Input)
 		return types.StateDoesNotChange
 	}
 	if e.Input.IsDigit() || e.Input.IsDot() {
-		ui.cancelQRPay(tele_api.State_Client)
 		ui.inputBuf = append(ui.inputBuf, byte(e.Input.Key))
 		ui.linesCreate(l1, l2, tuneScreen)
 		return types.StateDoesNotChange
 	}
 	if input.IsAccept(&e.Input) {
 		*tuneScreen = false
-		if types.UI.FrontResult.QRPaymenID != "" {
-			return types.StateDoesNotChange
-		}
 		if len(ui.inputBuf) == 0 {
 			*l1 = ui.g.Config.UI.Front.MsgError
 			*l2 = ui.g.Config.UI.Front.MsgMenuCodeEmpty
@@ -101,7 +107,7 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 		if types.UI.FrontResult.Item.Price > credit {
 			*l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgInputCode+" "+ui.g.Config.UI.Front.MsgPrice, types.UI.FrontResult.Item.Code, types.UI.FrontResult.Item.Price.Format100I())
 			if credit == 0 {
-				*l1 = *ui.sendRequestForQrPayment()
+				*l1 = *ui.sendRequestForQrPayment(&rm)
 			} else {
 				*l1 = ui.g.Config.UI.Front.MsgMenuInsufficientCredit
 			}

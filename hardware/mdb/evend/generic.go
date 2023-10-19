@@ -315,7 +315,9 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error
 	for count > 0 {
 		count--
 		time.Sleep(200 * time.Millisecond)
-		_ = gen.dev.Tx(gen.dev.PacketPoll, &response)
+		if err = gen.dev.Tx(gen.dev.PacketPoll, &response); err != nil {
+			return err
+		}
 		rb := response.Bytes()
 		if len(rb) == 0 {
 			continue
@@ -327,11 +329,12 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error
 		case 0x04:
 			errCode := rb[1]
 			e := fmt.Errorf("execute command(%s) error(%v)", gen.dev.Action, errCode)
-			gen.dev.TeleError(e)
+			// gen.dev.TeleError(e)
 			return e
 		default:
-			e := fmt.Errorf("unknow answer(%v) on command(%s)", rb, gen.dev.Action)
-			gen.dev.TeleError(e)
+			err = fmt.Errorf("unknow answer(%v) on command(%s)", rb, gen.dev.Action)
+			return
+			// gen.dev.TeleError(e)
 		}
 	}
 	if timeOut {
@@ -406,7 +409,7 @@ func (gen *Generic) Command(args ...byte) (err error) {
 	copy(bs[1:], args)
 	request := mdb.MustPacketFromBytes(bs, true)
 	if e := gen.dev.Tx(request, nil); e != nil {
-		err = fmt.Errorf("%v send command (%v) error(%v) ", gen.name, args, err)
+		err = fmt.Errorf("%v send command (%v) error(%v) ", gen.name, args, e)
 	}
 	return err
 }

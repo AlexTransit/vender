@@ -30,6 +30,7 @@ type Teler interface {
 	RoboSend(*FromRoboMessage)
 	RoboSendState(s State)
 	RoboConnected() bool
+	GetState() State
 }
 
 type stub struct{}
@@ -46,5 +47,6 @@ func (stub) CommandResponse(*Response)                                         {
 func (stub) RoboSend(*FromRoboMessage)                                         {}
 func (stub) RoboSendState(s State)                                             {}
 func (stub) RoboConnected() bool                                               { return false }
+func (stub) GetState() State                                                   { return 0 }
 
 func NewStub() Teler { return stub{} }

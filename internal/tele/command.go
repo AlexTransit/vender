@@ -3,6 +3,7 @@ package tele
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/AlexTransit/vender/currency"
@@ -67,7 +68,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	return true
 }
 func (t *tele) mesageMakeOrger(ctx context.Context) {
-	if t.InMessage.MakeOrder == nil || types.UI.FrontResult.PaymenId == t.InMessage.MakeOrder.OwnerInt {
+	if t.InMessage.MakeOrder == nil || types.UI.FrontResult.PaymenId != t.InMessage.MakeOrder.OwnerInt {
 		t.log.Errf("ignore mesageMakeOrger (%v)", t.InMessage.MakeOrder)
 		return
 	}
@@ -157,10 +158,15 @@ func (t *tele) messageShowQr(ctx context.Context) {
 	g := state.GetGlobal(ctx)
 	switch t.InMessage.ShowQR.QrType {
 	case tele_api.ShowQR_order:
-		if types.UI.FrontResult.QRPaymenID == "0" {
+		if t.currentState == tele_api.State_WaitingForExternalPayment {
 			types.UI.FrontResult.QRPayAmount = uint32(t.InMessage.ShowQR.DataInt)
 			g.ShowQR(t.InMessage.ShowQR.QrText)
 			types.UI.FrontResult.QRPaymenID = t.InMessage.ShowQR.DataStr
+			var err error
+			types.UI.FrontResult.PaymenId, err = strconv.ParseInt(t.InMessage.ShowQR.DataStr, 10, 64)
+			if err != nil {
+				t.Error(err)
+			}
 			l1 := fmt.Sprintf(g.Config.UI.Front.MsgRemotePay+g.Config.UI.Front.MsgPrice, currency.Amount(t.InMessage.ShowQR.DataInt).Format100I())
 			g.Hardware.HD44780.Display.SetLines(l1, types.VMC.HW.Display.L2)
 		}

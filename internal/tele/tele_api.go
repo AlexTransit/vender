@@ -10,6 +10,8 @@ import (
 
 const logMsgDisabled = "tele disabled"
 
+func (t *tele) GetState() tele_api.State { return t.currentState }
+
 func (t *tele) CommandReply(c *tele_api.Command, cr tele_api.CmdReplay) {
 	if te := t.teleEnable(); te {
 		return

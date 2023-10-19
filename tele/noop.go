@@ -34,3 +34,5 @@ func (Noop) RoboSend(*FromRoboMessage) {}
 func (Noop) RoboSendState(s State) {}
 
 func (Noop) RoboConnected() bool { return false }
+
+func (Noop) GetState() State { return 0 }

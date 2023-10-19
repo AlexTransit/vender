@@ -132,24 +132,34 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 
 // send request for pay ( if posible ) and
 // return message for display
-func (ui *UI) sendRequestForQrPayment() (message_for_display *string) {
+func (ui *UI) sendRequestForQrPayment(rm *tele_api.FromRoboMessage) (message_for_display *string) {
 	if !ui.g.Tele.RoboConnected() {
 		ui.g.ShowPicture(state.PictureQRPayError)
 		return &ui.g.Config.UI.Front.MsgNoNetwork
 	}
 	types.UI.FrontResult.QRPaymenID = "0"
 	types.VMC.UiState = uint32(types.StatePrepare)
-	rm := tele_api.FromRoboMessage{
-		State:    tele_api.State_WaitingForExternalPayment,
-		RoboTime: time.Now().Unix(),
-		Order: &tele_api.Order{
-			OrderStatus: tele_api.OrderStatus_waitingForPayment,
-			MenuCode:    types.UI.FrontResult.Item.Code,
-			Amount:      uint32(types.UI.FrontResult.Item.Price),
-		},
+	rm.State = tele_api.State_WaitingForExternalPayment
+	rm.RoboTime = time.Now().Unix()
+	rm.Order = &tele_api.Order{
+		OrderStatus: tele_api.OrderStatus_waitingForPayment,
+		MenuCode:    types.UI.FrontResult.Item.Code,
+		Amount:      uint32(types.UI.FrontResult.Item.Price),
 	}
-	ui.g.Tele.RoboSend(&rm)
 	return &ui.g.Config.UI.Front.MsgRemotePayRequest
+}
+
+func (ui *UI) canselQrOrder(rm *tele_api.FromRoboMessage) {
+	rm.State = tele_api.State_Nominal
+	go ui.g.ShowPicture(state.PictureClient)
+	if types.UI.FrontResult.PaymenId > 0 {
+		rm.Order = &tele_api.Order{
+			Amount:      types.UI.FrontResult.QRPayAmount,
+			OrderStatus: tele_api.OrderStatus_cancel,
+			OwnerInt:    types.UI.FrontResult.PaymenId,
+			OwnerType:   tele_api.OwnerType_qrCashLessUser,
+		}
+	}
 }
 
 func (ui *UI) cancelQRPay(s tele_api.State) {

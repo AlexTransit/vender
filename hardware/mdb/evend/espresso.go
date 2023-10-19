@@ -30,6 +30,7 @@ func (d *DeviceEspresso) init(ctx context.Context) error {
 	g.Engine.RegisterNewFunc(d.name+".dispose", func(ctx context.Context) error { return d.release() })
 	g.Engine.RegisterNewFunc(d.name+".heat_on", func(ctx context.Context) error { return d.heatOn() })
 	g.Engine.RegisterNewFunc(d.name+".heat_off", func(ctx context.Context) error { return d.heatOff() })
+	g.Engine.RegisterNewFunc(d.name+".reset", func(ctx context.Context) error { return d.dev.Rst() })
 
 	err := d.dev.Rst()
 	time.Sleep(200 * time.Millisecond)
