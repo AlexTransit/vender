@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
-	"github.com/juju/errors"
 )
 
 const DefaultHopperRunTimeout = 200 * time.Millisecond
@@ -18,58 +16,69 @@ type DeviceHopper struct {
 	Generic
 }
 
-func (devHop *DeviceHopper) init(ctx context.Context, addr uint8, nameSuffix string) error {
-	name := "hopper" + nameSuffix
-	g := state.GetGlobal(ctx)
-	devHop.Generic.Init(ctx, addr, name, proto2)
-
-	do := newHopperRun(&devHop.Generic, fmt.Sprintf("%s.run", devHop.name), nil)
-	g.Engine.Register(fmt.Sprintf("%s.run(?)", devHop.name), devHop.Generic.WithRestart(do))
-
-	err := devHop.dev.Rst()
-	return errors.Annotate(err, devHop.name+".init")
-}
-
 type DeviceMultiHopper struct {
 	Generic
 }
 
-func (devHop *DeviceMultiHopper) init(ctx context.Context) error {
-	const addr = 0xb8
+func (h *DeviceHopper) init(ctx context.Context, addr uint8, nameSuffix string) error {
+	name := "hopper" + nameSuffix
 	g := state.GetGlobal(ctx)
-	devHop.Generic.Init(ctx, addr, "multihopper", proto1)
-
-	for i := uint8(1); i <= 10; i++ {
-		do := newHopperRun(
-			&devHop.Generic,
-			fmt.Sprintf("%s%d.run", devHop.name, i),
-			[]byte{i},
-		)
-		g.Engine.Register(fmt.Sprintf("%s%d.run(?)", devHop.name, i), devHop.Generic.WithRestart(do))
-	}
-
-	err := devHop.dev.Rst()
-	return errors.Annotate(err, devHop.name+".init")
+	h.Generic.Init(ctx, addr, name, proto2)
+	g.Engine.RegisterNewFuncAgr(h.name+".run(?)", func(ctx context.Context, spinTime engine.Arg) (err error) {
+		if err = h.run(byte(spinTime)); err == nil {
+			return
+		}
+		h.dev.Rst()
+		time.Sleep(5 * time.Second)
+		if e := h.run(byte(spinTime)); e != nil {
+			return fmt.Errorf("two times errors e1(%v) e2(%v)", err, e)
+		}
+		h.dev.Log.Errorf("restart fix error (%v)", err)
+		return nil
+	})
+	g.Engine.RegisterNewFunc(h.name+".reset", func(ctx context.Context) error {
+		return h.dev.Rst()
+	})
+	err := h.dev.Rst()
+	return err
 }
 
-func newHopperRun(gen *Generic, tag string, argsPrefix []byte) engine.FuncArg {
-	return engine.FuncArg{Name: tag, F: func(ctx context.Context, arg engine.Arg) error {
-		g := state.GetGlobal(ctx)
-		hopperConfig := &g.Config.Hardware.Evend.Hopper
-		units := uint8(arg)
-		runTimeout := helpers.IntMillisecondDefault(hopperConfig.RunTimeoutMs, DefaultHopperRunTimeout)
+func (mh *DeviceMultiHopper) init(ctx context.Context) error {
+	const addr = 0xb8
+	g := state.GetGlobal(ctx)
+	mh.Generic.Init(ctx, addr, "multihopper", proto1)
 
-		if err := g.Engine.Exec(ctx, gen.NewWaitReady(tag)); err != nil {
-			return err
-		}
-		args := append(argsPrefix, units)
-		if err := gen.txAction(args); err != nil {
-			return err
-		}
-		if err := g.Engine.Exec(ctx, gen.NewWaitDone(tag, runTimeout*time.Duration(units)+HopperTimeout)); err != nil {
-			gen.dev.TeleError(err)
-			return err
-		}
-		return nil
-	}}
+	g.Engine.RegisterNewFunc(mh.name+".reset", func(ctx context.Context) error {
+		return mh.dev.Rst()
+	})
+	for i := uint8(1); i <= 10; i++ {
+		hopperNumber := i
+		g.Engine.RegisterNewFuncAgr(fmt.Sprintf("%s%d.run(?)", mh.name, hopperNumber), func(ctx context.Context, spinTime engine.Arg) (err error) {
+			if err = mh.run(byte(spinTime), hopperNumber); err == nil {
+				return nil
+			}
+			mh.dev.Rst()
+			time.Sleep(5 * time.Second)
+			if e := mh.run(byte(spinTime), hopperNumber); e != nil {
+				mh.dev.Rst()
+				return fmt.Errorf("two times errors e1(%v) e2(%v)", err, e)
+			}
+			mh.dev.Log.Errorf("restart fix error (%v)", err)
+			return nil
+		})
+	}
+	return mh.dev.Rst()
+}
+
+func (h *DeviceHopper) run(spinTime byte) (err error) {
+	timeout := uint16(spinTime) * 6
+	if err = h.CommandWaitSuccess(timeout, spinTime); err != nil {
+		return err
+	}
+	return h.ReadError()
+}
+
+func (mh *DeviceMultiHopper) run(spinTime byte, hopperNumber byte) (err error) {
+	timeout := uint16(spinTime) * 6
+	return mh.CommandWaitSuccess(timeout, hopperNumber, spinTime)
 }
