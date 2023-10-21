@@ -254,15 +254,16 @@ type FromRoboMessage tele_api.FromRoboMessage
 func (t *tele) RemCook(ctx context.Context, o tele_api.FromRoboMessage) (err error) {
 	types.UI.FrontResult.PaymenId = o.Order.OwnerInt
 	err = ui.Cook(ctx)
-	if err == nil {
+	if types.VMC.MonSys.Dirty == 0 {
 		o.Order.OrderStatus = tele_api.OrderStatus_complete
+	} else {
+		o.Order.OrderStatus = tele_api.OrderStatus_orderError
+	}
+	if err == nil {
 		o.State = tele_api.State_Nominal
 		types.VMC.UiState = uint32(types.StateFrontEnd)
 	} else {
 		o.State = tele_api.State_Broken
-		if types.VMC.MonSys.Dirty != 0 {
-			o.Order.OrderStatus = tele_api.OrderStatus_orderError
-		}
 		o.Err = &tele_api.Err{Message: err.Error()}
 		types.VMC.UiState = uint32(types.StateBroken)
 	}
