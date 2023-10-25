@@ -44,7 +44,7 @@ func (mh *DeviceMultiHopper) init(ctx context.Context) error {
 	mh.Generic.Init(ctx, addr, "multihopper", proto1)
 
 	g.Engine.RegisterNewFunc(mh.name+".reset", func(ctx context.Context) error { return mh.reset() })
-	for i := uint8(1); i <= 10; i++ {
+	for i := uint8(1); i <= 8; i++ {
 		hopperNumber := i
 		g.Engine.RegisterNewFuncAgr(fmt.Sprintf("%s%d.run(?)", mh.name, hopperNumber), func(ctx context.Context, spinTime engine.Arg) (err error) {
 			return runWitchControl(mh, byte(spinTime), hopperNumber)
