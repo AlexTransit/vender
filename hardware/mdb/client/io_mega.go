@@ -81,24 +81,31 @@ func (mu *megaUart) Tx(request, response []byte) (n int, err error) {
 	mu.lk.Lock()
 	defer mu.lk.Unlock()
 	var f mega.Frame
-	f, err = mu.c.DoMdbTxSimple(request)
-	switch errors.Cause(err) {
-	case nil: // success path
-		if f.Fields.MdbResult != mega.MDB_RESULT_SUCCESS {
-			err = errors.Errorf("mdb request (%v)", f.Fields.MdbResult.String())
+	for i := 0; i < 2; i++ {
+		f, err = mu.c.DoMdbTxSimple(request)
+		switch errors.Cause(err) {
+		case nil: // success path
+			if f.Fields.MdbResult != mega.MDB_RESULT_SUCCESS {
+				err = errors.Errorf("mdb request (%v)", f.Fields.MdbResult.String())
+				if f.Fields.MdbResult == mega.MDB_RESULT_TIMEOUT {
+					mu.c.Log.NoticeF("%v (%x)", err, request)
+					continue
+				}
+				return 0, err
+			}
+			mu.c.Log.Debugf("%s request=%x f=%s", tag, request, f.ResponseString())
+			n = copy(response, f.Fields.MdbData)
+			return n, nil
+		case mega.ErrCriticalProtocol:
+			// Alexm - падает все. бабло не возвращает.
+			err = errors.Annotatef(err, "%s CRITICAL request=%x", tag, request)
+			mu.c.Log.Error(err)
+			return 0, err
+		default:
+			err = errors.Annotatef(err, "%s request=%x", tag, request)
+			mu.c.Log.Error(err)
 			return 0, err
 		}
-		mu.c.Log.Debugf("%s request=%x f=%s", tag, request, f.ResponseString())
-		n = copy(response, f.Fields.MdbData)
-		return n, nil
-	case mega.ErrCriticalProtocol:
-		// Alexm - падает все. бабло не возвращает.
-		err = errors.Annotatef(err, "%s CRITICAL request=%x", tag, request)
-		mu.c.Log.Error(err)
-		return 0, err
-	default:
-		err = errors.Annotatef(err, "%s request=%x", tag, request)
-		mu.c.Log.Error(err)
-		return 0, err
 	}
+	return 0, err
 }

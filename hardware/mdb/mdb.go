@@ -72,36 +72,8 @@ func (b *Bus) Tx(request Packet, response *Packet) (err error) {
 	}
 	// if response != nil && rp.l == 0 { // need answer
 	// 	err = fmt.Errorf("device not anwer")
-	// } 
+	// }
 	return err
-}
-
-func (b *Bus) TxOld(request Packet, response *Packet) error {
-	if response == nil {
-		response = &Packet{}
-		b.Log.Debugf("mdb.Tx request=%x response=nil -> allocate temporary", request.Bytes())
-	}
-	if response.readonly {
-		return ErrPacketReadonly
-	}
-	if request.l == 0 {
-		return nil
-	}
-
-	rbs := request.Bytes()
-	n, err := b.u.Tx(rbs, response.b[:])
-	response.l = n
-
-	if err != nil {
-		b.Log.Errorf("mega transmit error:%v", err)
-		return fmt.Errorf("error=%v mdb.Tx send=%x recv=%x", err, rbs, response.Bytes())
-	}
-	// explicit level check to save costly .Format()
-	if b.Log.Enabled(log2.LOG_DEBUG) {
-		b.Log.Debugf("mdb.Tx (%02d) %s -> (%02d) %s",
-			request.Len(), request.Format(), response.Len(), response.Format())
-	}
-	return nil
 }
 
 func IsResponseTimeout(e error) bool {
