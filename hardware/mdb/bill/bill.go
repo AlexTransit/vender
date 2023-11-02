@@ -477,7 +477,7 @@ func (bv *BillValidator) BillRun(alive *alive.Alive, returnEvent func(money.Vali
 		return
 	}
 	if err := bv.enableAccept(); err != nil { // enable accept all posible
-		returnEvent(money.ValidatorEvent{Err: errors.New("config enable accept")})
+		returnEvent(money.ValidatorEvent{Err: err})
 		return
 	}
 	for len(bv.billCmd) > 0 {
