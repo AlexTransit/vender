@@ -13,7 +13,7 @@ import (
 
 func InitMDBDevices(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
-	errch := make(chan error, 1)
+	errch := make(chan error, 16)
 	wg := sync.WaitGroup{}
 
 	for _, rd := range g.Config.Hardware.XXX_Devices {
@@ -59,7 +59,6 @@ func InitMDBDevices(ctx context.Context) error {
 	}
 	wg.Wait()
 	errch <- g.CheckDevices()
-	// errch <- state.GetGlobal(ctx).CheckDevices()
 	close(errch)
 	return helpers.FoldErrChan(errch)
 }
