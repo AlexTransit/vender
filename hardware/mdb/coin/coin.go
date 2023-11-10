@@ -161,14 +161,11 @@ func (ca *CoinAcceptor) maximumAvailableNominal(notMore currency.Amount, priorit
 	}
 	for _, v := range ca.tub {
 		if notMore >= currency.Amount(v.nominal) {
-			if v.nominal == 0 {
-				n = ca.tub[len(ca.tub)-2].nominal // get maximum avalible
-				return n, fmt.Errorf("return bigged need:%s returned:%s", notMore.Format100I(), n.Format100I())
-			}
 			return v.nominal, nil
 		}
 	}
-	return n, nil
+	n = ca.tub[len(ca.tub)-1].nominal // get maximum avalible
+	return n, fmt.Errorf("return bigged need:%s returned:%s", notMore.Format100I(), n.Format100I())
 }
 
 func (ca *CoinAcceptor) DispenceCoin(nominal currency.Nominal) (complete bool, err error) {
@@ -470,23 +467,23 @@ func (ca *CoinAcceptor) TubeStatus() error {
 	ca.tubesmu.Lock()
 	defer ca.tubesmu.Unlock()
 	ca.tubes.Clear()
-	ca.tub = make([]tube, 1)
+	ca.tub = make([]tube, 0)
+	ct := make(map[uint32]bool)
 	for coinType := uint8(0); coinType < TypeCount; coinType++ {
 		full := (fulls & (1 << coinType)) != 0
 		nominal := ca.coinTypeNominal(coinType)
 		if counts[coinType] != 0 {
-			ca.tub = append(ca.tub, tube{nominal, uint(counts[coinType]), full})
+			ct[uint32(nominal)] = full
 		}
-		// old
 		if full && counts[coinType] == 0 {
-			// nominalString := currency.Amount(nominal).Format100I() // TODO use FormatCtx(ctx)
-			// _ = nominalString
-			// // ca.Device.TeleError(fmt.Errorf("%s coinType=%d nominal=%s problem (jam/sensor/etc)", tag, coinType, nominalString))
 		} else if counts[coinType] != 0 {
 			if err := ca.tubes.AddMany(nominal, uint(counts[coinType])); err != nil {
 				return err
 			}
 		}
+	}
+	for k, v := range ct {
+		ca.tub = append(ca.tub, tube{currency.Nominal(k), ca.tubes.InTube(currency.Nominal(k)), v})
 	}
 	sort.Slice(ca.tub[:], func(i, j int) bool {
 		return ca.tub[i].nominal > ca.tub[j].nominal
