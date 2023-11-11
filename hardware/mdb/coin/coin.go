@@ -117,6 +117,13 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 	return err
 }
 
+func (ca *CoinAcceptor) TestingDispense() {
+	for _, n := range ca.tub {
+		// fmt.Printf("\033[41m %v %v \033[0m\n", i, n.nominal)
+		_, _ = ca.DispenceCoin(n.nominal)
+	}
+}
+
 func (ca *CoinAcceptor) Dispence(amount currency.Amount) (err error) {
 	if amount == 0 {
 		return nil

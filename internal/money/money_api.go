@@ -21,6 +21,8 @@ var (
 	ErrChangeRetainOverflow = errors.New("ReturnChange(retain>total)")
 )
 
+func (ms *MoneySystem) TestingDispense() { ms.coin.TestingDispense() }
+
 func (ms *MoneySystem) WaitEscrowAccept(amount currency.Amount) (wait bool) {
 	bc := ms.billCredit.Total()
 	cc := ms.coinCredit.Total()

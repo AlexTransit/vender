@@ -4,10 +4,12 @@ import (
 	"context"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/hardware/mdb/bill"
 	"github.com/AlexTransit/vender/hardware/mdb/coin"
+	"github.com/temoto/alive/v2"
 
 	// "github.com/AlexTransit/vender/hardware/money"
 	"github.com/AlexTransit/vender/helpers"
@@ -138,7 +140,14 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 	doAccept := engine.FuncArg{
 		Name: "money.accept(?)",
 		F: func(ctx context.Context, arg engine.Arg) error {
-			ms.AcceptCredit(ctx, g.Config.ScaleU(uint32(arg)), g.Alive, nil)
+			alive := alive.NewAlive()
+			alive.Add(2)
+			ch := make(chan types.Event)
+			ms.AcceptCredit(ctx, g.Config.ScaleU(uint32(arg)), alive, ch)
+			time.Sleep(10 * time.Second)
+			alive.Stop()
+			alive.Wait()
+			ms.coin.TubeStatus()
 			return nil
 		},
 	}
