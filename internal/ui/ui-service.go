@@ -364,6 +364,7 @@ func (ui *UI) onServiceNetwork() types.UiState {
 }
 
 func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
+	ui.ms.TestingDispense()
 	alive := alive.NewAlive()
 	defer func() {
 		alive.Stop() // stop pending AcceptCredit

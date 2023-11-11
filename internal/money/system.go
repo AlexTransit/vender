@@ -147,7 +147,7 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 			time.Sleep(10 * time.Second)
 			alive.Stop()
 			alive.Wait()
-
+			ms.coin.TubeStatus()
 			return nil
 		},
 	}
