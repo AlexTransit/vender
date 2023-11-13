@@ -2,9 +2,18 @@
     "go.alternateTools": {
         "dlv": "${workspaceFolder}/.vscode/dlv-override.sh"
     },
-    "[go]": {"editor.formatOnSave": true },
-    "[json]": {"editor.formatOnSave": false },
-
+    // "[go]": {"editor.formatOnSave": true },
+    "[go]": {
+        "editor.insertSpaces": true,
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "golang.go"
+    },
+    "gopls": {
+        "formatting.gofumpt": true
+    },
+    "[json]": {
+        "editor.formatOnSave": false
+    },
     // "workbench.colorCustomizations": {
     //     // Gutter indicators (left)
     //     "editorGutter.modifiedBackground": "#0000",
@@ -15,7 +24,5 @@
     //     "editorOverviewRuler.modifiedForeground": "#0000",
     //     "editorOverviewRuler.deletedForeground": "#0000"
     // }
-
     "scm.alwaysShowRepositories": true,
-    
 }

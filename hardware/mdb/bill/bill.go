@@ -293,7 +293,7 @@ func (bv *BillValidator) BillStacked() bool {
 }
 
 func (bv *BillValidator) disableAccept() (e money.ValidatorEvent) {
-	buf := [5]byte{0x34, 00, 00, 00, 00}
+	buf := [5]byte{0x34, 0x00, 0x00, 0x00, 0x00}
 	request := mdb.MustPacketFromBytes(buf[:], true)
 	if e.Err = bv.Device.Tx(request, nil); e.Err != nil {
 		return
@@ -413,7 +413,7 @@ func (bv *BillValidator) decodeByte(b byte) (e money.ValidatorEvent) {
 		bv.Log.Error("StatusCreditedBillRemoval. ecsrow = 0")
 		return
 	}
-	if b&0x80 != 0 { //route status
+	if b&0x80 != 0 { // route status
 		status, billType := b&0xf0, b&0x0f
 		nominal := bv.nominals[billType]
 		bv.setEscrowBill(0)
