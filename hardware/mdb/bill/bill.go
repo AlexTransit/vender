@@ -99,6 +99,25 @@ func (bv *BillValidator) init(ctx context.Context) error {
 	return bv.BillReset()
 }
 
+func (bv *BillValidator) poll() (err error) {
+	// mbe := money.ValidatorEvent{}
+	var response mdb.Packet
+	if err := bv.Device.Tx(bv.Device.PacketPoll, &response); err != nil {
+		bv.Log.Errorf("bill poll TX error:%v", err)
+		return err
+	}
+	rb := response.Bytes()
+	if len(rb) == 0 {
+		return
+	}
+	for _, b := range rb {
+		if e := bv.decodeByte(b); e.Err != nil {
+			err = errors.Join(err, e.Err)
+		}
+	}
+	return err
+}
+
 func (bv *BillValidator) SendCommand(cmd BillCommand) {
 	select {
 	case bv.billCmd <- cmd:
@@ -112,28 +131,22 @@ func (bv *BillValidator) BillReset() (err error) {
 	bv.pollmu.Lock()
 	defer func() {
 		bv.pollmu.Unlock()
-		bv.teleError(err)
-		// if err != nil {
 		// bv.teleError(err)
-		// }
 	}()
 	if err = bv.Device.Tx(bv.Device.PacketReset, nil); err != nil {
 		return err
 	}
-	mbe := money.ValidatorEvent{}
-	if err := bv.pollF(nil); err != nil || mbe.Err != nil {
-		err = errors.Join(err, mbe.Err)
+	if err = bv.poll(); err != nil {
 		return err
 	}
 	bv.setState(Broken)
 	if !bv.reseted {
 		err := errors.New("bill. no complete reset response")
 		// ICT validator will not reset until it returns data (ICT валиадатор не отработает сброс, пока не отдаст данные)
-		if e := bv.pollF(nil); err != nil || mbe.Err != nil {
-			err = errors.Join(err, e, mbe.Err)
-			bv.setState(Broken)
-		}
-		return err
+		ep := bv.poll()
+		eda := bv.disableAccept()
+		ert := bv.Device.Tx(bv.Device.PacketReset, nil)
+		return errors.Join(err, ep, eda.Err, ert)
 	}
 	if err = bv.setup(); err != nil {
 		return err
@@ -151,9 +164,8 @@ func (bv *BillValidator) BillReset() (err error) {
 	if bv.manafacturer == "ICT" {
 		time.Sleep(15 * time.Second)
 	}
-	if err := bv.pollF(nil); err != nil || mbe.Err != nil {
-		err = errors.Join(err, mbe.Err)
-		return err
+	if ep := bv.poll(); ep != nil {
+		return errors.Join(err, ep)
 	}
 	if bv.readStacker() == -1 {
 		return errors.New("bill. read stacker count, after reset")
@@ -293,7 +305,7 @@ func (bv *BillValidator) BillStacked() bool {
 }
 
 func (bv *BillValidator) disableAccept() (e money.ValidatorEvent) {
-	buf := [5]byte{0x34, 00, 00, 00, 00}
+	buf := [5]byte{0x34, 0x00, 0x00, 0x00, 0x00}
 	request := mdb.MustPacketFromBytes(buf[:], true)
 	if e.Err = bv.Device.Tx(request, nil); e.Err != nil {
 		return
@@ -413,7 +425,7 @@ func (bv *BillValidator) decodeByte(b byte) (e money.ValidatorEvent) {
 		bv.Log.Error("StatusCreditedBillRemoval. ecsrow = 0")
 		return
 	}
-	if b&0x80 != 0 { //route status
+	if b&0x80 != 0 { // route status
 		status, billType := b&0xf0, b&0x0f
 		nominal := bv.nominals[billType]
 		bv.setEscrowBill(0)
