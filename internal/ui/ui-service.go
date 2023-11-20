@@ -302,7 +302,6 @@ func (ui *UI) onServiceReboot(ctx context.Context) types.UiState {
 }
 
 func (ui *UI) onServiceNetwork() types.UiState {
-
 	ui.display.SetLines("for select net 0", "press 1") // FIXME extract message string
 
 	next, e := ui.serviceWaitInput()
@@ -334,33 +333,6 @@ func (ui *UI) onServiceNetwork() types.UiState {
 		return types.StateServiceEnd
 	}
 	return types.StateServiceMenu
-	// 	allAddrs, _ := net.InterfaceAddrs()
-	// 	addrs := make([]string, 0, len(allAddrs))
-	// 	// TODO parse ignored networks from config
-	// addrLoop:
-	// 	for _, addr := range allAddrs {
-	// 		ip, _, err := net.ParseCIDR(addr.String())
-	// 		if err != nil {
-	// 			ui.g.Log.Errorf("invalid local addr=%v", addr)
-	// 			continue addrLoop
-	// 		}
-	// 		if ip.IsLoopback() {
-	// 			continue addrLoop
-	// 		}
-	// 		addrs = append(addrs, ip.String())
-	// 	}
-	// 	listString := strings.Join(addrs, " ")
-	// 	ui.display.SetLines("network", listString)
-
-	// 	for {
-	// 		next, e := ui.serviceWaitInput()
-	// 		if next != StateDefault {
-	// 			return next
-	// 		}
-	// 		if input.IsReject(&e) {
-	// 			return StateServiceMenu
-	// 		}
-	// 	}
 }
 
 func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {

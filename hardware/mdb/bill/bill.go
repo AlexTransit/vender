@@ -383,6 +383,7 @@ func (bv *BillValidator) setState(bc BllStateType) {
 
 func (bv *BillValidator) setBroken(err error) money.ValidatorEvent {
 	e := errors.New("bill broken - ")
+	bv.disableAccept()
 	bv.teleError(errors.Join(e, err))
 	bv.setState(Broken)
 	return money.ValidatorEvent{Err: err}

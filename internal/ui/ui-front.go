@@ -25,7 +25,6 @@ import (
 func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 	if types.VMC.NeedRestart {
 		ui.g.VmcStopWOInitRequared(ctx)
-
 	}
 	// ms := money.GetGlobal(ctx)
 	credit := ui.ms.GetCredit() / 100
@@ -112,7 +111,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 			ui.linesCreate(&l1, &l2, &tuneScreen)
 		case types.EventTime:
 			if tuneScreen {
-				ui.linesCreate(&l1, &l2, &tuneScreen) //disable tune screem
+				ui.linesCreate(&l1, &l2, &tuneScreen) // disable tune screem
 			} else {
 				return types.StateFrontTimeout
 			}
