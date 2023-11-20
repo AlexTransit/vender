@@ -93,30 +93,34 @@ func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
 
 func (s *Stock) ShowLevel() string {
 	currenValue := int(s.value) * 100
-	valuePerDelay, i := s.valuePerDelay(currenValue)
+	valuePerDelay, i := s.valuePerDelay(currenValue, false)
 	if valuePerDelay == 0 {
 		return "0"
 	}
 	ost := currenValue - s.level[i].val
-	valOst := int(math.Round(float64((ost * 10 / valuePerDelay * 10)) / 100))
-	r := s.level[i].lev + valOst
-	ri := r / 100
-	return fmt.Sprintf("%d.%d", ri, r-ri*100)
+	valOst := float64(s.level[i].lev)/100 + math.Round(float64(ost/valuePerDelay))/100
+	return fmt.Sprintf("%.2f", valOst)
 }
 
-func (s *Stock) SetLevel(v int) {
-	valuePerDelay, i := s.valuePerDelay(v)
-	ost := v - s.level[i].lev
+func (s *Stock) SetLevel(level int) {
+	valuePerDelay, i := s.valuePerDelay(level, true)
+	ost := level - s.level[i].lev
 	l1 := s.level[i].val
 	l2 := ost * valuePerDelay
 	s.value = float32((l1 + l2) / 100)
 }
 
 // returns the number per 0.01 division and the index of the smaller value
-func (s *Stock) valuePerDelay(value int) (valuePerDelay int, index int) {
+func (s *Stock) valuePerDelay(value int, valueIsLevel bool) (valuePerDelay int, index int) {
 	countLevels := len(s.level) - 1
 	for i := countLevels; i >= 0; i-- {
-		if s.level[i].lev < value {
+		var v int
+		if valueIsLevel {
+			v = s.level[i].lev
+		} else {
+			v = s.level[i].val
+		}
+		if v < value {
 			var valuePerDelay int
 			switch {
 			case countLevels == i && i == 0: // levels not sets
@@ -151,7 +155,6 @@ func (s *Stock) fillLevels(c *engine_config.Stock) {
 	sort.Slice(s.level, func(i, j int) bool {
 		return s.level[i].lev < s.level[j].lev
 	})
-
 }
 
 func stringToFixInt(s string) int {
@@ -163,7 +166,7 @@ func stringToFixInt(s string) int {
 
 // func (s *Stock) Enable()  { atomic.StoreUint32(&s.enabled, 1) }
 // func (s *Stock) Disable() { atomic.StoreUint32(&s.enabled, 0) }
-//AlexM
+// AlexM
 // func (s *Stock) Enable()  { s.enabled = true }
 // func (s *Stock) Disable() { s.enabled = false }
 
