@@ -113,24 +113,23 @@ func (s *Stock) SetLevel(level int) {
 // returns the number per 0.01 division and the index of the smaller value
 func (s *Stock) valuePerDelay(value int, valueIsLevel bool) (valuePerDelay int, index int) {
 	countLevels := len(s.level) - 1
-	for i := countLevels; i >= 0; i-- {
+	for index = countLevels; index >= 0; index-- {
 		var v int
 		if valueIsLevel {
-			v = s.level[i].lev
+			v = s.level[index].lev
 		} else {
-			v = s.level[i].val
+			v = s.level[index].val
 		}
 		if v < value {
-			var valuePerDelay int
 			switch {
-			case countLevels == i && i == 0: // levels not sets
+			case countLevels == index && index == 0: // levels not sets
 				return 0, 0
-			case countLevels == i && i > 0: // level > max rate
-				valuePerDelay = (s.level[i].val - s.level[i-1].val) / (s.level[i].lev - s.level[i-1].lev)
+			case countLevels == index && index > 0: // level > max rate
+				valuePerDelay = (s.level[index].val - s.level[index-1].val) / (s.level[index].lev - s.level[index-1].lev)
 			default: // level between
-				valuePerDelay = (s.level[i+1].val - s.level[i].val) / (s.level[i+1].lev - s.level[i].lev)
+				valuePerDelay = (s.level[index+1].val - s.level[index].val) / (s.level[index+1].lev - s.level[index].lev)
 			}
-			return valuePerDelay, i
+			return valuePerDelay, index
 		}
 	}
 	return 0, 0
