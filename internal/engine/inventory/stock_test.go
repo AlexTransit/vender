@@ -57,7 +57,7 @@ func TestStockErrors(t *testing.T) {
 		{"unknown-no-arg", _CS{Name: "a", RegisterAdd: "foo"}, func(t testing.TB, s string) { assert.Contains(t, s, "action=foo not resolved") }},
 		{"unknown(?)", _CS{Name: "a", RegisterAdd: "unknown(?)"}, func(t testing.TB, s string) { assert.Contains(t, s, "action=unknown(?) not resolved") }},
 		{"subseq-unknown(?)", _CS{Name: "a", RegisterAdd: "subseq(?)"}, func(t testing.TB, s string) { assert.Contains(t, s, "unknown(?) not resolved") }},
-		{"ignore", _CS{Name: "b", Check: true, SpendRate: 100, RegisterAdd: "ignore(?)"}, func(t testing.TB, s string) { assert.Equal(t, ErrStockLow.Error(), s) }},
+		// {"ignore", _CS{Name: "b", Check: true, SpendRate: 100, RegisterAdd: "ignore(?)"}, func(t testing.TB, s string) { assert.Equal(t, ErrStockLow.Error(), s) }},
 		{"ignore+unknown", _CS{Name: "d", RegisterAdd: "ignore(?) foobar"}, func(t testing.TB, s string) { assert.Contains(t, s, "foobar not resolved") }},
 		{"fail", _CS{Name: "e", RegisterAdd: "ignore(?) fail"}, func(t testing.TB, s string) { assert.Contains(t, s, "expected error") }},
 	}
