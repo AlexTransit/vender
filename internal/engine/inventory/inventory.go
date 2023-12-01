@@ -15,10 +15,6 @@ import (
 	"github.com/juju/errors"
 )
 
-var (
-	ErrStockLow = errors.New("Stock is too low")
-)
-
 type Inventory struct {
 	// persist.Persist
 	config *engine_config.Inventory
@@ -40,13 +36,13 @@ func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engi
 	errs := make([]error, 0)
 	sd := root + "/inventory"
 	if _, err := os.Stat(sd); os.IsNotExist(err) {
-		err := os.MkdirAll(sd, 0700)
+		err := os.MkdirAll(sd, 0o755)
 		errs = append(errs, err)
 	}
 	// AlexM инит директории для ошибок. надо от сюда вынести.
 	sde := root + "/errors"
 	if _, err := os.Stat(sde); os.IsNotExist(err) {
-		err := os.MkdirAll(sde, 0700)
+		err := os.MkdirAll(sde, 0o755)
 		errs = append(errs, err)
 	}
 	inv.file = sd + "/store.file"
@@ -123,7 +119,7 @@ func (inv *Inventory) InventorySave() error {
 		td[int32(cl.Code-1)] = int32(cl.value)
 	}
 	binary.Write(buf, binary.BigEndian, td)
-	err := os.WriteFile(inv.file, buf.Bytes(), 0600)
+	err := os.WriteFile(inv.file, buf.Bytes(), 0o666)
 	// check writen data
 	go func(memoryValue []int32) {
 		time.Sleep(5 * time.Second)

@@ -17,8 +17,6 @@ import (
 	"os"
 	"sync/atomic"
 	"testing"
-
-	"github.com/juju/errors"
 )
 
 const ContextKey = "run/log"
@@ -84,8 +82,8 @@ func NewWriter(w io.Writer, level Level) *Log {
 	}
 	lg.level = level
 	return &lg
-
 }
+
 func (l *Log) LogToSyslog(tag string) {
 	if l == nil {
 		return
@@ -99,6 +97,7 @@ func (l *Log) LogToSyslog(tag string) {
 		}
 	}
 }
+
 func (l *Log) LogToConsole() {
 	if l == nil {
 		return
@@ -110,12 +109,13 @@ func (l *Log) LogToConsole() {
 			l.logWriter[i] = os.Stdout
 		}
 	}
-
 }
 
-type ErrorFunc func(error)
-type FmtFunc func(format string, args ...interface{})
-type FmtFuncWriter struct{ FmtFunc }
+type (
+	ErrorFunc     func(error)
+	FmtFunc       func(format string, args ...interface{})
+	FmtFuncWriter struct{ FmtFunc }
+)
 
 func NewFunc(f FmtFunc, level Level) *Log { return NewWriter(FmtFuncWriter{f}, level) }
 func (ffw FmtFuncWriter) Write(b []byte) (int, error) {
@@ -196,6 +196,7 @@ func (lg *Log) Log(level Level, s string) {
 		_ = lg.l.Output(3, s)
 	}
 }
+
 func (lg *Log) Logf(level Level, format string, args ...interface{}) {
 	if lg.Enabled(level) {
 		s := fmt.Sprintf(format, args...)
@@ -210,59 +211,70 @@ func (lg *Log) Println(args ...interface{})               { lg.Log(LOG_INFO, fmt
 func (lg *Log) Info(args ...interface{}) {
 	lg.Log(LOG_INFO, fmt.Sprint(args...))
 }
+
 func (lg *Log) Infof(format string, args ...interface{}) {
 	s := fmt.Sprintf(format, args...)
 	lg.Log(LOG_INFO, s)
 }
+
 func (lg *Log) Debug(args ...interface{}) {
 	lg.Log(LOG_DEBUG, fmt.Sprint(args...))
 }
+
 func (lg *Log) Debugf(format string, args ...interface{}) {
 	s := fmt.Sprintf(format, args...)
 	lg.Log(LOG_DEBUG, s)
 }
+
 func (lg *Log) Err(args ...interface{}) {
 	lg.Log(LOG_ERR, fmt.Sprint(args...))
 }
+
 func (lg *Log) Errf(format string, args ...interface{}) {
 	s := fmt.Sprintf(format, args...)
 	lg.Log(LOG_ERR, s)
 }
+
 func (lg *Log) Warning(args ...interface{}) {
 	lg.Log(LOG_WARNING, fmt.Sprint(args...))
 }
+
 func (lg *Log) WarningF(format string, args ...interface{}) {
 	s := fmt.Sprintf(format, args...)
 	lg.Log(LOG_WARNING, s)
 }
+
 func (lg *Log) Notice(args ...interface{}) {
 	lg.Log(LOG_NOTICE, fmt.Sprint(args...))
 }
+
 func (lg *Log) NoticeF(format string, args ...interface{}) {
 	s := fmt.Sprintf(format, args...)
 	lg.Log(LOG_NOTICE, s)
-
 }
 
+//	func (lg *Log) Error(args ...interface{}) {
+//		lg.Log(LOG_ERR, "error: "+fmt.Sprint(args...))
+//		if lg == nil {
+//			return
+//		}
+//		if errfun := lg.loadErrorFunc(); errfun != nil {
+//			var e error
+//			if len(args) >= 1 {
+//				e, _ = args[0].(error)
+//			}
+//			if e != nil {
+//				args = args[1:]
+//				if len(args) > 0 { // Log.Error(err, arg1) please don't do this
+//					rest := fmt.Sprint(args...)
+//					e = errors.Annotate(e, rest)
+//				}
+//				errfun(e)
+//			}
+//		}
+//	}
 func (lg *Log) Error(args ...interface{}) {
-	lg.Log(LOG_ERR, "error: "+fmt.Sprint(args...))
-	if lg == nil {
-		return
-	}
-	if errfun := lg.loadErrorFunc(); errfun != nil {
-		var e error
-		if len(args) >= 1 {
-			e, _ = args[0].(error)
-		}
-		if e != nil {
-			args = args[1:]
-			if len(args) > 0 { // Log.Error(err, arg1) please don't do this
-				rest := fmt.Sprint(args...)
-				e = errors.Annotate(e, rest)
-			}
-			errfun(e)
-		}
-	}
+	lg.Errorf("%v", args)
 }
 
 var ErrStr string
@@ -291,6 +303,7 @@ func (lg *Log) Fatalf(format string, args ...interface{}) {
 		os.Exit(1)
 	}
 }
+
 func (lg *Log) Fatal(args ...interface{}) {
 	s := fmt.Sprint(args...)
 	if lg.fatalf != nil {
