@@ -2,6 +2,7 @@ package money
 
 import (
 	"context"
+	"time"
 
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/hardware/input"
@@ -67,9 +68,14 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 		})
 	} else {
 		if !ms.billReinited {
+			ms.Log.Error("bill not work. state broken. reinit. send reset command")
 			ms.billReinited = true
 			go func() {
 				ms.bill.BillReset()
+				time.Sleep(40 * time.Second)
+				if ms.bill.GetState() == bill.Broken {
+					ms.Log.Error("bill not work after reset command.")
+				}
 			}()
 		} else {
 			ms.Log.Warning("bill not work")
