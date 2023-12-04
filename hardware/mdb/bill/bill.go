@@ -423,7 +423,7 @@ func (bv *BillValidator) decodeByte(b byte) (e money.ValidatorEvent) {
 			err := errors.New("fishing!!! credited bill removed: " + bv.EscrowBill.Format100I())
 			return bv.escrowOutEvent(err, bv.EscrowBill)
 		}
-		bv.Log.Error("StatusCreditedBillRemoval. ecsrow = 0")
+		bv.Log.Warning("StatusCreditedBillRemoval. ecsrow = 0")
 		return
 	}
 	if b&0x80 != 0 { // route status
