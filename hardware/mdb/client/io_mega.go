@@ -21,12 +21,14 @@ type megaUart struct {
 func NewMegaUart(client *mega.Client) mdb.Uarter {
 	return &megaUart{c: client}
 }
+
 func (mu *megaUart) Open(_ string) error {
 	mu.c.IncRef("mdb-uart")
 	return nil
 	// _, err := mu.c.DoTimeout(mega.COMMAND_STATUS, nil, 5*time.Second)
 	// return err
 }
+
 func (mu *megaUart) Close() error {
 	return mu.c.DecRef("mdb-uart")
 }
@@ -86,9 +88,10 @@ func (mu *megaUart) Tx(request, response []byte) (n int, err error) {
 		switch errors.Cause(err) {
 		case nil: // success path
 			if f.Fields.MdbResult != mega.MDB_RESULT_SUCCESS {
-				err = errors.Errorf("mdb request (%v)", f.Fields.MdbResult.String())
-				if f.Fields.MdbResult == mega.MDB_RESULT_TIMEOUT {
-					mu.c.Log.NoticeF("%v (%x)", err, request)
+				err = errors.Errorf("mdb response (%v)", f.Fields.MdbResult.String())
+				if f.Fields.MdbResult == mega.MDB_RESULT_TIMEOUT || f.Fields.MdbResult == mega.MDB_RESULT_NAK {
+					mu.c.Log.NoticeF("%v. request(%x)", err, request)
+					time.Sleep(5200 * time.Microsecond)
 					continue
 				}
 				return 0, err
