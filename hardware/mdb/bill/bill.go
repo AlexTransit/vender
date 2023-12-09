@@ -415,7 +415,7 @@ func (bv *BillValidator) decodeByte(b byte) (e money.ValidatorEvent) {
 		// bv.setState(notReady)
 		return
 	case StatusInvalidEscrowRequest:
-		return bv.escrowOutEvent(fmt.Errorf("bill invalid escrow request"), bv.EscrowBill)
+		return bv.escrowOutEvent(fmt.Errorf("bill invalid escrow request (%v)", bv.EscrowBill), 0)
 	case StatusBillRejected:
 		return bv.escrowOutEvent(nil, bv.EscrowBill)
 	case StatusCreditedBillRemoval: // fishing attempt
