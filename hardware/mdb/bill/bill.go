@@ -415,7 +415,7 @@ func (bv *BillValidator) decodeByte(b byte) (e money.ValidatorEvent) {
 		// bv.setState(notReady)
 		return
 	case StatusInvalidEscrowRequest:
-		return bv.escrowOutEvent(fmt.Errorf("bill invalid escrow request (%v)", bv.EscrowBill), 0)
+		return bv.escrowOutEvent(fmt.Errorf("bill invalid escrow request "), bv.EscrowBill)
 	case StatusBillRejected:
 		return bv.escrowOutEvent(nil, bv.EscrowBill)
 	case StatusCreditedBillRemoval: // fishing attempt
@@ -469,8 +469,11 @@ func (bv *BillValidator) decodeByte(b byte) (e money.ValidatorEvent) {
 }
 
 func (bv *BillValidator) escrowOutEvent(err error, nominal currency.Nominal) money.ValidatorEvent {
+	if err != nil {
+		bv.Log.WarningF("%v (%v)", err, nominal.Format100I())
+	}
 	bv.setEscrowBill(0)
-	return money.ValidatorEvent{Err: err, Event: money.OutEscrow, Nominal: nominal}
+	return money.ValidatorEvent{Event: money.OutEscrow, Nominal: nominal}
 }
 
 // прием банкнот ( если не принимал ранее).
