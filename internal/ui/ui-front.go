@@ -163,11 +163,13 @@ func (ui *UI) canselQrOrder(rm *tele_api.FromRoboMessage) {
 }
 
 func (ui *UI) cancelQRPay(s tele_api.State) {
+	ui.g.Tele.RoboSendState(tele_api.State_Client)
 	defer func() {
 		types.UI.FrontResult.QRPaymenID = ""
 		types.VMC.EvendKeyboardInput(true)
 	}()
 	if types.UI.FrontResult.QRPaymenID == "" || types.UI.FrontResult.QRPaymenID == "0" {
+		go ui.g.ShowPicture(state.PictureClient)
 		return
 	}
 	rm := tele_api.FromRoboMessage{
