@@ -122,15 +122,13 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 }
 
 func (ui *UI) parseMoneyEvent(ek types.EventKind) types.UiState {
-	if types.UI.FrontResult.QRPaymenID != "0" {
-		ui.cancelQRPay(tele_api.State_Client)
-	}
+	ui.cancelQRPay(tele_api.State_Client)
 	credit := ui.ms.GetCredit()
 	price := types.UI.FrontResult.Item.Price
 	if price != 0 && credit >= price && types.UI.FrontResult.Item.D != nil {
 		// menu selected, almost paided and have item doer
 		if err := types.UI.FrontResult.Item.D.Validate(); err == nil {
-			//item valid
+			// item valid
 			if ek == types.EventMoneyPreCredit {
 				// send command escrow to stacker and wait
 				ui.ms.BillEscrowToStacker()
