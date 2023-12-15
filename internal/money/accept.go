@@ -43,7 +43,6 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 				if e.Nominal <= currency.Nominal(g.Config.Money.CreditMax) {
 					ms.billCredit.Add(e.Nominal)
 					if ms.GetCredit() < maxPrice {
-						time.Sleep(700 * time.Millisecond)
 						ms.bill.SendCommand(bill.Accept)
 					}
 				} else {
