@@ -19,8 +19,10 @@ import (
 // Mostly affects POLL response, see doc.
 type evendProtocol uint8
 
-const proto1 evendProtocol = 1
-const proto2 evendProtocol = 2
+const (
+	proto1 evendProtocol = 1
+	proto2 evendProtocol = 2
+)
 
 const (
 	genericPollMiss    = 0x04
@@ -69,26 +71,12 @@ func (gen *Generic) Init(ctx context.Context, address uint8, name string, proto 
 	gen.dev.Init(mdbus, address, gen.name, binary.BigEndian)
 }
 
-// FIXME_initIO Enum, remove IO from Init
-func (gen *Generic) FIXME_initIO(ctx context.Context) error {
-	tag := gen.name + ".initIO"
-	g := state.GetGlobal(ctx)
-	_, err := g.Mdb()
-	if err != nil {
-		return oerr.Annotate(err, tag)
-	}
-	if err = gen.dev.Reset(); err != nil {
-		return oerr.Annotate(err, tag)
-	}
-	err = gen.dev.TxSetup()
-	return oerr.Annotate(err, tag)
-}
-
 func (gen *Generic) Name() string { return gen.name }
 
 func (gen *Generic) NewErrPollProblem(p mdb.Packet) error {
 	return oerr.Errorf("%s POLL=%x -> need to ask problem code", gen.name, p.Bytes())
 }
+
 func (gen *Generic) NewErrPollUnexpected(p mdb.Packet) error {
 	return oerr.Errorf("%s POLL=%x unexpected", gen.name, p.Bytes())
 }
@@ -98,6 +86,7 @@ func (gen *Generic) NewAction(tag string, args ...byte) engine.Doer {
 		return gen.txAction(args)
 	}}
 }
+
 func (gen *Generic) txAction(args []byte) error {
 	bs := make([]byte, len(args)+1)
 	bs[0] = gen.dev.Address + 2
@@ -344,6 +333,7 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error
 	}
 	return err
 }
+
 func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool, waitExetute bool) (err error) {
 	response := mdb.Packet{}
 	var needReset bool

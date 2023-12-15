@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"time"
 
 	"github.com/AlexTransit/vender/hardware/input"
@@ -65,6 +66,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 		}
 	}
 	ui.g.ClientEnd(ctx)
+	runtime.GC() // чистка мусора в памяти
 	if errs := ui.g.Engine.ExecList(ctx, "on_front_begin", ui.g.Config.Engine.OnFrontBegin); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_front_begin"))
 		return types.StateBroken

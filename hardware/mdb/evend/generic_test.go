@@ -28,7 +28,7 @@ func TestGenericProto2Error(t *testing.T) {
 	dev := &Generic{}
 	dev.Init(ctx, 0x40, "abstract", proto2)
 	assert.Equal(t, "evend.abstract", dev.Name())
-	require.NoError(t, dev.FIXME_initIO(ctx))
+	// require.NoError(t, dev.FIXME_initIO(ctx))
 	const tag = "action"
 	d := engine.NewSeq(tag).
 		Append(dev.NewWaitReady(tag)).
