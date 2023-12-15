@@ -74,13 +74,7 @@ const (
 	Stop
 )
 
-var (
-	// packetTubeStatus = mdb.MustPacketFromHex("0a", true)
-	// packetExpIdent   = mdb.MustPacketFromHex("0f00", true)
-	// packetDiagStatus = mdb.MustPacketFromHex("0f05", true)
-	// packetPayoutPoll   = mdb.MustPacketFromHex("0f04", true)
-	packetPayoutStatus = mdb.MustPacketFromHex("0f03", true)
-)
+var packetPayoutStatus = mdb.MustPacketFromHex("0f03", true)
 
 var (
 	ErrNoCredit      = errors.New("no Credit")
@@ -117,6 +111,7 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 	return err
 }
 
+// test dispense. dispence all nominals
 func (ca *CoinAcceptor) TestingDispense() {
 	for _, n := range ca.tub {
 		// fmt.Printf("\033[41m %v %v \033[0m\n", i, n.nominal)
@@ -284,8 +279,8 @@ func (ca *CoinAcceptor) readSetupAndStatus() (err error) {
 func (ca *CoinAcceptor) pollF(returnEvent func(money.ValidatorEvent)) (empty bool, err error) {
 	var response mdb.Packet
 	if err := ca.Device.Tx(ca.Device.PacketPoll, &response); err != nil {
-		ca.Log.Errorf("coin poll TX error:%v", err)
-		return false, err
+		ca.Log.WarningF("coin poll TX error:%v", err)
+		return true, nil
 	}
 	rb := response.Bytes()
 	if len(rb) == 0 {
@@ -550,7 +545,7 @@ func (ca *CoinAcceptor) EnableAccept(maximumNominal currency.Amount) (err error)
 }
 
 func (ca *CoinAcceptor) DisableAccept() {
-	buf := [5]byte{0x0c, 00, 00, 00, 00}
+	buf := [5]byte{0x0c, 0x00, 0x00, 0x00, 0x00}
 	request := mdb.MustPacketFromBytes(buf[:], true)
 	if err := ca.Device.Tx(request, nil); err != nil {
 		ca.Device.TeleError(fmt.Errorf("bill. send disable accept packet not complete. (%v)", err))

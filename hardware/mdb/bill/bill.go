@@ -352,8 +352,8 @@ func (bv *BillValidator) enableAccept() (err error) {
 func (bv *BillValidator) pollF(returnEvent func(money.ValidatorEvent)) (err error) {
 	var response mdb.Packet
 	if err := bv.Device.Tx(bv.Device.PacketPoll, &response); err != nil {
-		bv.Log.Errorf("bill boll TX error:%v", err)
-		return err
+		bv.Log.WarningF("bill boll TX error:%v", err)
+		return nil
 	}
 	rb := response.Bytes()
 	if len(rb) == 0 {
