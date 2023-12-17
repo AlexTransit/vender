@@ -8,8 +8,10 @@ import (
 	"github.com/AlexTransit/vender/internal/types"
 )
 
-var heartBeatFile = "/run/hb"
-var wdTics = "31"
+var (
+	heartBeatFile = "/run/hb"
+	wdTics        = "31"
+)
 
 func WatchDogEnable() {
 	if wdTics == "0" {
@@ -37,8 +39,8 @@ func WatchDogEnable() {
 			createWatchDogFile()
 		}()
 	}
-
 }
+
 func createWatchDogFile() {
 	f, err := os.Create(heartBeatFile)
 	_ = err
@@ -46,6 +48,7 @@ func createWatchDogFile() {
 		types.Log.Errorf("error create watchdog heartBeatFile (%v)", err)
 		return
 	}
+	f.Sync()
 	f.Close()
 }
 
