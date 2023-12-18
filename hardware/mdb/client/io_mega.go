@@ -89,7 +89,7 @@ func (mu *megaUart) Tx(request, response []byte) (n int, err error) {
 		case nil: // success path
 			if f.Fields.MdbResult != mega.MDB_RESULT_SUCCESS {
 				err = errors.Errorf("mdb response (%v)", f.Fields.MdbResult.String())
-				if f.Fields.MdbResult == mega.MDB_RESULT_TIMEOUT || f.Fields.MdbResult == mega.MDB_RESULT_NAK {
+				if f.Fields.MdbResult == mega.MDB_RESULT_TIMEOUT || f.Fields.MdbResult == mega.MDB_RESULT_NAK || f.Fields.MdbResult == mega.MDB_RESULT_UART_READ_UNEXPECTED {
 					mu.c.Log.NoticeF("%v. request(%x)", err, request)
 					time.Sleep(5200 * time.Microsecond)
 					continue
