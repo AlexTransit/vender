@@ -9,6 +9,7 @@ import (
 	evend_config "github.com/AlexTransit/vender/hardware/mdb/evend/config"
 	"github.com/AlexTransit/vender/helpers"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
+	"github.com/AlexTransit/vender/internal/sound"
 	ui_config "github.com/AlexTransit/vender/internal/ui/config"
 	"github.com/AlexTransit/vender/log2"
 	tele_config "github.com/AlexTransit/vender/tele/config"
@@ -76,9 +77,9 @@ type Config struct {
 	Persist struct {
 		Root string `hcl:"root"`
 	}
-	Tele tele_config.Config
-	UI   ui_config.Config
-
+	Tele  tele_config.Config
+	UI    ui_config.Config
+	Sound sound.Config
 	// _copy_guard sync.Mutex //nolint:unused
 }
 

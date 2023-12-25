@@ -4,6 +4,7 @@ package input
 import (
 	"fmt"
 
+	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
@@ -54,8 +55,10 @@ func (d *Dispatch) ReadEvendKeyboard(s Source) {
 		}
 
 		if len(d.Bus) == 0 {
+			sound.KeyBeep()
 			if event.Source == DevInputEventTag || types.VMC.InputEnable {
 				d.Log.Infof("key press (%s) ", kn)
+				// sound.KeyBeep()
 				d.Bus <- event
 			} else {
 				d.Log.Infof("ignore key. input disabled. (%s) ", kn)

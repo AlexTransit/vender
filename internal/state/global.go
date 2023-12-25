@@ -16,6 +16,7 @@ import (
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
+	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
 	"github.com/AlexTransit/vender/log2"
@@ -96,7 +97,6 @@ func (g *Global) ShowPicture(pict Pic) {
 		file = g.Config.UI.Front.PicIdle
 	}
 	g.Hardware.Display.d.CopyFile2FB(file)
-
 }
 
 func (g *Global) VmcStop(ctx context.Context) {
@@ -201,6 +201,12 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 		g.Log.Infof("system signal - %v", sig)
 		g.VmcStop(ctx)
 	}()
+	go sound.Init(&g.Config.Sound, g.Log)
+	time.Sleep(2 * time.Second)
+	// sound.KeyBeep()
+	// time.Sleep(2 * time.Second)
+	// sound.KeyBeep()
+	// time.Sleep(2 * time.Second)
 
 	go helpers.WrapErrChan(&wg, errch, g.initDisplay)
 	go helpers.WrapErrChan(&wg, errch, g.initInput)
@@ -393,7 +399,6 @@ func VmcUnLock(ctx context.Context) {
 }
 
 func (g *Global) UpgradeVender() {
-
 	if g.Config.UpgradeScript != "" {
 		go func() {
 			cmd := exec.Command("/usr/bin/bash", "-c", g.Config.UpgradeScript)
@@ -403,7 +408,6 @@ func (g *Global) UpgradeVender() {
 				return
 			}
 			g.Log.Errorf("stdout(%s) error(%s)", stdout, cmd.Stderr)
-
 		}()
 	}
 }
@@ -480,7 +484,7 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 			event := types.InputEvent{Source: "evend-keyboard", Key: types.InputKey(key), Up: true}
 			g.Hardware.Input.Emit(event)
 			return nil
-		}}
+		},
+	}
 	g.Engine.Register(doEmuKey.Name, doEmuKey)
-
 }
