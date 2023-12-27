@@ -22,7 +22,7 @@ main() {
     # So far, GOARM=6 was useful only for Raspberry v1
     # You can remove GOARM=6 for negligible increase in performance.
     # http://single-boards.com/armv6-vs-armv7/
-    export -- GOARCH GOOS GOARM=6
+    # export -- GOARCH GOOS GOARM=6
     go build "${build_flags[@]}" "$gopkg"
     ./build/vender version
   )

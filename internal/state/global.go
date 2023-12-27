@@ -459,6 +459,22 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		},
 	)
 
+	g.Engine.RegisterNewFunc(
+		"sound.started",
+		func(ctx context.Context) error {
+			sound.Started()
+			return nil
+		},
+	)
+
+	g.Engine.RegisterNewFunc(
+		"sound.trash",
+		func(ctx context.Context) error {
+			sound.Trash()
+			return nil
+		},
+	)
+
 	doEmuKey := engine.FuncArg{
 		// keys 0-9, 10 = C, 11 = Ok,
 		// 12-13 cream- cream+, 14-15 sugar- sugar+, 16 dot

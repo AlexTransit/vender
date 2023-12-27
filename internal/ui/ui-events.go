@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/AlexTransit/vender/hardware/input"
+	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
@@ -27,6 +28,7 @@ func (ui *UI) linesCreate(l1 *string, l2 *string, tuneScreen *bool) {
 }
 
 func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *string, tuneScreen *bool) (nextState types.UiState) {
+	sound.KeyBeep()
 	rm := tele_api.FromRoboMessage{}
 	defer func() {
 		if rm.State != 0 {
@@ -35,6 +37,7 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 	}()
 	if input.IsMoneyAbort(&e.Input) {
 		ui.g.Log.Infof("money abort event.")
+		sound.Trash()
 		credit := ui.ms.GetCredit()
 		if credit > 0 {
 			ui.display.SetLines("  :-(", fmt.Sprintf(" -%v", credit.Format100I()))
@@ -122,6 +125,7 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 }
 
 func (ui *UI) parseMoneyEvent(ek types.EventKind) types.UiState {
+	sound.MoneyIn()
 	ui.cancelQRPay(tele_api.State_Client)
 	credit := ui.ms.GetCredit()
 	price := types.UI.FrontResult.Item.Price
