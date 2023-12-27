@@ -58,17 +58,17 @@ func KeyBeep() { s.playStream(&s.keyBeepStream) }
 func MoneyIn() { s.playStream(&s.moneyInStream) }
 func Trash()   { s.playStream(&s.trashStream) }
 func Started() {
-	if s.audioPlayer == nil {
+	if !s.stopPreviewPlay() {
 		return
-	}
-	if s.audioPlayer.IsPlaying() {
-		s.audioPlayer.Close()
 	}
 	s.playFile(s.sound.Started)
 }
 
 // play file and wait finishing
 func Broken() {
+	if !s.stopPreviewPlay() {
+		return
+	}
 	p := s.playFile(s.sound.Broken)
 	for {
 		if !p.IsPlaying() {
@@ -76,6 +76,16 @@ func Broken() {
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
+}
+
+func (s *Sound) stopPreviewPlay() (stoped bool) {
+	if s.audioPlayer == nil {
+		return false
+	}
+	if s.audioPlayer.IsPlaying() {
+		s.audioPlayer.Close()
+	}
+	return true
 }
 
 func (s *Sound) loadMp3Steram(file string) []byte {
