@@ -201,13 +201,7 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 		g.Log.Infof("system signal - %v", sig)
 		g.VmcStop(ctx)
 	}()
-	go sound.Init(&g.Config.Sound, g.Log)
-	time.Sleep(2 * time.Second)
-	// sound.KeyBeep()
-	// time.Sleep(2 * time.Second)
-	// sound.KeyBeep()
-	// time.Sleep(2 * time.Second)
-
+	sound.Init(&g.Config.Sound, g.Log)
 	go helpers.WrapErrChan(&wg, errch, g.initDisplay)
 	go helpers.WrapErrChan(&wg, errch, g.initInput)
 	go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
@@ -244,6 +238,7 @@ func (g *Global) Error(err error, args ...interface{}) {
 
 func (g *Global) Fatal(err error, args ...interface{}) {
 	if err != nil {
+		sound.Broken()
 		g.Error(err, args...)
 		g.StopWait(5 * time.Second)
 		g.Log.Fatal(err)

@@ -37,9 +37,9 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 	}()
 	if input.IsMoneyAbort(&e.Input) {
 		ui.g.Log.Infof("money abort event.")
-		sound.Trash()
 		credit := ui.ms.GetCredit()
 		if credit > 0 {
+			sound.Trash()
 			ui.display.SetLines("  :-(", fmt.Sprintf(" -%v", credit.Format100I()))
 			err := ui.ms.ReturnMoney()
 			ui.g.Error(errors.Trace(err))

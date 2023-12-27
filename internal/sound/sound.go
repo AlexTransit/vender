@@ -3,13 +3,14 @@ package sound
 import (
 	"io"
 	"os"
+	"time"
 
 	"github.com/AlexTransit/vender/log2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
 )
 
-const sampleRate = 48000
+const sampleRate = 32000
 
 type Sound struct {
 	sound         *Config
@@ -18,7 +19,7 @@ type Sound struct {
 	audioPlayer   *audio.Player
 	keyBeepStream []byte
 	moneyInStream []byte
-	trash         []byte
+	trashStream   []byte
 }
 
 type Config struct {
@@ -28,31 +29,53 @@ type Config struct {
 	Started  string `hcl:"sound_started"`
 	MoneyIn  string `hcl:"sound_money_in"`
 	Trash    string `hcl:"sound_trash"`
+	Broken   string `hcl:"sound_broken"`
 }
 
 var s Sound
 
 func Init(conf *Config, log *log2.Log) {
 	s.sound = conf
-
 	if conf.Disabled {
 		return
 	}
 	s.log = log
 	audioContext := audio.NewContext(sampleRate)
 	s.audioContext = audioContext
-	s.playfile(s.sound.Starting)
-	s.keyBeepStream = s.loadMp3Steram(s.sound.KeyBeep)
-	s.moneyInStream = s.loadMp3Steram(s.sound.MoneyIn)
-	s.trash = s.loadMp3Steram(s.sound.Trash)
+	f, _ := os.Open(s.sound.Starting)
+	str, _ := mp3.DecodeWithoutResampling(f)
+	s.audioPlayer, _ = s.audioContext.NewPlayer(str)
+	s.audioPlayer.Play()
+	go func() {
+		s.keyBeepStream = s.loadMp3Steram(s.sound.KeyBeep)
+		s.moneyInStream = s.loadMp3Steram(s.sound.MoneyIn)
+		s.trashStream = s.loadMp3Steram(s.sound.Trash)
+	}()
 	s.log.Info("sound module started")
 }
 
-func (s *Sound) playfile(file string) {
-	f, _ := os.Open(file)
-	bs, _ := mp3.DecodeWithoutResampling(f)
-	s.audioPlayer, _ = s.audioContext.NewPlayer(bs)
-	s.audioPlayer.Play()
+func KeyBeep() { s.playStream(&s.keyBeepStream) }
+func MoneyIn() { s.playStream(&s.moneyInStream) }
+func Trash()   { s.playStream(&s.trashStream) }
+func Started() {
+	if s.audioPlayer == nil {
+		return
+	}
+	if s.audioPlayer.IsPlaying() {
+		s.audioPlayer.Close()
+	}
+	s.playFile(s.sound.Started)
+}
+
+// play file and wait finishing
+func Broken() {
+	p := s.playFile(s.sound.Broken)
+	for {
+		if !p.IsPlaying() {
+			return
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 
 func (s *Sound) loadMp3Steram(file string) []byte {
@@ -62,7 +85,7 @@ func (s *Sound) loadMp3Steram(file string) []byte {
 		return nil
 	}
 	defer f.Close()
-	bs, err := mp3.DecodeWithoutResampling(f)
+	bs, err := mp3.DecodeWithSampleRate(sampleRate, f)
 	if err != nil {
 		s.log.Errorf("error decode sound:%v (%v)", file, err)
 		return nil
@@ -71,28 +94,14 @@ func (s *Sound) loadMp3Steram(file string) []byte {
 	return soundStream
 }
 
-func KeyBeep() {
-	p := s.audioContext.NewPlayerFromBytes(s.keyBeepStream)
+func (s *Sound) playStream(byteStream *[]byte) *audio.Player {
+	p := s.audioContext.NewPlayerFromBytes(*byteStream)
 	p.SetVolume(1.5)
 	p.Play()
+	return p
 }
 
-func MoneyIn() {
-	p := s.audioContext.NewPlayerFromBytes(s.moneyInStream)
-	p.SetVolume(1.5)
-	p.Play()
-}
-
-func Started() {
-	if s.audioPlayer != nil && s.audioPlayer.IsPlaying() {
-		s.audioPlayer.Close()
-	}
-	p := s.audioContext.NewPlayerFromBytes(s.loadMp3Steram(s.sound.Started))
-	p.Play()
-}
-
-func Trash() {
-	p := s.audioContext.NewPlayerFromBytes(s.trash)
-	p.SetVolume(1.5)
-	p.Play()
+func (s *Sound) playFile(fileName string) *audio.Player {
+	bs := s.loadMp3Steram(fileName)
+	return s.playStream(&bs)
 }
