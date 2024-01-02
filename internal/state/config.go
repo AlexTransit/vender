@@ -10,6 +10,7 @@ import (
 	"github.com/AlexTransit/vender/helpers"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
 	ui_config "github.com/AlexTransit/vender/internal/ui/config"
+	"github.com/AlexTransit/vender/internal/watchdog"
 	"github.com/AlexTransit/vender/log2"
 	tele_config "github.com/AlexTransit/vender/tele/config"
 	"github.com/hashicorp/hcl"
@@ -76,8 +77,9 @@ type Config struct {
 	Persist struct {
 		Root string `hcl:"root"`
 	}
-	Tele tele_config.Config
-	UI   ui_config.Config
+	Watchdog watchdog.Config
+	Tele     tele_config.Config
+	UI       ui_config.Config
 
 	// _copy_guard sync.Mutex //nolint:unused
 }

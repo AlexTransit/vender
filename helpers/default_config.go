@@ -1,8 +1,15 @@
 package helpers
 
-func IntConfigDefault(x int, def int) int {
-	if x == 0 {
-		return def
+func ConfigDefaultInt(InInt int, valueIfIntZero int) int {
+	if InInt == 0 {
+		return valueIfIntZero
 	}
-	return x
+	return InInt
+}
+
+func ConfigDefaultStr(inString string, valueIfStringBlank string) string {
+	if inString == "" {
+		return valueIfStringBlank
+	}
+	return inString
 }
