@@ -10,18 +10,21 @@ import (
 )
 
 type Config struct {
-	HeartBeatFile string `hcl:"heart_beat_file"`
+	Folder string
 }
 type wdStruct struct {
-	log *log2.Log
-	hbf string
+	Folder string
+	log    *log2.Log
+	// hbf string
 	wdt string
 }
+
+const file = "hb"
 
 var WD wdStruct
 
 func Init(conf *Config, log *log2.Log) {
-	WD.hbf = helpers.ConfigDefaultStr(conf.HeartBeatFile, "/run/user/1000/hb")
+	WD.Folder = helpers.ConfigDefaultStr(conf.Folder, "/run/user/1000/")
 	WD.log = log
 }
 
@@ -29,14 +32,15 @@ func WatchDogEnable() {
 	if WD.wdt == "0" {
 		return
 	}
+	wdf := WD.Folder + "hb"
 	createWatchDogFile()
-	b, err := os.ReadFile(WD.hbf)
+	b, err := os.ReadFile(wdf)
 	hbfd := string(b)
 	if err != nil || hbfd != WD.wdt {
 		WD.log.Errorf("error check watchdog heartBeatFile read data(%v) error(%v)", hbfd, err)
 		go func() {
 			time.Sleep(1 * time.Second)
-			if e := os.Remove(WD.hbf); e != nil {
+			if e := os.Remove(wdf); e != nil {
 				WD.log.Errorf("error delete incorect heartBeat File. error(%v)", e)
 			}
 			createWatchDogFile()
@@ -45,7 +49,7 @@ func WatchDogEnable() {
 }
 
 func createWatchDogFile() {
-	f, err := os.Create(WD.hbf)
+	f, err := os.Create(WD.Folder + "hb")
 	_ = err
 	if _, err := f.WriteString(WD.wdt); err != nil {
 		WD.log.Errorf("error create watchdog heartBeatFile (%v)", err)
@@ -57,7 +61,7 @@ func createWatchDogFile() {
 
 func WatchDogDisable() {
 	WD.log.Notice("watchdog disabled.")
-	if err := os.Remove(WD.hbf); err != nil {
+	if err := os.Remove(WD.Folder + "hb"); err != nil {
 		WD.log.Errorf("delete heartBeatFile error(%v)", err)
 	}
 }

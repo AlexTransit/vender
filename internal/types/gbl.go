@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/internal/watchdog"
 	"github.com/AlexTransit/vender/log2"
 
 	// "github.com/AlexTransit/vender/log2"
@@ -14,10 +15,12 @@ import (
 )
 
 // var Log = *log2.NewStderr(log2.LDebug)
-var VMC *VMCType = nil
-var UI *UItype = nil
-var TeleN tele_api.Teler
-var Log *log2.Log
+var (
+	VMC   *VMCType = nil
+	UI    *UItype  = nil
+	TeleN tele_api.Teler
+	Log   *log2.Log
+)
 
 type VMCType struct {
 	Version     string
@@ -85,13 +88,14 @@ func init() {
 }
 
 func FirstInit() bool {
-	if _, err := os.Stat("/run/vender"); os.IsNotExist(err) {
+	if _, err := os.Stat(watchdog.WD.Folder + "vmc"); os.IsNotExist(err) {
 		return true
 	}
 	return false
 }
+
 func InitRequared() {
-	os.RemoveAll("/run/vender")
+	os.RemoveAll(watchdog.WD.Folder + "vmc")
 }
 
 func SetLight(v bool) {
