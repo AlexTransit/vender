@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/AlexTransit/vender/currency"
@@ -126,8 +127,7 @@ func (c *Config) read(log *log2.Log, fs FullReader, source ConfigSource, errs *[
 
 	err = hcl.Unmarshal(bs, c)
 	if err != nil {
-		// err = errors.Annotatef(err, "config unmarshal source=%s content='%s'", source.Name, string(bs))
-		err = errors.Annotatef(err, "config (%s) read error", source.Name)
+		err = fmt.Errorf("%v parse error (%v)", source.Name, err)
 		*errs = append(*errs, err)
 		return
 	}
