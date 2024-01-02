@@ -67,14 +67,14 @@ func Init(conf *Config, log *log2.Log) {
 	s.log.Info("sound module started")
 }
 
-func KeyBeep() { playStream(&s.keyBeep.Stream) }
-func MoneyIn() { playStream(&s.moneyIn.Stream) }
-func Trash()   { playStream(&s.trash.Stream) }
+func KeyBeep() { playStream(&s.keyBeep) }
+func MoneyIn() { playStream(&s.moneyIn) }
+func Trash()   { playStream(&s.trash) }
 func Started() {
 	if !stopPreviewPlay() {
 		return
 	}
-	p := playFile(s.sound.Started)
+	p := playFile(s.sound.Started, s.sound.StartedVolume)
 	p.SetVolume(float64(helpers.ConfigDefaultInt(s.sound.StartingVolume, 10)) / 10)
 }
 
@@ -92,7 +92,8 @@ func Broken() {
 	if !stopPreviewPlay() {
 		return
 	}
-	p := playFile(s.sound.Broken)
+
+	p := playFile(s.sound.Broken, s.sound.BrokenVolume)
 	p.SetVolume(float64(s.sound.BrokenVolume))
 	for {
 		if !p.IsPlaying() {
@@ -115,33 +116,34 @@ func stopPreviewPlay() (stoped bool) {
 func loadMp3Steram(file string) ([]byte, error) {
 	f, err := os.Open(file)
 	if err != nil {
-		s.log.Errorf("error open file: %v (%v)", file, err)
 		return nil, err
 	}
 	defer f.Close()
 	bs, err := mp3.DecodeWithSampleRate(sampleRate, f)
 	if err != nil {
-		s.log.Errorf("error decode sound:%v (%v)", file, err)
 		return nil, err
 	}
 	soundStream, err := io.ReadAll(bs)
 	return soundStream, err
 }
 
-func playStream(byteStream *[]byte) *audio.Player {
+// func playStream(byteStream *[]byte) *audio.Player {
+func playStream(ss *soundStream) *audio.Player {
 	if s.sound.Disabled {
 		return nil
 	}
-	p := s.audioContext.NewPlayerFromBytes(*byteStream)
-	p.SetVolume(1.5)
+	p := s.audioContext.NewPlayerFromBytes(ss.Stream)
+	p.SetVolume(ss.volume)
 	p.Play()
 	return p
 }
 
-func playFile(fileName string) *audio.Player {
+func playFile(fileName string, volume int) *audio.Player {
 	if s.sound.Disabled {
 		return nil
 	}
-	bs, _ := loadMp3Steram(fileName)
-	return playStream(&bs)
+	var ss soundStream
+	ss.Stream, _ = loadMp3Steram(fileName)
+	ss.volume = (float64(helpers.ConfigDefaultInt(volume, 10)) / 10)
+	return playStream(&ss)
 }
