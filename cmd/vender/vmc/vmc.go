@@ -9,13 +9,16 @@ import (
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/ui"
+	"github.com/AlexTransit/vender/internal/watchdog"
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/juju/errors"
 )
 
-var VmcMod = subcmd.Mod{Name: "vmc", Main: VmcMain}
-var BrokenMod = subcmd.Mod{Name: "broken", Main: BrokenMain}
+var (
+	VmcMod    = subcmd.Mod{Name: "vmc", Main: VmcMain}
+	BrokenMod = subcmd.Mod{Name: "broken", Main: BrokenMain}
+)
 
 func VmcMain(ctx context.Context, config *state.Config) error {
 	g := state.GetGlobal(ctx)
@@ -45,6 +48,7 @@ func VmcMain(ctx context.Context, config *state.Config) error {
 	if err := ui.Init(ctx); err != nil {
 		return errors.Annotate(err, "ui Init()")
 	}
+	watchdog.Init(&config.Watchdog, g.Log)
 
 	subcmd.SdNotify(daemon.SdNotifyReady)
 	g.Log.Debugf("VMC init complete")
