@@ -16,6 +16,7 @@ import (
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
+	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
 	"github.com/AlexTransit/vender/log2"
@@ -96,7 +97,6 @@ func (g *Global) ShowPicture(pict Pic) {
 		file = g.Config.UI.Front.PicIdle
 	}
 	g.Hardware.Display.d.CopyFile2FB(file)
-
 }
 
 func (g *Global) VmcStop(ctx context.Context) {
@@ -201,7 +201,7 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 		g.Log.Infof("system signal - %v", sig)
 		g.VmcStop(ctx)
 	}()
-
+	sound.Init(&g.Config.Sound, g.Log)
 	go helpers.WrapErrChan(&wg, errch, g.initDisplay)
 	go helpers.WrapErrChan(&wg, errch, g.initInput)
 	go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
@@ -238,6 +238,7 @@ func (g *Global) Error(err error, args ...interface{}) {
 
 func (g *Global) Fatal(err error, args ...interface{}) {
 	if err != nil {
+		sound.Broken()
 		g.Error(err, args...)
 		g.StopWait(5 * time.Second)
 		g.Log.Fatal(err)
@@ -393,7 +394,6 @@ func VmcUnLock(ctx context.Context) {
 }
 
 func (g *Global) UpgradeVender() {
-
 	if g.Config.UpgradeScript != "" {
 		go func() {
 			cmd := exec.Command("/usr/bin/bash", "-c", g.Config.UpgradeScript)
@@ -403,7 +403,6 @@ func (g *Global) UpgradeVender() {
 				return
 			}
 			g.Log.Errorf("stdout(%s) error(%s)", stdout, cmd.Stderr)
-
 		}()
 	}
 }
@@ -455,6 +454,22 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		},
 	)
 
+	g.Engine.RegisterNewFunc(
+		"sound.started",
+		func(ctx context.Context) error {
+			sound.Started()
+			return nil
+		},
+	)
+
+	g.Engine.RegisterNewFunc(
+		"sound.trash",
+		func(ctx context.Context) error {
+			sound.Trash()
+			return nil
+		},
+	)
+
 	doEmuKey := engine.FuncArg{
 		// keys 0-9, 10 = C, 11 = Ok,
 		// 12-13 cream- cream+, 14-15 sugar- sugar+, 16 dot
@@ -480,7 +495,7 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 			event := types.InputEvent{Source: "evend-keyboard", Key: types.InputKey(key), Up: true}
 			g.Hardware.Input.Emit(event)
 			return nil
-		}}
+		},
+	}
 	g.Engine.Register(doEmuKey.Name, doEmuKey)
-
 }

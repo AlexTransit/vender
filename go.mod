@@ -24,16 +24,21 @@ require (
 	github.com/temoto/inputevent-go v1.0.0
 	github.com/temoto/iodin v0.0.0-20190211111721-99c87617ba86
 	golang.org/x/net v0.8.0 // indirect
-	golang.org/x/sys v0.7.0
+	golang.org/x/sys v0.15.0
 	google.golang.org/protobuf v1.28.0 // indirect
 	periph.io/x/periph v3.6.4+incompatible
 )
 
+require github.com/hajimehoshi/ebiten/v2 v2.6.3
+
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/ebitengine/oto/v3 v3.1.0 // indirect
+	github.com/ebitengine/purego v0.5.1 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
+	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
-	golang.org/x/sync v0.1.0 // indirect
+	golang.org/x/sync v0.3.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
