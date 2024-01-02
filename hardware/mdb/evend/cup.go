@@ -31,7 +31,7 @@ func (c *DeviceCup) init(ctx context.Context) error {
 	c.Generic.Init(ctx, 0xe0, "cup", proto2)
 	g := state.GetGlobal(ctx)
 	c.initLightSheduler(g.Config.UI.Front.LightShedule)
-	c.timeout = uint16(helpers.IntConfigDefault(g.Config.Hardware.Evend.Cup.TimeoutSec, DefaultTimeout)) * 5
+	c.timeout = uint16(helpers.ConfigDefaultInt(g.Config.Hardware.Evend.Cup.TimeoutSec, DefaultTimeout)) * 5
 	g.Engine.RegisterNewFunc(c.name+".ensure", func(ctx context.Context) error { return c.CommandWaitSuccess(c.timeout, 0x04) })
 	g.Engine.RegisterNewFunc(c.name+".dispense", func(ctx context.Context) error { return c.CommandWaitSuccess(c.timeout, 0x01) })
 	g.Engine.RegisterNewFunc(c.name+".wait_complete", func(ctx context.Context) error { return c.WaitSuccess(c.timeout, true) })
@@ -110,6 +110,7 @@ func (c *DeviceCup) initLightSheduler(sh string) {
 		}
 	}
 }
+
 func (s *DeviceCup) writeShedule(w int, v []string) {
 	s.lightShedule.weekDay[w].BeginOfWork = textTimeToDudation(v[3], v[4])
 	s.lightShedule.weekDay[w].EndOfWork = textTimeToDudation(v[5], v[6])

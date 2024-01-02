@@ -1,6 +1,6 @@
 #!/bin/bash
 
-fn="/run/hb"
+fn="/run/user/1000/hb"
 if [ ! -f $fn ]; then
  # application wacthdog not set
  exit 0
