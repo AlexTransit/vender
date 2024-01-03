@@ -7,6 +7,7 @@ import (
 	"github.com/AlexTransit/vender/cmd/vender/subcmd"
 	"github.com/AlexTransit/vender/hardware"
 	"github.com/AlexTransit/vender/internal/money"
+	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/ui"
 	"github.com/AlexTransit/vender/internal/watchdog"
@@ -89,6 +90,21 @@ func BrokenMain(ctx context.Context, config *state.Config) error {
 			g.Error(moneysys.ReturnMoney())
 		}
 	}
+
+	g.Tele.RoboSendState(tele_api.State_Broken)
+	display.SetLines(g.Config.UI.Front.MsgBrokenL1, g.Config.UI.Front.MsgBrokenL2)
+	g.Error(errors.Errorf("critical daemon broken mode"))
+	g.Alive.Wait()
+	return nil
+}
+
+func Broken(ctx context.Context, config *state.Config) error {
+	sound.Broken()
+	g := state.GetGlobal(ctx)
+	// g.MustInit(ctx, config)
+
+	display, _ := g.TextDisplay()
+	subcmd.SdNotify(daemon.SdNotifyReady)
 
 	g.Tele.RoboSendState(tele_api.State_Broken)
 	display.SetLines(g.Config.UI.Front.MsgBrokenL1, g.Config.UI.Front.MsgBrokenL2)

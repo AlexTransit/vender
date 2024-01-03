@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-
 	"os"
 	"regexp"
 	"strings"
@@ -22,19 +21,23 @@ import (
 	"github.com/AlexTransit/vender/log2"
 )
 
-var log = log2.NewStderr(log2.LOG_DEBUG)
-var modules = []subcmd.Mod{
-	vmc.BrokenMod,
-	cmd_engine.Mod,
-	mdb.Mod,
-	cmd_tele.Mod,
-	ui.Mod,
-	vmc.VmcMod,
-	{Name: "version", Main: versionMain},
-}
+var (
+	log     = log2.NewStderr(log2.LOG_DEBUG)
+	modules = []subcmd.Mod{
+		vmc.BrokenMod,
+		cmd_engine.Mod,
+		mdb.Mod,
+		cmd_tele.Mod,
+		ui.Mod,
+		vmc.VmcMod,
+		{Name: "version", Main: versionMain},
+	}
+)
 
-var BuildVersion string = "unknown" // set by ldflags -X
-var reFlagVersion = regexp.MustCompile("-?-?version")
+var (
+	BuildVersion  string = "unknown" // set by ldflags -X
+	reFlagVersion        = regexp.MustCompile("-?-?version")
+)
 
 func main() {
 	// log.SetFlags(0)
@@ -79,8 +82,10 @@ func main() {
 	g.BuildVersion = BuildVersion
 	types.Log = log
 	log.Debugf("starting command %s", mod.Name)
-	if err := mod.Main(ctx, config); err != nil {
-		g.Fatal(err)
+	if err := mod.Main(ctx, config); err == nil {
+		g.Log.Errorf("%v", err)
+		vmc.Broken(ctx, config)
+		// g.Fatal(err)
 	}
 }
 
