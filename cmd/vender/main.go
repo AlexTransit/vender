@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-
 	"os"
 	"regexp"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	cmd_tele "github.com/AlexTransit/vender/cmd/vender/tele"
 	"github.com/AlexTransit/vender/cmd/vender/ui"
 	"github.com/AlexTransit/vender/cmd/vender/vmc"
+	"github.com/AlexTransit/vender/internal/broken"
 	"github.com/AlexTransit/vender/internal/state"
 	state_new "github.com/AlexTransit/vender/internal/state/new"
 	"github.com/AlexTransit/vender/internal/tele"
@@ -22,19 +22,23 @@ import (
 	"github.com/AlexTransit/vender/log2"
 )
 
-var log = log2.NewStderr(log2.LOG_DEBUG)
-var modules = []subcmd.Mod{
-	vmc.BrokenMod,
-	cmd_engine.Mod,
-	mdb.Mod,
-	cmd_tele.Mod,
-	ui.Mod,
-	vmc.VmcMod,
-	{Name: "version", Main: versionMain},
-}
+var (
+	log     = log2.NewStderr(log2.LOG_DEBUG)
+	modules = []subcmd.Mod{
+		vmc.BrokenMod,
+		cmd_engine.Mod,
+		mdb.Mod,
+		cmd_tele.Mod,
+		ui.Mod,
+		vmc.VmcMod,
+		{Name: "version", Main: versionMain},
+	}
+)
 
-var BuildVersion string = "unknown" // set by ldflags -X
-var reFlagVersion = regexp.MustCompile("-?-?version")
+var (
+	BuildVersion  string = "unknown" // set by ldflags -X
+	reFlagVersion        = regexp.MustCompile("-?-?version")
+)
 
 func main() {
 	// log.SetFlags(0)
@@ -63,7 +67,7 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(flagset.Output(), "command line error: %v\n\n", err)
 		flagset.Usage()
-		os.Exit(1)
+		os.Exit(0)
 	}
 	log.SetFlags(log2.LServiceFlags)
 	if !subcmd.SdNotify("start") {
@@ -77,10 +81,12 @@ func main() {
 	config := state.MustReadConfig(log, state.NewOsFullReader(), *configPath)
 	ctx, g := state_new.NewContext(log, tele.New())
 	g.BuildVersion = BuildVersion
+	broken.BrokenInit(g)
 	types.Log = log
 	log.Debugf("starting command %s", mod.Name)
-	if err := mod.Main(ctx, config); err != nil {
-		g.Fatal(err)
+	if err := mod.Main(ctx, config); err == nil {
+		g.Log.Errorf("%v", err)
+		broken.Broken()
 	}
 }
 

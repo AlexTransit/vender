@@ -10,7 +10,6 @@ import (
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/ui"
 	"github.com/AlexTransit/vender/internal/watchdog"
-	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/juju/errors"
 )
@@ -90,7 +89,7 @@ func BrokenMain(ctx context.Context, config *state.Config) error {
 		}
 	}
 
-	g.Tele.RoboSendState(tele_api.State_Broken)
+	g.Tele.RoboSendBroken()
 	display.SetLines(g.Config.UI.Front.MsgBrokenL1, g.Config.UI.Front.MsgBrokenL2)
 	g.Error(errors.Errorf("critical daemon broken mode"))
 	g.Alive.Wait()
