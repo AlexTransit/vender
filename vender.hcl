@@ -253,3 +253,23 @@ display { framebuffer = "/dev/fb0" }
 include "local.hcl" {
   optional = true
 }
+
+Watchdog {Folder = "/run/user/1000"} // template folder. always  blank on reboot
+
+sound { // resample resampling takes a few seconds. I use sample rate 22000Hz mono without recoding
+#  https://audio.online-convert.com/convert-to-mp3
+
+#  disabled = true
+  folder = "/home/vmc/vender-db/audio/"
+  keybeep = "bb.mp3"
+#  keyBeepVolume = 10
+  starting = "start.mp3"
+  startingVolume = 10
+  started = "started.mp3"
+  StartedVolume = 10
+  moneyIn = "moneyIn.mp3"
+  moneyInVolume = 10
+  trash = "trash.mp3"
+  broken = "broken.mp3"
+
+}

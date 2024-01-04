@@ -15,7 +15,7 @@ import (
 
 type Mod struct {
 	Name string
-	Main func(context.Context, *state.Config) error
+	Main func(context.Context, *state.Config, ...[]string) error
 }
 
 func Parse(command string, modules []Mod) (*Mod, error) {

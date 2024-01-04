@@ -39,7 +39,7 @@ var Mod = subcmd.Mod{
 // megaPin := cmdline.String("mega-pin", "25", "mega notify pin")
 // uarterName := cmdline.String("io", "file", "file|iodin|mega")
 
-func Main(ctx context.Context, config *state.Config) error {
+func Main(ctx context.Context, config *state.Config, args ...[]string) error {
 	g := state.GetGlobal(ctx)
 	g.MustInit(ctx, config)
 

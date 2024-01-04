@@ -1,7 +1,6 @@
 package sound
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"time"
@@ -12,7 +11,7 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
 )
 
-const sampleRate = 32000
+const sampleRate = 24000
 
 type Sound struct {
 	sound        *Config
@@ -31,6 +30,7 @@ type soundStream struct {
 // sound volume use fixed point. 12 = 1.2
 type Config struct {
 	Disabled       bool
+	Folder         string
 	KeyBeep        string
 	KeyBeepVolume  int
 	Starting       string
@@ -47,7 +47,7 @@ type Config struct {
 
 var s Sound
 
-func Init(conf *Config, log *log2.Log) {
+func Init(conf *Config, log *log2.Log, startingVMC bool) {
 	s.sound = conf
 	if conf.Disabled {
 		return
@@ -55,78 +55,78 @@ func Init(conf *Config, log *log2.Log) {
 	s.log = log
 	audioContext := audio.NewContext(sampleRate)
 	s.audioContext = audioContext
-	f, err := os.Open(conf.Starting)
+	if startingVMC {
+		Starting()
+		go func() {
+			s.keyBeep.prepare("keyBeep", s.sound.KeyBeep, s.sound.KeyBeepVolume)
+			s.moneyIn.prepare("money in", s.sound.MoneyIn, s.sound.MoneyInVolume)
+			s.trash.prepare("trash", s.sound.Trash, s.sound.TrashVolume)
+		}()
+	}
+}
+
+func Starting() { playMP3controlled(s.sound.Starting, s.sound.StartingVolume) }
+func Started()  { playMP3controlled(s.sound.Started, s.sound.StartedVolume) }
+func KeyBeep()  { playStream(&s.keyBeep) }
+func MoneyIn()  { playStream(&s.moneyIn) }
+func Trash()    { playStream(&s.trash) }
+
+// play file and wait finishing
+func Broken() { playMP3controlled(s.sound.Broken, s.sound.BrokenVolume); waitingEndPlay() }
+
+func SoundStop() {
+	if s.audioPlayer == nil {
+		return
+	}
+	if s.audioPlayer.IsPlaying() {
+		s.audioPlayer.Pause()
+		s.audioPlayer.Close()
+	}
+}
+
+func playMP3controlled(file string, volume int) {
+	if s.sound.Disabled {
+		return
+	}
+	SoundStop()
+	f, err := os.Open(s.sound.Folder + file)
 	if err != nil {
 		s.log.Errorf("open starting (%v)", err)
 	}
 	str, _ := mp3.DecodeWithoutResampling(f)
-	if err != nil {
-		s.log.Errorf("decode (%v)", err)
-	}
 	s.audioPlayer, err = s.audioContext.NewPlayer(str)
+	s.audioPlayer.SetVolume(float64(helpers.ConfigDefaultInt(s.sound.StartingVolume, 10)) / 10)
 	if err != nil {
 		s.log.Errorf("new player (%v)", err)
 	}
-
-	s.audioPlayer.SetVolume(float64(helpers.ConfigDefaultInt(conf.StartingVolume, 10)) / 10)
-	s.audioPlayer.Play()
-	fmt.Printf("play sound start")
 	go func() {
-		s.keyBeep.prepare("keyBeep", conf.KeyBeep, conf.KeyBeepVolume)
-		s.moneyIn.prepare("money in", conf.MoneyIn, conf.MoneyInVolume)
-		s.trash.prepare("trash", conf.Trash, conf.TrashVolume)
+		s.audioPlayer.Play()
+		waitingEndPlay()
+		f.Close()
 	}()
-	s.log.Info("sound module started")
+	s.log.Infof("play %s", file)
 }
 
-func KeyBeep() { playStream(&s.keyBeep) }
-func MoneyIn() { playStream(&s.moneyIn) }
-func Trash()   { playStream(&s.trash) }
-func Started() {
-	if !stopPreviewPlay() {
-		return
-	}
-	p := playFile(s.sound.Started, s.sound.StartedVolume)
-	p.SetVolume(float64(helpers.ConfigDefaultInt(s.sound.StartingVolume, 10)) / 10)
-}
-
-func (ss *soundStream) prepare(name string, file string, volume int) {
-	var err error
-	ss.Stream, err = loadMp3Steram(file)
-	if err != nil {
-		s.log.Errorf("load sound %s (%+v)", name, err)
-	}
-	ss.volume = float64(helpers.ConfigDefaultInt(volume, 10)) / 10
-}
-
-// play file and wait finishing
-func Broken() {
-	if !stopPreviewPlay() {
-		return
-	}
-
-	p := playFile(s.sound.Broken, s.sound.BrokenVolume)
-	p.SetVolume(float64(s.sound.BrokenVolume))
+func waitingEndPlay() {
 	for {
-		if !p.IsPlaying() {
+		if !s.audioPlayer.IsPlaying() {
 			return
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
 }
 
-func stopPreviewPlay() (stoped bool) {
-	if s.audioPlayer == nil {
-		return false
+func (ss *soundStream) prepare(name string, file string, volume int) {
+	var err error
+	ss.Stream, err = loadSteram(file)
+	if err != nil {
+		s.log.Errorf("load sound %s (%+v)", name, err)
 	}
-	if s.audioPlayer.IsPlaying() {
-		s.audioPlayer.Close()
-	}
-	return true
+	ss.volume = float64(helpers.ConfigDefaultInt(volume, 10)) / 10
 }
 
-func loadMp3Steram(file string) ([]byte, error) {
-	f, err := os.Open(file)
+func loadSteram(file string) ([]byte, error) {
+	f, err := os.Open(s.sound.Folder + file)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,6 @@ func loadMp3Steram(file string) ([]byte, error) {
 	return soundStream, err
 }
 
-// func playStream(byteStream *[]byte) *audio.Player {
 func playStream(ss *soundStream) *audio.Player {
 	if s.sound.Disabled {
 		return nil
@@ -148,14 +147,4 @@ func playStream(ss *soundStream) *audio.Player {
 	p.SetVolume(ss.volume)
 	p.Play()
 	return p
-}
-
-func playFile(fileName string, volume int) *audio.Player {
-	if s.sound.Disabled {
-		return nil
-	}
-	var ss soundStream
-	ss.Stream, _ = loadMp3Steram(fileName)
-	ss.volume = (float64(helpers.ConfigDefaultInt(volume, 10)) / 10)
-	return playStream(&ss)
 }

@@ -25,12 +25,13 @@ import (
 var (
 	log     = log2.NewStderr(log2.LOG_DEBUG)
 	modules = []subcmd.Mod{
-		vmc.BrokenMod,
+		// vmc.BrokenMod,
 		cmd_engine.Mod,
 		mdb.Mod,
 		cmd_tele.Mod,
 		ui.Mod,
 		vmc.VmcMod,
+		vmc.CmdMod,
 		{Name: "version", Main: versionMain},
 	}
 )
@@ -59,7 +60,7 @@ func main() {
 		log.Fatal(err)
 	}
 	if *onlyVersion || reFlagVersion.MatchString(flagset.Arg(0)) {
-		_ = versionMain(context.Background(), nil)
+		versionMain(context.Background(), nil)
 		return
 	}
 
@@ -84,13 +85,12 @@ func main() {
 	broken.BrokenInit(g)
 	types.Log = log
 	log.Debugf("starting command %s", mod.Name)
-	if err := mod.Main(ctx, config); err == nil {
+	if err := mod.Main(ctx, config, flagset.Args()); err == nil {
 		g.Log.Errorf("%v", err)
-		broken.Broken()
 	}
 }
 
-func versionMain(ctx context.Context, config *state.Config) error {
+func versionMain(ctx context.Context, config *state.Config, _ ...[]string) error {
 	fmt.Printf("vender %s\n", BuildVersion)
 	return nil
 }
