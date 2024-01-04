@@ -14,6 +14,7 @@ import (
 	cmd_tele "github.com/AlexTransit/vender/cmd/vender/tele"
 	"github.com/AlexTransit/vender/cmd/vender/ui"
 	"github.com/AlexTransit/vender/cmd/vender/vmc"
+	"github.com/AlexTransit/vender/internal/broken"
 	"github.com/AlexTransit/vender/internal/state"
 	state_new "github.com/AlexTransit/vender/internal/state/new"
 	"github.com/AlexTransit/vender/internal/tele"
@@ -80,12 +81,12 @@ func main() {
 	config := state.MustReadConfig(log, state.NewOsFullReader(), *configPath)
 	ctx, g := state_new.NewContext(log, tele.New())
 	g.BuildVersion = BuildVersion
+	broken.BrokenInit(g)
 	types.Log = log
 	log.Debugf("starting command %s", mod.Name)
 	if err := mod.Main(ctx, config); err == nil {
 		g.Log.Errorf("%v", err)
-		vmc.Broken(ctx, config)
-		// g.Fatal(err)
+		broken.Broken()
 	}
 }
 

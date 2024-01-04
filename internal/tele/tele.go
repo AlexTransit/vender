@@ -37,6 +37,7 @@ type tele struct { //nolint:maligned
 func New() tele_api.Teler {
 	return &tele{}
 }
+
 func NewWithTransporter(trans Transporter) tele_api.Teler {
 	return &tele{transport: trans}
 }
@@ -119,6 +120,10 @@ func (t *tele) RoboSendState(s tele_api.State) {
 		State: s,
 	}
 	t.marshalAndSendMessage(&rm)
+}
+
+func (t *tele) RoboSendBroken() {
+	t.RoboSendState(tele_api.State_Broken)
 }
 
 func (t *tele) marshalAndSendMessage(m proto.Message) {

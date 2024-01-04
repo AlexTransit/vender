@@ -10,6 +10,7 @@ import (
 	"github.com/AlexTransit/vender/hardware"
 	"github.com/AlexTransit/vender/hardware/mdb"
 	"github.com/AlexTransit/vender/helpers/cli"
+	"github.com/AlexTransit/vender/internal/broken"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
 	prompt "github.com/c-bata/go-prompt"
@@ -51,12 +52,14 @@ func Main(ctx context.Context, config *state.Config) error {
 	g.MustInit(ctx, synthConfig)
 
 	if _, err := g.Mdb(); err != nil {
-		g.Log.Fatal(err)
+		g.Log.Errorf("%v", err)
+		broken.Broken()
 	}
 	defer g.Hardware.Mdb.Uarter.Close()
 
 	if err := g.Engine.ValidateExec(ctx, doBusReset); err != nil {
-		g.Log.Fatal(err)
+		g.Log.Errorf("%v", err)
+		broken.Broken()
 	}
 
 	if err := hardware.InitMDBDevices(ctx); err != nil {
@@ -79,10 +82,10 @@ var doBusReset = engine.Func{Name: "reset", F: func(ctx context.Context) error {
 
 func newCompleter(ctx context.Context) func(d prompt.Document) []prompt.Suggest {
 	suggests := []prompt.Suggest{
-		prompt.Suggest{Text: "reset", Description: "MDB bus reset"},
-		prompt.Suggest{Text: "sN", Description: "pause for N ms"},
-		prompt.Suggest{Text: "loop=N", Description: "repeat line N times"},
-		prompt.Suggest{Text: "@XX", Description: "transmit MDB block, show response"},
+		{Text: "reset", Description: "MDB bus reset"},
+		{Text: "sN", Description: "pause for N ms"},
+		{Text: "loop=N", Description: "repeat line N times"},
+		{Text: "@XX", Description: "transmit MDB block, show response"},
 	}
 
 	return func(d prompt.Document) []prompt.Suggest {
@@ -165,7 +168,8 @@ func parseLine(ctx context.Context, line string) (engine.Doer, error) {
 	for _, word := range wordsRest {
 		d, err := parseCommand(word)
 		if d == nil && err == nil {
-			g.Log.Fatalf("code error parseCommand word='%s' both doer and err are nil", word)
+			g.Log.Errorf("code error parseCommand word='%s' both doer and err are nil", word)
+			broken.Broken()
 		}
 		if err != nil {
 			// TODO accumulate errors into list
