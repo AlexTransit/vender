@@ -54,19 +54,9 @@ func Init(conf *Config, log *log2.Log) {
 	s.log = log
 	audioContext := audio.NewContext(sampleRate)
 	s.audioContext = audioContext
-	f, err := os.Open(conf.Starting)
-	if err != nil {
-		s.log.Errorf("open starting (%v)", err)
-	}
+	f, _ := os.Open(conf.Starting)
 	str, _ := mp3.DecodeWithoutResampling(f)
-	if err != nil {
-		s.log.Errorf("decode (%v)", err)
-	}
-	s.audioPlayer, err = s.audioContext.NewPlayer(str)
-	if err != nil {
-		s.log.Errorf("new player (%v)", err)
-	}
-
+	s.audioPlayer, _ = s.audioContext.NewPlayer(str)
 	s.audioPlayer.SetVolume(float64(helpers.ConfigDefaultInt(conf.StartingVolume, 10)) / 10)
 	s.audioPlayer.Play()
 	go func() {
