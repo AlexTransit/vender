@@ -114,7 +114,7 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 	go func() {
 		time.Sleep(10 * time.Second)
 		g.Log.Infof("--- vmc timeout EXIT ---")
-		os.Exit(1)
+		os.Exit(0)
 	}()
 	g.LockCh <- struct{}{}
 	_ = g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken)
@@ -125,7 +125,7 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 	g.Log.Infof("--- vmc stop ---")
 	g.Stop()
 	g.Alive.Done()
-	os.Exit(1)
+	os.Exit(0)
 }
 
 func (g *Global) ClientBegin(ctx context.Context) {

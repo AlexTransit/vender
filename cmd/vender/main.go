@@ -67,7 +67,7 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(flagset.Output(), "command line error: %v\n\n", err)
 		flagset.Usage()
-		os.Exit(1)
+		os.Exit(0)
 	}
 	log.SetFlags(log2.LServiceFlags)
 	if !subcmd.SdNotify("start") {

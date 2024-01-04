@@ -23,7 +23,7 @@ func MainLoop(tag string, exec func(line string), complete func(d prompt.Documen
 		for range signalCh {
 			// TODO engine.Interrupt()
 			// if s == syscall.SIGINT { }
-			os.Exit(1)
+			os.Exit(0)
 		}
 	}()
 
