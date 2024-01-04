@@ -156,6 +156,7 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 
 	g.Log.Infof("build version=%s", g.BuildVersion)
 	types.VMC.Version = g.BuildVersion
+	sound.Init(&g.Config.Sound, g.Log)
 
 	if g.Config.Persist.Root == "" {
 		g.Config.Persist.Root = "./tmp-vender-db"
@@ -174,9 +175,9 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	g.Log.SetErrorFunc(g.Tele.Error)
 
 	if g.BuildVersion == "unknown" {
-		g.Error(fmt.Errorf("build version is not set, please use script/build"))
+		g.Log.Warning("build version is not set, please use script/build")
 	} else if g.Config.Tele.VmId > 0 && strings.HasSuffix(g.BuildVersion, "-dirty") { // vmid<=0 is staging
-		g.Error(fmt.Errorf("running development build with uncommited changes, bad idea for production"))
+		g.Log.Warning("running development build with uncommited changes, bad idea for production")
 	}
 
 	if g.Config.Money.Scale == 0 {
@@ -201,7 +202,7 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 		g.Log.Infof("system signal - %v", sig)
 		g.VmcStop(ctx)
 	}()
-	sound.Init(&g.Config.Sound, g.Log)
+	// sound.Init(&g.Config.Sound, g.Log)
 	go helpers.WrapErrChan(&wg, errch, g.initDisplay)
 	go helpers.WrapErrChan(&wg, errch, g.initInput)
 	go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
