@@ -1,6 +1,7 @@
 package sound
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -69,6 +70,7 @@ func Init(conf *Config, log *log2.Log) {
 
 	s.audioPlayer.SetVolume(float64(helpers.ConfigDefaultInt(conf.StartingVolume, 10)) / 10)
 	s.audioPlayer.Play()
+	fmt.Printf("play sound start")
 	go func() {
 		s.keyBeep.prepare("keyBeep", conf.KeyBeep, conf.KeyBeepVolume)
 		s.moneyIn.prepare("money in", conf.MoneyIn, conf.MoneyInVolume)
