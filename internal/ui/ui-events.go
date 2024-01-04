@@ -28,7 +28,7 @@ func (ui *UI) linesCreate(l1 *string, l2 *string, tuneScreen *bool) {
 }
 
 func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *string, tuneScreen *bool) (nextState types.UiState) {
-	sound.KeyBeep()
+	sound.PlayKeyBeep()
 	rm := tele_api.FromRoboMessage{}
 	defer func() {
 		if rm.State != 0 {
@@ -39,7 +39,7 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 		ui.g.Log.Infof("money abort event.")
 		credit := ui.ms.GetCredit()
 		if credit > 0 {
-			sound.Trash()
+			sound.PlayTrash()
 			ui.display.SetLines("  :-(", fmt.Sprintf(" -%v", credit.Format100I()))
 			err := ui.ms.ReturnMoney()
 			ui.g.Error(errors.Trace(err))
@@ -125,7 +125,7 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 }
 
 func (ui *UI) parseMoneyEvent(ek types.EventKind) types.UiState {
-	sound.MoneyIn()
+	sound.PlayMoneyIn()
 	ui.cancelQRPay(tele_api.State_Client)
 	credit := ui.ms.GetCredit()
 	price := types.UI.FrontResult.Item.Price

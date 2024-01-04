@@ -56,7 +56,7 @@ func Init(conf *Config, log *log2.Log, startingVMC bool) {
 	audioContext := audio.NewContext(sampleRate)
 	s.audioContext = audioContext
 	if startingVMC {
-		Starting()
+		PlayStarting()
 		go func() {
 			s.keyBeep.prepare("keyBeep", s.sound.KeyBeep, s.sound.KeyBeepVolume)
 			s.moneyIn.prepare("money in", s.sound.MoneyIn, s.sound.MoneyInVolume)
@@ -65,16 +65,16 @@ func Init(conf *Config, log *log2.Log, startingVMC bool) {
 	}
 }
 
-func Starting() { playMP3controlled(s.sound.Starting, s.sound.StartingVolume) }
-func Started()  { playMP3controlled(s.sound.Started, s.sound.StartedVolume) }
-func KeyBeep()  { playStream(&s.keyBeep) }
-func MoneyIn()  { playStream(&s.moneyIn) }
-func Trash()    { playStream(&s.trash) }
+func PlayStarting() { playMP3controlled(s.sound.Starting, s.sound.StartingVolume) }
+func PlayStarted()  { playMP3controlled(s.sound.Started, s.sound.StartedVolume) }
+func PlayKeyBeep()  { playStream(&s.keyBeep) }
+func PlayMoneyIn()  { playStream(&s.moneyIn) }
+func PlayTrash()    { playStream(&s.trash) }
 
 // play file and wait finishing
 func Broken() { playMP3controlled(s.sound.Broken, s.sound.BrokenVolume); waitingEndPlay() }
 
-func SoundStop() {
+func Stop() {
 	if s.audioPlayer == nil {
 		return
 	}
@@ -88,7 +88,7 @@ func playMP3controlled(file string, volume int) {
 	if s.sound.Disabled {
 		return
 	}
-	SoundStop()
+	Stop()
 	f, err := os.Open(s.sound.Folder + file)
 	if err != nil {
 		s.log.Errorf("open starting (%v)", err)

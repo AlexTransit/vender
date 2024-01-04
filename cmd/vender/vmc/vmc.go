@@ -26,6 +26,7 @@ var (
 
 func VmcMain(ctx context.Context, config *state.Config, args ...[]string) error {
 	g := state.GetGlobal(ctx)
+	subcmd.SdNotify(daemon.SdNotifyReady)
 	g.MustInit(ctx, config)
 
 	display := g.MustTextDisplay()
@@ -54,7 +55,7 @@ func VmcMain(ctx context.Context, config *state.Config, args ...[]string) error 
 	}
 	watchdog.Init(&config.Watchdog, g.Log)
 
-	subcmd.SdNotify(daemon.SdNotifyReady)
+	// subcmd.SdNotify(daemon.SdNotifyReady)
 	g.Log.Debugf("VMC init complete")
 
 	ui.Loop(ctx)
@@ -103,6 +104,7 @@ func VmcMain(ctx context.Context, config *state.Config, args ...[]string) error 
 
 func CmdMain(ctx context.Context, config *state.Config, a ...[]string) error {
 	g := state.GetGlobal(ctx)
+	subcmd.SdNotify(daemon.SdNotifyReady)
 
 	args := a[0][1:]
 	switch strings.ToLower(args[0]) {
@@ -123,6 +125,8 @@ func broken(ctx context.Context, config *state.Config) {
 	g := state.GetGlobal(ctx)
 	sound.Init(&config.Sound, g.Log, false)
 	sound.Broken()
+	time.Sleep(2 * time.Second)
+	sound.Stop()
 	for {
 		time.Sleep(time.Second)
 	}
