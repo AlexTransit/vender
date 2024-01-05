@@ -86,6 +86,11 @@ func CmdMain(ctx context.Context, config *state.Config, a ...[]string) error {
 
 	args := a[0][1:]
 	switch strings.ToLower(args[0]) {
+	case "aa":
+		sound.Init(&config.Sound, g.Log, false)
+		sound.PlayFile("moneyIn.mp3")
+		time.Sleep(5 * time.Second)
+		os.Exit(0)
 	case "broken":
 		broken(ctx, config)
 	case "exitcode":

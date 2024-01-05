@@ -74,6 +74,8 @@ func PlayTrash()    { playStream(&s.trash) }
 // play file and wait finishing
 func Broken() { playMP3controlled(s.sound.Broken, s.sound.BrokenVolume); waitingEndPlay() }
 
+func PlayFile(file string) { playMP3controlled(file, 10); waitingEndPlay() }
+
 func Stop() {
 	if s.audioPlayer == nil {
 		return
@@ -85,7 +87,7 @@ func Stop() {
 }
 
 func playMP3controlled(file string, volume int) {
-	if s.sound.Disabled {
+	if s.sound == nil || s.sound.Disabled {
 		return
 	}
 	Stop()
@@ -109,7 +111,7 @@ func playMP3controlled(file string, volume int) {
 
 func waitingEndPlay() {
 	for {
-		if !s.audioPlayer.IsPlaying() {
+		if s.audioPlayer == nil || !s.audioPlayer.IsPlaying() {
 			return
 		}
 		time.Sleep(100 * time.Millisecond)
