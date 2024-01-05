@@ -14,8 +14,8 @@
             "buildFlags": "-ldflags=' -X main.BuildVersion=debugCLI'",
             // "env": {"DEBUG_AS_ROOT": "true",    },
             "args": [
-                "-config",
-                "/home/vmc/config.hcl",
+                // "-config",
+                // "/home/vmc/config.hcl",
                 "engine-cli"
             ],
         },
@@ -29,8 +29,8 @@
             "buildFlags": "-ldflags=' -X main.BuildVersion=debugVMC'",
             // "env": {                "DEBUG_AS_ROOT": "true",            },
             "args": [
-                "-config",
-                "/home/vmc/config.hcl",
+                // "-config",
+                // "/home/vmc/config.hcl",
                 "vmc"
             ],
         },
@@ -44,8 +44,8 @@
             "buildFlags": "-ldflags=' -X main.BuildVersion=debugVMC'",
             // "env": {                "DEBUG_AS_ROOT": "true",            },
             "args": [
-                "-config",
-                "/home/vmc/config.hcl",
+                // "-config",
+                // "/home/vmc/config.hcl",
                 "cmd",
                 "exitCode",
                 "1"

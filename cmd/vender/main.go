@@ -14,7 +14,6 @@ import (
 	cmd_tele "github.com/AlexTransit/vender/cmd/vender/tele"
 	"github.com/AlexTransit/vender/cmd/vender/ui"
 	"github.com/AlexTransit/vender/cmd/vender/vmc"
-	"github.com/AlexTransit/vender/internal/broken"
 	"github.com/AlexTransit/vender/internal/state"
 	state_new "github.com/AlexTransit/vender/internal/state/new"
 	"github.com/AlexTransit/vender/internal/tele"
@@ -54,7 +53,7 @@ func main() {
 		}
 		fmt.Fprintf(flagset.Output(), "Commands: %s\n", strings.Join(commandNames, " "))
 	}
-	configPath := flagset.String("config", "vender.hcl", "")
+	configPath := flagset.String("config", "/home/vmc/config.hcl", "")
 	onlyVersion := flagset.Bool("version", false, "print build version and exit")
 	if err := flagset.Parse(os.Args[1:]); err != nil {
 		log.Fatal(err)
@@ -82,9 +81,9 @@ func main() {
 	config := state.MustReadConfig(log, state.NewOsFullReader(), *configPath)
 	ctx, g := state_new.NewContext(log, tele.New())
 	g.BuildVersion = BuildVersion
-	broken.BrokenInit(g)
 	types.Log = log
 	log.Debugf("starting command %s", mod.Name)
+
 	if err := mod.Main(ctx, config, flagset.Args()); err != nil {
 		g.Log.Errorf("%v", err)
 	}

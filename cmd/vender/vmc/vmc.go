@@ -4,7 +4,9 @@ package vmc
 import (
 	"context"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/AlexTransit/vender/cmd/vender/subcmd"
@@ -26,8 +28,17 @@ var (
 
 func VmcMain(ctx context.Context, config *state.Config, args ...[]string) error {
 	g := state.GetGlobal(ctx)
-	subcmd.SdNotify(daemon.SdNotifyReady)
 	g.MustInit(ctx, config)
+
+	// working term signal
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigs
+		g.Log.Infof("system signal - %v", sig)
+		g.VmcStop(ctx)
+	}()
+	subcmd.SdNotify(daemon.SdNotifyReady)
 
 	display := g.MustTextDisplay()
 	display.SetLines("boot "+g.BuildVersion, g.Config.UI.Front.MsgWait)
@@ -62,48 +73,15 @@ func VmcMain(ctx context.Context, config *state.Config, args ...[]string) error 
 	return nil
 }
 
-// func BrokenMain(ctx context.Context, config *state.Config, args []string) error {
-// 	g := state.GetGlobal(ctx)
-// 	g.MustInit(ctx, config)
-
-// 	display := g.MustTextDisplay()
-// 	display.SetLines("boot "+g.BuildVersion, g.Config.UI.Front.MsgWait)
-
-// 	subcmd.SdNotify(daemon.SdNotifyReady)
-
-// 	if mdbus, err := g.Mdb(); err != nil || mdbus == nil {
-// 		if err == nil {
-// 			err = errors.Errorf("hardware problem, see logs")
-// 		}
-// 		err = errors.Annotate(err, "mdb init")
-// 		g.Error(err)
-// 	} else {
-// 		if err = mdbus.ResetDefault(); err != nil {
-// 			err = errors.Annotate(err, "mdb bus reset")
-// 			g.Error(err)
-// 		}
-// 		if err = hardware.InitMDBDevices(ctx); err != nil {
-// 			err = errors.Annotate(err, "hardware enum")
-// 			g.Error(err)
-// 		}
-// 		moneysys := new(money.MoneySystem)
-// 		if err := moneysys.Start(ctx); err != nil {
-// 			err = errors.Annotate(err, "money system Start()")
-// 			g.Error(err)
-// 		} else {
-// 			g.Error(moneysys.ReturnMoney())
-// 		}
-// 	}
-
-// 	g.Tele.RoboSendBroken()
-// 	display.SetLines(g.Config.UI.Front.MsgBrokenL1, g.Config.UI.Front.MsgBrokenL2)
-// 	g.Error(errors.Errorf("critical daemon broken mode"))
-// 	g.Alive.Wait()
-// 	return nil
-// }
-
 func CmdMain(ctx context.Context, config *state.Config, a ...[]string) error {
 	g := state.GetGlobal(ctx)
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		sig := <-sigs
+		g.Log.Infof("system signal - %v", sig)
+		os.Exit(0)
+	}()
 	subcmd.SdNotify(daemon.SdNotifyReady)
 
 	args := a[0][1:]

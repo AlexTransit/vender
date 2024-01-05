@@ -10,7 +10,6 @@ import (
 	"github.com/AlexTransit/vender/hardware"
 	"github.com/AlexTransit/vender/hardware/mdb"
 	"github.com/AlexTransit/vender/helpers/cli"
-	"github.com/AlexTransit/vender/internal/broken"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
 	prompt "github.com/c-bata/go-prompt"
@@ -52,14 +51,12 @@ func Main(ctx context.Context, config *state.Config, args ...[]string) error {
 	g.MustInit(ctx, synthConfig)
 
 	if _, err := g.Mdb(); err != nil {
-		g.Log.Errorf("%v", err)
-		broken.Broken()
+		g.Log.Fatalf("%v", err)
 	}
 	defer g.Hardware.Mdb.Uarter.Close()
 
 	if err := g.Engine.ValidateExec(ctx, doBusReset); err != nil {
-		g.Log.Errorf("%v", err)
-		broken.Broken()
+		g.Log.Fatalf("%v", err)
 	}
 
 	if err := hardware.InitMDBDevices(ctx); err != nil {
@@ -168,8 +165,7 @@ func parseLine(ctx context.Context, line string) (engine.Doer, error) {
 	for _, word := range wordsRest {
 		d, err := parseCommand(word)
 		if d == nil && err == nil {
-			g.Log.Errorf("code error parseCommand word='%s' both doer and err are nil", word)
-			broken.Broken()
+			g.Log.Fatalf("code error parseCommand word='%s' both doer and err are nil", word)
 		}
 		if err != nil {
 			// TODO accumulate errors into list

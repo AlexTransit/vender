@@ -5,12 +5,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/signal"
 	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
@@ -195,14 +193,6 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	wg.Add(initTasks)
 	errch := make(chan error, initTasks)
 
-	// working term signal
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		sig := <-sigs
-		g.Log.Infof("system signal - %v", sig)
-		g.VmcStop(ctx)
-	}()
 	// sound.Init(&g.Config.Sound, g.Log)
 	go helpers.WrapErrChan(&wg, errch, g.initDisplay)
 	go helpers.WrapErrChan(&wg, errch, g.initInput)
