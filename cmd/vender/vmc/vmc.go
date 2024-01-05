@@ -108,6 +108,8 @@ func CmdMain(ctx context.Context, config *state.Config, a ...[]string) error {
 
 	args := a[0][1:]
 	switch strings.ToLower(args[0]) {
+	case "broken":
+		broken(ctx, config)
 	case "exitcode":
 		if args[1] == "0" {
 			g.Log.Info("exit code 0")

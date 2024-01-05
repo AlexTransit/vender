@@ -85,7 +85,7 @@ func main() {
 	broken.BrokenInit(g)
 	types.Log = log
 	log.Debugf("starting command %s", mod.Name)
-	if err := mod.Main(ctx, config, flagset.Args()); err == nil {
+	if err := mod.Main(ctx, config, flagset.Args()); err != nil {
 		g.Log.Errorf("%v", err)
 	}
 }
