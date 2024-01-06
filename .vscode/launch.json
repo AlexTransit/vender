@@ -47,8 +47,10 @@
                 // "-config",
                 // "/home/vmc/config.hcl",
                 "cmd",
-                "exitCode",
-                "1"
+                "playsound",
+                "moneyIn.mp3",
+                // "exitCode",
+                // "1"
             ],
         },
     ]

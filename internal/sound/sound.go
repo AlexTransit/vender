@@ -43,6 +43,8 @@ type Config struct {
 	TrashVolume    int
 	Broken         string
 	BrokenVolume   int
+	Complete       string
+	CompleteVolume int
 }
 
 var s Sound
@@ -67,6 +69,7 @@ func Init(conf *Config, log *log2.Log, startingVMC bool) {
 
 func PlayStarting() { playMP3controlled(s.sound.Starting, s.sound.StartingVolume) }
 func PlayStarted()  { playMP3controlled(s.sound.Started, s.sound.StartedVolume) }
+func PlayComplete() { playMP3controlled(s.sound.Complete, s.sound.CompleteVolume) }
 func PlayKeyBeep()  { playStream(&s.keyBeep) }
 func PlayMoneyIn()  { playStream(&s.moneyIn) }
 func PlayTrash()    { playStream(&s.trash) }

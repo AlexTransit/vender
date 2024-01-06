@@ -86,6 +86,10 @@ func CmdMain(ctx context.Context, config *state.Config, a ...[]string) error {
 
 	args := a[0][1:]
 	switch strings.ToLower(args[0]) {
+	case "sound":
+		sound.Init(&config.Sound, g.Log, false)
+		sound.PlayFile(args[1])
+		os.Exit(0)
 	case "aa":
 		sound.Init(&config.Sound, g.Log, false)
 		sound.PlayFile("moneyIn.mp3")

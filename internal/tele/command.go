@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/ui"
@@ -15,9 +16,7 @@ import (
 	"github.com/juju/errors"
 )
 
-var (
-	errInvalidArg = fmt.Errorf("invalid arg")
-)
+var errInvalidArg = fmt.Errorf("invalid arg")
 
 // AlexM old tele
 func (t *tele) onCommandMessage(ctx context.Context, payload []byte) bool {
@@ -46,7 +45,6 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 		return false
 	}
 	err := proto.Unmarshal(payload, &t.InMessage)
-
 	if err != nil {
 		t.log.Errorf("tele command parse raw=%x err=%v", payload, err)
 		return false
@@ -67,6 +65,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	}
 	return true
 }
+
 func (t *tele) mesageMakeOrger(ctx context.Context) {
 	if t.InMessage.MakeOrder == nil {
 		return
@@ -111,7 +110,7 @@ func (t *tele) mesageMakeOrger(ctx context.Context) {
 		types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
 
 	case tele_api.OrderStatus_doTransferred:
-		//TODO execute external order. сделать внешний заказ
+		// TODO execute external order. сделать внешний заказ
 		// check validity, price. проверить валидность, цену
 		if t.currentState != tele_api.State_Nominal {
 			t.log.Errorf("make doTransferred unposible. robo state:%v", t.currentState)
@@ -132,8 +131,9 @@ func (t *tele) mesageMakeOrger(ctx context.Context) {
 		types.UI.FrontResult.Cream = tuneCook(t.InMessage.MakeOrder.Cream, ui.DefaultCream, ui.CreamMax())
 		t.OutMessage.Order.Amount = uint32(types.UI.FrontResult.Item.Price)
 		types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
+		sound.PlayMoneyIn()
 
-	default: //unknown status
+	default: // unknown status
 		t.log.Errorf("unknown order status(%v)", t.InMessage.MakeOrder.OrderStatus)
 		t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_orderError
 		return
@@ -178,8 +178,8 @@ func (t *tele) messageShowQr(ctx context.Context) {
 			g.Config.UI.Front.MsgRemotePayReject)
 		g.ShowPicture(state.PicturePayReject)
 	}
-
 }
+
 func (t *tele) checkCodePriceValid(menuCode *string, amount uint32) bool {
 	i, found := types.UI.Menu[*menuCode]
 	if !found {

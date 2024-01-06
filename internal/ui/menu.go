@@ -7,6 +7,7 @@ import (
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/money"
+	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
 
@@ -110,7 +111,7 @@ func Cook(ctx context.Context) error {
 	} else {
 		g.Log.Err(err)
 	}
-
+	sound.PlayComplete()
 	if invErr := g.Inventory.InventorySave(); invErr != nil {
 		g.Error(errors.Annotate(invErr, "critical inventory persist"))
 		// err = errors.Wrap(err, invErr)
@@ -118,7 +119,6 @@ func Cook(ctx context.Context) error {
 	}
 	g.Log.Debugf("ui-front selected=%s end err=%v", types.UI.FrontResult.Item.String(), err)
 	return err
-
 }
 
 func CreamMax() uint8 {
