@@ -38,7 +38,7 @@ var Mod = subcmd.Mod{
 // megaPin := cmdline.String("mega-pin", "25", "mega notify pin")
 // uarterName := cmdline.String("io", "file", "file|iodin|mega")
 
-func Main(ctx context.Context, config *state.Config) error {
+func Main(ctx context.Context, config *state.Config, args ...[]string) error {
 	g := state.GetGlobal(ctx)
 	g.MustInit(ctx, config)
 
@@ -51,12 +51,12 @@ func Main(ctx context.Context, config *state.Config) error {
 	g.MustInit(ctx, synthConfig)
 
 	if _, err := g.Mdb(); err != nil {
-		g.Log.Fatal(err)
+		g.Log.Fatalf("%v", err)
 	}
 	defer g.Hardware.Mdb.Uarter.Close()
 
 	if err := g.Engine.ValidateExec(ctx, doBusReset); err != nil {
-		g.Log.Fatal(err)
+		g.Log.Fatalf("%v", err)
 	}
 
 	if err := hardware.InitMDBDevices(ctx); err != nil {
@@ -79,10 +79,10 @@ var doBusReset = engine.Func{Name: "reset", F: func(ctx context.Context) error {
 
 func newCompleter(ctx context.Context) func(d prompt.Document) []prompt.Suggest {
 	suggests := []prompt.Suggest{
-		prompt.Suggest{Text: "reset", Description: "MDB bus reset"},
-		prompt.Suggest{Text: "sN", Description: "pause for N ms"},
-		prompt.Suggest{Text: "loop=N", Description: "repeat line N times"},
-		prompt.Suggest{Text: "@XX", Description: "transmit MDB block, show response"},
+		{Text: "reset", Description: "MDB bus reset"},
+		{Text: "sN", Description: "pause for N ms"},
+		{Text: "loop=N", Description: "repeat line N times"},
+		{Text: "@XX", Description: "transmit MDB block, show response"},
 	}
 
 	return func(d prompt.Document) []prompt.Suggest {

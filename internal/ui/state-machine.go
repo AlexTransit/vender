@@ -71,7 +71,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 			ui.g.Log.Error(errs)
 			return types.StateBroken
 		}
-		if err := os.MkdirAll("/run/vender", 0700); err != nil {
+		if err := os.MkdirAll(watchdog.WD.Folder+"vmc", 0o700); err != nil {
 			ui.g.Tele.Error(errors.Annotatef(err, "create vender folder"))
 		}
 		ui.broken = false

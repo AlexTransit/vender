@@ -5,17 +5,16 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/signal"
 	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
+	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
 	"github.com/AlexTransit/vender/log2"
@@ -96,7 +95,6 @@ func (g *Global) ShowPicture(pict Pic) {
 		file = g.Config.UI.Front.PicIdle
 	}
 	g.Hardware.Display.d.CopyFile2FB(file)
-
 }
 
 func (g *Global) VmcStop(ctx context.Context) {
@@ -114,7 +112,7 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 	go func() {
 		time.Sleep(10 * time.Second)
 		g.Log.Infof("--- vmc timeout EXIT ---")
-		os.Exit(1)
+		os.Exit(0)
 	}()
 	g.LockCh <- struct{}{}
 	_ = g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken)
@@ -125,7 +123,7 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 	g.Log.Infof("--- vmc stop ---")
 	g.Stop()
 	g.Alive.Done()
-	os.Exit(1)
+	os.Exit(0)
 }
 
 func (g *Global) ClientBegin(ctx context.Context) {
@@ -156,6 +154,8 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 
 	g.Log.Infof("build version=%s", g.BuildVersion)
 	types.VMC.Version = g.BuildVersion
+	sound.Init(&g.Config.Sound, g.Log, true)
+	// time.Sleep(3 * time.Second)
 
 	if g.Config.Persist.Root == "" {
 		g.Config.Persist.Root = "./tmp-vender-db"
@@ -174,9 +174,9 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	g.Log.SetErrorFunc(g.Tele.Error)
 
 	if g.BuildVersion == "unknown" {
-		g.Error(fmt.Errorf("build version is not set, please use script/build"))
+		g.Log.Warning("build version is not set, please use script/build")
 	} else if g.Config.Tele.VmId > 0 && strings.HasSuffix(g.BuildVersion, "-dirty") { // vmid<=0 is staging
-		g.Error(fmt.Errorf("running development build with uncommited changes, bad idea for production"))
+		g.Log.Warning("running development build with uncommited changes, bad idea for production")
 	}
 
 	if g.Config.Money.Scale == 0 {
@@ -193,15 +193,7 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	wg.Add(initTasks)
 	errch := make(chan error, initTasks)
 
-	// working term signal
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		sig := <-sigs
-		g.Log.Infof("system signal - %v", sig)
-		g.VmcStop(ctx)
-	}()
-
+	// sound.Init(&g.Config.Sound, g.Log)
 	go helpers.WrapErrChan(&wg, errch, g.initDisplay)
 	go helpers.WrapErrChan(&wg, errch, g.initInput)
 	go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
@@ -238,6 +230,7 @@ func (g *Global) Error(err error, args ...interface{}) {
 
 func (g *Global) Fatal(err error, args ...interface{}) {
 	if err != nil {
+		sound.Broken()
 		g.Error(err, args...)
 		g.StopWait(5 * time.Second)
 		g.Log.Fatal(err)
@@ -393,7 +386,6 @@ func VmcUnLock(ctx context.Context) {
 }
 
 func (g *Global) UpgradeVender() {
-
 	if g.Config.UpgradeScript != "" {
 		go func() {
 			cmd := exec.Command("/usr/bin/bash", "-c", g.Config.UpgradeScript)
@@ -403,7 +395,6 @@ func (g *Global) UpgradeVender() {
 				return
 			}
 			g.Log.Errorf("stdout(%s) error(%s)", stdout, cmd.Stderr)
-
 		}()
 	}
 }
@@ -455,6 +446,22 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		},
 	)
 
+	g.Engine.RegisterNewFunc(
+		"sound.started",
+		func(ctx context.Context) error {
+			sound.PlayStarted()
+			return nil
+		},
+	)
+
+	g.Engine.RegisterNewFunc(
+		"sound.trash",
+		func(ctx context.Context) error {
+			sound.PlayTrash()
+			return nil
+		},
+	)
+
 	doEmuKey := engine.FuncArg{
 		// keys 0-9, 10 = C, 11 = Ok,
 		// 12-13 cream- cream+, 14-15 sugar- sugar+, 16 dot
@@ -480,7 +487,7 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 			event := types.InputEvent{Source: "evend-keyboard", Key: types.InputKey(key), Up: true}
 			g.Hardware.Input.Emit(event)
 			return nil
-		}}
+		},
+	}
 	g.Engine.Register(doEmuKey.Name, doEmuKey)
-
 }

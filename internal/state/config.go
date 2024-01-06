@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/AlexTransit/vender/currency"
@@ -9,7 +10,9 @@ import (
 	evend_config "github.com/AlexTransit/vender/hardware/mdb/evend/config"
 	"github.com/AlexTransit/vender/helpers"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
+	"github.com/AlexTransit/vender/internal/sound"
 	ui_config "github.com/AlexTransit/vender/internal/ui/config"
+	"github.com/AlexTransit/vender/internal/watchdog"
 	"github.com/AlexTransit/vender/log2"
 	tele_config "github.com/AlexTransit/vender/tele/config"
 	"github.com/hashicorp/hcl"
@@ -76,9 +79,10 @@ type Config struct {
 	Persist struct {
 		Root string `hcl:"root"`
 	}
-	Tele tele_config.Config
-	UI   ui_config.Config
-
+	Tele     tele_config.Config
+	UI       ui_config.Config
+	Sound    sound.Config
+	Watchdog watchdog.Config
 	// _copy_guard sync.Mutex //nolint:unused
 }
 
@@ -123,8 +127,7 @@ func (c *Config) read(log *log2.Log, fs FullReader, source ConfigSource, errs *[
 
 	err = hcl.Unmarshal(bs, c)
 	if err != nil {
-		// err = errors.Annotatef(err, "config unmarshal source=%s content='%s'", source.Name, string(bs))
-		err = errors.Annotatef(err, "config (%s) read error", source.Name)
+		err = fmt.Errorf("%v parse error (%v)", source.Name, err)
 		*errs = append(*errs, err)
 		return
 	}

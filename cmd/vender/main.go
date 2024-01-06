@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-
 	"os"
 	"regexp"
 	"strings"
@@ -22,19 +21,24 @@ import (
 	"github.com/AlexTransit/vender/log2"
 )
 
-var log = log2.NewStderr(log2.LOG_DEBUG)
-var modules = []subcmd.Mod{
-	vmc.BrokenMod,
-	cmd_engine.Mod,
-	mdb.Mod,
-	cmd_tele.Mod,
-	ui.Mod,
-	vmc.VmcMod,
-	{Name: "version", Main: versionMain},
-}
+var (
+	log     = log2.NewStderr(log2.LOG_DEBUG)
+	modules = []subcmd.Mod{
+		// vmc.BrokenMod,
+		cmd_engine.Mod,
+		mdb.Mod,
+		cmd_tele.Mod,
+		ui.Mod,
+		vmc.VmcMod,
+		vmc.CmdMod,
+		{Name: "version", Main: versionMain},
+	}
+)
 
-var BuildVersion string = "unknown" // set by ldflags -X
-var reFlagVersion = regexp.MustCompile("-?-?version")
+var (
+	BuildVersion  string = "unknown" // set by ldflags -X
+	reFlagVersion        = regexp.MustCompile("-?-?version")
+)
 
 func main() {
 	// log.SetFlags(0)
@@ -49,13 +53,13 @@ func main() {
 		}
 		fmt.Fprintf(flagset.Output(), "Commands: %s\n", strings.Join(commandNames, " "))
 	}
-	configPath := flagset.String("config", "vender.hcl", "")
+	configPath := flagset.String("config", "/home/vmc/config.hcl", "")
 	onlyVersion := flagset.Bool("version", false, "print build version and exit")
 	if err := flagset.Parse(os.Args[1:]); err != nil {
 		log.Fatal(err)
 	}
 	if *onlyVersion || reFlagVersion.MatchString(flagset.Arg(0)) {
-		_ = versionMain(context.Background(), nil)
+		versionMain(context.Background(), nil)
 		return
 	}
 
@@ -63,7 +67,7 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(flagset.Output(), "command line error: %v\n\n", err)
 		flagset.Usage()
-		os.Exit(1)
+		os.Exit(0)
 	}
 	log.SetFlags(log2.LServiceFlags)
 	if !subcmd.SdNotify("start") {
@@ -79,12 +83,13 @@ func main() {
 	g.BuildVersion = BuildVersion
 	types.Log = log
 	log.Debugf("starting command %s", mod.Name)
-	if err := mod.Main(ctx, config); err != nil {
-		g.Fatal(err)
+
+	if err := mod.Main(ctx, config, flagset.Args()); err != nil {
+		g.Log.Errorf("%v", err)
 	}
 }
 
-func versionMain(ctx context.Context, config *state.Config) error {
+func versionMain(ctx context.Context, config *state.Config, _ ...[]string) error {
 	fmt.Printf("vender %s\n", BuildVersion)
 	return nil
 }

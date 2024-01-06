@@ -32,6 +32,7 @@ func (Noop) CommandResponse(*Response) {}
 func (Noop) RoboSend(*FromRoboMessage) {}
 
 func (Noop) RoboSendState(s State) {}
+func (Noop) RoboSendBroken()       {}
 
 func (Noop) RoboConnected() bool { return false }
 

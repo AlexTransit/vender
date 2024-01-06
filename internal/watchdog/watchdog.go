@@ -5,56 +5,68 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/log2"
 )
 
-var heartBeatFile = "/run/hb"
-var wdTics = "31"
+type Config struct {
+	Folder string
+}
+type wdStruct struct {
+	Folder string
+	log    *log2.Log
+	// hbf string
+	wdt string
+}
+
+const file = "hb"
+
+var WD wdStruct
+
+func Init(conf *Config, log *log2.Log) {
+	WD.Folder = helpers.ConfigDefaultStr(conf.Folder, "/run/user/1000/")
+	WD.log = log
+}
 
 func WatchDogEnable() {
-	if wdTics == "0" {
+	if WD.wdt == "0" {
 		return
 	}
-	// cmd := exec.Command("/usr/bin/sudo", "/usr/bin/touch", heartBeatFile, "&", "/usr/bin/sudo", "/usr/bin/chown", "vmc:vmc", heartBeatFile)
-	// if err := cmd.Run(); err != nil {
-	// 	types.Log.Errorf("cant creat heartBeatFile (%v)", err)
-	// }
-	// cmd = exec.Command("/usr/bin/sudo", "/usr/bin/chown", "vmc:vmc", heartBeatFile)
-	// if err := cmd.Run(); err != nil {
-	// 	types.Log.Errorf("cant change heartBeatFile owner (%v)", err)
-	// }
-
+	wdf := WD.Folder + "hb"
 	createWatchDogFile()
-	b, err := os.ReadFile(heartBeatFile)
+	b, err := os.ReadFile(wdf)
 	hbfd := string(b)
-	if err != nil || hbfd != wdTics {
-		types.Log.Errorf("error check watchdog heartBeatFile read data(%v) error(%v)", hbfd, err)
+	if err != nil || hbfd != WD.wdt {
+		WD.log.Errorf("error check watchdog heartBeatFile read data(%v) error(%v)", hbfd, err)
 		go func() {
 			time.Sleep(1 * time.Second)
-			if e := os.Remove(heartBeatFile); e != nil {
-				types.Log.Errorf("error delete incorect heartBeat File. error(%v)", e)
+			if e := os.Remove(wdf); e != nil {
+				WD.log.Errorf("error delete incorect heartBeat File. error(%v)", e)
 			}
 			createWatchDogFile()
 		}()
 	}
-
 }
+
 func createWatchDogFile() {
-	f, err := os.Create(heartBeatFile)
+	f, err := os.Create(WD.Folder + "hb")
 	_ = err
-	if _, err := f.WriteString(wdTics); err != nil {
-		types.Log.Errorf("error create watchdog heartBeatFile (%v)", err)
+	if _, err := f.WriteString(WD.wdt); err != nil {
+		WD.log.Errorf("error create watchdog heartBeatFile (%v)", err)
 		return
 	}
+	f.Sync()
 	f.Close()
 }
 
 func WatchDogDisable() {
-	types.Log.Notice("watchdog disabled.")
-	_ = os.Remove(heartBeatFile)
+	WD.log.Notice("watchdog disabled.")
+	if err := os.Remove(WD.Folder + "hb"); err != nil {
+		WD.log.Errorf("delete heartBeatFile error(%v)", err)
+	}
 }
 
 func WatchDogSetTics(tics int) {
-	wdTics = strconv.Itoa(tics)
-	types.Log.Infof("watchdog set count:%d", tics)
+	WD.wdt = strconv.Itoa(tics)
+	WD.log.Infof("watchdog set count:%d", tics)
 }

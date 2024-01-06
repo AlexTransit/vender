@@ -29,6 +29,7 @@ type Teler interface {
 	CommandResponse(*Response)
 	RoboSend(*FromRoboMessage)
 	RoboSendState(s State)
+	RoboSendBroken()
 	RoboConnected() bool
 	GetState() State
 }
@@ -46,6 +47,7 @@ func (stub) Transaction(*Telemetry_Transaction)                                {
 func (stub) CommandResponse(*Response)                                         {}
 func (stub) RoboSend(*FromRoboMessage)                                         {}
 func (stub) RoboSendState(s State)                                             {}
+func (stub) RoboSendBroken()                                                   {}
 func (stub) RoboConnected() bool                                               { return false }
 func (stub) GetState() State                                                   { return 0 }
 

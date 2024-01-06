@@ -16,12 +16,12 @@ import (
 
 var Mod = subcmd.Mod{Name: "ui", Main: Main}
 
-func Main(ctx context.Context, config *state.Config) error {
+func Main(ctx context.Context, config *state.Config, args ...[]string) error {
 	g := state.GetGlobal(ctx)
 	config.Engine.OnBoot = nil
 	config.Engine.OnMenuError = nil
 	config.Engine.Menu.Items = []*engine_config.MenuItem{
-		&engine_config.MenuItem{Code: "333", Name: "test item", XXX_Price: 5, Scenario: "sleep(3s)"},
+		{Code: "333", Name: "test item", XXX_Price: 5, Scenario: "sleep(3s)"},
 	}
 	g.MustInit(ctx, config)
 	g.Log.Debugf("config=%+v", g.Config)
