@@ -97,12 +97,14 @@ func playMP3controlled(file string, volume int) {
 	f, err := os.Open(s.sound.Folder + file)
 	if err != nil {
 		s.log.Errorf("open starting (%v)", err)
+		return
 	}
 	str, _ := mp3.DecodeWithoutResampling(f)
 	s.audioPlayer, err = s.audioContext.NewPlayer(str)
 	s.audioPlayer.SetVolume(float64(helpers.ConfigDefaultInt(s.sound.StartingVolume, 10)) / 10)
 	if err != nil {
 		s.log.Errorf("new player (%v)", err)
+		return
 	}
 	go func() {
 		s.audioPlayer.Play()
