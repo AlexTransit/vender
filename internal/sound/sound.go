@@ -1,6 +1,7 @@
 package sound
 
 import (
+	"errors"
 	"io"
 	"os"
 	"time"
@@ -67,17 +68,46 @@ func Init(conf *Config, log *log2.Log, startingVMC bool) {
 	}
 }
 
-func PlayStarting() { playMP3controlled(s.sound.Starting, s.sound.StartingVolume) }
-func PlayStarted()  { playMP3controlled(s.sound.Started, s.sound.StartedVolume) }
-func PlayComplete() { playMP3controlled(s.sound.Complete, s.sound.CompleteVolume) }
-func PlayKeyBeep()  { playStream(&s.keyBeep) }
-func PlayMoneyIn()  { playStream(&s.moneyIn) }
-func PlayTrash()    { playStream(&s.trash) }
+func PlayStarting() {
+	if err := playMP3controlled(s.sound.Starting, s.sound.StartingVolume); err != nil {
+		s.log.Errorf("play Starting (%v)", err)
+	}
+}
+
+func PlayStarted() {
+	if err := playMP3controlled(s.sound.Started, s.sound.StartedVolume); err != nil {
+		s.log.Errorf(" play Started (%v)", err)
+	}
+}
+
+func PlayComplete() {
+	if err := playMP3controlled(s.sound.Complete, s.sound.CompleteVolume); err != nil {
+		s.log.Errorf("play Complete (%v)", err)
+	}
+}
+func PlayKeyBeep() { playStream(&s.keyBeep) }
+func PlayMoneyIn() { playStream(&s.moneyIn) }
+func PlayTrash()   { playStream(&s.trash) }
 
 // play file and wait finishing
-func Broken() { playMP3controlled(s.sound.Broken, s.sound.BrokenVolume); waitingEndPlay() }
+func Broken() {
+	if err := PlayFile(s.sound.Broken, s.sound.BrokenVolume); err != nil {
+		s.log.Errorf(" play Broken (%v)", err)
+	}
+}
 
-func PlayFile(file string) { playMP3controlled(file, 10); waitingEndPlay() }
+func PlayFile(file string, volume ...int) error {
+	v := 10
+	if volume != nil {
+		v = volume[0]
+	}
+	if err := playMP3controlled(file, v); err != nil {
+		s.log.Errorf(" play file (%v)", err)
+		return err
+	}
+	waitingEndPlay()
+	return nil
+}
 
 func Stop() {
 	if s.audioPlayer == nil {
@@ -89,21 +119,22 @@ func Stop() {
 	}
 }
 
-func playMP3controlled(file string, volume int) {
-	if s.sound == nil || s.sound.Disabled {
-		return
+func playMP3controlled(file string, volume int) (err error) {
+	if s.sound == nil || s.sound.Disabled || file == "" {
+		return errors.New("play imposible")
 	}
 	Stop()
 	f, err := os.Open(s.sound.Folder + file)
 	if err != nil {
-		s.log.Errorf("open starting (%v)", err)
 		return
 	}
-	str, _ := mp3.DecodeWithoutResampling(f)
+	str, err := mp3.DecodeWithoutResampling(f)
+	if err != nil {
+		return
+	}
 	s.audioPlayer, err = s.audioContext.NewPlayer(str)
 	s.audioPlayer.SetVolume(float64(helpers.ConfigDefaultInt(s.sound.StartingVolume, 10)) / 10)
 	if err != nil {
-		s.log.Errorf("new player (%v)", err)
 		return
 	}
 	go func() {
@@ -112,6 +143,7 @@ func playMP3controlled(file string, volume int) {
 		f.Close()
 	}()
 	s.log.Infof("play %s", file)
+	return nil
 }
 
 func waitingEndPlay() {
