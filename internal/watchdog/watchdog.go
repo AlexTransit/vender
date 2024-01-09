@@ -54,7 +54,7 @@ func WatchDogEnable() {
 func createWatchDogFile() {
 	f, err := os.Create(WD.Folder + file)
 	_ = err
-	if _, err := f.WriteString(WD.wdt); err != nil {
+	if _, err := f.WriteString(WD.wdt + "\n"); err != nil {
 		WD.log.Errorf("error create watchdog heartBeatFile (%v)", err)
 		return
 	}
