@@ -32,7 +32,7 @@ func Init(conf *Config, log *log2.Log) {
 }
 
 func WatchDogEnable() {
-	if WD.wdt == "0" {
+	if WD.Disabled {
 		return
 	}
 	wdf := WD.Folder + "hb"
