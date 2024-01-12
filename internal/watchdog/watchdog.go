@@ -3,6 +3,7 @@ package watchdog
 import (
 	"os"
 	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
@@ -26,7 +27,7 @@ const file = "hb"
 var WD wdStruct
 
 func Init(conf *Config, log *log2.Log) {
-	WD.Folder = helpers.ConfigDefaultStr(conf.Folder, "/run/user/1000/")
+	WD.Folder = helpers.ConfigDefaultStr(conf.Folder, "/run/user/1000/") + file
 	WD.log = log
 	WD.Disabled = conf.Disabled
 }
@@ -35,37 +36,52 @@ func WatchDogEnable() {
 	if WD.Disabled {
 		return
 	}
-	wdf := WD.Folder + "hb"
-	createWatchDogFile()
-	b, err := os.ReadFile(wdf)
-	hbfd := string(b)
-	if err != nil || hbfd != WD.wdt {
-		WD.log.Errorf("error check watchdog heartBeatFile read data(%v) error(%v)", hbfd, err)
+	if err := createWatchDogFile(); err != nil {
+		WD.log.WarningF("create watchdog error(%v) retry", err)
 		go func() {
 			time.Sleep(1 * time.Second)
-			if e := os.Remove(wdf); e != nil {
-				WD.log.Errorf("error delete incorect heartBeat File. error(%v)", e)
+			if err := createWatchDogFile(); err != nil {
+				WD.Disabled = true
+				WD.log.Errorf("watchdog disabled. create file two times error(%v)", err)
 			}
-			createWatchDogFile()
 		}()
 	}
-}
-
-func createWatchDogFile() {
-	f, err := os.Create(WD.Folder + file)
-	_ = err
-	if _, err := f.WriteString(WD.wdt + "\n"); err != nil {
-		WD.log.Errorf("error create watchdog heartBeatFile (%v)", err)
+	f, err := os.OpenFile(WD.Folder+file, syscall.O_RDONLY, 0o666)
+	if err != nil {
+		WD.log.WarningF("open watchdog file error(%v)", err)
 		return
 	}
-	f.Sync()
+	buf := make([]byte, len(WD.wdt))
+	_, err = f.Read(buf)
+	if err != nil {
+		WD.log.WarningF("read watchdog file error(%v)", err)
+		return
+	}
+	if WD.wdt != string(buf) {
+		WD.log.WarningF("new watchdog file dismatch wd(%s) tiks(%s)", WD.wdt, buf)
+	}
 	f.Close()
+}
+
+func createWatchDogFile() error {
+	var f *os.File
+	var err error
+	f, err = os.Create(WD.Folder + file)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	_, err = f.Write([]byte(WD.wdt + "\n"))
+	return err
 }
 
 func WatchDogDisable() {
 	WD.log.Notice("watchdog disabled.")
 	if err := os.Remove(WD.Folder + file); err != nil {
-		WD.log.Errorf("delete heartBeatFile error(%v)", err)
+		e, ok := err.(*os.PathError)
+		if ok && e.Err != syscall.ENOENT {
+			WD.log.Errorf("delete heartBeatFile error(%v)", e)
+		}
 	}
 }
 

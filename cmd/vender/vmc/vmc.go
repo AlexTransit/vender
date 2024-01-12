@@ -15,7 +15,6 @@ import (
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/ui"
-	"github.com/AlexTransit/vender/internal/watchdog"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/juju/errors"
 )
@@ -64,7 +63,6 @@ func VmcMain(ctx context.Context, config *state.Config, args ...[]string) error 
 	if err := ui.Init(ctx); err != nil {
 		return errors.Annotate(err, "ui Init()")
 	}
-	watchdog.Init(&config.Watchdog, g.Log)
 
 	// subcmd.SdNotify(daemon.SdNotifyReady)
 	g.Log.Debugf("VMC init complete")
