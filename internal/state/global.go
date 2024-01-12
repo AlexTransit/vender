@@ -106,7 +106,6 @@ func (g *Global) VmcStop(ctx context.Context) {
 
 func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 	watchdog.WatchDogDisable()
-	watchdog.WatchDogSetTics(0)
 	g.ShowPicture(PictureBroken)
 	g.Log.Infof("--- event vmc stop ---")
 	go func() {
@@ -151,6 +150,9 @@ func (g *Global) ClientEnd(ctx context.Context) {
 // If `Init` fails, consider `Global` is in broken state.
 func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	g.Config = cfg
+
+	watchdog.Init(&g.Config.Watchdog, g.Log)
+	watchdog.WatchDogEnable()
 
 	g.Log.Infof("build version=%s", g.BuildVersion)
 	types.VMC.Version = g.BuildVersion

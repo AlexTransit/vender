@@ -41,8 +41,6 @@ var (
 )
 
 func main() {
-	// log.SetFlags(0)
-
 	flagset := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	flagset.Usage = func() {
 		fmt.Fprint(flagset.Output(), "Usage: [option...] command\n\nOptions:\n")
@@ -67,7 +65,7 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(flagset.Output(), "command line error: %v\n\n", err)
 		flagset.Usage()
-		os.Exit(0)
+		os.Exit(1)
 	}
 	log.SetFlags(log2.LServiceFlags)
 	if !subcmd.SdNotify("start") {
@@ -86,6 +84,7 @@ func main() {
 
 	if err := mod.Main(ctx, config, flagset.Args()); err != nil {
 		g.Log.Errorf("%v", err)
+		os.Exit(1)
 	}
 }
 
