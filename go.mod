@@ -1,18 +1,18 @@
 module github.com/AlexTransit/vender
 
-go 1.20
+go 1.21
 
 require (
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
-	github.com/eclipse/paho.mqtt.golang v1.4.1
+	github.com/eclipse/paho.mqtt.golang v1.4.3
 	github.com/golang/protobuf v1.5.2
 	github.com/hashicorp/hcl v1.0.0
 	github.com/juju/errors v1.0.0
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mattn/go-isatty v0.0.16
-	github.com/mattn/go-runewidth v0.0.14 // indirect
-	github.com/mattn/go-tty v0.0.4 // indirect
+	github.com/mattn/go-isatty v0.0.20
+	github.com/mattn/go-runewidth v0.0.15 // indirect
+	github.com/mattn/go-tty v0.0.5 // indirect
 	github.com/paulrosania/go-charset v0.0.0-20151028000031-621bb39fcc83
 	github.com/pkg/term v1.2.0-beta.2 // indirect
 	github.com/skip2/go-qrcode v0.0.0-20191027152451-9434209cb086
@@ -23,8 +23,8 @@ require (
 	github.com/temoto/gpio-cdev-go v1.1.0
 	github.com/temoto/inputevent-go v1.0.0
 	github.com/temoto/iodin v0.0.0-20190211111721-99c87617ba86
-	golang.org/x/net v0.8.0 // indirect
-	golang.org/x/sys v0.15.0
+	golang.org/x/net v0.20.0 // indirect
+	golang.org/x/sys v0.16.0
 	google.golang.org/protobuf v1.28.0 // indirect
 	periph.io/x/periph v3.6.4+incompatible
 )
@@ -35,10 +35,10 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ebitengine/oto/v3 v3.1.0 // indirect
 	github.com/ebitengine/purego v0.5.1 // indirect
-	github.com/gorilla/websocket v1.5.0 // indirect
+	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/rivo/uniseg v0.4.2 // indirect
-	golang.org/x/sync v0.3.0 // indirect
+	github.com/rivo/uniseg v0.4.4 // indirect
+	golang.org/x/sync v0.6.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
