@@ -99,7 +99,7 @@ func (g *Global) ShowPicture(pict Pic) {
 
 func (g *Global) VmcStop(ctx context.Context) {
 	if types.VMC.UiState != uint32(types.StateFrontSelect) {
-		types.InitRequared()
+		watchdog.InitDeviceRequared()
 	}
 	g.VmcStopWOInitRequared(ctx)
 }
@@ -109,7 +109,7 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 	g.ShowPicture(PictureBroken)
 	g.Log.Infof("--- event vmc stop ---")
 	go func() {
-		time.Sleep(10 * time.Second)
+		time.Sleep(3 * time.Second)
 		g.Log.Infof("--- vmc timeout EXIT ---")
 		os.Exit(0)
 	}()

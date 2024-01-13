@@ -1,6 +1,7 @@
 package watchdog
 
 import (
+	"errors"
 	"os"
 	"strconv"
 	"syscall"
@@ -15,11 +16,10 @@ type Config struct {
 	Folder   string
 }
 type wdStruct struct {
-	Disabled bool
-	file     string
+	disabled bool
+	folder   string
 	log      *log2.Log
-	// hbf string
-	wdt string
+	wdt      string // watchdog tics
 }
 
 const file = "hb"
@@ -27,13 +27,13 @@ const file = "hb"
 var WD wdStruct
 
 func Init(conf *Config, log *log2.Log) {
-	WD.file = helpers.ConfigDefaultStr(conf.Folder, "/run/user/1000/") + file
+	WD.folder = helpers.ConfigDefaultStr(conf.Folder, "/run/user/1000/")
 	WD.log = log
-	WD.Disabled = conf.Disabled
+	WD.disabled = conf.Disabled
 }
 
 func WatchDogEnable() {
-	if WD.Disabled {
+	if WD.disabled {
 		return
 	}
 	if err := createWatchDogFile(); err != nil {
@@ -41,12 +41,12 @@ func WatchDogEnable() {
 		go func() {
 			time.Sleep(1 * time.Second)
 			if err := createWatchDogFile(); err != nil {
-				WD.Disabled = true
+				WD.disabled = true
 				WD.log.Errorf("watchdog disabled. create file two times error(%v)", err)
 			}
 		}()
 	}
-	f, err := os.OpenFile(WD.file, syscall.O_RDONLY, 0o666)
+	f, err := os.OpenFile(WD.folder+file, syscall.O_RDONLY, 0o666)
 	if err != nil {
 		WD.log.WarningF("open watchdog file error(%v)", err)
 		return
@@ -66,7 +66,7 @@ func WatchDogEnable() {
 func createWatchDogFile() error {
 	var f *os.File
 	var err error
-	f, err = os.Create(WD.file + file)
+	f, err = os.Create(WD.folder + file)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func createWatchDogFile() error {
 
 func WatchDogDisable() {
 	WD.log.Notice("watchdog disabled.")
-	if err := os.Remove(WD.file); err != nil {
+	if err := os.Remove(WD.folder + file); err != nil {
 		e, ok := err.(*os.PathError)
 		if ok && e.Err != syscall.ENOENT {
 			WD.log.Errorf("delete heartBeatFile error(%v)", e)
@@ -86,9 +86,26 @@ func WatchDogDisable() {
 }
 
 func WatchDogSetTics(tics int) {
-	if WD.Disabled {
+	if WD.disabled {
 		return
 	}
 	WD.wdt = strconv.Itoa(tics)
 	WD.log.Infof("watchdog set count:%d", tics)
+}
+
+func CheckDeviceInited() bool {
+	if _, err := os.Stat(WD.folder + "vmc"); os.IsNotExist(err) {
+		return true
+	}
+	return false
+}
+
+func SetDeviceInited() {
+	if err := os.MkdirAll(WD.folder+"vmc", 0o700); err != nil {
+		WD.log.Error(errors.New("create vender folder"), err)
+	}
+}
+
+func InitDeviceRequared() {
+	os.RemoveAll(WD.folder + "vmc")
 }

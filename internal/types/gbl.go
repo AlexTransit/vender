@@ -3,11 +3,9 @@ package types
 import (
 	"context"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/AlexTransit/vender/currency"
-	"github.com/AlexTransit/vender/internal/watchdog"
 	"github.com/AlexTransit/vender/log2"
 
 	// "github.com/AlexTransit/vender/log2"
@@ -85,17 +83,6 @@ type Doer interface {
 func init() {
 	VMC = new(VMCType)
 	UI = new(UItype)
-}
-
-func FirstInit() bool {
-	if _, err := os.Stat(watchdog.WD.Folder + "vmc"); os.IsNotExist(err) {
-		return true
-	}
-	return false
-}
-
-func InitRequared() {
-	os.RemoveAll(watchdog.WD.Folder + "vmc")
 }
 
 func SetLight(v bool) {
