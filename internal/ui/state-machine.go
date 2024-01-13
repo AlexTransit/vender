@@ -2,7 +2,6 @@ package ui
 
 import (
 	"context"
-	"os"
 	"sync/atomic"
 	"time"
 
@@ -62,7 +61,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		watchdog.WatchDogEnable()
 
 		onBootScript := ui.g.Config.Engine.OnBoot
-		if types.FirstInit() {
+		if watchdog.CheckDeviceInited() {
 			time.Sleep(3 * time.Second) // wait device init after reset
 			onBootScript = append(ui.g.Config.Engine.FirstInit, onBootScript[:]...)
 		}
@@ -71,16 +70,14 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 			ui.g.Log.Error(errs)
 			return types.StateBroken
 		}
-		if err := os.MkdirAll(watchdog.WD.Folder+"vmc", 0o700); err != nil {
-			ui.g.Tele.Error(errors.Annotatef(err, "create vender folder"))
-		}
+		watchdog.SetDeviceInited()
 		ui.broken = false
 		ui.g.Tele.RoboSendState(tele_api.State_Nominal)
 		return types.StateFrontBegin
 
 	case types.StateBroken:
 		watchdog.WatchDogDisable()
-		types.InitRequared()
+		watchdog.InitDeviceRequared()
 		ui.g.Log.Infof("state=broken")
 		ui.g.ShowPicture(state.PictureBroken)
 		if !ui.broken {
