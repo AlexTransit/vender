@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -16,10 +15,12 @@ import (
 	"periph.io/x/periph/conn/physic"
 )
 
-const modName string = "mega-client"
-const DefaultTimeout = 20 * time.Millisecond
-const DefaultSpiSpeed = 200 * physic.KiloHertz
-const busyDelay = 500 * time.Microsecond
+const (
+	modName         string = "mega-client"
+	DefaultTimeout         = 20 * time.Millisecond
+	DefaultSpiSpeed        = 200 * physic.KiloHertz
+	busyDelay              = 500 * time.Microsecond
+)
 
 var (
 	ErrCriticalProtocol = errors.New("CRITICAL mega protocol error")
@@ -109,6 +110,7 @@ func (c *Client) IncRef(debug string) {
 	c.Log.Debugf("%s incref by %s", modName, debug)
 	atomic.AddInt32(&c.refcount, 1)
 }
+
 func (c *Client) DecRef(debug string) error {
 	c.Log.Debugf("%s decref by %s", modName, debug)
 	new := atomic.AddInt32(&c.refcount, -1)
@@ -239,7 +241,7 @@ func (c *Client) ioLoop() {
 				case kind == RESPONSE_TWI_LISTEN || kind == RESPONSE_RESET:
 
 				case kind == RESPONSE_OK && bgrecv.Fields.MdbResult == MDB_RESULT_UART_READ_UNEXPECTED:
-					//AlexM FIXME попал сюда при тесте. ( циклично слал) и это точно не помехи
+					// AlexM FIXME попал сюда при тесте. ( циклично слал) и это точно не помехи
 					// если на coinco отключить бошку и ресетнуть, то получим все типа помехим
 					c.Log.Infof("mega stray1 king(%v) MdbResult(%v) response(%s)", kind, bgrecv.Fields.MdbResult, bgrecv.ResponseString())
 
@@ -265,8 +267,8 @@ func (c *Client) ioLoop() {
 func (c *Client) ioTx(tx *tx) error {
 	c.alive.Add(1)
 	defer c.alive.Done()
-	saveGCPercent := debug.SetGCPercent(-1) // workaround for protocol error under GC stress
-	defer debug.SetGCPercent(saveGCPercent)
+	// saveGCPercent := debug.SetGCPercent(-1) // workaround for protocol error under GC stress
+	// defer debug.SetGCPercent(saveGCPercent)
 
 	if tx.command != nil {
 		err := c.ioWrite(tx.command)
