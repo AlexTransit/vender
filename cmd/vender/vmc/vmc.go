@@ -15,6 +15,7 @@ import (
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/ui"
+	"github.com/AlexTransit/vender/internal/watchdog"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/juju/errors"
 )
@@ -27,6 +28,9 @@ var (
 
 func VmcMain(ctx context.Context, config *state.Config, args ...[]string) error {
 	g := state.GetGlobal(ctx)
+	if watchdog.IsBroken() {
+		broken(ctx, config)
+	}
 	g.MustInit(ctx, config)
 
 	// working term signal
@@ -112,8 +116,6 @@ func broken(ctx context.Context, config *state.Config) {
 	g := state.GetGlobal(ctx)
 	sound.Init(&config.Sound, g.Log, false)
 	sound.Broken()
-	time.Sleep(2 * time.Second)
-	sound.Stop()
 	for {
 		time.Sleep(time.Second)
 	}

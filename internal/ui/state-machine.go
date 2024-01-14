@@ -61,7 +61,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		watchdog.WatchDogEnable()
 
 		onBootScript := ui.g.Config.Engine.OnBoot
-		if watchdog.CheckDeviceInited() {
+		if watchdog.ReinitRequired() {
 			time.Sleep(3 * time.Second) // wait device init after reset
 			onBootScript = append(ui.g.Config.Engine.FirstInit, onBootScript[:]...)
 		}

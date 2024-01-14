@@ -22,7 +22,7 @@ type wdStruct struct {
 	wdt      string // watchdog tics
 }
 
-const file = "hb"
+const watchdogHeartBeatingfile = "hb"
 
 var WD wdStruct
 
@@ -46,7 +46,7 @@ func WatchDogEnable() {
 			}
 		}()
 	}
-	f, err := os.OpenFile(WD.folder+file, syscall.O_RDONLY, 0o666)
+	f, err := os.OpenFile(WD.folder+watchdogHeartBeatingfile, syscall.O_RDONLY, 0o666)
 	if err != nil {
 		WD.log.WarningF("open watchdog file error(%v)", err)
 		return
@@ -66,7 +66,7 @@ func WatchDogEnable() {
 func createWatchDogFile() error {
 	var f *os.File
 	var err error
-	f, err = os.Create(WD.folder + file)
+	f, err = os.Create(WD.folder + watchdogHeartBeatingfile)
 	if err != nil {
 		return err
 	}
@@ -77,7 +77,7 @@ func createWatchDogFile() error {
 
 func WatchDogDisable() {
 	WD.log.Notice("watchdog disabled.")
-	if err := os.Remove(WD.folder + file); err != nil {
+	if err := os.Remove(WD.folder + watchdogHeartBeatingfile); err != nil {
 		e, ok := err.(*os.PathError)
 		if ok && e.Err != syscall.ENOENT {
 			WD.log.Errorf("delete heartBeatFile error(%v)", e)
@@ -93,7 +93,7 @@ func WatchDogSetTics(tics int) {
 	WD.log.Infof("watchdog set count:%d", tics)
 }
 
-func CheckDeviceInited() bool {
+func ReinitRequired() bool {
 	if _, err := os.Stat(WD.folder + "vmc"); os.IsNotExist(err) {
 		return true
 	}
@@ -101,11 +101,26 @@ func CheckDeviceInited() bool {
 }
 
 func SetDeviceInited() {
-	if err := os.MkdirAll(WD.folder+"vmc", 0o700); err != nil {
+	if err := os.MkdirAll(WD.folder+"vmc", 0o777); err != nil {
 		WD.log.Error(errors.New("create vender folder"), err)
 	}
 }
 
-func InitDeviceRequared() {
-	os.RemoveAll(WD.folder + "vmc")
+func InitDeviceRequared() { os.RemoveAll(WD.folder + "vmc") }
+
+func SetBroken() {
+	f, err := os.Create("broken")
+	if err != nil {
+		WD.log.Error(errors.New("create broken file "), err)
+		return
+	}
+	f.Sync()
+	f.Close()
+}
+
+func UnsetBroken() { os.Remove("broken") }
+
+func IsBroken() bool {
+	_, err := os.Stat("broken")
+	return !os.IsNotExist(err)
 }

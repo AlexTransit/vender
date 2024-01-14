@@ -147,12 +147,8 @@ func (g *Global) ClientEnd(ctx context.Context) {
 	g.ShowPicture(PictureIdle)
 }
 
-// If `Init` fails, consider `Global` is in broken state.
 func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	g.Config = cfg
-
-	watchdog.Init(&g.Config.Watchdog, g.Log)
-	watchdog.WatchDogEnable()
 
 	g.Log.Infof("build version=%s", g.BuildVersion)
 	types.VMC.Version = g.BuildVersion
@@ -160,11 +156,11 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	// time.Sleep(3 * time.Second)
 
 	if g.Config.Persist.Root == "" {
-		g.Config.Persist.Root = "./tmp-vender-db"
-		g.Log.Errorf("config: persist.root=empty changed=%s", g.Config.Persist.Root)
-		// return errors.Errorf("config: persist.root=empty")
+		g.Config.Persist.Root = "./vender-db"
+		g.Log.WarningF("config: persist.root=empty changed=%s", g.Config.Persist.Root)
 	}
 	g.Log.Debugf("config: persist.root=%s", g.Config.Persist.Root)
+	watchdog.Init(&g.Config.Watchdog, g.Log)
 
 	// Since tele is remote error reporting mechanism, it must be inited before anything else
 	// Tele.Init gets g.Log clone before SetErrorFunc, so Tele.Log.Error doesn't recurse on itself
@@ -194,8 +190,6 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	wg := sync.WaitGroup{}
 	wg.Add(initTasks)
 	errch := make(chan error, initTasks)
-
-	// sound.Init(&g.Config.Sound, g.Log)
 	go helpers.WrapErrChan(&wg, errch, g.initDisplay)
 	go helpers.WrapErrChan(&wg, errch, g.initInput)
 	go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
@@ -204,8 +198,6 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	g.RegisterCommands(ctx)
 	wg.Wait()
 	close(errch)
-
-	// TODO engine.try-resolve-all-lazy after all other inits finished
 
 	return helpers.FoldErrChan(errch)
 }
