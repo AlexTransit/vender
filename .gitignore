@@ -32,3 +32,4 @@ local.hcl
 tmp-vender-db/
 vender.sublime-*
 cmd/vender/__debug_bin*
+cmd/vender/broken
