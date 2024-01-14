@@ -24,7 +24,7 @@ import (
 // }
 
 func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
-	if types.VMC.NeedRestart {
+	if types.VMC.NeedRestart { // after upgrade
 		ui.g.VmcStopWOInitRequared(ctx)
 		return types.StateStop
 	}
