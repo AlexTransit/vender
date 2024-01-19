@@ -16,14 +16,14 @@ import (
 
 var Mod = subcmd.Mod{Name: "ui", Main: Main}
 
-func Main(ctx context.Context, config *state.Config, args ...[]string) error {
+func Main(ctx context.Context, args ...[]string) error {
 	g := state.GetGlobal(ctx)
-	config.Engine.OnBoot = nil
-	config.Engine.OnMenuError = nil
-	config.Engine.Menu.Items = []*engine_config.MenuItem{
+	g.Config.Engine.OnBoot = nil
+	g.Config.Engine.OnMenuError = nil
+	g.Config.Engine.Menu.Items = []*engine_config.MenuItem{
 		{Code: "333", Name: "test item", XXX_Price: 5, Scenario: "sleep(3s)"},
 	}
-	g.MustInit(ctx, config)
+	g.MustInit(ctx, g.Config)
 	g.Log.Debugf("config=%+v", g.Config)
 
 	g.Log.Debugf("Init display")

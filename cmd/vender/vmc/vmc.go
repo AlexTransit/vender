@@ -3,6 +3,7 @@ package vmc
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"strings"
@@ -26,16 +27,16 @@ var (
 	CmdMod = subcmd.Mod{Name: "cmd", Main: CmdMain}
 )
 
-func VmcMain(ctx context.Context, config *state.Config, args ...[]string) error {
+func VmcMain(ctx context.Context, args ...[]string) error {
 	g := state.GetGlobal(ctx)
 	if watchdog.IsBroken() {
-		broken(ctx, config)
+		broken(ctx)
 	}
-	g.MustInit(ctx, config)
+	g.MustInit(ctx, g.Config)
 
 	// working term signal
 	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGABRT)
 	go func() {
 		sig := <-sigs
 		g.Log.Infof("system signal - %v", sig)
@@ -75,8 +76,12 @@ func VmcMain(ctx context.Context, config *state.Config, args ...[]string) error 
 	return nil
 }
 
-func CmdMain(ctx context.Context, config *state.Config, a ...[]string) error {
+func CmdMain(ctx context.Context, a ...[]string) error {
 	g := state.GetGlobal(ctx)
+	if len(a[0]) <= 1 {
+		g.Log.Infof("command %v - error. few parameters", a)
+		os.Exit(0)
+	}
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
@@ -88,23 +93,30 @@ func CmdMain(ctx context.Context, config *state.Config, a ...[]string) error {
 
 	args := a[0][1:]
 	switch strings.ToLower(args[0]) {
+	case "help":
+		showHelpCMD()
 	case "sound":
-		sound.Init(&config.Sound, g.Log, false)
+		sound.Init(&g.Config.Sound, g.Log, false)
 		sound.PlayFile(args[1])
 		os.Exit(0)
 	case "aa":
-		sound.Init(&config.Sound, g.Log, false)
+		sound.Init(&g.Config.Sound, g.Log, false)
 		sound.PlayFile("moneyIn.mp3")
 		time.Sleep(5 * time.Second)
 		os.Exit(0)
 	case "broken":
-		broken(ctx, config)
+		broken(ctx)
 	case "exitcode":
+		if len(args) < 3 || args[2] != "success" {
+			g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
+			g.Tele.ErrorStr(fmt.Sprintf("exit code %v", args))
+			g.RunBashSript(g.Config.ScriptIfBroken)
+		}
 		if args[1] == "0" {
 			g.Log.Info("exit code 0")
 			os.Exit(0)
 		}
-		broken(ctx, config)
+		broken(ctx)
 	default:
 		return nil
 	}
@@ -112,11 +124,19 @@ func CmdMain(ctx context.Context, config *state.Config, a ...[]string) error {
 	return nil
 }
 
-func broken(ctx context.Context, config *state.Config) {
+func broken(ctx context.Context) {
+	watchdog.SetBroken()
 	g := state.GetGlobal(ctx)
-	sound.Init(&config.Sound, g.Log, false)
-	sound.Broken()
+	g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
+	g.Broken()
+	sound.Init(&g.Config.Sound, g.Log, false)
 	for {
 		time.Sleep(time.Second)
 	}
+}
+
+func showHelpCMD() {
+	fmt.Println("vender cmd sound - play file from /audio directory (mono 24000Hz)")
+	fmt.Println("vender cmd broken - broken mode")
+	fmt.Println("vender cmd exitcode $EXIT_STATUS $SERVICE_RESULT - use systemd service exit code and exit result. if result not `success` the script_if_broken in the config will run")
 }

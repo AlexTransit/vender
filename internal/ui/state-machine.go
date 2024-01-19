@@ -58,7 +58,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 	case types.StateBoot:
 		ui.g.Tele.RoboSendState(tele_api.State_Boot)
 		ui.g.ShowPicture(state.PictureBoot)
-		watchdog.WatchDogEnable()
+		watchdog.Enable()
 
 		onBootScript := ui.g.Config.Engine.OnBoot
 		if watchdog.ReinitRequired() {
@@ -76,10 +76,8 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		return types.StateFrontBegin
 
 	case types.StateBroken:
-		watchdog.WatchDogDisable()
-		watchdog.InitDeviceRequared()
+		ui.g.Broken()
 		ui.g.Log.Infof("state=broken")
-		ui.g.ShowPicture(state.PictureBroken)
 		if !ui.broken {
 			// ui.g.Tele.RoboSendState(tele_api.State_Broken)
 			if errs := ui.g.Engine.ExecList(ctx, "on_broken", ui.g.Config.Engine.OnBroken); len(errs) != 0 {
@@ -90,7 +88,6 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 			_ = moneysys.SetAcceptMax(ctx, 0)
 		}
 		ui.broken = true
-		ui.display.SetLines(ui.g.Config.UI.Front.MsgBrokenL1, ui.g.Config.UI.Front.MsgBrokenL2)
 		for ui.g.Alive.IsRunning() {
 			e := ui.wait(time.Second)
 			// TODO receive tele command to reboot or change state
@@ -118,7 +115,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 	case types.StateFrontBegin:
 		ui.inputBuf = ui.inputBuf[:0]
 		ui.broken = false
-		watchdog.WatchDogEnable()
+		watchdog.Enable()
 		return ui.onFrontBegin(ctx)
 
 	case types.StateFrontSelect:
@@ -141,7 +138,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		return ui.onFrontLock()
 
 	case types.StateServiceBegin:
-		watchdog.WatchDogDisable()
+		watchdog.Disable()
 		return ui.onServiceBegin(ctx)
 	case types.StateServiceMenu:
 		return ui.onServiceMenu()
@@ -158,6 +155,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 	case types.StateServiceReport:
 		return ui.onServiceReport(ctx)
 	case types.StateServiceEnd:
+		watchdog.Enable()
 		return replaceDefault(ui.onServiceEnd(ctx), types.StateFrontBegin)
 
 	case types.StateStop:

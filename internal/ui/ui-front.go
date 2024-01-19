@@ -12,6 +12,7 @@ import (
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/internal/watchdog"
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
 	"github.com/temoto/alive/v2"
@@ -28,16 +29,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 		ui.g.VmcStopWOInitRequared(ctx)
 		return types.StateStop
 	}
-	// ms := money.GetGlobal(ctx)
-	credit := ui.ms.GetCredit() / 100
-	types.UI.FrontResult = types.UIMenuResult{
-		Cream: DefaultCream,
-		Sugar: DefaultSugar,
-	}
-	if credit != 0 {
-		ui.g.Error(errors.Errorf("money timeout lost (%v)", credit))
-	}
-	ui.ms.ResetMoney()
+	watchdog.Refresh()
 	if ui.g.Config.Hardware.Evend.Valve.TemperatureHot != 0 {
 		curTemp, e := evend.EValve.GetTemperature()
 		if e != nil {
@@ -65,6 +57,16 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 			return types.StateFrontEnd
 		}
 	}
+	credit := ui.ms.GetCredit() / 100
+	types.UI.FrontResult = types.UIMenuResult{
+		Cream: DefaultCream,
+		Sugar: DefaultSugar,
+	}
+	if credit != 0 {
+		ui.g.Error(errors.Errorf("money timeout lost (%v)", credit))
+	}
+	ui.ms.ResetMoney()
+
 	ui.g.ClientEnd(ctx)
 	runtime.GC() // чистка мусора в памяти
 	if errs := ui.g.Engine.ExecList(ctx, "on_front_begin", ui.g.Config.Engine.OnFrontBegin); len(errs) != 0 {

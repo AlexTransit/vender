@@ -1,4 +1,5 @@
 upgrade_script = "git -C /home/vmc/vender-distr/ pull && /home/vmc/vender-distr/script/build && rsync -av /home/vmc/vender-distr/build/vender"
+script_if_broken ="journalctl -e -n100 > /home/vmc/vender-db/errors/wd-`date '+%Y-%m-%d_%H_%M_%S'`"
 
 engine {
   // alias "cup_dispense" { scenario = "conveyor_move_cup cup_drop" }

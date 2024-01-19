@@ -8,14 +8,13 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/AlexTransit/vender/internal/state"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/juju/errors"
 )
 
 type Mod struct {
 	Name string
-	Main func(context.Context, *state.Config, ...[]string) error
+	Main func(context.Context, ...[]string) error
 }
 
 func Parse(command string, modules []Mod) (*Mod, error) {
