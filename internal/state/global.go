@@ -68,6 +68,9 @@ const (
 )
 
 func (g *Global) ShowPicture(pict Pic) {
+	if g.Hardware.Display.d == nil {
+		return
+	}
 	var file string
 	switch {
 	case pict == PictureBoot:
@@ -99,13 +102,13 @@ func (g *Global) ShowPicture(pict Pic) {
 
 func (g *Global) VmcStop(ctx context.Context) {
 	if types.VMC.UiState != uint32(types.StateFrontSelect) {
-		watchdog.InitDeviceRequared()
+		watchdog.DevicesInitializationRequired()
 	}
 	g.VmcStopWOInitRequared(ctx)
 }
 
 func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
-	watchdog.WatchDogDisable()
+	watchdog.Disable()
 	g.ShowPicture(PictureBroken)
 	g.Log.Infof("--- event vmc stop ---")
 	go func() {
@@ -148,8 +151,6 @@ func (g *Global) ClientEnd(ctx context.Context) {
 }
 
 func (g *Global) Init(ctx context.Context, cfg *Config) error {
-	g.Config = cfg
-
 	g.Log.Infof("build version=%s", g.BuildVersion)
 	types.VMC.Version = g.BuildVersion
 	sound.Init(&g.Config.Sound, g.Log, true)
@@ -160,7 +161,7 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 		g.Log.WarningF("config: persist.root=empty changed=%s", g.Config.Persist.Root)
 	}
 	g.Log.Debugf("config: persist.root=%s", g.Config.Persist.Root)
-	watchdog.Init(&g.Config.Watchdog, g.Log)
+	watchdog.Init(&g.Config.Watchdog, g.Log, cfg.UI.Front.ResetTimeoutSec)
 
 	// Since tele is remote error reporting mechanism, it must be inited before anything else
 	// Tele.Init gets g.Log clone before SetErrorFunc, so Tele.Log.Error doesn't recurse on itself
@@ -203,7 +204,7 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 }
 
 func (g *Global) MustInit(ctx context.Context, cfg *Config) {
-	err := g.Init(ctx, cfg)
+	err := g.Init(ctx, g.Config)
 	if err != nil {
 		g.Fatal(err)
 	}
@@ -380,17 +381,25 @@ func VmcUnLock(ctx context.Context) {
 }
 
 func (g *Global) UpgradeVender() {
-	if g.Config.UpgradeScript != "" {
-		go func() {
-			cmd := exec.Command("/usr/bin/bash", "-c", g.Config.UpgradeScript)
-			stdout, err := cmd.Output()
-			if err == nil {
-				types.VMC.NeedRestart = true
-				return
-			}
-			g.Log.Errorf("stdout(%s) error(%s)", stdout, cmd.Stderr)
-		}()
+	go func() {
+		if err := g.RunBashSript(g.Config.UpgradeScript); err != nil {
+			g.Log.Errorf("upgrade err(%v)", err)
+			return
+		}
+		types.VMC.NeedRestart = true
+	}()
+}
+
+func (g *Global) RunBashSript(script string) (err error) {
+	if script == "" {
+		return nil
 	}
+	cmd := exec.Command("/usr/bin/bash", "-c", script)
+	stdout, e := cmd.Output()
+	if e == nil {
+		return nil
+	}
+	return fmt.Errorf("script(%s) stdout(%s) error(%s)", script, stdout, cmd.Stderr)
 }
 
 func (g *Global) RegisterCommands(ctx context.Context) {
@@ -484,4 +493,16 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		},
 	}
 	g.Engine.Register(doEmuKey.Name, doEmuKey)
+}
+
+func (g *Global) Broken() {
+	watchdog.Disable()
+	g.Tele.RoboSendBroken()
+	watchdog.DevicesInitializationRequired()
+	g.Display()
+	g.ShowPicture(PictureBroken)
+	display := g.MustTextDisplay()
+	display.SetLines(g.Config.UI.Front.MsgBrokenL1, g.Config.UI.Front.MsgBrokenL2)
+	g.RunBashSript(g.Config.ScriptIfBroken)
+	sound.Broken()
 }

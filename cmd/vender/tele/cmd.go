@@ -18,10 +18,10 @@ const modName = "tele"
 
 var Mod = subcmd.Mod{Name: modName, Main: Main}
 
-func Main(ctx context.Context, config *state.Config, args ...[]string) error {
+func Main(ctx context.Context, args ...[]string) error {
 	g := state.GetGlobal(ctx)
 	synthConfig := &state.Config{
-		Tele: config.Tele,
+		Tele: g.Config.Tele,
 	}
 	synthConfig.Hardware.XXX_Devices = nil
 	synthConfig.Tele.Enabled = true

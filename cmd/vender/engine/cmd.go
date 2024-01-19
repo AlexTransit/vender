@@ -32,9 +32,9 @@ const usage = `syntax: commands separated by whitespace
 
 var Mod = subcmd.Mod{Name: "engine-cli", Main: Main}
 
-func Main(ctx context.Context, config *state.Config, _ ...[]string) error {
+func Main(ctx context.Context, _ ...[]string) error {
 	g := state.GetGlobal(ctx)
-	g.MustInit(ctx, config)
+	g.MustInit(ctx, g.Config)
 	// g.Log.Debugf("config=%+v", g.Config)
 
 	if err := g.Engine.ValidateExec(ctx, doMdbBusReset); err != nil {

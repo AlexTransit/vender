@@ -38,15 +38,15 @@ var Mod = subcmd.Mod{
 // megaPin := cmdline.String("mega-pin", "25", "mega notify pin")
 // uarterName := cmdline.String("io", "file", "file|iodin|mega")
 
-func Main(ctx context.Context, config *state.Config, args ...[]string) error {
+func Main(ctx context.Context, args ...[]string) error {
 	g := state.GetGlobal(ctx)
-	g.MustInit(ctx, config)
+	g.MustInit(ctx, g.Config)
 
 	synthConfig := &state.Config{}
 	synthConfig.Hardware.XXX_Devices = nil
-	synthConfig.Hardware.IodinPath = config.Hardware.IodinPath // *iodinPath
-	synthConfig.Hardware.Mdb = config.Hardware.Mdb             // *uarterName *devicePath
-	synthConfig.Hardware.Mega = config.Hardware.Mega           // *megaSpi *megaPin
+	synthConfig.Hardware.IodinPath = g.Config.Hardware.IodinPath // *iodinPath
+	synthConfig.Hardware.Mdb = g.Config.Hardware.Mdb             // *uarterName *devicePath
+	synthConfig.Hardware.Mega = g.Config.Hardware.Mega           // *megaSpi *megaPin
 	synthConfig.Tele.Enabled = false
 	g.MustInit(ctx, synthConfig)
 

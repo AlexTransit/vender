@@ -12,7 +12,6 @@ import (
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
 	ui_config "github.com/AlexTransit/vender/internal/ui/config"
-	"github.com/AlexTransit/vender/internal/watchdog"
 )
 
 type UI struct { //nolint:maligned
@@ -42,6 +41,7 @@ var _ types.UIer = &UI{} // compile-time interface test
 func (ui *UI) GetUiState() uint32 {
 	return 0
 }
+
 func (ui *UI) Init(ctx context.Context) error {
 	ui.g = state.GetGlobal(ctx)
 	ui.config = &ui.g.Config.UI
@@ -58,7 +58,6 @@ func (ui *UI) Init(ctx context.Context) error {
 	ui.inputch = *ui.g.Hardware.Input.InputChain()
 
 	ui.frontResetTimeout = helpers.IntSecondDefault(ui.g.Config.UI.Front.ResetTimeoutSec, 0)
-	watchdog.WatchDogSetTics((ui.g.Config.UI.Front.ResetTimeoutSec / 10) * 3)
 	ui.g.LockCh = make(chan struct{}, 1)
 	ui.Service.Init(ctx)
 	ui.ms = money.GetGlobal(ctx)

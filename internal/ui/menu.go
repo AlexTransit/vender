@@ -100,6 +100,7 @@ func Cook(ctx context.Context) error {
 
 	err := g.Engine.Exec(itemCtx, types.UI.FrontResult.Item.D)
 	if err == nil {
+		sound.PlayComplete()
 		if g.Tele.RoboConnected() {
 			types.VMC.ReportInv += 1
 			// AlexM autoreporter move to config
@@ -111,7 +112,6 @@ func Cook(ctx context.Context) error {
 	} else {
 		g.Log.Err(err)
 	}
-	sound.PlayComplete()
 	if invErr := g.Inventory.InventorySave(); invErr != nil {
 		g.Error(errors.Annotate(invErr, "critical inventory persist"))
 		// err = errors.Wrap(err, invErr)

@@ -79,16 +79,17 @@ func main() {
 	config := state.MustReadConfig(log, state.NewOsFullReader(), *configPath)
 	ctx, g := state_new.NewContext(log, tele.New())
 	g.BuildVersion = BuildVersion
+	g.Config = config
 	types.Log = log
-	log.Debugf("starting command %s", mod.Name)
+	log.Debugf("starting %s", flagset.Args())
 
-	if err := mod.Main(ctx, config, flagset.Args()); err != nil {
+	if err := mod.Main(ctx, flagset.Args()); err != nil {
 		g.Log.Errorf("%v", err)
 		os.Exit(1)
 	}
 }
 
-func versionMain(ctx context.Context, config *state.Config, _ ...[]string) error {
+func versionMain(ctx context.Context, _ ...[]string) error {
 	fmt.Printf("vender %s\n", BuildVersion)
 	return nil
 }
