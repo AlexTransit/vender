@@ -68,12 +68,16 @@ func ReinitRequired() bool {
 }
 
 func SetDeviceInited() {
+	WD.log.Info("devices inited")
 	if err := os.MkdirAll(WD.folder+"vmc", 0o777); err != nil {
 		WD.log.Error(errors.New("create vender folder"), err)
 	}
 }
 
-func InitDeviceRequared() { os.RemoveAll(WD.folder + "vmc") }
+func DevicesInitializationRequired() {
+	WD.log.Info("devices initialization required")
+	os.RemoveAll(WD.folder + "vmc")
+}
 
 func SetBroken() {
 	f, err := os.Create("broken")

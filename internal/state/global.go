@@ -102,7 +102,7 @@ func (g *Global) ShowPicture(pict Pic) {
 
 func (g *Global) VmcStop(ctx context.Context) {
 	if types.VMC.UiState != uint32(types.StateFrontSelect) {
-		watchdog.InitDeviceRequared()
+		watchdog.DevicesInitializationRequired()
 	}
 	g.VmcStopWOInitRequared(ctx)
 }
@@ -498,7 +498,7 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 func (g *Global) Broken() {
 	watchdog.Disable()
 	g.Tele.RoboSendBroken()
-	watchdog.InitDeviceRequared()
+	watchdog.DevicesInitializationRequired()
 	g.Display()
 	g.ShowPicture(PictureBroken)
 	display := g.MustTextDisplay()
