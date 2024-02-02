@@ -21,6 +21,8 @@ type wdStruct struct {
 	wdt      string // watchdog tics
 }
 
+const brokenFile = "/home/vmc/broken"
+
 var WD wdStruct
 
 func Init(conf *Config, log *log2.Log, timeout int) {
@@ -80,7 +82,7 @@ func DevicesInitializationRequired() {
 }
 
 func SetBroken() {
-	f, err := os.Create("broken")
+	f, err := os.Create(brokenFile)
 	if err != nil {
 		WD.log.Error(errors.New("create broken file "), err)
 		return
@@ -89,10 +91,10 @@ func SetBroken() {
 	f.Close()
 }
 
-func UnsetBroken() { os.Remove("broken") }
+func UnsetBroken() { os.Remove(brokenFile) }
 
 func IsBroken() bool {
-	_, err := os.Stat("broken")
+	_, err := os.Stat(brokenFile)
 	return !os.IsNotExist(err)
 }
 
