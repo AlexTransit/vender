@@ -144,8 +144,8 @@ func broken(ctx context.Context) {
 	watchdog.SetBroken()
 	g := state.GetGlobal(ctx)
 	g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
-	g.Broken()
 	sound.Init(&g.Config.Sound, g.Log, false)
+	g.Broken()
 	for {
 		time.Sleep(time.Second)
 	}
