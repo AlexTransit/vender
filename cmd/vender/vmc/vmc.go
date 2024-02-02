@@ -99,6 +99,9 @@ func CmdMain(ctx context.Context, a ...[]string) error {
 		sound.Init(&g.Config.Sound, g.Log, false)
 		sound.PlayFile(args[1])
 		os.Exit(0)
+	case "text":
+		showText(ctx, a[0][2:])
+		os.Exit(0)
 	case "aa":
 		sound.Init(&g.Config.Sound, g.Log, false)
 		sound.PlayFile("moneyIn.mp3")
@@ -124,12 +127,25 @@ func CmdMain(ctx context.Context, a ...[]string) error {
 	return nil
 }
 
+func showText(ctx context.Context, s []string) {
+	var l1, l2 string
+	if cap(s) >= 1 {
+		l1 = s[0]
+	}
+	if cap(s) >= 2 {
+		l2 = s[1]
+	}
+	g := state.GetGlobal(ctx)
+	display := g.MustTextDisplay()
+	display.SetLines(l1, l2)
+}
+
 func broken(ctx context.Context) {
 	watchdog.SetBroken()
 	g := state.GetGlobal(ctx)
 	g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
-	g.Broken()
 	sound.Init(&g.Config.Sound, g.Log, false)
+	g.Broken()
 	for {
 		time.Sleep(time.Second)
 	}

@@ -91,6 +91,9 @@ func PlayTrash()   { playStream(&s.trash) }
 
 // play file and wait finishing
 func Broken() {
+	if s.sound == nil {
+		return
+	}
 	if err := PlayFile(s.sound.Broken, s.sound.BrokenVolume); err != nil {
 		s.log.Errorf(" play Broken (%v)", err)
 	}
@@ -120,7 +123,7 @@ func Stop() {
 }
 
 func playMP3controlled(file string, volume int) (err error) {
-	if s.sound == nil || s.sound.Disabled {
+	if s.sound == nil || s.sound.Disabled || s.audioPlayer == nil {
 		return nil
 	}
 	if file == "" {

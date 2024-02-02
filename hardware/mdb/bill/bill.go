@@ -299,7 +299,8 @@ func (bv *BillValidator) BillStacked() bool {
 	oldv := int32(bv.stackerCount)
 	if oldv+1 != bv.readStacker() {
 		bv.Log.Errorf("bill count does not match. preview value:%v return value:%v", oldv, bv.stackerCount)
-		return false
+		// ICT may not add stacker value. может не добавить значение стекера
+		// return false
 	}
 	return true
 }

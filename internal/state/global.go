@@ -191,7 +191,7 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	wg := sync.WaitGroup{}
 	wg.Add(initTasks)
 	errch := make(chan error, initTasks)
-	go helpers.WrapErrChan(&wg, errch, g.initDisplay)
+	go helpers.WrapErrChan(&wg, errch, g.initDisplay) // AlexM хрень переделать
 	go helpers.WrapErrChan(&wg, errch, g.initInput)
 	go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
 	go helpers.WrapErrChan(&wg, errch, g.initEngine)
