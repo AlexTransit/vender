@@ -59,7 +59,6 @@ func Init(conf *Config, log *log2.Log, startingVMC bool) {
 	audioContext := audio.NewContext(sampleRate)
 	s.audioContext = audioContext
 	if startingVMC {
-		PlayStarting()
 		go func() {
 			s.keyBeep.prepare("keyBeep", s.sound.KeyBeep, s.sound.KeyBeepVolume)
 			s.moneyIn.prepare("money in", s.sound.MoneyIn, s.sound.MoneyInVolume)
@@ -123,7 +122,7 @@ func Stop() {
 }
 
 func playMP3controlled(file string, volume int) (err error) {
-	if s.sound == nil || s.sound.Disabled || s.audioPlayer == nil {
+	if s.sound == nil || s.sound.Disabled {
 		return nil
 	}
 	if file == "" {
