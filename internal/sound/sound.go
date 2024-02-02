@@ -91,6 +91,8 @@ func PlayTrash()   { playStream(&s.trash) }
 
 // play file and wait finishing
 func Broken() {
+	s.log.Errorf("(%v)(%v)", s, s.sound)
+	return
 	if err := PlayFile(s.sound.Broken, s.sound.BrokenVolume); err != nil {
 		s.log.Errorf(" play Broken (%v)", err)
 	}
