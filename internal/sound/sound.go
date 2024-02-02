@@ -120,7 +120,7 @@ func Stop() {
 }
 
 func playMP3controlled(file string, volume int) (err error) {
-	if s.sound == nil || s.sound.Disabled {
+	if s.sound == nil || s.sound.Disabled || s.audioPlayer == nil {
 		return nil
 	}
 	if file == "" {
