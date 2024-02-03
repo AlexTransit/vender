@@ -72,8 +72,10 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		}
 		watchdog.SetDeviceInited()
 		ui.broken = false
-		ui.g.Tele.RoboSendState(tele_api.State_Nominal)
-		return types.StateFrontBegin
+		return types.StateOnStart
+
+	case types.StateOnStart:
+		return ui.onFrontStart(ctx)
 
 	case types.StateBroken:
 		ui.g.Broken()

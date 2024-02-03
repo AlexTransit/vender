@@ -153,8 +153,6 @@ func (g *Global) ClientEnd(ctx context.Context) {
 func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	g.Log.Infof("build version=%s", g.BuildVersion)
 	types.VMC.Version = g.BuildVersion
-	sound.Init(&g.Config.Sound, g.Log, true)
-	// time.Sleep(3 * time.Second)
 
 	if g.Config.Persist.Root == "" {
 		g.Config.Persist.Root = "./vender-db"

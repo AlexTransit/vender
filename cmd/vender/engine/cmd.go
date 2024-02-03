@@ -15,6 +15,7 @@ import (
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
 	"github.com/AlexTransit/vender/internal/money"
+	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
 	prompt "github.com/c-bata/go-prompt"
 	"github.com/juju/errors"
@@ -34,6 +35,7 @@ var Mod = subcmd.Mod{Name: "engine-cli", Main: Main}
 
 func Main(ctx context.Context, _ ...[]string) error {
 	g := state.GetGlobal(ctx)
+	sound.Init(&g.Config.Sound, g.Log, false)
 	g.MustInit(ctx, g.Config)
 	// g.Log.Debugf("config=%+v", g.Config)
 

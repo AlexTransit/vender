@@ -16,7 +16,7 @@ const DefaultTimeout = 60
 type DeviceCup struct {
 	Generic
 	timeout      uint16
-	Light        bool
+	light        bool
 	lightShedule struct {
 		weekDay [7]worktime
 	}
@@ -27,25 +27,28 @@ type worktime struct {
 	EndOfWork   time.Duration
 }
 
+var Cup *DeviceCup
+
 func (c *DeviceCup) init(ctx context.Context) error {
 	c.Generic.Init(ctx, 0xe0, "cup", proto2)
+	Cup = c
 	g := state.GetGlobal(ctx)
 	c.initLightSheduler(g.Config.UI.Front.LightShedule)
 	c.timeout = uint16(helpers.ConfigDefaultInt(g.Config.Hardware.Evend.Cup.TimeoutSec, DefaultTimeout)) * 5
 	g.Engine.RegisterNewFunc(c.name+".ensure", func(ctx context.Context) error { return c.CommandWaitSuccess(c.timeout, 0x04) })
 	g.Engine.RegisterNewFunc(c.name+".dispense", func(ctx context.Context) error { return c.CommandWaitSuccess(c.timeout, 0x01) })
 	g.Engine.RegisterNewFunc(c.name+".wait_complete", func(ctx context.Context) error { return c.WaitSuccess(c.timeout, true) })
-	g.Engine.RegisterNewFunc(c.name+".light_on", func(ctx context.Context) error { return c.lightOn() })
-	g.Engine.RegisterNewFunc(c.name+".light_off", func(ctx context.Context) error { return c.lightOff() })
+	g.Engine.RegisterNewFunc(c.name+".light_on", func(ctx context.Context) error { return c.LightOn() })
+	g.Engine.RegisterNewFunc(c.name+".light_off", func(ctx context.Context) error { return c.LightOff() })
 	g.Engine.RegisterNewFunc(c.name+".reset", func(ctx context.Context) error { return c.dev.Rst() })
 	g.Engine.RegisterNewFunc(c.name+".light_on_schedule", func(ctx context.Context) error {
 		if !c.lightShouldWork() {
-			if c.Light {
-				return c.lightOff()
+			if c.light {
+				return c.LightOff()
 			}
 			return nil
 		}
-		return c.lightOn()
+		return c.LightOn()
 	})
 	if err := c.dev.Rst(); err != nil {
 		return fmt.Errorf("%s init error:%v", c.name, err)
@@ -53,20 +56,26 @@ func (c *DeviceCup) init(ctx context.Context) error {
 	return nil
 }
 
-func (c *DeviceCup) lightOn() error {
-	if !c.Light {
-		c.dev.Log.Info("light on")
+func (c *DeviceCup) Reset() error {
+	return c.dev.Rst()
+}
+
+func (c *DeviceCup) LightOn() error {
+	if c.light {
+		return nil
 	}
+	c.dev.Log.Info("light on")
 	c.Command(0x02)
-	c.Light = true
+	c.light = true
 	return c.WaitSuccess(c.timeout, false)
 }
 
-func (c *DeviceCup) lightOff() error {
-	if c.Light {
-		c.dev.Log.Info("light off")
+func (c *DeviceCup) LightOff() error {
+	if !c.light {
+		return nil
 	}
-	c.Light = false
+	c.dev.Log.Info("light off")
+	c.light = false
 	c.Command(0x03)
 	return c.WaitSuccess(c.timeout, false)
 }

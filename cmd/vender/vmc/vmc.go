@@ -32,6 +32,7 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 	if watchdog.IsBroken() {
 		broken(ctx)
 	}
+	sound.Init(&g.Config.Sound, g.Log, true)
 	g.MustInit(ctx, g.Config)
 
 	// working term signal
