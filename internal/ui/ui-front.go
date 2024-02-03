@@ -10,6 +10,7 @@ import (
 	"github.com/AlexTransit/vender/hardware/mdb/evend"
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/money"
+	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
@@ -18,33 +19,36 @@ import (
 	"github.com/temoto/alive/v2"
 )
 
-// type UIMenuResult struct {
-// 	Item  MenuItem
-// 	Cream uint8
-// 	Sugar uint8
-// }
-
-func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
-	if types.VMC.NeedRestart { // after upgrade
-		ui.g.VmcStopWOInitRequared(ctx)
-		return types.StateStop
-	}
+//	type UIMenuResult struct {
+//		Item  MenuItem
+//		Cream uint8
+//		Sugar uint8
+//	}
+func (ui *UI) onFrontStart(ctx context.Context) types.UiState {
 	watchdog.Refresh()
+	if ok, nextState := ui.checkTemperature(); !ok {
+		return nextState
+	}
+	sound.PlayStarted()
+	return types.StateFrontBegin
+}
+
+// check current temperature. retunt next state if temperature not correct
+func (ui *UI) checkTemperature() (correct bool, stateIfNotCorrect types.UiState) {
 	if ui.g.Config.Hardware.Evend.Valve.TemperatureHot != 0 {
 		curTemp, e := evend.EValve.GetTemperature()
 		if e != nil {
 			ui.g.Log.Error(e)
-			return types.StateBroken
+			return false, types.StateBroken
 		}
 		if curTemp < int32(ui.g.Config.Hardware.Evend.Valve.TemperatureHot-10) {
 			line1 := fmt.Sprintf(ui.g.Config.UI.Front.MsgWaterTemp, curTemp)
 			ui.g.ShowPicture(state.PictureBroken)
-			_ = ui.g.Engine.ExecList(ctx, "water-temp", []string{"evend.cup.light_off"})
+			evend.Cup.LightOff() // light off
 			if types.VMC.HW.Display.L1 != line1 {
 				ui.display.SetLines(line1, ui.g.Config.UI.Front.MsgWait)
 				rm := tele_api.FromRoboMessage{
-					State:    tele_api.State_TemperatureProblem,
-					RoboTime: 0,
+					State: tele_api.State_TemperatureProblem,
 					RoboHardware: &tele_api.RoboHardware{
 						Temperature: curTemp,
 					},
@@ -52,11 +56,24 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 				ui.g.Tele.RoboSend(&rm)
 			}
 			if e := ui.wait(5 * time.Second); e.Kind == types.EventService {
-				return types.StateServiceBegin
+				return false, types.StateServiceBegin
 			}
-			return types.StateFrontEnd
+			return false, types.StateOnStart
 		}
 	}
+
+	return true, 0
+}
+
+func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
+	if types.VMC.NeedRestart { // after upgrade
+		ui.g.VmcStopWOInitRequared(ctx)
+		return types.StateStop
+	}
+	if valid, nextState := ui.checkTemperature(); !valid {
+		return nextState
+	}
+	watchdog.Refresh()
 	credit := ui.ms.GetCredit() / 100
 	types.UI.FrontResult = types.UIMenuResult{
 		Cream: DefaultCream,
@@ -248,6 +265,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	if err := moneysys.WithdrawPrepare(ctx, types.UI.FrontResult.Item.Price); err != nil {
 		ui.g.Log.Errorf("ui-front CRITICAL error while return change")
 	}
+	watchdog.DevicesInitializationRequired()
 	err := Cook(ctx)
 	rm := CreateOrderMessageAndFillSelected()
 	defer ui.g.Tele.RoboSend(&rm)
@@ -255,6 +273,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	if err == nil { // success path
 		rm.Order.OrderStatus = tele_api.OrderStatus_complete
 		rm.State = tele_api.State_Nominal
+		watchdog.SetDeviceInited()
 		return types.StateFrontEnd
 	}
 	moneysys.ReturnDirty()
