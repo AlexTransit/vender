@@ -26,7 +26,7 @@ const brokenFile = "/home/vmc/broken"
 var WD wdStruct
 
 func Init(conf *Config, log *log2.Log, timeout int) {
-	WD.folder = helpers.ConfigDefaultStr(conf.Folder, "/tmp/")
+	WD.folder = helpers.ConfigDefaultStr(conf.Folder, "/run/user/1000/")
 	WD.log = log
 	WD.disabled = conf.Disabled
 	SetTimerSec(timeout * 2)
