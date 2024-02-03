@@ -36,13 +36,13 @@ func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engi
 	errs := make([]error, 0)
 	sd := root + "/inventory"
 	if _, err := os.Stat(sd); os.IsNotExist(err) {
-		err := os.MkdirAll(sd, 0o755)
+		err := os.MkdirAll(sd, os.ModePerm)
 		errs = append(errs, err)
 	}
 	// AlexM инит директории для ошибок. надо от сюда вынести.
 	sde := root + "/errors"
 	if _, err := os.Stat(sde); os.IsNotExist(err) {
-		err := os.MkdirAll(sde, 0o755)
+		err := os.MkdirAll(sde, os.ModePerm)
 		errs = append(errs, err)
 	}
 	inv.file = sd + "/store.file"
