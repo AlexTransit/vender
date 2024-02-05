@@ -12,8 +12,6 @@ import (
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
-
-	tele_api "github.com/AlexTransit/vender/tele"
 )
 
 func (ui *UI) State() types.UiState               { return types.UiState(atomic.LoadUint32((*uint32)(&ui.state))) }
@@ -56,7 +54,6 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 	// ui.g.Log.Debugf("ui enter %s", s.String())
 	switch s {
 	case types.StateBoot:
-		ui.g.Tele.RoboSendState(tele_api.State_Boot)
 		ui.g.ShowPicture(state.PictureBoot)
 		watchdog.Enable()
 
