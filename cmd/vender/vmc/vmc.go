@@ -103,11 +103,6 @@ func CmdMain(ctx context.Context, a ...[]string) error {
 	case "text":
 		showText(ctx, a[0][2:])
 		os.Exit(0)
-	case "aa":
-		sound.Init(&g.Config.Sound, g.Log, false)
-		sound.PlayFile("moneyIn.mp3")
-		time.Sleep(5 * time.Second)
-		os.Exit(0)
 	case "broken":
 		broken(ctx)
 	case "exitcode":
