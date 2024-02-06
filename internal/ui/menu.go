@@ -7,7 +7,6 @@ import (
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/money"
-	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
 
@@ -100,7 +99,6 @@ func Cook(ctx context.Context) error {
 
 	err := g.Engine.Exec(itemCtx, types.UI.FrontResult.Item.D)
 	if err == nil {
-		sound.PlayComplete()
 		if g.Tele.RoboConnected() {
 			types.VMC.ReportInv += 1
 			// AlexM autoreporter move to config

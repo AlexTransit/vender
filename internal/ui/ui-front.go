@@ -29,7 +29,7 @@ func (ui *UI) onFrontStart(ctx context.Context) types.UiState {
 	if ok, nextState := ui.checkTemperature(); !ok {
 		return nextState
 	}
-	sound.PlayStarted()
+	sound.PlayVmcStarted()
 	return types.StateFrontBegin
 }
 
