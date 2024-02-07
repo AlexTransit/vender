@@ -2,13 +2,13 @@ package evend
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
-	"github.com/juju/errors"
 )
 
 type DeviceElevator struct { //nolint:maligned
@@ -19,35 +19,40 @@ type DeviceElevator struct { //nolint:maligned
 	nPos        uint8
 }
 
+// текущая проша подьемника, требует определенных действий. надо обязательно "проехать" с нуля на 100
+// тогда можно один! раз установить промежуточную позицию. иначе установка "промежуточной" позиции сделает движеие к 100
+// вплоть до одибке по перегрузке, если находлось рядом с 100
 func (e *DeviceElevator) init(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
-	e.cPos = -1
 	config := &g.Config.Hardware.Evend.Elevator
-	keepaliveInterval := helpers.IntMillisecondDefault(config.KeepaliveMs, 0)
 	e.moveTimeout = helpers.IntSecondDefault(config.MoveTimeoutSec, 10*time.Second)
 	e.Generic.Init(ctx, 0xd0, "elevator", proto1)
 
-	g.Engine.Register(e.name+".move(?)",
-		engine.FuncArg{Name: e.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
-			if err = g.Engine.Exec(ctx, e.move(uint8(arg))); err == nil {
-				e.cPos = int8(arg)
-				return
+	g.Engine.RegisterNewFunc(e.name+".reset", func(ctx context.Context) error { return e.reset() })
+	g.Engine.RegisterNewFuncAgr(e.name+".moveNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return e.moveNoWait(uint8(arg)) })
+	g.Engine.Register(e.name+".move(?)", engine.FuncArg{Name: e.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
+		previewPosition := e.cPos
+		for i := 1; i <= 2; i++ {
+			er := e.move(uint8(arg))
+			if er == nil {
+				if i > 1 {
+					e.dev.TeleError(fmt.Errorf("restart fix error (%v)", err))
+				}
+				return nil
 			}
-			e.dev.TeleError(err)
-			e.dev.Reset()
-			if err = g.Engine.Exec(ctx, e.move(uint8(arg))); err == nil {
-				e.cPos = int8(arg)
-				e.dev.TeleError(errors.Errorf("restart fix preview error"))
-				return
+			err = errors.Join(err, er)
+			// FIXME тут можно добавть скрипт действий после ошибки
+			if e.dev.ErrorCode() == 36 { // reverse high load
+				if !((previewPosition == 100 && arg == 0) || (previewPosition == 0 && arg == 100)) {
+					e.reset()
+					break
+				}
 			}
-			e.dev.TeleError(errors.Annotatef(err, "two times error"))
-			return
-		}})
-
-	g.Engine.Register(e.name+".moveNoWait(?)",
-		engine.FuncArg{Name: e.name + ".moveNoWait", F: func(ctx context.Context, arg engine.Arg) error {
-			return g.Engine.Exec(ctx, e.moveNoWait(uint8(arg)))
-		}})
+			e.reset()
+			time.Sleep(5 * time.Second)
+		}
+		return err
+	}})
 
 	g.Engine.RegisterNewFunc(
 		"elevator.status",
@@ -56,45 +61,35 @@ func (e *DeviceElevator) init(ctx context.Context) error {
 			return nil
 		},
 	)
-
-	err := e.dev.Rst()
-	if keepaliveInterval > 0 {
-		go e.Generic.dev.Keepalive(keepaliveInterval, g.Alive.StopChan())
-	}
-	return errors.Annotate(err, e.name+".init")
+	return e.reset()
 }
 
-func (e *DeviceElevator) move(position uint8) engine.Doer {
-	tag := fmt.Sprintf("%s.move:%d->%d", e.name, e.cPos, position)
-	d := engine.NewSeq(tag)
-	if e.cPos == int8(position) {
-		d.Append(engine.Func0{F: func() error { return nil }})
-		return d
-	}
-	d.Append(e.NewWaitReady(tag))
-	switch position {
-	case 0, 100:
-		d.Append(e.Generic.NewAction(tag, 0x03, position, 0x64))
-	default:
-		if e.cPos == -1 {
-			d.Append(e.Generic.NewAction(tag, 0x03, 100, 0x64))
-			d.Append(e.NewWaitDone(tag, e.moveTimeout))
-			d.Append(e.NewWaitReady(tag))
-		}
-		e.cPos = -1
-		d.Append(e.Generic.NewAction(tag, 0x03, position, 0x64))
-	}
+func (e *DeviceElevator) reset() error {
+	e.cPos = -1
+	return e.dev.Rst()
+}
 
-	d.Append(e.NewWaitDone(tag, e.moveTimeout))
+func (e *DeviceElevator) moveNoWait(position uint8) (err error) {
 	e.cPos = -1
 	e.nPos = position
-	return d
+	// return m.Command([]byte{0x03, byte(position), 0x64})
+	return e.Command(0x03, byte(position), 0x64)
 }
 
-func (e *DeviceElevator) moveNoWait(position uint8) engine.Doer {
-	tag := fmt.Sprintf("%s.move_no_wait:%d->%d", e.name, e.cPos, position)
-	// c.cPos = -1
-	return engine.NewSeq(tag).
-		// Append(e.Generic.NewWaitReady(tag)).
-		Append(e.Generic.NewAction(tag, 0x03, position, 0x64))
+func (e *DeviceElevator) move(position uint8) (err error) {
+	e.dev.Action = fmt.Sprintf("%s move %d=>%d", e.name, e.cPos, position)
+	if err = e.moveNoWait(position); err != nil {
+		// e.errorCode =
+		return fmt.Errorf("send command(%v) error(%v)", e.dev.Action, err)
+	}
+	return e.mvComplete()
+}
+
+func (e *DeviceElevator) mvComplete() (err error) {
+	err = e.WaitSuccess(100, true) // FIXME timeout to config
+	if err == nil {
+		e.cPos = int8(e.nPos)
+		e.dev.Action = ""
+	}
+	return err
 }

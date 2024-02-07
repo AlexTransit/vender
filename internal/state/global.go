@@ -450,7 +450,7 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 	g.Engine.RegisterNewFunc(
 		"sound.started",
 		func(ctx context.Context) error {
-			sound.PlayStarted()
+			sound.PlayVmcStarted()
 			return nil
 		},
 	)
@@ -459,6 +459,30 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		"sound.trash",
 		func(ctx context.Context) error {
 			sound.PlayTrash()
+			return nil
+		},
+	)
+
+	g.Engine.RegisterNewFunc(
+		"sound.finish.cook",
+		func(ctx context.Context) error {
+			sound.PlayFinishedCooking()
+			return nil
+		},
+	)
+
+	g.Engine.RegisterNewFunc(
+		"sound.start.cook",
+		func(ctx context.Context) error {
+			sound.PlayStartedCooking()
+			return nil
+		},
+	)
+
+	g.Engine.RegisterNewFunc(
+		"sound.custom",
+		func(ctx context.Context) error {
+			sound.PlayCustom()
 			return nil
 		},
 	)

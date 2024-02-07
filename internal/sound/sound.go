@@ -30,22 +30,25 @@ type soundStream struct {
 
 // sound volume use fixed point. 12 = 1.2
 type Config struct {
-	Disabled       bool
-	Folder         string
-	KeyBeep        string
-	KeyBeepVolume  int
-	Starting       string
-	StartingVolume int
-	Started        string
-	StartedVolume  int
-	MoneyIn        string
-	MoneyInVolume  int
-	Trash          string
-	TrashVolume    int
-	Broken         string
-	BrokenVolume   int
-	Complete       string
-	CompleteVolume int
+	Disabled              bool
+	Folder                string
+	KeyBeep               string
+	KeyBeepVolume         int
+	Starting              string
+	StartingVolume        int
+	Started               string
+	StartedVolume         int
+	MoneyIn               string
+	MoneyInVolume         int
+	Trash                 string
+	TrashVolume           int
+	Broken                string
+	BrokenVolume          int
+	StartedCooking        string
+	StartedCookingVolume  int
+	FinishedCooking       string
+	FinishedCookingVolume int
+	Custom                string
 }
 
 var s Sound
@@ -60,7 +63,7 @@ func Init(conf *Config, log *log2.Log, startingVMC bool) {
 	s.audioContext = audioContext
 	if startingVMC {
 		go func() {
-			PlayStarting()
+			PlayVmcStarting()
 			s.keyBeep.prepare("keyBeep", s.sound.KeyBeep, s.sound.KeyBeepVolume)
 			s.moneyIn.prepare("money in", s.sound.MoneyIn, s.sound.MoneyInVolume)
 			s.trash.prepare("trash", s.sound.Trash, s.sound.TrashVolume)
@@ -68,23 +71,36 @@ func Init(conf *Config, log *log2.Log, startingVMC bool) {
 	}
 }
 
-func PlayStarting() {
+func PlayVmcStarting() {
 	if err := playMP3controlled(s.sound.Starting, s.sound.StartingVolume); err != nil {
 		s.log.Errorf("play Starting (%v)", err)
 	}
 }
 
-func PlayStarted() {
+func PlayVmcStarted() {
 	if err := playMP3controlled(s.sound.Started, s.sound.StartedVolume); err != nil {
 		s.log.Errorf(" play Started (%v)", err)
 	}
 }
 
-func PlayComplete() {
-	if err := playMP3controlled(s.sound.Complete, s.sound.CompleteVolume); err != nil {
-		s.log.Errorf("play Complete (%v)", err)
+func PlayStartedCooking() {
+	if err := playMP3controlled(s.sound.StartedCooking, s.sound.StartedCookingVolume); err != nil {
+		s.log.Errorf(" play started cooking (%v)", err)
 	}
 }
+
+func PlayFinishedCooking() {
+	if err := playMP3controlled(s.sound.FinishedCooking, s.sound.FinishedCookingVolume); err != nil {
+		s.log.Errorf(" play finish cooking (%v)", err)
+	}
+}
+
+func PlayCustom() {
+	if err := playMP3controlled(s.sound.Custom, s.sound.StartingVolume); err != nil {
+		s.log.Errorf(" play custom (%v)", err)
+	}
+}
+
 func PlayKeyBeep() { playStream(&s.keyBeep) }
 func PlayMoneyIn() { playStream(&s.moneyIn) }
 func PlayTrash()   { playStream(&s.trash) }
