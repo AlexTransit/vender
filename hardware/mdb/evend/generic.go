@@ -317,13 +317,12 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error
 			return
 		case 0x04:
 			errCode := rb[1]
+			gen.dev.SetErrorCode(int32(errCode))
 			e := fmt.Errorf("execute command(%s) error(%v)", gen.dev.Action, errCode)
-			// gen.dev.TeleError(e)
 			return e
 		default:
 			err = fmt.Errorf("unknow answer(%v) on command(%s)", rb, gen.dev.Action)
 			return
-			// gen.dev.TeleError(e)
 		}
 	}
 	if timeOut {
