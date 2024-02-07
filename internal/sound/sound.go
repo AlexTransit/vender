@@ -44,8 +44,6 @@ type Config struct {
 	TrashVolume           int
 	Broken                string
 	BrokenVolume          int
-	Complete              string
-	CompleteVolume        int
 	StartedCooking        string
 	StartedCookingVolume  int
 	FinishedCooking       string
@@ -93,21 +91,16 @@ func PlayStartedCooking() {
 
 func PlayFinishedCooking() {
 	if err := playMP3controlled(s.sound.FinishedCooking, s.sound.FinishedCookingVolume); err != nil {
-		s.log.Errorf(" play started cooking (%v)", err)
+		s.log.Errorf(" play finish cooking (%v)", err)
 	}
 }
 
 func PlayCustom() {
 	if err := playMP3controlled(s.sound.Custom, s.sound.StartingVolume); err != nil {
-		s.log.Errorf(" play started cooking (%v)", err)
+		s.log.Errorf(" play custom (%v)", err)
 	}
 }
 
-func PlayComplete() {
-	if err := playMP3controlled(s.sound.Complete, s.sound.CompleteVolume); err != nil {
-		s.log.Errorf("play Complete (%v)", err)
-	}
-}
 func PlayKeyBeep() { playStream(&s.keyBeep) }
 func PlayMoneyIn() { playStream(&s.moneyIn) }
 func PlayTrash()   { playStream(&s.trash) }
