@@ -2,6 +2,7 @@ package engine_config
 
 import (
 	"fmt"
+	"reflect"
 
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/internal/engine"
@@ -69,4 +70,26 @@ type Stock struct { //nolint:maligned
 func (s *Stock) String() string {
 	return fmt.Sprintf("inventory.%s #%d check=%t hw_rate=%f spend_rate=%f min=%f",
 		s.Name, s.Code, s.Check, s.HwRate, s.SpendRate, s.Min)
+}
+
+type Cfg interface{}
+
+func (s *Stock) Override(override *Stock) {
+	numField := reflect.TypeOf(*s).NumField()
+	for i := 0; i < numField; i++ {
+		el := reflect.ValueOf(override).Elem().Field(i)
+		if !el.IsZero() {
+			reflect.ValueOf(s).Elem().Field(i).Set(el)
+		}
+	}
+}
+
+func (s *MenuItem) Override(override *MenuItem) {
+	numField := reflect.TypeOf(*s).NumField()
+	for i := 0; i < numField; i++ {
+		el := reflect.ValueOf(override).Elem().Field(i)
+		if !el.IsZero() {
+			reflect.ValueOf(s).Elem().Field(i).Set(el)
+		}
+	}
 }
