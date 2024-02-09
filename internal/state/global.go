@@ -472,6 +472,14 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 	)
 
 	g.Engine.RegisterNewFunc(
+		"sound.money",
+		func(ctx context.Context) error {
+			sound.PlayMoneyIn()
+			return nil
+		},
+	)
+
+	g.Engine.RegisterNewFunc(
 		"sound.start.cook",
 		func(ctx context.Context) error {
 			sound.PlayStartedCooking()
