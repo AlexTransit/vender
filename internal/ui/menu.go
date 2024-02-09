@@ -27,29 +27,14 @@ func (mi *MenuItem) String() string {
 	return fmt.Sprintf("menu code=%s price=%d(raw) name='%s'", mi.Code, mi.Price, mi.Name)
 }
 
-// меню может меняться в нескольких конфигах.
-// disables
+// AlexM FIXME с меню переделать. посмотреть что массив нигде не используется и в конфиге сразу заполнить карту.
 func FillMenu(ctx context.Context) {
-	config := state.GetGlobal(ctx).Config
-
-	for _, x := range config.Engine.Menu.Items {
-		if x.Disabled || types.UI.Menu[x.Code].Disabled {
-			types.UI.Menu[x.Code] = types.MenuItemType{
-				Disabled: true,
-				Code:     x.Code,
-			}
-			continue
-		}
+	items := state.GetGlobal(ctx).Config.Engine.Menu.Items
+	for _, x := range items {
 		ic := types.UI.Menu[x.Code]
-		if x.Name != "" {
-			ic.Name = x.Name
-		}
-		if x.Scenario != "" {
-			ic.D = x.Doer
-		}
-		if x.Price != 0 {
-			ic.Price = x.Price
-		}
+		ic.Name = x.Name
+		ic.D = x.Doer
+		ic.Price = x.Price
 		if x.CreamMax != 0 {
 			ic.CreamMax = uint8(x.CreamMax)
 		}
@@ -59,19 +44,8 @@ func FillMenu(ctx context.Context) {
 		ic.Code = x.Code
 		types.UI.Menu[x.Code] = ic
 	}
-	for i, x := range types.UI.Menu {
-		if x.Disabled {
-			delete(types.UI.Menu, i)
-		}
-	}
 }
 
-func Init(ctx context.Context) error {
-	FillMenu(ctx)
-	return nil
-}
-
-// func Cook(ctx context.Context, rm *tele_api.FromRoboMessage) error {
 func Cook(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	state.VmcLock(ctx)

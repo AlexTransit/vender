@@ -171,6 +171,8 @@ func MustReadConfig(log *log2.Log, fs FullReader, names ...string) *Config {
 	if err != nil {
 		log.Fatal(errors.ErrorStack(err))
 	}
+	c.rewriteStock()
+	c.rewriteMenu()
 	c.rewriteAliace()
 	return c
 }
@@ -183,5 +185,37 @@ func (c *Config) rewriteAliace() {
 	c.Engine.Aliases = nil
 	for _, v := range m {
 		c.Engine.Aliases = append(c.Engine.Aliases, v)
+	}
+}
+
+func (c *Config) rewriteStock() {
+	tempStock := make(map[int]engine_config.Stock)
+	for _, v := range c.Engine.Inventory.Stocks {
+		// i := engine_config.Stock{}
+		i := tempStock[v.Code]
+		i.Override(&v)
+		tempStock[v.Code] = i
+	}
+	newStore := make([]engine_config.Stock, len(tempStock))
+	for i, v := range tempStock {
+		newStore[i-1] = v
+	}
+	c.Engine.Inventory.Stocks = newStore
+}
+
+func (c *Config) rewriteMenu() {
+	tempMenu := make(map[string]engine_config.MenuItem)
+	for _, v := range c.Engine.Menu.Items {
+		i := tempMenu[v.Code]
+		i.Override(v)
+		tempMenu[v.Code] = i
+	}
+	c.Engine.Menu.Items = nil
+	for _, v := range tempMenu {
+		if v.Disabled {
+			continue
+		}
+		mi := v
+		c.Engine.Menu.Items = append(c.Engine.Menu.Items, &mi)
 	}
 }
