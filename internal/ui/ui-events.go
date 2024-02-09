@@ -100,7 +100,7 @@ func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *
 			return types.StateDoesNotChange
 		}
 		if err := types.UI.FrontResult.Item.D.Validate(); err != nil {
-			ui.g.Log.Warning("code not valid. code invalid or little ingridient")
+			ui.g.Log.WarningF("validate menu:%v error:%v", types.UI.FrontResult.Item.Code, err)
 			*l1 = ui.g.Config.UI.Front.MsgMenuError
 			*l2 = ui.g.Config.UI.Front.MsgMenuNotAvailable
 			ui.inputBuf = []byte{}
