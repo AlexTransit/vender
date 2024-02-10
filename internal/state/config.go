@@ -27,10 +27,6 @@ type Config struct {
 	UpgradeScript  string         `hcl:"upgrade_script"`
 	ScriptIfBroken string         `hcl:"script_if_broken"`
 
-	Debug struct {
-		PprofListen string `hcl:"pprof_listen"`
-	}
-
 	Hardware struct {
 		// only used for Unmarshal, do not access
 		XXX_Devices []DeviceConfig      `hcl:"device"`
@@ -90,6 +86,7 @@ type Config struct {
 type DeviceConfig struct {
 	Name     string `hcl:"name,key"`
 	Required bool   `hcl:"required"`
+	Disabled bool
 }
 
 type ConfigSource struct {
@@ -174,6 +171,7 @@ func MustReadConfig(log *log2.Log, fs FullReader, names ...string) *Config {
 	c.rewriteStock()
 	c.rewriteMenu()
 	c.rewriteAliace()
+	c.rewriteHardware()
 	return c
 }
 
@@ -191,9 +189,8 @@ func (c *Config) rewriteAliace() {
 func (c *Config) rewriteStock() {
 	tempStock := make(map[int]engine_config.Stock)
 	for _, v := range c.Engine.Inventory.Stocks {
-		// i := engine_config.Stock{}
 		i := tempStock[v.Code]
-		i.Override(&v)
+		helpers.OverrideStructure(&i, &v)
 		tempStock[v.Code] = i
 	}
 	newStore := make([]engine_config.Stock, len(tempStock))
@@ -207,7 +204,7 @@ func (c *Config) rewriteMenu() {
 	tempMenu := make(map[string]engine_config.MenuItem)
 	for _, v := range c.Engine.Menu.Items {
 		i := tempMenu[v.Code]
-		i.Override(v)
+		helpers.OverrideStructure(&i, v)
 		tempMenu[v.Code] = i
 	}
 	c.Engine.Menu.Items = nil
@@ -218,4 +215,24 @@ func (c *Config) rewriteMenu() {
 		mi := v
 		c.Engine.Menu.Items = append(c.Engine.Menu.Items, &mi)
 	}
+}
+
+func (c *Config) rewriteHardware() {
+	listDevices := make(map[string]DeviceConfig)
+	for _, v := range c.Hardware.XXX_Devices {
+		i := listDevices[v.Name]
+		helpers.OverrideStructure(&i, &v)
+		listDevices[v.Name] = i
+	}
+	c.Hardware.XXX_Devices = nil
+	for _, v := range listDevices {
+		if v.Disabled {
+			continue
+		}
+		d := v
+		c.Hardware.XXX_Devices = append(c.Hardware.XXX_Devices, d)
+	}
+}
+
+func rewriteByName() {
 }
