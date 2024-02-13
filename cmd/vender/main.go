@@ -24,7 +24,6 @@ import (
 var (
 	log     = log2.NewStderr(log2.LOG_DEBUG)
 	modules = []subcmd.Mod{
-		// vmc.BrokenMod,
 		cmd_engine.Mod,
 		mdb.Mod,
 		cmd_tele.Mod,

@@ -155,6 +155,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		return ui.onServiceReport(ctx)
 	case types.StateServiceEnd:
 		watchdog.Enable()
+		watchdog.UnsetBroken()
 		return replaceDefault(ui.onServiceEnd(ctx), types.StateFrontBegin)
 
 	case types.StateStop:
