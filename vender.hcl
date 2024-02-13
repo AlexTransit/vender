@@ -79,6 +79,7 @@ hardware {
 
   // device "evend.cup" { required = true }
   // device "evend.hopper5" { }
+  device "evend.multihopper" { disabled = true }
 
   evend {
 
