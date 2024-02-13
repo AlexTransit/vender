@@ -527,6 +527,7 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 
 func (g *Global) Broken() {
 	watchdog.Disable()
+	watchdog.SetBroken()
 	g.Tele.RoboSendBroken()
 	watchdog.DevicesInitializationRequired()
 	g.Display()

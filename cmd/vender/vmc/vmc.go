@@ -23,7 +23,6 @@ import (
 
 var (
 	VmcMod = subcmd.Mod{Name: "vmc", Main: VmcMain}
-	// BrokenMod = subcmd.Mod{Name: "broken", Main: BrokenMain}
 	CmdMod = subcmd.Mod{Name: "cmd", Main: CmdMain}
 )
 
