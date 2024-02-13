@@ -70,6 +70,13 @@ func (t *tele) mesageMakeOrger(ctx context.Context) {
 	if t.InMessage.MakeOrder == nil {
 		return
 	}
+	if t.InMessage.MakeOrder.OrderStatus == tele_api.OrderStatus_doSelected &&
+		t.currentState == tele_api.State_RemoteControl &&
+		types.UI.FrontResult.PaymenId == t.InMessage.MakeOrder.OwnerInt {
+		t.log.Errorf("ignore doSelected message. is already doing it (%+v)", t.InMessage)
+		return
+	}
+
 	// prepare output message
 	g := state.GetGlobal(ctx)
 	t.OutMessage = tele_api.FromRoboMessage{
@@ -108,6 +115,7 @@ func (t *tele) mesageMakeOrger(ctx context.Context) {
 		}
 		t.OutMessage.Order.Amount = t.InMessage.MakeOrder.Amount
 		types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
+		types.UI.FrontResult.PaymenId = t.InMessage.MakeOrder.OwnerInt
 
 	case tele_api.OrderStatus_doTransferred:
 		// TODO execute external order. сделать внешний заказ
