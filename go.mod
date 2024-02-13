@@ -1,6 +1,6 @@
 module github.com/AlexTransit/vender
 
-go 1.21
+go 1.22
 
 require (
 	github.com/c-bata/go-prompt v0.2.6
