@@ -2,11 +2,12 @@ package evend
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/state"
-	"github.com/juju/errors"
 )
 
 const defaultEspressoTimeout = 30
@@ -32,12 +33,27 @@ func (d *DeviceEspresso) init(ctx context.Context) error {
 	g.Engine.RegisterNewFunc(d.name+".heat_off", func(ctx context.Context) error { return d.heatOff() })
 	g.Engine.RegisterNewFunc(d.name+".reset", func(ctx context.Context) error { return d.dev.Rst() })
 
-	err := d.dev.Rst()
-	time.Sleep(200 * time.Millisecond)
-	return errors.Annotate(err, d.name+".init")
+	if err := d.dev.Rst(); err != nil {
+		return fmt.Errorf("init %s:%v", d.name, err)
+	}
+	return nil
 }
 
-func (d *DeviceEspresso) grindNoWait() error   { return d.CommandNoWait(0x01) }
+func (d *DeviceEspresso) grindNoWait() (err error) {
+	for i := 0; i < 3; i++ {
+		e := d.CommandNoWait(0x01)
+		if e == nil {
+			if err != nil {
+				d.dev.Log.Errf("%d restart fix problem (%v)", i, err)
+			}
+			return nil
+		}
+		err = errors.Join(err, e)
+		time.Sleep(3 * time.Second)
+	}
+	return err
+}
+
 func (d *DeviceEspresso) pressNoWait() error   { return d.CommandNoWait(0x02) }
 func (d *DeviceEspresso) releaseNoWait() error { return d.CommandNoWait(0x03) }
 func (d *DeviceEspresso) heatOn() error        { return d.CommandNoWait(0x05) }
