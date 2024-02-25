@@ -153,17 +153,9 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 	}
 	g.Engine.Register(doAccept.Name, doAccept)
 
-	doGive := engine.FuncArg{
-		Name: "money.give(?)",
-		F: func(ctx context.Context, arg engine.Arg) error {
-			dispensed := currency.NominalGroup{}
-			d := ms.coin.NewGive(g.Config.ScaleU(uint32(arg)), false, &dispensed)
-			err := g.Engine.Exec(ctx, d)
-			ms.Log.Infof("dispensed=%s", dispensed.String())
-			return err
-		}}
-	g.Engine.Register(doGive.Name, doGive)
-	g.Engine.Register("money.dispense(?)", doGive) // FIXME remove deprecated
+	g.Engine.RegisterNewFuncAgr("money.dispense(?)", func(ctx context.Context, arg engine.Arg) error {
+		return ms.coin.Dispense(g.Config.ScaleU(uint32(arg)))
+	})
 
 	doSetGiftCredit := engine.FuncArg{
 		Name: "money.set_gift_credit(?)",
@@ -231,6 +223,7 @@ func GetCurrentPrice(ctx context.Context) currency.Amount {
 	}
 	panic(fmt.Sprintf("code error ctx[currentPriceKey] expected=currency.Amount actual=%#v", v))
 }
+
 func SetCurrentPrice(ctx context.Context, p currency.Amount) context.Context {
 	return context.WithValue(ctx, currentPriceKey, p)
 }
