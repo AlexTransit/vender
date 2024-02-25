@@ -7,10 +7,7 @@ type Config struct { //nolint:maligned
 		ScalingFactor int `hcl:"scaling_factor"`
 	}
 	Coin struct { //nolint:maligned
-		DispenseTimeoutSec int  `hcl:"dispense_timeout_sec"`
-		GiveSmart          bool `hcl:"give_smart"`
-
-		XXX_Deprecated_DispenseSmart bool `hcl:"dispense_smart"`
+		DispenseStrategy int
 	}
 	LogDebug   bool   `hcl:"log_debug"`
 	UartDevice string `hcl:"uart_device"`

@@ -66,7 +66,7 @@ func (ms *MoneySystem) WithdrawPrepare(ctx context.Context, amount currency.Amou
 	ms.billCredit.Clear()
 	ms.coinCredit.Clear()
 	go func() {
-		if err := ms.coin.Dispence(change); err != nil {
+		if err := ms.coin.Dispense(change); err != nil {
 			err = oerr.Annotate(err, tag)
 			ms.Log.WarningF("%s CRITICAL change err=%v", tag, err)
 			// state.GetGlobal(ctx).Tele.Error(err)
@@ -74,7 +74,6 @@ func (ms *MoneySystem) WithdrawPrepare(ctx context.Context, amount currency.Amou
 		ms.SetDirty(amount)
 	}()
 	return nil
-
 }
 
 // ----------------------------------------------------------------------
@@ -112,7 +111,7 @@ func (ms *MoneySystem) WithdrawCommit(ctx context.Context, amount currency.Amoun
 func (ms *MoneySystem) ReturnDirty() error {
 	ms.lk.Lock()
 	defer ms.lk.Unlock()
-	return ms.coin.Dispence(ms.dirty)
+	return ms.coin.Dispense(ms.dirty)
 }
 
 func (ms *MoneySystem) ReturnMoney() error {
@@ -125,7 +124,7 @@ func (ms *MoneySystem) ReturnMoney() error {
 	ms.giftCredit = 0
 	if cash > 0 {
 		ms.Log.Infof("return money (%v)", cash)
-		return ms.coin.Dispence(cash)
+		return ms.coin.Dispense(cash)
 	}
 	return nil
 }

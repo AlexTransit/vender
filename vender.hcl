@@ -158,8 +158,7 @@ hardware {
     }
 
     coin {
-      give_smart           = false
-      dispense_timeout_sec = 0
+      DispenseStrategy = 0  "0 = uniform dispensing, 1 = first ful tube, 2 = minimal coins"
     }
 
     // log_debug = true
