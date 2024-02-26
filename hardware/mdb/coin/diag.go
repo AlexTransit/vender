@@ -2,7 +2,6 @@ package coin
 
 import (
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"strings"
 )
@@ -70,18 +69,19 @@ func (dr DiagResult) Error() string {
 	return strings.Join(ss, ",")
 }
 
-func parseDiagResult(b []byte, byteOrder binary.ByteOrder) (DiagResult, error) {
+func parseDiagResult(b []byte, byteOrder binary.ByteOrder) (DiagResult, string) {
 	lb := len(b)
-	if lb == 0 {
-		return nil, nil
+	if lb < 2 {
+		return nil, ""
 	}
-	if lb%2 != 0 {
-		es := fmt.Sprintf("coin diag response must be 0..8 words of 16 bit. byte(%x)", b)
-		return nil, errors.New(es)
+	var errorString string
+	if lb%2 != 0 { // can posible return 3 or 5 bytes. this is a violation of the specification. видел когда Coges вернул 3, 5 байт. это нарушение спецификации
+		errorString = fmt.Sprintf("coin diag response must be a multiple of 2 bytes bytes(%v)", b)
+		lb -= 1
 	}
-	dr := make(DiagResult, lb/2)
+	ds := make(DiagResult, lb/2)
 	for i := 0; i < lb/2; i++ {
-		dr[i] = DiagStatus(byteOrder.Uint16(b[i*2 : i*2+2]))
+		ds[i] = DiagStatus(byteOrder.Uint16(b[i*2 : i*2+2]))
 	}
-	return dr, nil
+	return ds, errorString
 }

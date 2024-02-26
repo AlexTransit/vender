@@ -531,12 +531,12 @@ func (ca *CoinAcceptor) ExpansionDiagStatus(result *DiagResult) error {
 	if err != nil {
 		return err
 	}
-	dr, err := parseDiagResult(response.Bytes(), ca.Device.ByteOrder)
-	ca.Device.Log.Infof("%s result=%s", tag, dr.Error())
+	dr, es := parseDiagResult(response.Bytes(), ca.Device.ByteOrder)
+	ca.Device.Log.Infof("%s result=%s (%s)", tag, dr.Error(), es)
 	if result != nil {
 		*result = dr
 	}
-	return err
+	return nil
 }
 
 func (ca *CoinAcceptor) EnableAccept(maximumNominal currency.Amount) (err error) {
