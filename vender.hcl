@@ -255,7 +255,9 @@ include "local.hcl" {
   optional = true
 }
 
-Watchdog {Folder = "/run/user/1000"} // template folder. always  blank on reboot
+Watchdog { 
+  disabled = bool
+  Folder = "/run/user/1000"} // template folder. always  blank on reboot
 
 sound { // resample resampling takes a few seconds. I use sample rate 22000Hz mono without recoding
 #  https://audio.online-convert.com/convert-to-mp3

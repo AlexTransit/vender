@@ -104,12 +104,18 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 			return ca.CoinReset()
 		},
 	)
+	g.Engine.RegisterNewFunc(
+		"coin.status",
+		func(ctx context.Context) error {
+			ca.Log.Infof("%+v", ca.tub)
+			return nil
+		},
+	)
 	g.Engine.Register("coin.dispence(?)",
 		engine.FuncArg{Name: "coin.dispence", F: func(ctx context.Context, arg engine.Arg) (err error) {
 			err = ca.Dispense(currency.Amount(arg))
 			return err
 		}})
-
 	err = ca.CoinReset()
 	return err
 }
@@ -120,6 +126,13 @@ func (ca *CoinAcceptor) TestingDispense() {
 		// fmt.Printf("\033[41m %v %v \033[0m\n", i, n.nominal)
 		_, _ = ca.DispenceCoin(n.nominal)
 	}
+}
+
+func (ca *CoinAcceptor) ReturnMoney(amount currency.Amount) (err error) {
+	strategy := ca.dispenseStrategy
+	err = ca.Dispense(amount)
+	ca.dispenseStrategy = strategy
+	return err
 }
 
 func (ca *CoinAcceptor) Dispense(amount currency.Amount) (err error) {
@@ -154,6 +167,7 @@ func (ca *CoinAcceptor) Dispense(amount currency.Amount) (err error) {
 }
 
 func (ca *CoinAcceptor) nominalMaximumNumberOfCoins(notMore currency.Amount) (n currency.Nominal, err error) {
+	ca.Log.Infof("%+v", ca.tub)
 	sort.Slice(ca.tub[:], func(i, j int) bool {
 		return ca.tub[i].count > ca.tub[j].count
 	})
