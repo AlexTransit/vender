@@ -210,7 +210,11 @@ func (ms *MoneySystem) TeleChange(ctx context.Context) *tele_api.Telemetry_Money
 	return pb
 }
 
-const currentPriceKey = "run/current-price"
+type key string
+
+const (
+	currentPriceKey key = "run/current-price"
+)
 
 func GetCurrentPrice(ctx context.Context) currency.Amount {
 	v := ctx.Value(currentPriceKey)
@@ -225,7 +229,8 @@ func GetCurrentPrice(ctx context.Context) currency.Amount {
 }
 
 func SetCurrentPrice(ctx context.Context, p currency.Amount) context.Context {
-	return context.WithValue(ctx, currentPriceKey, p)
+	ck := context.WithValue(ctx, currentPriceKey, p)
+	return ck
 }
 
 func (ms *MoneySystem) XXX_InjectCoin(n currency.Nominal) error {
