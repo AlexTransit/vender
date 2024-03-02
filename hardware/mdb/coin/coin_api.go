@@ -32,6 +32,7 @@ type Coiner interface {
 	CoinRun(*alive.Alive, func(money.ValidatorEvent))
 	DisableAccept()
 	Dispense(currency.Amount) error
+	ReturnMoney(currency.Amount) error
 }
 
 var (
@@ -46,7 +47,8 @@ func (Stub) CoinRun(*alive.Alive, func(money.ValidatorEvent)) {}
 func (Stub) DisableAccept()   {}
 func (Stub) TestingDispense() {}
 
-func (Stub) Dispense(currency.Amount) error { return nil }
+func (Stub) Dispense(currency.Amount) error    { return nil }
+func (Stub) ReturnMoney(currency.Amount) error { return nil }
 
 func (Stub) AcceptMax(currency.Amount) engine.Doer {
 	return engine.Fail{E: errors.NotSupportedf("coin.Stub.AcceptMax")}
