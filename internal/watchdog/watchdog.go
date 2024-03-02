@@ -29,7 +29,9 @@ func Init(conf *Config, log *log2.Log, timeout int) {
 	WD.folder = helpers.ConfigDefaultStr(conf.Folder, "/run/user/1000/")
 	WD.log = log
 	WD.disabled = conf.Disabled
-	SetTimerSec(timeout * 2)
+	if !WD.disabled {
+		setTimerSec(timeout * 2)
+	}
 }
 
 func Enable() {
@@ -51,7 +53,7 @@ func setUsec(usec string) {
 	}
 }
 
-func SetTimerSec(sec int) {
+func setTimerSec(sec int) {
 	WD.wdt = "0"
 	if sec != 0 {
 		WD.wdt = strconv.Itoa(sec) + "000000"
@@ -59,7 +61,10 @@ func SetTimerSec(sec int) {
 }
 
 func Refresh() {
-	SendNotify(daemon.SdNotifyWatchdog)
+	if WD.disabled {
+		return
+	}
+	sendNotify(daemon.SdNotifyWatchdog)
 }
 
 func ReinitRequired() bool {
@@ -99,10 +104,10 @@ func IsBroken() bool {
 }
 
 // send a ready signal to systemd
-func ServiceStarted() { SendNotify(daemon.SdNotifyReady) }
+func ServiceStarted() { sendNotify(daemon.SdNotifyReady) }
 
-func SendNotify(signal string) {
-	ok, err := daemon.SdNotify(false, daemon.SdNotifyWatchdog)
+func sendNotify(signal string) {
+	ok, err := daemon.SdNotify(false, signal)
 	if !ok {
 		WD.log.Errorf("watchdog not updated error:%v", err)
 	}
