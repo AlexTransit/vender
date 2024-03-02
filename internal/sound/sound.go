@@ -155,7 +155,7 @@ func playMP3controlled(file string, volume int) (err error) {
 		return
 	}
 	s.audioPlayer, err = s.audioContext.NewPlayer(str)
-	s.audioPlayer.SetVolume(float64(helpers.ConfigDefaultInt(s.sound.StartingVolume, 10)) / 10)
+	s.audioPlayer.SetVolume(float64(helpers.ConfigDefaultInt(volume, 10)) / 10)
 	if err != nil {
 		return
 	}
