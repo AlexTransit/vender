@@ -35,7 +35,7 @@ func Init(conf *Config, log *log2.Log, timeout int) {
 }
 
 func Enable() {
-	if WD.wdt == "0" {
+	if WD.disabled || WD.wdt == "0" {
 		return
 	}
 	setUsec(WD.wdt)

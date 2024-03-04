@@ -40,7 +40,7 @@ func (d *DeviceEspresso) init(ctx context.Context) error {
 }
 
 func (d *DeviceEspresso) grindNoWait() (err error) {
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 5; i++ {
 		e := d.CommandNoWait(0x01)
 		if e == nil {
 			if err != nil {
@@ -49,7 +49,7 @@ func (d *DeviceEspresso) grindNoWait() (err error) {
 			return nil
 		}
 		err = errors.Join(err, e)
-		time.Sleep(3 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 	return err
 }
