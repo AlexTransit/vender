@@ -8,6 +8,7 @@ import (
 
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/log2"
 )
 
 const defaultEspressoTimeout = 30
@@ -22,6 +23,7 @@ func (d *DeviceEspresso) init(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	d.timeout = uint16(helpers.ConfigDefaultInt(g.Config.Hardware.Evend.Espresso.TimeoutSec, defaultEspressoTimeout)) * 5 // every 200 ms
 	d.Generic.Init(ctx, 0xe8, "espresso", proto2)
+	d.dev.Log.SetLevel(log2.LOG_DEBUG)
 	g.Engine.RegisterNewFunc(d.name+".waitDone", func(ctx context.Context) error { return d.Proto2PollWaitSuccess(d.timeout, true, false) })
 	g.Engine.RegisterNewFunc(d.name+".grindNoWait", func(ctx context.Context) error { return d.grindNoWait() })
 	g.Engine.RegisterNewFunc(d.name+".grind", func(ctx context.Context) error { return d.grind() })
@@ -41,16 +43,20 @@ func (d *DeviceEspresso) init(ctx context.Context) error {
 
 func (d *DeviceEspresso) grindNoWait() (err error) {
 	for i := 0; i < 5; i++ {
+		d.dev.Log.Debug("grind start")
 		e := d.CommandNoWait(0x01)
 		if e == nil {
 			if err != nil {
 				d.dev.Log.Errf("%d restart fix problem (%v)", i, err)
 			}
+			d.dev.Log.Debug("grind complete")
 			return nil
 		}
+		d.dev.Log.Debugf("grind error (%v)", e)
 		err = errors.Join(err, e)
 		time.Sleep(5 * time.Second)
 	}
+	d.dev.Log.Debugf("grind not complete (%v)", err)
 	return err
 }
 
