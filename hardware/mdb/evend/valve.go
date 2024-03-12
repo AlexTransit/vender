@@ -36,14 +36,14 @@ type DeviceValve struct { //nolint:maligned
 	cautionPartUnit uint8
 	pourTimeout     time.Duration
 
-	doGetTempHot    engine.Doer
-	DoSetTempHot    engine.FuncArg
-	DoPourCold      engine.Doer
-	DoPourHot       engine.Doer
-	DoPourEspresso  engine.Doer
-	tempHot         int32
-	tempHotTarget   uint8
-	tempHotReported bool
+	doGetTempHot   engine.Doer
+	DoSetTempHot   engine.FuncArg
+	DoPourCold     engine.Doer
+	DoPourHot      engine.Doer
+	DoPourEspresso engine.Doer
+	tempHot        int32
+	tempHotTarget  uint8
+	// tempHotReported bool
 }
 
 var EValve DeviceValve
@@ -82,9 +82,9 @@ func (dv *DeviceValve) init(ctx context.Context) (err error) {
 		g.Log.Infof("current temp=%v target temp=%v", ct, EValve.tempHotTarget)
 		return err
 	})
-	g.Engine.Register("evend.valve.pour_espresso(?)", dv.DoPourEspresso.(engine.Doer))
-	g.Engine.Register("evend.valve.pour_cold(?)", dv.DoPourCold.(engine.Doer))
-	g.Engine.Register("evend.valve.pour_hot(?)", dv.DoPourHot.(engine.Doer))
+	g.Engine.Register("evend.valve.pour_espresso(?)", dv.DoPourEspresso)
+	g.Engine.Register("evend.valve.pour_cold(?)", dv.DoPourCold)
+	g.Engine.Register("evend.valve.pour_hot(?)", dv.DoPourHot)
 	g.Engine.Register("evend.valve.cold_open", dv.NewValveCold(true))
 	g.Engine.Register("evend.valve.cold_close", dv.NewValveCold(false))
 	g.Engine.Register("evend.valve.hot_open", dv.NewValveHot(true))
@@ -331,44 +331,44 @@ func (dv *DeviceValve) newCommand(cmdName, argName string, arg1, arg2 byte) engi
 	return dv.Generic.NewAction(tag, arg1, arg2)
 }
 
-func (dv *DeviceValve) newCheckTempHotValidate(ctx context.Context) func() error {
-	g := state.GetGlobal(ctx)
-	return func() error {
-		tag := dv.name + ".check_temp_hot"
-		var getErr error
-		temp := dv.tempHot
-		if getErr != nil {
-			if doSetZero, _, _ := engine.ArgApply(dv.DoSetTempHot, 0); doSetZero != nil {
-				_ = g.Engine.Exec(ctx, doSetZero)
-			}
-			return getErr
-		}
+// func (dv *DeviceValve) newCheckTempHotValidate(ctx context.Context) func() error {
+// 	g := state.GetGlobal(ctx)
+// 	return func() error {
+// 		tag := dv.name + ".check_temp_hot"
+// 		var getErr error
+// 		temp := dv.tempHot
+// 		if getErr != nil {
+// 			if doSetZero, _, _ := engine.ArgApply(dv.DoSetTempHot, 0); doSetZero != nil {
+// 				_ = g.Engine.Exec(ctx, doSetZero)
+// 			}
+// 			return getErr
+// 		}
 
-		diff := absDiffU16(uint16(temp), uint16(dv.tempHotTarget))
-		const tempHotMargin = 10 // FIXME margin from config
-		msg := fmt.Sprintf("%s current=%d config=%d diff=%d", tag, temp, dv.tempHotTarget, diff)
-		dv.dev.Log.Debugf(msg)
-		if diff > tempHotMargin {
-			if !dv.tempHotReported {
-				g.Error(fmt.Errorf(msg))
-				dv.tempHotReported = true
-			}
-			return &ErrWaterTemperature{
-				Source:  "hot",
-				Current: int16(temp),
-				Target:  int16(dv.tempHotTarget),
-			}
-		} else if dv.tempHotReported {
-			// TODO report OK
-			dv.tempHotReported = false
-		}
-		return nil
-	}
-}
+// 		diff := absDiffU16(uint16(temp), uint16(dv.tempHotTarget))
+// 		const tempHotMargin = 10 // FIXME margin from config
+// 		msg := fmt.Sprintf("%s current=%d config=%d diff=%d", tag, temp, dv.tempHotTarget, diff)
+// 		dv.dev.Log.Debugf(msg)
+// 		if diff > tempHotMargin {
+// 			if !dv.tempHotReported {
+// 				g.Error(fmt.Errorf(msg))
+// 				dv.tempHotReported = true
+// 			}
+// 			return &ErrWaterTemperature{
+// 				Source:  "hot",
+// 				Current: int16(temp),
+// 				Target:  int16(dv.tempHotTarget),
+// 			}
+// 		} else if dv.tempHotReported {
+// 			// TODO report OK
+// 			dv.tempHotReported = false
+// 		}
+// 		return nil
+// 	}
+// }
 
-func absDiffU16(a, b uint16) uint16 {
-	if a >= b {
-		return a - b
-	}
-	return b - a
-}
+// func absDiffU16(a, b uint16) uint16 {
+// 	if a >= b {
+// 		return a - b
+// 	}
+// 	return b - a
+// }
