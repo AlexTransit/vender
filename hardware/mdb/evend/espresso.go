@@ -41,12 +41,19 @@ func (d *DeviceEspresso) init(ctx context.Context) error {
 	return nil
 }
 
-func (d *DeviceEspresso) grindNoWait() (err error) {
+func (d *DeviceEspresso) grindNoWait() error { return d.CommandNoWait(0x01) }
+
+func (d *DeviceEspresso) pressNoWait() error   { return d.CommandNoWait(0x02) }
+func (d *DeviceEspresso) releaseNoWait() error { return d.CommandNoWait(0x03) }
+func (d *DeviceEspresso) heatOn() error        { return d.CommandNoWait(0x05) }
+func (d *DeviceEspresso) heatOff() error       { return d.CommandNoWait(0x06) }
+
+func (d *DeviceEspresso) grind() (err error) {
 	for i := 0; i < 5; i++ {
 		d.log.Debug("grind start")
-		e := d.CommandNoWait(0x01)
+		e := d.CommandWaitSuccess(d.timeout, 0x01)
 		if e == nil {
-			if err != nil {
+			if i > 0 {
 				d.log.Errf("%d restart fix problem (%v)", i, err)
 			}
 			d.dev.Log.Debug("grind complete")
@@ -58,18 +65,6 @@ func (d *DeviceEspresso) grindNoWait() (err error) {
 	}
 	d.log.Debugf("grind not complete (%v)", err)
 	return err
-}
-
-func (d *DeviceEspresso) pressNoWait() error   { return d.CommandNoWait(0x02) }
-func (d *DeviceEspresso) releaseNoWait() error { return d.CommandNoWait(0x03) }
-func (d *DeviceEspresso) heatOn() error        { return d.CommandNoWait(0x05) }
-func (d *DeviceEspresso) heatOff() error       { return d.CommandNoWait(0x06) }
-
-func (d *DeviceEspresso) grind() (err error) {
-	if err = d.grindNoWait(); err != nil {
-		return
-	}
-	return d.WaitSuccess(d.timeout, true)
 }
 
 func (d *DeviceEspresso) press() (err error) {

@@ -333,7 +333,7 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error
 	return err
 }
 
-func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool, waitExetute bool) (err error) {
+func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool, noWaitExetute bool) (err error) {
 	response := mdb.Packet{}
 	var needReset bool
 	for count > 0 {
@@ -355,7 +355,7 @@ func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool, waitExetut
 			needReset = true
 		}
 		if rb[0]&0x50 == 0x50 { // executing
-			if waitExetute {
+			if noWaitExetute {
 				return nil
 			}
 			continue

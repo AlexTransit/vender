@@ -37,7 +37,6 @@ type DeviceValve struct { //nolint:maligned
 	pourTimeout     time.Duration
 
 	doGetTempHot    engine.Doer
-	doCheckTempHot  engine.Doer
 	DoSetTempHot    engine.FuncArg
 	DoPourCold      engine.Doer
 	DoPourHot       engine.Doer
@@ -57,7 +56,6 @@ func (dv *DeviceValve) init(ctx context.Context) (err error) {
 	dv.proto2IgnoreMask = valvePollNotHot
 	dv.Generic.Init(ctx, 0xc0, "valve", proto2)
 	dv.doGetTempHot = dv.newGetTempHot()
-	dv.doCheckTempHot = engine.Func0{F: func() error { return nil }, V: dv.newCheckTempHotValidate(ctx)}
 	dv.DoPourCold = dv.newPourCold()
 	dv.DoPourHot = dv.newPourHot()
 	dv.DoPourEspresso = dv.newPourEspresso()
@@ -71,7 +69,6 @@ func (dv *DeviceValve) init(ctx context.Context) (err error) {
 	} else {
 		dv.dev.Log.Errorf("invalid config, stock water not found err=%v", err)
 	}
-	g.Engine.Register("evend.valve.check_temp_hot", dv.doCheckTempHot)
 	g.Engine.RegisterNewFunc("evend.valve.get_temp_hot", func(ctx context.Context) error { return dv.readTemp() })
 	g.Engine.RegisterNewFunc("evend.valve.reset", func(ctx context.Context) error { return dv.dev.Rst() })
 	g.Engine.Register("evend.valve.set_temp_hot(?)",
@@ -170,6 +167,7 @@ func (dv *DeviceValve) SetTemp(temp uint8) (err error) {
 	}
 	return nil
 }
+
 func (dv *DeviceValve) poll() {
 	bs := []byte{dv.dev.Address + 3}
 	request := mdb.MustPacketFromBytes(bs, true)
@@ -249,7 +247,8 @@ func (dv *DeviceValve) newPourCareful(name string, arg1 byte, abort engine.Doer)
 			}
 			err := e.Exec(ctx, dv.Generic.NewWaitDone(tag, dv.pourTimeout))
 			return err
-		}}
+		},
+	}
 
 	return engine.NewSeq(tag).
 		Append(dv.Generic.NewWaitReady(tag)).
@@ -283,6 +282,7 @@ func (dv *DeviceValve) NewValveCold(open bool) engine.Doer {
 		return dv.newCommand("valve_cold", "close", 0x10, 0x00)
 	}
 }
+
 func (dv *DeviceValve) NewValveHot(open bool) engine.Doer {
 	if open {
 		return dv.newCommand("valve_hot", "open", 0x11, 0x01)
@@ -290,6 +290,7 @@ func (dv *DeviceValve) NewValveHot(open bool) engine.Doer {
 		return dv.newCommand("valve_hot", "close", 0x11, 0x00)
 	}
 }
+
 func (dv *DeviceValve) NewValveBoiler(open bool) engine.Doer {
 	if open {
 		return dv.newCommand("valve_boiler", "open", 0x12, 0x01)
@@ -297,6 +298,7 @@ func (dv *DeviceValve) NewValveBoiler(open bool) engine.Doer {
 		return dv.newCommand("valve_boiler", "close", 0x12, 0x00)
 	}
 }
+
 func (dv *DeviceValve) NewPumpEspresso(start bool) engine.Doer {
 	if start {
 		return dv.newCommand("pump_espresso", "start", 0x13, 0x01)
@@ -304,6 +306,7 @@ func (dv *DeviceValve) NewPumpEspresso(start bool) engine.Doer {
 		return dv.newCommand("pump_espresso", "stop", 0x13, 0x00)
 	}
 }
+
 func (dv *DeviceValve) NewPump(start bool) engine.Doer {
 	if start {
 		return dv.newCommand("pump", "start", 0x14, 0x01)
