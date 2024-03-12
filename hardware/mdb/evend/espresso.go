@@ -56,7 +56,7 @@ func (d *DeviceEspresso) grind() (err error) {
 			if i > 0 {
 				d.log.Errf("%d restart fix problem (%v)", i, err)
 			}
-			d.dev.Log.Debug("grind complete")
+			d.log.Debug("grind complete")
 			return nil
 		}
 		d.log.Debugf("grind error (%v)", e)
