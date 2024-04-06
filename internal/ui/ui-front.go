@@ -24,7 +24,7 @@ import (
 //		Cream uint8
 //		Sugar uint8
 //	}
-func (ui *UI) onFrontStart(ctx context.Context) types.UiState {
+func (ui *UI) onFrontStart() types.UiState {
 	watchdog.Refresh()
 	if ok, nextState := ui.checkTemperature(); !ok {
 		return nextState
@@ -123,7 +123,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 		e := ui.wait(timeout)
 		switch e.Kind {
 		case types.EventInput:
-			if nextState := ui.parseKeyEvent(ctx, e, &l1, &l2, &tuneScreen); nextState != types.StateDoesNotChange {
+			if nextState := ui.parseKeyEvent(e, &l1, &l2, &tuneScreen); nextState != types.StateDoesNotChange {
 				return nextState
 			}
 		case types.EventMoneyPreCredit, types.EventMoneyCredit:
@@ -310,6 +310,7 @@ func (ui *UI) onFrontTimeout(ctx context.Context) types.UiState {
 	// ui.g.Log.Debugf("ui state=%s result=%#v", ui.State().String(), ui.FrontResult)
 	// moneysys := money.GetGlobal(ctx)
 	// moneysys.save
+	_ = ctx
 	return types.StateFrontEnd
 }
 

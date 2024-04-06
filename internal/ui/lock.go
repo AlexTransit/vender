@@ -50,18 +50,18 @@ func (ui *UI) LockEnd() {
 	}
 }
 
-func (ui *UI) checkInterrupt(s types.UiState) bool {
-	if !ui.lock.locked() {
-		return false
-	}
+// func (ui *UI) checkInterrupt(s types.UiState) bool {
+// 	if !ui.lock.locked() {
+// 		return false
+// 	}
 
-	interrupt := true
-	// if ui.lock.priority()&tele_api.Priority_IdleUser != 0 {
-	// 	interrupt = !(s > StateFrontBegin && s < StateFrontEnd) &&
-	// 		!(s >= StateServiceBegin && s <= StateServiceEnd)
-	// }
-	return interrupt
-}
+// 	interrupt := true
+// 	// if ui.lock.priority()&tele_api.Priority_IdleUser != 0 {
+// 	// 	interrupt = !(s > StateFrontBegin && s < StateFrontEnd) &&
+// 	// 		!(s >= StateServiceBegin && s <= StateServiceEnd)
+// 	// }
+// 	return interrupt
+// }
 
 func (l *uiLock) locked() bool { return atomic.LoadInt32(&l.sem) > 0 }
 

@@ -1,7 +1,6 @@
 package ui
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/AlexTransit/vender/hardware/input"
@@ -27,7 +26,7 @@ func (ui *UI) linesCreate(l1 *string, l2 *string, tuneScreen *bool) {
 	*tuneScreen = false
 }
 
-func (ui *UI) parseKeyEvent(ctx context.Context, e types.Event, l1 *string, l2 *string, tuneScreen *bool) (nextState types.UiState) {
+func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *bool) (nextState types.UiState) {
 	sound.PlayKeyBeep()
 	rm := tele_api.FromRoboMessage{}
 	defer func() {
