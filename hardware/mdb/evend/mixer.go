@@ -2,6 +2,7 @@ package evend
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -34,12 +35,14 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 	g.Engine.Register(m.name+".shake(?)",
 		engine.FuncArg{Name: m.name + ".shake", F: func(ctx context.Context, arg engine.Arg) (err error) {
 			for i := 1; i <= 2; i++ {
-				if err = m.shake(uint8(arg)); err == nil {
+				e := m.shake(uint8(arg))
+				if e == nil {
 					if i > 1 {
-						m.dev.TeleError(fmt.Errorf("restart fix error"))
+						m.dev.TeleError(fmt.Errorf("restart fix error (%v)", err))
 					}
 					return
 				}
+				err = errors.Join(err, e)
 				// FIXME тут можно добавть скрипт действий после ошибки
 				m.dev.Rst()
 				time.Sleep(5 * time.Second)
@@ -52,12 +55,14 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 	g.Engine.RegisterNewFunc(m.name+".movingComplete", func(ctx context.Context) error { return m.mvComplete() })
 	g.Engine.Register(m.name+".move(?)", engine.FuncArg{Name: m.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
 		for i := 1; i <= 2; i++ {
-			if err = m.move(int8(arg)); err == nil {
+			e := m.move(int8(arg))
+			if e == nil {
 				if i > 1 {
-					m.dev.TeleError(fmt.Errorf("restart fix error"))
+					m.dev.TeleError(fmt.Errorf("restart fix error (%v)", err))
 				}
 				return
 			}
+			err = errors.Join(err, e)
 			m.cPos = -1
 			// FIXME тут можно добавть скрипт действий после ошибки
 			m.dev.Rst()
