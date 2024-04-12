@@ -208,7 +208,7 @@ func (ui *UI) onServiceInventory() types.UiState {
 		return types.StateServiceInventory
 	case input.IsAccept(&e):
 		if len(ui.inputBuf) == 0 {
-			ui.g.Log.Errorf("ui onServiceInventory input=accept inputBuf=empty")
+			ui.g.Log.WarningF("ui onServiceInventory input=accept inputBuf=empty")
 			ui.display.SetLines(MsgError, "empty") // FIXME extract message string
 			ui.serviceWaitInput()
 			return types.StateServiceInventory
@@ -218,7 +218,7 @@ func (ui *UI) onServiceInventory() types.UiState {
 		x := int(xt * 100)
 		ui.inputBuf = ui.inputBuf[:0]
 		if err != nil {
-			ui.g.Log.Errorf("ui onServiceInventory input=accept inputBuf='%s'", string(ui.inputBuf))
+			ui.g.Log.WarningF("ui onServiceInventory input=accept inputBuf='%s'", string(ui.inputBuf))
 			ui.display.SetLines(MsgError, "number-invalid") // FIXME extract message string
 			ui.serviceWaitInput()
 			return types.StateServiceInventory

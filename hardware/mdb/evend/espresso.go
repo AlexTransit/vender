@@ -54,7 +54,8 @@ func (d *DeviceEspresso) grind() (err error) {
 		e := d.CommandWaitSuccess(d.timeout, 0x01)
 		if e == nil {
 			if i > 0 {
-				d.log.WarningF("%d restart fix problem (%v)", i, err)
+				// d.log.WarningF("%d restart fix problem (%v)", i, err)
+				d.dev.TeleError(fmt.Errorf("%d restart fix problem (%v)", i, err))
 			}
 			d.log.Debug("grind complete")
 			return nil

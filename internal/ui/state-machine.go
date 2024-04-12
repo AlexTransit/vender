@@ -29,13 +29,13 @@ func (ui *UI) Loop(ctx context.Context) {
 		if next == types.StateDefault {
 			ui.g.Log.Fatalf("ui state=%v next=default", current)
 		}
-		ui.exit(ctx, current, next)
+		ui.exit(next)
 
-		if current != types.StateLocked && ui.checkInterrupt(next) {
-			ui.lock.next = next
-			ui.g.Log.Infof("ui lock interrupt")
-			next = types.StateLocked
-		}
+		// if current != types.StateLocked && ui.checkInterrupt(next) {
+		// 	ui.lock.next = next
+		// 	ui.g.Log.Infof("ui lock interrupt")
+		// 	next = types.StateLocked
+		// }
 
 		if !ui.g.Alive.IsRunning() {
 			ui.g.Log.Debugf("ui Loop stopping because g.Alive")
@@ -72,7 +72,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		return types.StateOnStart
 
 	case types.StateOnStart:
-		return ui.onFrontStart(ctx)
+		return ui.onFrontStart()
 
 	case types.StateBroken:
 		ui.g.Broken()
@@ -167,7 +167,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 	}
 }
 
-func (ui *UI) exit(ctx context.Context, current, next types.UiState) {
+func (ui *UI) exit(next types.UiState) {
 	// ui.g.Log.Debugf("ui exit %s -> %s", current.String(), next.String())
 
 	if next != types.StateBroken {

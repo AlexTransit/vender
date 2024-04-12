@@ -212,7 +212,7 @@ func (t *tele) checkCodePriceValid(menuCode *string, amount uint32) bool {
 func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error {
 	switch task := cmd.Task.(type) {
 	case *tele_api.Command_Report:
-		return t.cmdReport(ctx, cmd)
+		return t.cmdReport(ctx)
 
 	case *tele_api.Command_GetState:
 		t.transport.SendState([]byte{byte(t.currentState)})
@@ -222,7 +222,7 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 		return t.cmdExec(ctx, cmd, task.Exec)
 
 	case *tele_api.Command_SetInventory:
-		return t.cmdSetInventory(ctx, cmd, task.SetInventory)
+		return t.cmdSetInventory(ctx, task.SetInventory)
 
 	case *tele_api.Command_ValidateCode:
 		t.cmdValidateCode(cmd, task.ValidateCode.Code)
@@ -233,7 +233,7 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 		return nil
 
 	case *tele_api.Command_Show_QR:
-		return t.cmdShowQR(ctx, cmd, task.Show_QR)
+		return t.cmdShowQR(ctx, task.Show_QR)
 
 	default:
 		err := fmt.Errorf("unknown command=%#v", cmd)
@@ -253,7 +253,7 @@ func (t *tele) cmdValidateCode(cmd *tele_api.Command, code string) {
 	t.CookReply(cmd, tele_api.CookReplay_cookInaccessible)
 }
 
-func (t *tele) cmdReport(ctx context.Context, cmd *tele_api.Command) error {
+func (t *tele) cmdReport(ctx context.Context) error {
 	return errors.Annotate(t.Report(ctx, false), "cmdReport")
 }
 
@@ -331,7 +331,7 @@ func (t *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	return err
 }
 
-func (t *tele) cmdSetInventory(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgSetInventory) error {
+func (t *tele) cmdSetInventory(ctx context.Context, arg *tele_api.Command_ArgSetInventory) error {
 	if arg == nil || arg.New == nil {
 		return errInvalidArg
 	}
@@ -341,7 +341,7 @@ func (t *tele) cmdSetInventory(ctx context.Context, cmd *tele_api.Command, arg *
 	return err
 }
 
-func (t *tele) cmdShowQR(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgShowQR) error {
+func (t *tele) cmdShowQR(ctx context.Context, arg *tele_api.Command_ArgShowQR) error {
 	if arg == nil {
 		return errInvalidArg
 	}
