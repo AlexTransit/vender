@@ -118,6 +118,7 @@ func resendRequest(MdbResult mega.Mdb_result_t) bool {
 	case mega.MDB_RESULT_TIMEOUT,
 		mega.MDB_RESULT_NAK,
 		mega.MDB_RESULT_UART_READ_UNEXPECTED,
+		mega.MDB_RESULT_UART_READ_ERROR,
 		mega.MDB_RESULT_INVALID_CHK:
 		return true
 	default:
