@@ -42,6 +42,9 @@ func Enable() {
 }
 
 func Disable() {
+	if WD.disabled {
+		return
+	}
 	WD.log.Info("disable watchdog")
 	setUsec("0")
 }
