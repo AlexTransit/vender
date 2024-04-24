@@ -157,6 +157,10 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 		return ms.coin.Dispense(g.Config.ScaleU(uint32(arg)))
 	})
 
+	g.Engine.RegisterNewFuncAgr("money.return(?)", func(ctx context.Context, arg engine.Arg) error {
+		return ms.coin.ReturnMoney(g.Config.ScaleU(uint32(arg)))
+	})
+
 	doSetGiftCredit := engine.FuncArg{
 		Name: "money.set_gift_credit(?)",
 		F: func(ctx context.Context, arg engine.Arg) error {
