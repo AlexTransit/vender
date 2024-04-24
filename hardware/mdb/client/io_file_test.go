@@ -86,6 +86,7 @@ func testFileUart(t testing.TB, r io.Reader, w io.Writer) *fileUart {
 }
 
 func checkUarterTx(t testing.TB, u mdb.Uarter, send string, bw *bytes.Buffer, expectOk string, expectErr error) {
+	_ = bw
 	request, err := hex.DecodeString(send)
 	if err != nil {
 		panic(errors.Errorf("code error send=%s err=%v", send, err))
@@ -139,7 +140,7 @@ func TestUarterTx(t *testing.T) {
 }
 
 func BenchmarkFileUartTx(b *testing.B) {
-	var packetNul1 = mdb.MustPacketFromHex("00", true)
+	packetNul1 := mdb.MustPacketFromHex("00", true)
 
 	b.ReportAllocs()
 	mr := parseMockReader(strings.Repeat("bff0000 ", b.N))

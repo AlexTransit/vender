@@ -43,7 +43,8 @@ func NewEngine(log *log2.Log) *Engine {
 	}
 	e.actions["ignore(?)"] = FuncArg{
 		Name: "ignore(?)",
-		F:    func(context.Context, Arg) error { return nil }}
+		F:    func(context.Context, Arg) error { return nil },
+	}
 	e.actions["sleep(100ms)"] = Sleep{Duration: 100 * time.Millisecond}
 	return e
 }
@@ -242,6 +243,10 @@ func (e *Engine) ExecList(ctx context.Context, tag string, list []string) []erro
 }
 
 func (e *Engine) exec(ctx context.Context, d Doer, validate, enableProfile bool) (err error) {
+	if d == nil {
+		err = fmt.Errorf("doer nil")
+		return
+	}
 	if validate {
 		err = d.Validate()
 	}
