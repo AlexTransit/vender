@@ -130,6 +130,7 @@ func (ca *CoinAcceptor) TestingDispense() {
 
 func (ca *CoinAcceptor) ReturnMoney(amount currency.Amount) (err error) {
 	strategy := ca.dispenseStrategy
+	ca.dispenseStrategy = maximumAvailable
 	err = ca.Dispense(amount)
 	ca.dispenseStrategy = strategy
 	return err
