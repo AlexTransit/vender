@@ -48,6 +48,7 @@ func PacketFromBytes(b []byte, readonly bool) (Packet, error) {
 	p.readonly = readonly
 	return p, nil
 }
+
 func MustPacketFromBytes(b []byte, readonly bool) Packet {
 	p, err := PacketFromBytes(b, readonly)
 	if err != nil {
@@ -63,6 +64,7 @@ func PacketFromHex(s string, readonly bool) (Packet, error) {
 	}
 	return PacketFromBytes(b, readonly)
 }
+
 func MustPacketFromHex(s string, readonly bool) Packet {
 	p, err := PacketFromHex(s, readonly)
 	if err != nil {
@@ -73,6 +75,10 @@ func MustPacketFromHex(s string, readonly bool) Packet {
 
 func (p *Packet) Bytes() []byte {
 	return p.b[:p.l]
+}
+
+func (p *Packet) Byte() byte {
+	return p.b[0]
 }
 
 func (p *Packet) String() string {

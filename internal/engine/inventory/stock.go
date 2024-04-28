@@ -91,6 +91,11 @@ func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
 	return s, nil
 }
 
+func (s *Stock) GetSpendRate() float32 { return s.spendRate }
+func (s *Stock) SpendValue(value byte) {
+	s.value -= s.spendRate / float32(value)
+}
+
 func (s *Stock) ShowLevel() string {
 	currenValue := int(s.value) * 100
 	valuePerDelay, i := s.valuePerDelay(currenValue, false)
