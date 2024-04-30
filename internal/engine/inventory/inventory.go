@@ -77,9 +77,6 @@ func initOverWriteStocks(c *engine_config.Inventory) (m map[uint32]engine_config
 		if v.Name != "" {
 			ss.Name = v.Name
 		}
-		if v.HwRate != 0 {
-			ss.HwRate = v.HwRate
-		}
 		if v.Level != "" {
 			ss.Level = v.Level
 		}

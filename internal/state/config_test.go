@@ -31,7 +31,8 @@ func TestReadConfig(t *testing.T) {
 			// TODO check defaults
 		}, ""},
 
-		{"mdb",
+		{
+			"mdb",
 			`hardware { mdb { uart_device = "/dev/shmoo" } } money { scale = 1 }`,
 			func(t testing.TB, ctx context.Context) {
 				g := GetGlobal(ctx)
@@ -40,7 +41,8 @@ func TestReadConfig(t *testing.T) {
 			"",
 		},
 
-		{"alias", `
+		{
+			"alias", `
 engine {
 	alias "simple(?)" { scenario = "mock1 mock2(?)" }
 	alias "complex" { scenario = "simple(1) simple(2)" }
@@ -65,7 +67,8 @@ engine {
 			"",
 		},
 
-		{"menu-items",
+		{
+			"menu-items",
 			`
 engine { menu {
 	item "1" { name = "first" price = 13 scenario = "sleep(1s)" }
@@ -93,28 +96,35 @@ money { scale = 10 }`,
 			"",
 		},
 
-		{"include-normalize", `
+		{
+			"include-normalize", `
 money { scale = 1 }
 include "./empty" {}`,
-			nil, ""},
+			nil, "",
+		},
 
-		{"include-optional", `
+		{
+			"include-optional", `
 include "money-scale-7" {}
 include "non-exist" { optional = true }`,
 			func(t testing.TB, ctx context.Context) {
 				g := GetGlobal(ctx)
 				assert.Equal(t, 7, g.Config.Money.Scale)
-			}, ""},
+			}, "",
+		},
 
-		{"include-overwrites", `
+		{
+			"include-overwrites", `
 money { scale = 1 }
 include "money-scale-7" {}`,
 			func(t testing.TB, ctx context.Context) {
 				g := GetGlobal(ctx)
 				assert.Equal(t, 7, g.Config.Money.Scale)
-			}, ""},
+			}, "",
+		},
 
-		{"inventory-simple", `
+		{
+			"inventory-simple", `
 engine { inventory {
 	stock "espresso" { spend_rate=9 }
 }}`,
@@ -127,11 +137,13 @@ engine { inventory {
 				g.Engine.TestDo(t, ctx, "stock.espresso.spend1")
 				g.Engine.TestDo(t, ctx, "stock.espresso.spend(3)")
 				assert.Equal(t, float32(initial-4*9), stock.Value())
-			}, ""},
+			}, "",
+		},
 
-		{"inventory-register", `
+		{
+			"inventory-register", `
 engine { inventory {
-	stock "tea" { check=true hw_rate=0.5 register_add="tea.drop(?)" spend_rate=3 }
+	stock "tea" { check=true spend_rate=0.5 register_add="tea.drop(?)" spend_rate=3 }
 }}`,
 			func(t testing.TB, ctx context.Context) {
 				g := GetGlobal(ctx)
@@ -143,11 +155,13 @@ engine { inventory {
 					F: func(ctx context.Context, arg engine.Arg) error {
 						hwarg = int32(arg)
 						return nil
-					}})
+					},
+				})
 				g.Engine.TestDo(t, ctx, "add.tea(4)")
 				assert.Equal(t, int32(2), hwarg)
 				assert.Equal(t, float32(13-4*3), stock.Value())
-			}, ""},
+			}, "",
+		},
 
 		{"error-syntax", `hello`, nil, "key 'hello' expected start of object"},
 		{"error-include-loop", `include "include-loop" {}`, nil, "config include loop: from=include-loop include=include-loop"},
