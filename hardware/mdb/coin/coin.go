@@ -49,6 +49,18 @@ const (
 	maximumAvailable
 )
 
+func (ds dispenseStrategy) String() string {
+	switch ds {
+	case maximumCountPriority:
+		return "uniform level"
+	case fullTubesPrioryty:
+		return "full tubes priority"
+	case maximumAvailable:
+		return "minimal coins count"
+	}
+	return "unknow"
+}
+
 type CoinAcceptor struct { //nolint:maligned
 	mdb.Device
 	dispenseStrategy dispenseStrategy
@@ -70,6 +82,17 @@ type tube struct {
 	nominal  currency.Nominal
 	count    uint
 	tubeFull bool
+}
+
+func (ca *CoinAcceptor) tubeStatus() (status string) {
+	status = ca.dispenseStrategy.String()
+	sort.Slice(ca.tub[:], func(i, j int) bool {
+		return ca.tub[i].nominal < ca.tub[j].nominal
+	})
+	for _, v := range ca.tub {
+		status += fmt.Sprintf(" %s(%d)full-%v", v.nominal.Format100I(), v.count, v.tubeFull)
+	}
+	return status
 }
 
 type CoinCommand byte
@@ -107,7 +130,7 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 	g.Engine.RegisterNewFunc(
 		"coin.status",
 		func(ctx context.Context) error {
-			ca.Log.Infof("%+v", ca.tub)
+			ca.Log.Infof(ca.tubeStatus())
 			return nil
 		},
 	)
@@ -117,6 +140,9 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 			return err
 		}})
 	err = ca.CoinReset()
+	if err == nil {
+		ca.Log.Infof(ca.tubeStatus())
+	}
 	return err
 }
 

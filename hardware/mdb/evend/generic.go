@@ -13,6 +13,7 @@ import (
 	"github.com/AlexTransit/vender/hardware/mdb"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/log2"
 	oerr "github.com/juju/errors"
 )
 
@@ -22,6 +23,16 @@ type evendProtocol uint8
 const (
 	proto1 evendProtocol = 1
 	proto2 evendProtocol = 2
+)
+
+const (
+	resetAddress     = 0x00
+	infoAddress      = 0x01
+	commandAddress   = 0x02
+	statusAddress    = 0x03
+	readDataAddress  = 0x04
+	configAddress    = 0x05
+	upgradeFwAddress = 0x06
 )
 
 const (
@@ -38,6 +49,7 @@ type DeviceErrorCode byte
 func (c DeviceErrorCode) Error() string { return fmt.Sprintf("evend errorcode=%d", c) }
 
 type Generic struct {
+	log          *log2.Log
 	dev          mdb.Device
 	name         string
 	readyTimeout time.Duration
@@ -67,6 +79,7 @@ func (gen *Generic) Init(ctx context.Context, address uint8, name string, proto 
 		gen.dev.DelayAfterReset = DefaultResetDelay
 	}
 	g := state.GetGlobal(ctx)
+	gen.log = g.Log
 	mdbus, _ := g.Mdb()
 	gen.dev.Init(mdbus, address, gen.name, binary.BigEndian)
 }
@@ -74,11 +87,11 @@ func (gen *Generic) Init(ctx context.Context, address uint8, name string, proto 
 func (gen *Generic) Name() string { return gen.name }
 
 func (gen *Generic) NewErrPollProblem(p mdb.Packet) error {
-	return oerr.Errorf("%s POLL=%x -> need to ask problem code", gen.name, p.Bytes())
+	return fmt.Errorf("%s POLL=%x -> need to ask problem code", gen.name, p.Bytes())
 }
 
 func (gen *Generic) NewErrPollUnexpected(p mdb.Packet) error {
-	return oerr.Errorf("%s POLL=%x unexpected", gen.name, p.Bytes())
+	return fmt.Errorf("%s POLL=%x unexpected", gen.name, p.Bytes())
 }
 
 func (gen *Generic) NewAction(tag string, args ...byte) engine.Doer {
@@ -117,7 +130,7 @@ func (gen *Generic) Diagnostic() (byte, error) {
 	}
 	rs := response.Bytes()
 	if len(rs) < 1 {
-		err = oerr.Errorf("%s request=%x response=%x", tag, request.Bytes(), rs)
+		err = fmt.Errorf("%s request=%x response=%x", tag, request.Bytes(), rs)
 		gen.dev.SetError(err)
 		return 0, err
 	}
@@ -146,7 +159,7 @@ func (gen *Generic) NewWaitReady(tag string) engine.Doer {
 				return true, DeviceErrorCode(code)
 
 			default:
-				err := oerr.Errorf("%s unknown response=%x", tag, bs)
+				err := fmt.Errorf("%s unknown response=%x", tag, bs)
 				gen.dev.Log.Error(err)
 				return false, err
 			}
@@ -203,6 +216,7 @@ func (gen *Generic) NewWaitDone(tag string, timeout time.Duration) engine.Doer {
 	case proto2:
 		fun := func(p mdb.Packet) (bool, error) {
 			bs := p.Bytes()
+			fmt.Printf("\033[41m %v \033[0m\n", bs)
 			// gen.dev.Log.Debugf("%s POLL=%x", tag, bs)
 			if stop, err := gen.proto2PollCommon(tag, bs); stop || err != nil {
 				// gen.dev.Log.Debugf("%s ... return common stop=%t err=%v", tag, stop, err)
@@ -214,7 +228,7 @@ func (gen *Generic) NewWaitDone(tag string, timeout time.Duration) engine.Doer {
 			// 04 during WaitDone is "oops, device reboot in operation"
 			if value&genericPollMiss != 0 {
 				gen.dev.SetState(mdb.DeviceOnline)
-				return true, oerr.Errorf("%s POLL=%x ignore=%02x continous connection lost, (TODO decide reset?)", tag, bs, gen.proto2IgnoreMask)
+				return true, fmt.Errorf("%s POLL=%x ignore=%02x continous connection lost, (TODO decide reset?)", tag, bs, gen.proto2IgnoreMask)
 			}
 
 			// busy during WaitDone is correct path
@@ -263,7 +277,7 @@ func (gen *Generic) proto2PollCommon(tag string, bs []byte) (bool, error) {
 		return true, nil
 	}
 	if len(bs) > 1 {
-		return true, oerr.Errorf("%s POLL=%x -> too long", tag, bs)
+		return true, fmt.Errorf("%s POLL=%x -> too long", tag, bs)
 	}
 	value := bs[0]
 	value &^= gen.proto2IgnoreMask
@@ -274,26 +288,12 @@ func (gen *Generic) proto2PollCommon(tag string, bs []byte) (bool, error) {
 	if value&genericPollProblem != 0 {
 		code, err := gen.Diagnostic()
 		if err != nil {
-			err = oerr.Annotate(err, tag)
+			err = fmt.Errorf("%s %v", tag, err)
 			return true, err
 		}
 		return true, DeviceErrorCode(code)
 	}
 	return false, nil
-}
-
-func (gen *Generic) WithRestart(d engine.Doer) *engine.RestartError {
-	return &engine.RestartError{
-		Doer: d,
-		Check: func(e error) bool {
-			_, ok := oerr.Cause(e).(DeviceErrorCode)
-			return ok
-		},
-		Reset: engine.Func0{
-			Name: d.String() + "/restart-reset",
-			F:    gen.dev.Reset,
-		},
-	}
 }
 
 //-------------------------------------------------------------------------
@@ -333,7 +333,7 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error
 	return err
 }
 
-func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool, noWaitExetute bool) (err error) {
+func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool) (err error) {
 	response := mdb.Packet{}
 	var needReset bool
 	for count > 0 {
@@ -342,22 +342,18 @@ func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool, noWaitExet
 		if err = gen.dev.Tx(gen.dev.PacketPoll, &response); err != nil {
 			return err
 		}
-		rb := response.Bytes()
-		if len(rb) == 0 {
+		// AlexM FIXME
+		// for valve clear 2 bit. 8-bit = not configure 7-bit -temp not walid
+		rb := response.Byte() << 2
+		rb = rb >> 2
+		if rb&0x08 == 0x08 || response.Len() == 0 || rb == 0 {
+			// len=0 maybe sucsess :)
 			return gen.ReadError()
 		}
-		if rb[0]&0x08 == 0x08 {
-			err = gen.ReadError()
-			// gen.dev.TeleError(err)
-			return
-		}
-		if rb[0]&0x20 == 0x20 {
+		if rb&0x20 == 0x20 {
 			needReset = true
 		}
-		if rb[0]&0x50 == 0x50 { // executing
-			if noWaitExetute {
-				return nil
-			}
+		if rb&0x50 == 0x50 { // executing
 			continue
 		}
 	}
@@ -375,7 +371,7 @@ func (gen *Generic) WaitSuccess(count uint16, timeOut bool) error {
 	if gen.proto == proto1 {
 		return gen.Proto1PollWaitSuccess(count, timeOut)
 	}
-	return gen.Proto2PollWaitSuccess(count, timeOut, false)
+	return gen.Proto2PollWaitSuccess(count, timeOut)
 }
 
 func (gen *Generic) CommandNoWait(cmd ...byte) (err error) {
@@ -393,25 +389,36 @@ func (gen *Generic) CommandWaitSuccess(count uint16, cmd ...byte) (err error) {
 }
 
 func (gen *Generic) Command(args ...byte) (err error) {
-	bs := make([]byte, len(args)+1)
-	bs[0] = gen.dev.Address + 2
-	copy(bs[1:], args)
-	request := mdb.MustPacketFromBytes(bs, true)
-	if e := gen.dev.Tx(request, nil); e != nil {
-		err = fmt.Errorf("%v send command (%v) error(%v) ", gen.name, args, e)
+	return gen.addressArgumentsTx(commandAddress, &args)
+}
+
+func (gen *Generic) SetConfig(args ...byte) (err error) {
+	for i := 1; i <= 2; i++ {
+		e := gen.addressArgumentsTx(configAddress, &args)
+		if e == nil {
+			if err != nil {
+				gen.log.Error(err)
+			}
+			return nil
+		}
+		err = errors.Join(err, e)
 	}
 	return err
 }
 
+func (gen *Generic) addressArgumentsTx(address byte, args *[]byte) error {
+	bs := make([]byte, len(*args)+1)
+	bs[0] = gen.dev.Address + address
+	copy(bs[1:], *args)
+	return gen.tx(&bs, nil)
+}
+
 func (gen *Generic) ReadError_proto2() (errb byte) {
-	bs := []byte{gen.dev.Address + 4, 2}
-	request := mdb.MustPacketFromBytes(bs, true)
-	response := mdb.Packet{}
-	gen.dev.Tx(request, &response)
-	if response.Len() == 0 {
+	response, err := gen.ReadData(0x02)
+	if err != nil || len(response) == 0 {
 		return 255
 	}
-	return response.Bytes()[0]
+	return response[0]
 }
 
 func (gen *Generic) ReadError() (err error) {
@@ -421,4 +428,40 @@ func (gen *Generic) ReadError() (err error) {
 		return fmt.Errorf("device:%s error:%v", gen.name, errb)
 	}
 	return nil
+}
+
+// read device data
+// 0x02 - read error
+// 0x11 - read temperature
+func (gen *Generic) ReadData(readCommand byte) (rp []byte, err error) {
+	bs := []byte{gen.dev.Address + 4, readCommand}
+	request := mdb.MustPacketFromBytes(bs, true)
+	response := mdb.Packet{}
+	for i := 1; i <= 3; i++ {
+		e := gen.dev.Tx(request, &response)
+		if e == nil || response.Len() != 0 {
+			rp = response.Bytes()
+			if err != nil {
+				gen.log.Errorf("%s read data (%v)", gen.name, err)
+			}
+			return
+		}
+		err = errors.Join(err, fmt.Errorf("(%d) %s %v", i, gen.name, e))
+	}
+	return nil, err
+}
+
+func (gen *Generic) tx(bs *[]byte, response ...*mdb.Packet) (err error) {
+	request := mdb.MustPacketFromBytes(*bs, true)
+	for i := 1; i <= 3; i++ {
+		e := gen.dev.Tx(request, response[0])
+		if e == nil {
+			if err != nil {
+				gen.log.Errorf("resend fix error (%v)", err)
+			}
+			return nil
+		}
+		err = errors.Join(err, fmt.Errorf("(%d) transmit %s (%v)", i, gen.name, e))
+	}
+	return
 }

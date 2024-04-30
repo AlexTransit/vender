@@ -60,13 +60,12 @@ type Stock struct { //nolint:maligned
 	Code        int     `hcl:"code"`
 	Check       bool    `hcl:"check"`
 	Min         float32 `hcl:"min"`
-	HwRate      float32 `hcl:"hw_rate"`
 	SpendRate   float32 `hcl:"spend_rate"`
 	RegisterAdd string  `hcl:"register_add"`
 	Level       string  `hcl:"level"`
 }
 
 func (s *Stock) String() string {
-	return fmt.Sprintf("inventory.%s #%d check=%t hw_rate=%f spend_rate=%f min=%f",
-		s.Name, s.Code, s.Check, s.HwRate, s.SpendRate, s.Min)
+	return fmt.Sprintf("inventory.%s #%d check=%t spend_rate=%f min=%f",
+		s.Name, s.Code, s.Check, s.SpendRate, s.Min)
 }
