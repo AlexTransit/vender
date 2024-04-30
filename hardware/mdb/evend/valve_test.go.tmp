@@ -15,7 +15,7 @@ func TestValve(t *testing.T) {
 
 	ctx, g := state_new.NewTestContext(t, "", `
 engine { inventory {
-	stock "water" { check=false hw_rate = 0.6 min = 500 }
+	stock "water" { check=false spend_rate = 0.6 }
 }}
 hardware { device "evend.valve" {} }`)
 	mock := mdb.MockFromContext(ctx)

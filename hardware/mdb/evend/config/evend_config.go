@@ -23,9 +23,6 @@ type Config struct { //nolint:maligned
 	} `hcl:"mixer"`
 	Valve struct { //nolint:maligned
 		// TODO TemperatureCold int     `hcl:"temperature_cold"`
-		TemperatureHot     int `hcl:"temperature_hot"`
-		TemperatureValidMs int `hcl:"temperature_valid_ms"`
-		PourTimeoutSec     int `hcl:"pour_timeout_sec"`
-		CautionPartMl      int `hcl:"caution_part_ml"`
+		TemperatureHot int `hcl:"temperature_hot"`
 	} `hcl:"valve"`
 }

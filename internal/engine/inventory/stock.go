@@ -38,12 +38,6 @@ func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
 	if c.Name == "" {
 		return nil, errors.Errorf("stock=(empty) is invalid")
 	}
-	if c.HwRate == 0 {
-		c.HwRate = 1
-	}
-	if c.SpendRate < 0 {
-		return nil, errors.Errorf("stock=%s invalid spend_rate=%f", c.Name, c.SpendRate)
-	}
 	if c.SpendRate == 0 {
 		c.SpendRate = 1
 	}
@@ -54,7 +48,6 @@ func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
 		Code:      uint32(c.Code),
 		check:     c.Check,
 		enabled:   true,
-		hwRate:    c.HwRate,
 		spendRate: c.SpendRate,
 		min:       c.Min,
 		tuneKey:   fmt.Sprintf(tuneKeyFormat, c.Name),
@@ -93,7 +86,10 @@ func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
 
 func (s *Stock) GetSpendRate() float32 { return s.spendRate }
 func (s *Stock) SpendValue(value byte) {
-	s.value -= s.spendRate / float32(value)
+	if !s.enabled {
+		return
+	}
+	s.value -= float32(value) / s.spendRate
 }
 
 func (s *Stock) ShowLevel() string {
@@ -168,13 +164,6 @@ func stringToFixInt(s string) int {
 	return 0
 }
 
-// func (s *Stock) Enable()  { atomic.StoreUint32(&s.enabled, 1) }
-// func (s *Stock) Disable() { atomic.StoreUint32(&s.enabled, 0) }
-// AlexM
-// func (s *Stock) Enable()  { s.enabled = true }
-// func (s *Stock) Disable() { s.enabled = false }
-
-// func (s *Stock) Enabled() bool { return atomic.LoadUint32(&s.enabled) == 1 }
 func (s *Stock) Enabled() bool { return s.enabled }
 
 func (s *Stock) Value() float32 { return s.value }
