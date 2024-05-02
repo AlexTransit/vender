@@ -83,6 +83,18 @@ const (
 	waterEspresso = byte(0x03)
 )
 
+func waterTypeString(waterType byte) string {
+	switch waterType {
+	case waterHot:
+		return "hot"
+	case waterCold:
+		return "cold"
+	case waterEspresso:
+		return "espresso"
+	}
+	return "unknow"
+}
+
 func (dv *DeviceValve) Reset() (err error) {
 	err = dv.dev.Rst()
 	if err != nil {
@@ -96,11 +108,11 @@ func (dv *DeviceValve) Reset() (err error) {
 }
 
 func (dv *DeviceValve) waterRun(waterType byte, steps uint8) (err error) {
-	dv.log.Infof("start water(%d) (%d)ml.", waterType, steps)
+	wts := waterTypeString(waterType)
+	dv.log.Infof("start %s %d ml.", wts, steps)
 	milliliterToHW := byte(math.Round(float64(dv.waterStock.GetSpendRate() * float32(steps))))
 	err = dv.CommandWaitSuccess(uint16(steps*10), waterType, milliliterToHW)
-	// err = dv.CommandNoWait(waterType, milliliterToHW)
-	dv.log.Infof("stop water(%d) (%d)ml.", waterType, steps)
+	dv.log.Infof("stop %s %d ml.", wts, steps)
 	dv.waterStock.SpendValue(milliliterToHW)
 	return err
 }
