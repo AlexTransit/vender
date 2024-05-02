@@ -2,6 +2,7 @@ package evend
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -57,25 +58,31 @@ func runWitchControl(b BunkerDevice, spinTime byte, hopperNumber byte) (err erro
 	if spinTime == 0 {
 		return
 	}
-	if err = b.run(spinTime, hopperNumber); err == nil {
-		return
-	}
-	b.reset()
-	time.Sleep(5 * time.Second)
-	if e := b.run(byte(spinTime), hopperNumber); e != nil {
+	for i := 1; i <= 2; i++ {
+		e := b.run(spinTime, hopperNumber)
+		if e == nil {
+			if err != nil {
+				b.logError(fmt.Errorf("(%d) restart fix error (%v)", i, err))
+			}
+			return
+		}
+		err = errors.Join(err, e)
 		b.reset()
-		return fmt.Errorf("two times errors error1(%v) error2(%v)", err, e)
+		time.Sleep(5 * time.Second)
 	}
-	b.logError(fmt.Errorf("restart fix error (%v)", err))
-	return
+	return err
 }
 
-func (h *DeviceHopper) run(spinTime byte, _tmp byte) (err error) {
+func (h *DeviceHopper) run(spinTime byte, _tmp byte) error {
 	timeout := uint16(spinTime) + 5
+	h.log.Infof("%s start (%d)", h.name, spinTime)
+	defer h.log.Infof("%s stop (%d)", h.name, spinTime)
 	return h.CommandWaitSuccess(timeout, spinTime)
 }
 
-func (mh *DeviceMultiHopper) run(spinTime byte, hopperNumber byte) (err error) {
+func (mh *DeviceMultiHopper) run(spinTime byte, hopperNumber byte) error {
 	timeout := uint16(spinTime) + 5
+	mh.log.Infof("%s start (%d)", mh.name, spinTime)
+	defer mh.log.Infof("%s stop (%d)", mh.name, spinTime)
 	return mh.CommandWaitSuccess(timeout, hopperNumber, spinTime)
 }
