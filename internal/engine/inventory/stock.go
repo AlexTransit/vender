@@ -23,7 +23,6 @@ type Stock struct { //nolint:maligned
 	enabled   bool
 	check     bool
 	TeleLow   bool
-	hwRate    float32 // TODO table // FIXME concurrency
 	spendRate float32
 	min       float32
 	value     float32
@@ -179,7 +178,6 @@ func (s *Stock) Wrap(d engine.Doer) engine.Doer {
 	return &custom{stock: s, before: d}
 }
 
-func (s *Stock) TranslateHw(arg engine.Arg) float32    { return translate(int32(arg), s.hwRate) }
 func (s *Stock) TranslateSpend(arg engine.Arg) float32 { return translate(int32(arg), s.spendRate) }
 
 // signature match engine.Func0.F
@@ -270,8 +268,7 @@ func (c *custom) String() string {
 }
 
 func (c *custom) apply(arg engine.Arg) (engine.Doer, bool, error) {
-	hwArg := engine.Arg(c.stock.TranslateHw(arg))
-	after, applied, err := engine.ArgApply(c.before, hwArg)
+	after, applied, err := engine.ArgApply(c.before, arg)
 	if err != nil {
 		return nil, false, errors.Annotatef(err, engine.FmtErrContext, c.stock.String())
 	}

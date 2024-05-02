@@ -66,8 +66,8 @@ func (dv *DeviceValve) init(ctx context.Context) (err error) {
 	g.Engine.RegisterNewFunc("evend.valve.cold_close", func(ctx context.Context) error { return dv.Command(0x10, 0x00) })
 	g.Engine.RegisterNewFunc("evend.valve.hot_open", func(ctx context.Context) error { return dv.Command(0x11, 0x01) })
 	g.Engine.RegisterNewFunc("evend.valve.hot_close", func(ctx context.Context) error { return dv.Command(0x11, 0x00) })
-	g.Engine.RegisterNewFunc("evend.valve.boiler_start", func(ctx context.Context) error { return dv.Command(0x12, 0x01) })
-	g.Engine.RegisterNewFunc("evend.valve.boiler_stop", func(ctx context.Context) error { return dv.Command(0x12, 0x00) })
+	g.Engine.RegisterNewFunc("evend.valve.pump_start", func(ctx context.Context) error { return dv.Command(0x12, 0x01) })
+	g.Engine.RegisterNewFunc("evend.valve.pump_stop", func(ctx context.Context) error { return dv.Command(0x12, 0x00) })
 	g.Engine.RegisterNewFunc("evend.valve.pump_espresso_start", func(ctx context.Context) error { return dv.Command(0x13, 0x01) })
 	g.Engine.RegisterNewFunc("evend.valve.pump_espresso_stop", func(ctx context.Context) error { return dv.Command(0x13, 0x00) })
 	g.Engine.RegisterNewFunc("evend.valve.reserved_on", func(ctx context.Context) error { return dv.Command(0x14, 0x01) })
@@ -83,6 +83,18 @@ const (
 	waterEspresso = byte(0x03)
 )
 
+func waterTypeString(waterType byte) string {
+	switch waterType {
+	case waterHot:
+		return "hot"
+	case waterCold:
+		return "cold"
+	case waterEspresso:
+		return "espresso"
+	}
+	return "unknow"
+}
+
 func (dv *DeviceValve) Reset() (err error) {
 	err = dv.dev.Rst()
 	if err != nil {
@@ -96,9 +108,11 @@ func (dv *DeviceValve) Reset() (err error) {
 }
 
 func (dv *DeviceValve) waterRun(waterType byte, steps uint8) (err error) {
+	wts := waterTypeString(waterType)
+	dv.log.Infof("start %s %d ml.", wts, steps)
 	milliliterToHW := byte(math.Round(float64(dv.waterStock.GetSpendRate() * float32(steps))))
 	err = dv.CommandWaitSuccess(uint16(steps*10), waterType, milliliterToHW)
-	// err = dv.CommandNoWait(waterType, milliliterToHW)
+	dv.log.Infof("stop %s %d ml.", wts, steps)
 	dv.waterStock.SpendValue(milliliterToHW)
 	return err
 }
