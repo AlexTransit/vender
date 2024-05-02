@@ -40,8 +40,10 @@ func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
 	if c.SpendRate == 0 {
 		c.SpendRate = 1
 	}
-	// log.Printf("stock=%s hwRate=%f spendRate=%f", c.Name, c.HwRate, c.SpendRate)
-
+	tk := fmt.Sprintf(tuneKeyFormat, c.Name)
+	if c.TuneKey != "" {
+		tk = fmt.Sprintf(tuneKeyFormat, c.TuneKey)
+	}
 	s := &Stock{
 		Name:      c.Name,
 		Code:      uint32(c.Code),
@@ -49,7 +51,7 @@ func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
 		enabled:   true,
 		spendRate: c.SpendRate,
 		min:       c.Min,
-		tuneKey:   fmt.Sprintf(tuneKeyFormat, c.Name),
+		tuneKey:   tk,
 	}
 	s.fillLevels(&c)
 	doSpend1 := engine.Func0{
