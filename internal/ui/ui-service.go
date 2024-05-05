@@ -168,14 +168,15 @@ func (ui *UI) onServiceInventory() types.UiState {
 		return types.StateServiceMenu
 	}
 	invCurrent := ui.Service.invList[ui.Service.invIdx]
+	iname := fmt.Sprintf("%d %s", invCurrent.Code, invCurrent.Name)
 	if lv {
 		ui.display.SetLines(
-			fmt.Sprintf("V:%.0f %s\x00", invCurrent.Value(), invCurrent.Name),
+			fmt.Sprintf("V:%.0f %s\x00", invCurrent.Value(), iname),
 			fmt.Sprintf("L:%s %s", invCurrent.ShowLevel(), string(ui.inputBuf)), // TODO configurable decimal point
 		)
 	} else {
 		ui.display.SetLines(
-			fmt.Sprintf("L:%s %s", invCurrent.ShowLevel(), invCurrent.Name),
+			fmt.Sprintf("L:%s %s", invCurrent.ShowLevel(), iname),
 			fmt.Sprintf("V:%.0f %s\x00", invCurrent.Value(), string(ui.inputBuf)), // TODO configurable decimal point
 		)
 	}
