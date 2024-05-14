@@ -34,7 +34,7 @@ func main() {
 	spiPort := cmdline.String("spi", "", "")
 	spiSpeed := cmdline.String("spi-speed", "", "")
 	gpiochip := cmdline.String("dev", "/dev/gpiochip0", "")
-	pin := cmdline.String("pin", "25", "")
+	pin := cmdline.String("pin", "6", "")
 	testmode := cmdline.Bool("testmode", false, "run tests, exit code 0 if pass")
 	rawmode := cmdline.Bool("raw", false, "raw mode skips ioLoop, if unsure do not use")
 	logDebug := cmdline.Bool("log-debug", false, "")

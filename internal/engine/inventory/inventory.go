@@ -144,7 +144,7 @@ func (inv *Inventory) Get(name string) (*Stock, error) {
 
 func (inv *Inventory) Iter(fun func(s *Stock)) {
 	inv.mu.Lock()
-	for _, stock := range inv.byName {
+	for _, stock := range inv.byCode {
 		fun(stock)
 	}
 	inv.mu.Unlock()

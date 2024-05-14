@@ -33,3 +33,5 @@ tmp-vender-db/
 vender.sublime-*
 cmd/vender/__debug_bin*
 cmd/vender/broken
+hardware/schematic/evend-adapter/#auto_saved_files#
+hardware/schematic/evend-adapter/_autosave-evend-adapter.kicad_sch
