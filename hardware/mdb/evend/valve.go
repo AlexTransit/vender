@@ -111,7 +111,8 @@ func (dv *DeviceValve) waterRun(waterType byte, steps uint8) (err error) {
 	wts := waterTypeString(waterType)
 	dv.log.Infof("start %s %d ml.", wts, steps)
 	milliliterToHW := byte(math.Round(float64(dv.waterStock.GetSpendRate() * float32(steps))))
-	err = dv.CommandWaitSuccess(uint16(steps*32), waterType, milliliterToHW)
+	timeuot := uint16(steps) * 32
+	err = dv.CommandWaitSuccess(timeuot, waterType, milliliterToHW)
 	dv.log.Infof("stop %s %d ml.", wts, steps)
 	dv.waterStock.SpendValue(milliliterToHW)
 	return err
