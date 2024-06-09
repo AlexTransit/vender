@@ -324,33 +324,27 @@ func (g *Global) initDevices() error {
 	})
 }
 
-func (g *Global) initInput() error {
+func (g *Global) initInput() {
 	g.Hardware.Input = &input.Dispatch{
 		Log: g.Log,
 		Bus: make(chan types.InputEvent),
 	}
 
 	// read key event from evend keyboard
-	if src, err := g.initInputEvendKeyboard(); err != nil {
-		return err
-	} else if src != nil {
-		go g.Hardware.Input.ReadEvendKeyboard(src)
+	srcEvendKbd, err := g.initInputEvendKeyboard()
+	if srcEvendKbd != nil && err == nil {
+		go g.Hardware.Input.ReadEvendKeyboard(srcEvendKbd)
+	} else {
+		g.Log.Errorf("evend keyboard not work. sourse(%v) error(%v)", srcEvendKbd, err)
 	}
 
 	// read service key
-	if !g.Config.Hardware.Input.DevInputEvent.Enable {
-		g.Log.Infof("input=%s disabled", input.DevInputEventTag)
+	srcServiceKey, err := input.NewDevInputEventSource(g.Config.Hardware.Input.DevInputEvent.Device)
+	if err == nil {
+		go g.Hardware.Input.ReadEvendKeyboard(srcServiceKey)
 	} else {
-		src, err := input.NewDevInputEventSource(g.Config.Hardware.Input.DevInputEvent.Device)
-		err = errors.Annotatef(err, "input=%s", input.DevInputEventTag)
-		if err != nil {
-			return err
-		} else if src != nil {
-			go g.Hardware.Input.ReadEvendKeyboard(src)
-		}
+		g.Log.Errorf("service button not work. error(%v)", err)
 	}
-
-	return nil
 }
 
 func (g *Global) initInputEvendKeyboard() (input.Source, error) {

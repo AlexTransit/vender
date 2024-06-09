@@ -52,7 +52,6 @@ type Config struct {
 				// TODO ListenAddr int
 			} `hcl:"evend_keyboard"`
 			DevInputEvent struct {
-				Enable bool   `hcl:"enable"`
 				Device string `hcl:"device"`
 			} `hcl:"dev_input_event"`
 		}
@@ -232,7 +231,4 @@ func (c *Config) rewriteHardware() {
 		d := v
 		c.Hardware.XXX_Devices = append(c.Hardware.XXX_Devices, d)
 	}
-}
-
-func rewriteByName() {
 }

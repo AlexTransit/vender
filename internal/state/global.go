@@ -185,12 +185,12 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	g.Config.Money.CreditMax *= g.Config.Money.Scale
 	g.Config.Money.ChangeOverCompensate *= g.Config.Money.Scale
 
-	const initTasks = 4
+	const initTasks = 3
 	wg := sync.WaitGroup{}
 	wg.Add(initTasks)
 	errch := make(chan error, initTasks)
-	go helpers.WrapErrChan(&wg, errch, g.initDisplay) // AlexM хрень переделать
-	go helpers.WrapErrChan(&wg, errch, g.initInput)
+	g.initInput()
+	go helpers.WrapErrChan(&wg, errch, g.initDisplay)                                // AlexM хрень переделать
 	go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
 	go helpers.WrapErrChan(&wg, errch, g.initEngine)
 	// TODO init money system, load money state from storage

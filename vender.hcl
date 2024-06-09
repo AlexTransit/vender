@@ -135,12 +135,10 @@ hardware {
   input {
     evend_keyboard {
       enable = true
-
       // TODO listen_addr = 0x78
     }
 
     dev_input_event {
-      enable = true
       device = "/dev/input/event0"
     }
   }
