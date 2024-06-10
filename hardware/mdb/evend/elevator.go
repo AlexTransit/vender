@@ -29,11 +29,11 @@ func (e *DeviceElevator) init(ctx context.Context) error {
 	e.Generic.Init(ctx, 0xd0, "elevator", proto1)
 
 	g.Engine.RegisterNewFunc(e.name+".reset", func(ctx context.Context) error { return e.reset() })
-	g.Engine.RegisterNewFuncAgr(e.name+".moveNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return e.moveNoWait(uint8(arg)) })
+	g.Engine.RegisterNewFuncAgr(e.name+".moveNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return e.moveNoWait(uint8(arg.(int16))) })
 	g.Engine.Register(e.name+".move(?)", engine.FuncArg{Name: e.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
 		previewPosition := e.cPos
 		for i := 1; i <= 2; i++ {
-			er := e.move(uint8(arg))
+			er := e.move(uint8(arg.(int16)))
 			if er == nil {
 				if i > 1 {
 					e.dev.TeleError(fmt.Errorf("restart fix error (%v)", err))

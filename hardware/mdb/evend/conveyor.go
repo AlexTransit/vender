@@ -12,11 +12,13 @@ import (
 	// "github.com/juju/errors"
 )
 
-const ConveyorDefaultTimeout = 30 * time.Second
-const ConveyorMinTimeout = 1 * time.Second
-const commandMove byte = 1
-const commandShake byte = 2
-const commandWaitAndShake byte = 3
+const (
+	ConveyorDefaultTimeout      = 30 * time.Second
+	ConveyorMinTimeout          = 1 * time.Second
+	commandMove            byte = 1
+	commandShake           byte = 2
+	commandWaitAndShake    byte = 3
+)
 
 type DeviceConveyor struct { //nolint:maligned
 	Generic
@@ -36,9 +38,9 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 	c.maxTimeout = ConveyorDefaultTimeout
 	c.dev.DelayNext = 200 * time.Millisecond // empirically found lower total WaitReady
 	c.Generic.Init(ctx, 0xd8, "conveyor", proto2)
-	g.Engine.RegisterNewFuncAgr(c.name+".set_speed(?)", func(ctx context.Context, speed engine.Arg) error { return c.setSpeed(uint8(speed)) })
+	g.Engine.RegisterNewFuncAgr(c.name+".set_speed(?)", func(ctx context.Context, speed engine.Arg) error { return c.setSpeed(uint8(speed.(int16))) })
 	g.Engine.RegisterNewFuncAgr(c.name+".moveNoWait(?)", func(ctx context.Context, position engine.Arg) error {
-		return c.CommandNoWait(commandMove, byte(position&0xff), byte(position>>8))
+		return c.CommandNoWait(commandMove, byte(position.(int16)&0xff), byte(position.(int16)>>8))
 	})
 	g.Engine.RegisterNewFunc(c.name+".movingDone", func(ctx context.Context) error { return c.WaitSuccess(c.timeout, true) })
 	g.Engine.RegisterNewFunc("conveyor.status", func(ctx context.Context) error {
@@ -46,12 +48,12 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 		return nil
 	})
 	g.Engine.RegisterNewFunc(c.name+".reset", func(ctx context.Context) error { return c.reset() })
-	g.Engine.RegisterNewFuncAgr(c.name+".move(?)", func(ctx context.Context, position engine.Arg) error { return c.move(int16(position)) })
+	g.Engine.RegisterNewFuncAgr(c.name+".move(?)", func(ctx context.Context, position engine.Arg) error { return c.move(int16(position.(int16))) })
 	g.Engine.RegisterNewFuncAgr(c.name+".shake(?)", func(ctx context.Context, cnt engine.Arg) error {
-		return c.CommandWaitSuccess(uint16(cnt)*2*5, commandWaitAndShake, byte(cnt), 0)
+		return c.CommandWaitSuccess(uint16(cnt.(int16))*2*5, commandWaitAndShake, byte(cnt.(int16)), 0)
 	})
 	g.Engine.RegisterNewFuncAgr(c.name+".vibrate(?)", func(ctx context.Context, cnt engine.Arg) error {
-		return c.CommandWaitSuccess(uint16(cnt)*2*5, commandShake, byte(cnt), 0)
+		return c.CommandWaitSuccess(uint16(cnt.(int16))*2*5, commandShake, byte(cnt.(int16)), 0)
 	})
 
 	if err := c.reset(); err != nil {

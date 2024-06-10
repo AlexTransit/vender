@@ -503,13 +503,13 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 			var key uint16
 			switch arg {
 			case 0, 1, 2, 3, 4, 5, 6, 7, 8, 9:
-				key = uint16(arg) + 48
+				key = uint16(arg.(int16)) + 48
 			case 10:
 				key = 27
 			case 11:
 				key = 13
 			case 12, 13, 14, 15:
-				key = uint16(arg) + 53
+				key = uint16(arg.(int16)) + 53
 			case 16:
 				key = 46
 			case 99:

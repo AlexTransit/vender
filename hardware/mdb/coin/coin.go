@@ -136,7 +136,7 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 	)
 	g.Engine.Register("coin.dispence(?)",
 		engine.FuncArg{Name: "coin.dispence", F: func(ctx context.Context, arg engine.Arg) (err error) {
-			err = ca.Dispense(currency.Amount(arg))
+			err = ca.Dispense(currency.Amount(arg.(int16)))
 			return err
 		}})
 	err = ca.CoinReset()
