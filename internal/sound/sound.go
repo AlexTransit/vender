@@ -116,6 +116,16 @@ func Broken() {
 }
 
 func PlayFile(file string, volume ...int) error {
+	if volume == nil {
+		PlayFileNoWait(file)
+	} else {
+		PlayFileNoWait(file, volume[0])
+	}
+	waitingEndPlay()
+	return nil
+}
+
+func PlayFileNoWait(file string, volume ...int) error {
 	v := 10
 	if volume != nil {
 		v = volume[0]
@@ -124,7 +134,6 @@ func PlayFile(file string, volume ...int) error {
 		s.log.Errorf(" play file (%v)", err)
 		return err
 	}
-	waitingEndPlay()
 	return nil
 }
 
