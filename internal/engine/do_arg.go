@@ -7,8 +7,10 @@ import (
 	"github.com/juju/errors"
 )
 
-var ErrArgNotApplied = errors.Errorf("Argument is not applied")
-var ErrArgOverwrite = errors.Errorf("Argument already applied")
+var (
+	ErrArgNotApplied = errors.Errorf("Argument is not applied")
+	ErrArgOverwrite  = errors.Errorf("Argument already applied")
+)
 
 type MaybeBool uint8
 
@@ -25,10 +27,12 @@ func ArgApply(d Doer, arg Arg) (Doer, bool, error) {
 	return d, false, nil
 }
 
-type Arg int32 // maybe interface{}
-type ArgApplier interface {
-	Apply(a Arg) (Doer, bool, error)
-}
+type (
+	Arg        int32 // maybe interface{}
+	ArgApplier interface {
+		Apply(a Arg) (Doer, bool, error)
+	}
+)
 
 type FuncArg struct {
 	Name string
@@ -44,12 +48,14 @@ func (fa FuncArg) Validate() error {
 	}
 	return useValidator(fa.V)
 }
+
 func (fa FuncArg) Do(ctx context.Context) error {
 	if !fa.set {
 		return errors.Annotatef(ErrArgNotApplied, FmtErrContext, fa.Name)
 	}
 	return fa.F(ctx, fa.arg)
 }
+
 func (fa FuncArg) String() string {
 	if !fa.set {
 		return fmt.Sprintf("%s:Arg?", fa.Name)
@@ -126,7 +132,9 @@ type IgnoreArg struct{ Doer }
 func (i IgnoreArg) Apply(Arg) (Doer, bool, error) { return i.Doer, true, nil }
 
 // compile-time interface checks
-var _ ArgApplier = &RestartError{}
-var _ ArgApplier = &Seq{}
-var _ ArgApplier = FuncArg{}
-var _ ArgApplier = IgnoreArg{}
+var (
+	_ ArgApplier = &RestartError{}
+	_ ArgApplier = &Seq{}
+	_ ArgApplier = FuncArg{}
+	_ ArgApplier = IgnoreArg{}
+)
