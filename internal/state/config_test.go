@@ -53,7 +53,7 @@ engine {
 				e.Register("mock1", engine.Func0{F: func() error { mock1calls++; return nil }})
 				e.Register("mock2(?)", engine.FuncArg{F: func(_ context.Context, arg engine.Arg) error {
 					mock2calls++
-					mockArg += int(arg)
+					mockArg += int(arg.(int16))
 					return nil
 				}})
 				err := e.ValidateExec(ctx, e.Resolve("complex"))
@@ -153,7 +153,7 @@ engine { inventory {
 				hwarg := int32(0)
 				g.Engine.Register("tea.drop(?)", engine.FuncArg{
 					F: func(ctx context.Context, arg engine.Arg) error {
-						hwarg = int32(arg)
+						hwarg = int32(arg.(int16))
 						return nil
 					},
 				})

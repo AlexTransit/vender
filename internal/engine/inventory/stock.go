@@ -180,7 +180,9 @@ func (s *Stock) Wrap(d engine.Doer) engine.Doer {
 	return &custom{stock: s, before: d}
 }
 
-func (s *Stock) TranslateSpend(arg engine.Arg) float32 { return translate(int32(arg), s.spendRate) }
+func (s *Stock) TranslateSpend(arg engine.Arg) float32 {
+	return translate(int32(arg.(int16)), s.spendRate)
+}
 
 // signature match engine.Func0.F
 func (s *Stock) spend1() error {
@@ -190,7 +192,7 @@ func (s *Stock) spend1() error {
 
 // signature match engine.FuncArg.F
 func (s *Stock) spendArg(ctx context.Context, arg engine.Arg) error {
-	s.spendValue(s.TranslateSpend(arg))
+	s.spendValue(s.TranslateSpend(arg.(int16)))
 	return nil
 }
 
@@ -239,7 +241,7 @@ func (c *custom) Validate() error {
 func (c *custom) Do(ctx context.Context) error {
 	e := engine.GetGlobal(ctx)
 	if tunedCtx, tuneRate, ok := takeTuneRate(ctx, c.stock.tuneKey); ok {
-		tunedArg := engine.Arg(math.Round(float64(c.arg) * float64(tuneRate)))
+		tunedArg := engine.Arg(int16(math.Round(float64(c.arg.(int16)) * float64(tuneRate))))
 		d, _, err := c.apply(tunedArg)
 		// log.Printf("stock=%s before=%#v arg=%v tuneRate=%v tunedArg=%v d=%v err=%v", c.stock.String(), c.before, c.arg, tuneRate, tunedArg, d, err)
 		if err != nil {
@@ -265,9 +267,7 @@ func (c *custom) Do(ctx context.Context) error {
 	return nil
 }
 
-func (c *custom) String() string {
-	return fmt.Sprintf("stock.%s(%d)", c.stock.Name, c.arg)
-}
+func (c *custom) String() string { return fmt.Sprintf("stock.%s(%d)", c.stock.Name, c.arg) }
 
 func (c *custom) apply(arg engine.Arg) (engine.Doer, bool, error) {
 	after, applied, err := engine.ArgApply(c.before, arg)

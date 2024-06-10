@@ -33,7 +33,7 @@ func (h *DeviceHopper) init(ctx context.Context, addr uint8, nameSuffix string) 
 	g := state.GetGlobal(ctx)
 	h.Generic.Init(ctx, addr, name, proto2)
 	g.Engine.RegisterNewFuncAgr(h.name+".run(?)", func(ctx context.Context, spinTime engine.Arg) (err error) {
-		return runWitchControl(h, byte(spinTime), 0)
+		return runWitchControl(h, byte(spinTime.(int16)), 0)
 	})
 	g.Engine.RegisterNewFunc(h.name+".reset", func(ctx context.Context) error { return h.reset() })
 	return h.reset()
@@ -48,7 +48,7 @@ func (mh *DeviceMultiHopper) init(ctx context.Context) error {
 	for i := uint8(1); i <= 8; i++ {
 		hopperNumber := i
 		g.Engine.RegisterNewFuncAgr(fmt.Sprintf("%s%d.run(?)", mh.name, hopperNumber), func(ctx context.Context, spinTime engine.Arg) (err error) {
-			return runWitchControl(mh, byte(spinTime), hopperNumber)
+			return runWitchControl(mh, byte(spinTime.(int16)), hopperNumber)
 		})
 	}
 	return mh.reset()

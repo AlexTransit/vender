@@ -48,13 +48,13 @@ func (dv *DeviceValve) init(ctx context.Context) (err error) {
 	if err != nil {
 		dv.waterStock = &inventory.Stock{}
 	}
-	g.Engine.RegisterNewFuncAgr("add.water_hot(?)", func(ctx context.Context, arg engine.Arg) error { return dv.waterRun(waterHot, uint8(arg)) })
-	g.Engine.RegisterNewFuncAgr("add.water_cold(?)", func(ctx context.Context, arg engine.Arg) error { return dv.waterRun(waterCold, uint8(arg)) })
-	g.Engine.RegisterNewFuncAgr("add.water_espresso(?)", func(ctx context.Context, arg engine.Arg) error { return dv.waterRun(waterEspresso, uint8(arg)) })
+	g.Engine.RegisterNewFuncAgr("add.water_hot(?)", func(ctx context.Context, arg engine.Arg) error { return dv.waterRun(waterHot, uint8(arg.(int16))) })
+	g.Engine.RegisterNewFuncAgr("add.water_cold(?)", func(ctx context.Context, arg engine.Arg) error { return dv.waterRun(waterCold, uint8(arg.(int16))) })
+	g.Engine.RegisterNewFuncAgr("add.water_espresso(?)", func(ctx context.Context, arg engine.Arg) error { return dv.waterRun(waterEspresso, uint8(arg.(int16))) })
 	g.Engine.RegisterNewFunc("evend.valve.get_temp_hot", func(ctx context.Context) error { return dv.readTemp() })
 	g.Engine.RegisterNewFunc("evend.valve.reset", func(ctx context.Context) error { return dv.Reset() })
 
-	g.Engine.RegisterNewFuncAgr("evend.valve.set_temp_hot(?)", func(ctx context.Context, arg engine.Arg) error { return dv.SetTemp(uint8(arg)) })
+	g.Engine.RegisterNewFuncAgr("evend.valve.set_temp_hot(?)", func(ctx context.Context, arg engine.Arg) error { return dv.SetTemp(uint8(arg.(int16))) })
 
 	g.Engine.RegisterNewFunc("evend.valve.set_temp_hot_config", func(ctx context.Context) error { return dv.SetTemp(uint8(valveConfig.TemperatureHot)) })
 	g.Engine.RegisterNewFunc("evend.valve.status", func(ctx context.Context) error {
