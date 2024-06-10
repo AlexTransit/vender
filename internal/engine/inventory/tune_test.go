@@ -41,12 +41,14 @@ menu {
 		F: func(ctx context.Context, arg engine.Arg) error {
 			hwSugar <- arg
 			return nil
-		}})
+		},
+	})
 	g.Engine.Register("tea.drop(?)", engine.FuncArg{
 		F: func(ctx context.Context, arg engine.Arg) error {
 			hwTea <- arg
 			return nil
-		}})
+		},
+	})
 	ctx, err = g.Inventory.WithTuning(ctx, "tea", 1.25)
 	require.NoError(t, err)
 	ctx, err = g.Inventory.WithTuning(ctx, "sugar", 0.25)
@@ -59,12 +61,12 @@ menu {
 	hwSugar1 := <-hwSugar
 	hwTea1 := <-hwTea
 	hwTea2 := <-hwTea
-	sugarSpent := float32(math.Round(float64(hwSugar1) * 0.98))
-	teaSpent := float32(math.Round(float64(hwTea1)*0.33) + math.Round(float64(hwTea2)*0.33))
+	sugarSpent := float32(math.Round(float64(hwSugar1.(int16)) * 0.98))
+	teaSpent := float32(math.Round(float64(hwTea1.(int16))*0.33) + math.Round(float64(hwTea2.(int16))*0.33))
 	assert.Equal(t, engine.Arg(math.Round(4*0.25)), hwSugar1)
 	assert.Equal(t, engine.Arg(math.Round(15*1.25)), hwTea1)
 	assert.Equal(t, engine.Arg(math.Round(10*1.25)), hwTea2)
 	assert.Equal(t, sugarInitial-sugarSpent, sugarStock.Value())
-	assert.NotEqual(t, teaInitial-float32(math.Round(float64(hwTea1+hwTea2)*0.33)), teaStock.Value()) // without precision
-	assert.Equal(t, teaInitial-teaSpent, teaStock.Value())                                            // with precision
+	assert.NotEqual(t, teaInitial-float32(math.Round(float64(hwTea1.(int16)+hwTea2.(int16))*0.33)), teaStock.Value()) // without precision
+	assert.Equal(t, teaInitial-teaSpent, teaStock.Value())                                                            // with precision
 }

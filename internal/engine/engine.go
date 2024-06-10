@@ -87,7 +87,7 @@ func (e *Engine) RegisterParse(name, scenario string) error {
 	return nil
 }
 
-var reActionArg = regexp.MustCompile(`^(.+)\((\d+|\?)\)$`)
+var reActionArg = regexp.MustCompile(`^(.+)\((.+)\)$`)
 
 func (e *Engine) resolve(action string) (Doer, error) {
 	// e.Log.Debugf("engine.resolve action=%s", action)
@@ -116,8 +116,9 @@ func parseArg(s string) token {
 	}
 }
 
-func (e *Engine) locked_resolve(action string) (Doer, error) {
-	d, ok := e.actions[action]
+func (e *Engine) locked_resolve(action string) (d Doer, err error) {
+	var ok bool
+	d, ok = e.actions[action]
 	if ok {
 		// e.Log.Debugf("engine.resolve action=%s resolved d=%v", action, d)
 		return d, nil
@@ -137,23 +138,17 @@ func (e *Engine) locked_resolve(action string) (Doer, error) {
 		err.msg = fmt.Sprintf(FmtErrContext, action) + err.msg
 		return nil, err
 	}
-	if tok.arg != "?" {
-		argn, err := strconv.Atoi(tok.arg)
-		if err != nil {
-			e.Log.Debugf("resolve action=%s err=%s", action, err)
-			return nil, errors.Annotatef(err, FmtErrContext, action)
-		}
-		var applied bool
-		d, applied, err = ArgApply(d, Arg(argn))
-		if err != nil {
-			e.Log.Debugf("resolve action=%s err=%s", action, err)
-			return nil, errors.Annotatef(err, FmtErrContext, action)
-		}
-		if !applied {
-			e.Log.Debugf("resolve action=%s arg=%v not applied", action, tok.arg)
-			err = ErrArgNotApplied
-			return nil, errors.Annotatef(err, FmtErrContext, action)
-		}
+	if tok.arg == "?" {
+		return nil, nil
+	}
+	argn, err := strconv.Atoi(tok.arg)
+	if err == nil {
+		d, ok, err = ArgApply(d, Arg(int16(argn)).(int16))
+	} else {
+		d, ok, err = ArgApply(d, Arg(tok.arg))
+	}
+	if !ok || err != nil {
+		return nil, fmt.Errorf("resolve action=%s arg=%v not applied", action, tok.arg)
 	}
 	return d, nil
 }

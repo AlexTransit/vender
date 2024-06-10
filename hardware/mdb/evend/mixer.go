@@ -35,7 +35,7 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 	g.Engine.Register(m.name+".shake(?)",
 		engine.FuncArg{Name: m.name + ".shake", F: func(ctx context.Context, arg engine.Arg) (err error) {
 			for i := 1; i <= 2; i++ {
-				e := m.shake(uint8(arg))
+				e := m.shake(uint8(arg.(int16)))
 				if e == nil {
 					if i > 1 {
 						m.dev.TeleError(fmt.Errorf("restart fix error (%v)", err))
@@ -49,13 +49,13 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 			}
 			return err
 		}})
-	g.Engine.RegisterNewFuncAgr(m.name+".moveNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return m.moveNoWait(int8(arg)) })
-	g.Engine.RegisterNewFuncAgr(m.name+".shakeNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return m.shakeNoWait(uint8(arg)) })
-	g.Engine.RegisterNewFuncAgr(m.name+".WaitSuccess(?)", func(ctx context.Context, arg engine.Arg) error { return m.WaitSuccess(uint16(arg*5+5), true) })
+	g.Engine.RegisterNewFuncAgr(m.name+".moveNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return m.moveNoWait(int8(arg.(int16))) })
+	g.Engine.RegisterNewFuncAgr(m.name+".shakeNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return m.shakeNoWait(uint8(arg.(int16))) })
+	g.Engine.RegisterNewFuncAgr(m.name+".WaitSuccess(?)", func(ctx context.Context, arg engine.Arg) error { return m.WaitSuccess(uint16(arg.(int16)*5+5), true) })
 	g.Engine.RegisterNewFunc(m.name+".movingComplete", func(ctx context.Context) error { return m.mvComplete() })
 	g.Engine.Register(m.name+".move(?)", engine.FuncArg{Name: m.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
 		for i := 1; i <= 2; i++ {
-			e := m.move(int8(arg))
+			e := m.move(int8(arg.(int16)))
 			if e == nil {
 				if i > 1 {
 					m.dev.TeleError(fmt.Errorf("restart fix error (%v)", err))
@@ -74,7 +74,7 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 	g.Engine.Register(m.name+".fan_off", m.NewFan(false))
 	g.Engine.Register(m.name+".shake_set_speed(?)",
 		engine.FuncArg{Name: "evend.mixer.shake_set_speed", F: func(ctx context.Context, arg engine.Arg) error {
-			m.shakeSpeed = uint8(arg)
+			m.shakeSpeed = uint8(arg.(int16))
 			return nil
 		}})
 

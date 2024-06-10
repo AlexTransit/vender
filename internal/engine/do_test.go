@@ -17,7 +17,7 @@ func TestArg(t *testing.T) {
 
 	worker := func(ctx context.Context, param Arg) error {
 		result := ctx.Value("result").(*Arg)
-		*result = param + 1
+		*result = param.(int16) + 1
 		return nil
 	}
 	failOnceFlag := false
@@ -60,7 +60,7 @@ func TestArg(t *testing.T) {
 			// outctx := context.WithValue(ctx, "result", &result)
 			outctx := context.WithValue(ctx, result, &result)
 			require.NoError(t, new.Do(outctx), d.String())
-			assert.Equal(t, arg+1, result)
+			assert.Equal(t, arg.(int16)+1, result)
 		})
 	}
 }

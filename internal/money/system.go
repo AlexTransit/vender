@@ -143,7 +143,7 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 			alive := alive.NewAlive()
 			alive.Add(2)
 			ch := make(chan types.Event)
-			ms.AcceptCredit(ctx, g.Config.ScaleU(uint32(arg)), alive, ch)
+			ms.AcceptCredit(ctx, g.Config.ScaleU(uint32(arg.(int16))), alive, ch)
 			time.Sleep(10 * time.Second)
 			alive.Stop()
 			alive.Wait()
@@ -154,17 +154,17 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 	g.Engine.Register(doAccept.Name, doAccept)
 
 	g.Engine.RegisterNewFuncAgr("money.dispense(?)", func(ctx context.Context, arg engine.Arg) error {
-		return ms.coin.Dispense(g.Config.ScaleU(uint32(arg)))
+		return ms.coin.Dispense(g.Config.ScaleU(uint32(arg.(int16))))
 	})
 
 	g.Engine.RegisterNewFuncAgr("money.return(?)", func(ctx context.Context, arg engine.Arg) error {
-		return ms.coin.ReturnMoney(g.Config.ScaleU(uint32(arg)))
+		return ms.coin.ReturnMoney(g.Config.ScaleU(uint32(arg.(int16))))
 	})
 
 	doSetGiftCredit := engine.FuncArg{
 		Name: "money.set_gift_credit(?)",
 		F: func(ctx context.Context, arg engine.Arg) error {
-			amount := g.Config.ScaleU(uint32(arg))
+			amount := g.Config.ScaleU(uint32(arg.(int16)))
 			ms.SetGiftCredit(ctx, amount)
 			return nil
 		},

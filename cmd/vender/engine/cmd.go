@@ -57,7 +57,7 @@ func Main(ctx context.Context, _ ...[]string) error {
 		g.Inventory.Iter(func(stock *inventory.Stock) {
 			current := stock.Value()
 			g.Log.Debugf("- source=%s value=%f", stock.Name, current)
-			stock.Set(current + float32(arg))
+			stock.Set(current + float32(arg.(int16)))
 		})
 		return nil
 	}})
