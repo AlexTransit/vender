@@ -161,6 +161,18 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 		return ms.coin.ReturnMoney(g.Config.ScaleU(uint32(arg.(int16))))
 	})
 
+	g.Engine.RegisterNewFuncAgr("line1(?)", func(ctx context.Context, arg engine.Arg) error {
+		bs := g.MustTextDisplay().Translate(arg.(string))
+		g.MustTextDisplay().SetLinesBytes(bs, nil)
+		return nil
+	})
+
+	g.Engine.RegisterNewFuncAgr("line2(?)", func(ctx context.Context, arg engine.Arg) error {
+		bs := g.MustTextDisplay().Translate(arg.(string))
+		g.MustTextDisplay().SetLinesBytes(nil, bs)
+		return nil
+	})
+
 	doSetGiftCredit := engine.FuncArg{
 		Name: "money.set_gift_credit(?)",
 		F: func(ctx context.Context, arg engine.Arg) error {

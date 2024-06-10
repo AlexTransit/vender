@@ -3,7 +3,7 @@ package text_display
 import (
 	"bytes"
 	"fmt"
-
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -76,12 +76,14 @@ func (td *TextDisplay) SetCodepage(cp string) error {
 	td.tr.Store(tr)
 	return nil
 }
+
 func (td *TextDisplay) SetDevice(dev Devicer) {
 	td.mu.Lock()
 	defer td.mu.Unlock()
 
 	td.dev = dev
 }
+
 func (td *TextDisplay) SetScrollDelay(d time.Duration) {
 	td.mu.Lock()
 	defer td.mu.Unlock()
@@ -216,9 +218,10 @@ func (td *TextDisplay) Translate(s string) []byte {
 		pad = false
 		s = s[:len(s)-1]
 	}
-
+	s = strings.Replace(s, "_", " ", -1)
 	result := []byte(s)
 	tr, ok := td.tr.Load().(charset.Translator)
+
 	if ok && tr != nil {
 		_, tb, err := tr.Translate(result, true)
 		if err != nil {
