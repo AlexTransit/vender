@@ -463,45 +463,13 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		},
 	)
 
-	g.Engine.RegisterNewFunc(
-		"sound.finish.cook",
-		func(ctx context.Context) error {
-			sound.PlayFinishedCooking()
-			return nil
-		},
-	)
-
-	g.Engine.RegisterNewFunc(
-		"sound.money",
-		func(ctx context.Context) error {
-			sound.PlayMoneyIn()
-			return nil
-		},
-	)
-
-	g.Engine.RegisterNewFunc(
-		"sound.start.cook",
-		func(ctx context.Context) error {
-			sound.PlayStartedCooking()
-			return nil
-		},
-	)
-
-	g.Engine.RegisterNewFunc(
-		"sound.custom",
-		func(ctx context.Context) error {
-			sound.PlayCustom()
-			return nil
-		},
-	)
-
 	doEmuKey := engine.FuncArg{
 		// keys 0-9, 10 = C, 11 = Ok,
 		// 12-13 cream- cream+, 14-15 sugar- sugar+, 16 dot
 		Name: "emulate.key(?)",
 		F: func(ctx context.Context, arg engine.Arg) error {
 			var key uint16
-			switch arg {
+			switch arg.(int16) {
 			case 0, 1, 2, 3, 4, 5, 6, 7, 8, 9:
 				key = uint16(arg.(int16)) + 48
 			case 10:
