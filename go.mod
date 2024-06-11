@@ -13,7 +13,7 @@ require (
 	github.com/mattn/go-isatty v0.0.20
 	github.com/mattn/go-runewidth v0.0.15 // indirect
 	github.com/mattn/go-tty v0.0.5 // indirect
-	github.com/paulrosania/go-charset v0.0.0-20151028000031-621bb39fcc83
+	github.com/paulrosania/go-charset v0.0.0-20190326053356-55c9d7a5834c
 	github.com/pkg/term v1.2.0-beta.2 // indirect
 	github.com/skip2/go-qrcode v0.0.0-20191027152451-9434209cb086
 	github.com/stretchr/objx v0.2.0 // indirect
