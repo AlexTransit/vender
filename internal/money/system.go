@@ -14,6 +14,7 @@ import (
 	// "github.com/AlexTransit/vender/hardware/money"
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
+	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
 
@@ -159,6 +160,23 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 
 	g.Engine.RegisterNewFuncAgr("money.return(?)", func(ctx context.Context, arg engine.Arg) error {
 		return ms.coin.ReturnMoney(g.Config.ScaleU(uint32(arg.(int16))))
+	})
+
+	g.Engine.RegisterNewFuncAgr("line1(?)", func(ctx context.Context, arg engine.Arg) error {
+		bs := g.MustTextDisplay().Translate(arg.(string))
+		g.MustTextDisplay().SetLinesBytes(bs, nil)
+		return nil
+	})
+
+	g.Engine.RegisterNewFuncAgr("line2(?)", func(ctx context.Context, arg engine.Arg) error {
+		bs := g.MustTextDisplay().Translate(arg.(string))
+		g.MustTextDisplay().SetLinesBytes(nil, bs)
+		return nil
+	})
+
+	g.Engine.RegisterNewFuncAgr("sound(?)", func(ctx context.Context, arg engine.Arg) error {
+		sound.PlayFileNoWait(arg.(string))
+		return nil
 	})
 
 	doSetGiftCredit := engine.FuncArg{

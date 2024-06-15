@@ -63,7 +63,7 @@ func Init(conf *Config, log *log2.Log, startingVMC bool) {
 	s.audioContext = audioContext
 	if startingVMC {
 		go func() {
-			PlayVmcStarting()
+			// PlayVmcStarting()
 			s.keyBeep.prepare("keyBeep", s.sound.KeyBeep, s.sound.KeyBeepVolume)
 			s.moneyIn.prepare("money in", s.sound.MoneyIn, s.sound.MoneyInVolume)
 			s.trash.prepare("trash", s.sound.Trash, s.sound.TrashVolume)
@@ -71,33 +71,9 @@ func Init(conf *Config, log *log2.Log, startingVMC bool) {
 	}
 }
 
-func PlayVmcStarting() {
-	if err := playMP3controlled(s.sound.Starting, s.sound.StartingVolume); err != nil {
-		s.log.Errorf("play Starting (%v)", err)
-	}
-}
-
 func PlayVmcStarted() {
 	if err := playMP3controlled(s.sound.Started, s.sound.StartedVolume); err != nil {
 		s.log.Errorf(" play Started (%v)", err)
-	}
-}
-
-func PlayStartedCooking() {
-	if err := playMP3controlled(s.sound.StartedCooking, s.sound.StartedCookingVolume); err != nil {
-		s.log.Errorf(" play started cooking (%v)", err)
-	}
-}
-
-func PlayFinishedCooking() {
-	if err := playMP3controlled(s.sound.FinishedCooking, s.sound.FinishedCookingVolume); err != nil {
-		s.log.Errorf(" play finish cooking (%v)", err)
-	}
-}
-
-func PlayCustom() {
-	if err := playMP3controlled(s.sound.Custom, s.sound.StartingVolume); err != nil {
-		s.log.Errorf(" play custom (%v)", err)
 	}
 }
 
@@ -116,6 +92,16 @@ func Broken() {
 }
 
 func PlayFile(file string, volume ...int) error {
+	if volume == nil {
+		PlayFileNoWait(file)
+	} else {
+		PlayFileNoWait(file, volume[0])
+	}
+	waitingEndPlay()
+	return nil
+}
+
+func PlayFileNoWait(file string, volume ...int) error {
 	v := 10
 	if volume != nil {
 		v = volume[0]
@@ -124,7 +110,6 @@ func PlayFile(file string, volume ...int) error {
 		s.log.Errorf(" play file (%v)", err)
 		return err
 	}
-	waitingEndPlay()
 	return nil
 }
 
