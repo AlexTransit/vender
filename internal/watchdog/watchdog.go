@@ -80,7 +80,7 @@ func ReinitRequired() bool {
 func SetDeviceInited() {
 	WD.log.Info("devices inited")
 	if err := os.MkdirAll(WD.folder+"vmc", os.ModePerm); err != nil {
-		WD.log.Error(errors.New("create vender folder"), err)
+		WD.log.Warning(errors.New("create vender folder"), err)
 	}
 }
 
