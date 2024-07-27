@@ -29,7 +29,10 @@ require (
 	periph.io/x/periph v3.6.4+incompatible
 )
 
-require github.com/hajimehoshi/ebiten/v2 v2.6.3
+require (
+	github.com/g0rbe/go-chattr v1.0.1
+	github.com/hajimehoshi/ebiten/v2 v2.6.3
+)
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
