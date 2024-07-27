@@ -51,11 +51,11 @@ func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engi
 	if attrs, e := chattr.GetAttrs(file); e == nil {
 		if (attrs & chattr.FS_SYNC_FL) == 0 {
 			if e = chattr.SetAttr(file, chattr.FS_SYNC_FL); e != nil {
-				inv.log.Errf("set file atributes autosync error:%v", e)
+				inv.log.Errorf("set file atributes autosync error:%v", e)
 			}
 		}
 	} else {
-		inv.log.Errf("read inventory file atributes error:%v", e)
+		inv.log.Errorf("read inventory file atributes error:%v", e)
 	}
 	file.Close()
 
