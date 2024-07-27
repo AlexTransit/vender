@@ -12,6 +12,7 @@ import (
 	"github.com/AlexTransit/vender/internal/engine"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
 	"github.com/AlexTransit/vender/log2"
+	"github.com/g0rbe/go-chattr"
 	"github.com/juju/errors"
 )
 
@@ -46,6 +47,18 @@ func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engi
 		errs = append(errs, err)
 	}
 	inv.file = sd + "/store.file"
+	file, _ := os.OpenFile(inv.file, os.O_RDONLY, 0o666)
+	if attrs, e := chattr.GetAttrs(file); e == nil {
+		if (attrs & chattr.FS_SYNC_FL) == 0 {
+			if e = chattr.SetAttr(file, chattr.FS_SYNC_FL); e != nil {
+				inv.log.Errorf("set file atributes autosync error:%v", e)
+			}
+		}
+	} else {
+		inv.log.Errorf("read inventory file atributes error:%v", e)
+	}
+	file.Close()
+
 	inv.byName = make(map[string]*Stock, countBunkers)
 	inv.byCode = make(map[uint32]*Stock, countBunkers)
 	for _, stockConfig := range bunkers {
