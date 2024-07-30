@@ -56,7 +56,7 @@ func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engi
 
 	if attr_int, err := unix.IoctlGetInt(int(file.Fd()), unix.FS_IOC_GETFLAGS); err == nil {
 		const FS_SYNC_FL = 0x00000008 /* Synchronous updates */
-		if (attr_int & FS_SYNC_FL) != 0 {
+		if (attr_int & FS_SYNC_FL) == 0 {
 			inv.log.Info("add autosync attriubute on store file")
 			attr_int |= FS_SYNC_FL
 			if err := unix.IoctlSetPointerInt(int(file.Fd()), unix.FS_IOC_SETFLAGS, int(attr_int)); err != nil {
