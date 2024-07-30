@@ -47,15 +47,18 @@ func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engi
 		errs = append(errs, err)
 	}
 	inv.file = sd + "/store.file"
+
+	// check and set sync flag after write
 	file, _ := os.OpenFile(inv.file, os.O_RDONLY, 0o666)
-	if attrs, e := chattr.GetAttrs(file); e == nil {
-		if (attrs & chattr.FS_SYNC_FL) == 0 {
-			if e = chattr.SetAttr(file, chattr.FS_SYNC_FL); e != nil {
-				inv.log.Errorf("set file atributes autosync error:%v", e)
+	if syncFlagSeted, e := chattr.IsAttr(file, chattr.FS_SYNC_FL); e == nil {
+		if !syncFlagSeted {
+			err := chattr.SetAttr(file, chattr.FS_SYNC_FL)
+			if err != nil {
+				inv.log.Errorf("set file atributes autosync error: %v", e)
 			}
 		}
 	} else {
-		inv.log.Errorf("read inventory file atributes error:%v", e)
+		inv.log.Errorf("read inventory file atributes error: %v", e)
 	}
 	file.Close()
 
