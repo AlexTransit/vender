@@ -24,15 +24,12 @@ require (
 	github.com/temoto/inputevent-go v1.0.0
 	github.com/temoto/iodin v0.0.0-20190211111721-99c87617ba86
 	golang.org/x/net v0.20.0 // indirect
-	golang.org/x/sys v0.16.0
+	golang.org/x/sys v0.22.0
 	google.golang.org/protobuf v1.28.0 // indirect
 	periph.io/x/periph v3.6.4+incompatible
 )
 
-require (
-	github.com/g0rbe/go-chattr v1.0.1
-	github.com/hajimehoshi/ebiten/v2 v2.6.3
-)
+require github.com/hajimehoshi/ebiten/v2 v2.6.3
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
