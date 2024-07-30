@@ -118,9 +118,10 @@ func (inv *Inventory) InventoryLoad() {
 	stat, _ := f.Stat()
 	defer f.Close()
 	td := make([]int32, stat.Size()/4)
-	binary.Read(f, binary.BigEndian, &td)
-	for _, cl := range inv.byCode {
-		inv.byCode[cl.Code].Set(float32(td[cl.Code-1]))
+	if err := binary.Read(f, binary.BigEndian, &td); err == nil {
+		for _, cl := range inv.byCode {
+			inv.byCode[cl.Code].Set(float32(td[cl.Code-1]))
+		}
 	}
 }
 
