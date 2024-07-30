@@ -49,7 +49,10 @@ func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engi
 	inv.file = sd + "/store.file"
 
 	// check and set sync flag after write
-	file, _ := os.OpenFile(inv.file, os.O_RDONLY, 0o666)
+	file, err := os.OpenFile(inv.file, os.O_RDONLY, 0o666)
+	if err != nil {
+		inv.log.Errorf("open for check atributes error(%v)", err)
+	}
 	if syncFlagSeted, e := chattr.IsAttr(file, chattr.FS_SYNC_FL); e == nil {
 		if !syncFlagSeted {
 			err := chattr.SetAttr(file, chattr.FS_SYNC_FL)
