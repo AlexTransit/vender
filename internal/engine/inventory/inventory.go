@@ -12,8 +12,8 @@ import (
 	"github.com/AlexTransit/vender/internal/engine"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
 	"github.com/AlexTransit/vender/log2"
-	"github.com/g0rbe/go-chattr"
 	"github.com/juju/errors"
+	"golang.org/x/sys/unix"
 )
 
 type Inventory struct {
@@ -51,17 +51,20 @@ func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engi
 	// check and set sync flag after write
 	file, err := os.OpenFile(inv.file, os.O_RDONLY, 0o666)
 	if err != nil {
-		inv.log.Errorf("open for check atributes error(%v)", err)
+		inv.log.Errorf("open file for check atributes error(%v)", err)
 	}
-	if syncFlagSeted, e := chattr.IsAttr(file, chattr.FS_SYNC_FL); e == nil {
-		if !syncFlagSeted {
-			err := chattr.SetAttr(file, chattr.FS_SYNC_FL)
-			if err != nil {
-				inv.log.Errorf("set file atributes autosync error: %v", e)
+
+	if attr_int, err := unix.IoctlGetInt(int(file.Fd()), unix.FS_IOC_GETFLAGS); err == nil {
+		const FS_SYNC_FL = 0x00000008 /* Synchronous updates */
+		if (attr_int & FS_SYNC_FL) != 0 {
+			inv.log.Info("add autosync attriubute on store file")
+			attr_int |= FS_SYNC_FL
+			if err := unix.IoctlSetPointerInt(int(file.Fd()), unix.FS_IOC_SETFLAGS, int(attr_int)); err != nil {
+				inv.log.Errorf("set file atributes autosync error: %v", err)
 			}
 		}
 	} else {
-		inv.log.Errorf("read inventory file atributes error: %v", e)
+		inv.log.Errorf("read atributes store file error: %v", err)
 	}
 	file.Close()
 
