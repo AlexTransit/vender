@@ -13,6 +13,11 @@
             "program": "${workspaceFolder}/cmd/vender/main.go",
             "buildFlags": "-ldflags=' -X main.BuildVersion=debugCLI'",
             // "env": {"DEBUG_AS_ROOT": "true",    },
+            "args": [
+                // "-config",
+                // "/home/vmc/config.hcl",
+                "cmd"
+            ],
         },
         {
             "console": "integratedTerminal",
