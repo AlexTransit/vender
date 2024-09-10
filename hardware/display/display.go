@@ -83,6 +83,7 @@ func (d *Display) QR(text string, border bool, level qrcode.RecoveryLevel) error
 	d.palleted2(img)
 	return d.Flush()
 }
+
 func (d *Display) CopyFile2FB(f string) error {
 	p, _ := os.ReadFile(f)
 	if len(p) == 0 {
@@ -91,37 +92,7 @@ func (d *Display) CopyFile2FB(f string) error {
 		d.fb.Buf = p
 	}
 	return d.fb.Flush()
-
 }
-
-// type Pic uint32
-
-// const (
-// 	PictureBoot Pic = iota
-// 	PictureMake
-// 	PictureIdle
-// 	PictureBroken
-// )
-
-// func (d *Display) ShowPic(pict Pic) error {
-// 	// AlexM fixMe. move to config
-// 	var file string
-// 	switch {
-// 	case pict == PictureMake:
-// 		file = "/home/vmc/make-pic"
-// 	case pict == PictureBroken, pict == PictureBoot:
-// 		file = "/home/vmc/broken-pic"
-// 	default:
-// 		file = "/home/vmc/coffe-pic"
-// 	}
-// 	p, _ := os.ReadFile(file)
-// 	if len(p) == 0 {
-// 		d.ClearFB()
-// 	} else {
-// 		d.fb.Buf = p
-// 	}
-// 	return d.fb.Flush()
-// }
 
 func (d *Display) String2() string {
 	b := strings.Builder{}

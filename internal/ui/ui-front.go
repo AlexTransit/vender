@@ -11,7 +11,6 @@ import (
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/sound"
-	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
 	tele_api "github.com/AlexTransit/vender/tele"
@@ -43,7 +42,6 @@ func (ui *UI) checkTemperature() (correct bool, stateIfNotCorrect types.UiState)
 		}
 		if curTemp < int32(ui.g.Config.Hardware.Evend.Valve.TemperatureHot-10) {
 			line1 := fmt.Sprintf(ui.g.Config.UI.Front.MsgWaterTemp, curTemp)
-			ui.g.ShowPicture(state.PictureBroken)
 			evend.Cup.LightOff() // light off
 			if types.VMC.HW.Display.L1 != line1 {
 				ui.display.SetLines(line1, ui.g.Config.UI.Front.MsgWait)
@@ -111,7 +109,8 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 		alive.Stop() // stop pending AcceptCredit
 		alive.Wait()
 	}()
-	l1 := ui.g.Config.UI.Front.MsgStateIntro
+	l1 := ui.display.GetLine(1)
+	// ui.g.Config.UI.Front.MsgStateIntro
 	l2 := " "
 	tuneScreen := false
 	for {
@@ -155,7 +154,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 // return message for display
 func (ui *UI) sendRequestForQrPayment(rm *tele_api.FromRoboMessage) (message_for_display *string) {
 	if !ui.g.Tele.RoboConnected() {
-		ui.g.ShowPicture(state.PictureQRPayError)
+		ui.g.Hardware.Display.Graphic.CopyFile2FB(ui.g.Config.UI.Front.PicQRPayError)
 		return &ui.g.Config.UI.Front.MsgNoNetwork
 	}
 	types.UI.FrontResult.QRPaymenID = "0"
@@ -172,7 +171,6 @@ func (ui *UI) sendRequestForQrPayment(rm *tele_api.FromRoboMessage) (message_for
 
 func (ui *UI) canselQrOrder(rm *tele_api.FromRoboMessage) {
 	rm.State = tele_api.State_Nominal
-	go ui.g.ShowPicture(state.PictureClient)
 	if types.UI.FrontResult.PaymenId > 0 {
 		rm.Order = &tele_api.Order{
 			Amount:      types.UI.FrontResult.QRPayAmount,
@@ -190,7 +188,6 @@ func (ui *UI) cancelQRPay(s tele_api.State) {
 		types.VMC.EvendKeyboardInput(true)
 	}()
 	if types.UI.FrontResult.QRPaymenID == "" || types.UI.FrontResult.QRPaymenID == "0" {
-		go ui.g.ShowPicture(state.PictureClient)
 		return
 	}
 	rm := tele_api.FromRoboMessage{
@@ -257,7 +254,6 @@ func createScale(currentValue uint8, maximumValue uint8, defaultValue uint8) (ba
 func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	ui.g.Tele.RoboSendState(tele_api.State_Process)
 	moneysys := money.GetGlobal(ctx)
-	uiConfig := &ui.g.Config.UI
 
 	selected := types.UI.FrontResult.Item.String()
 
@@ -278,7 +274,6 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	}
 	moneysys.ReturnDirty()
 	rm.State = tele_api.State_Broken
-	ui.display.SetLines(uiConfig.Front.MsgError, uiConfig.Front.MsgMenuError)
 	rm.Err = &tele_api.Err{
 		Message: errors.Annotatef(err, "execute %s", selected).Error(),
 	}

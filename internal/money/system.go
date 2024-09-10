@@ -163,19 +163,26 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 	})
 
 	g.Engine.RegisterNewFuncAgr("line1(?)", func(ctx context.Context, arg engine.Arg) error {
-		bs := g.MustTextDisplay().Translate(arg.(string))
-		g.MustTextDisplay().SetLinesBytes(bs, nil)
+		g.MustTextDisplay().SetLine(1, arg.(string))
 		return nil
 	})
 
 	g.Engine.RegisterNewFuncAgr("line2(?)", func(ctx context.Context, arg engine.Arg) error {
-		bs := g.MustTextDisplay().Translate(arg.(string))
-		g.MustTextDisplay().SetLinesBytes(nil, bs)
+		g.MustTextDisplay().SetLine(2, arg.(string))
 		return nil
 	})
 
 	g.Engine.RegisterNewFuncAgr("sound(?)", func(ctx context.Context, arg engine.Arg) error {
 		sound.PlayFileNoWait(arg.(string))
+		return nil
+	})
+
+	g.Engine.RegisterNewFuncAgr("picture(?)", func(ctx context.Context, arg engine.Arg) error {
+		if g.Hardware.Display.Graphic != nil {
+			g.Hardware.Display.Graphic.CopyFile2FB(arg.(string))
+			return nil
+		}
+		g.Log.Warning("display not set")
 		return nil
 	})
 

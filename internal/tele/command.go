@@ -100,7 +100,6 @@ func (t *tele) mesageMakeOrger(ctx context.Context) {
 		l2 := fmt.Sprintf(g.Config.UI.Front.MsgInputCode, types.UI.FrontResult.Item.Code)
 		// l2 := fmt.Sprintf(g.Config.UI.Front.MsgMenuInsufficientCreditL2, "0", types.UI.FrontResult.Item.Price.Format100I())
 		g.Hardware.HD44780.Display.SetLines(l1, l2)
-		g.ShowPicture(state.PictureClient)
 		return
 	}
 
@@ -180,11 +179,11 @@ func (t *tele) messageShowQr(ctx context.Context) {
 	case tele_api.ShowQR_receipt:
 		g.ShowQR(t.InMessage.ShowQR.QrText)
 	case tele_api.ShowQR_error:
-		g.ShowPicture(state.PictureQRPayError)
+		g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI.Front.PicQRPayError)
 	case tele_api.ShowQR_errorOverdraft:
 		g.Hardware.HD44780.Display.SetLines(g.Config.UI.Front.MsgMenuInsufficientCredit,
 			g.Config.UI.Front.MsgRemotePayReject)
-		g.ShowPicture(state.PicturePayReject)
+		g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI.Front.PicPayReject)
 	}
 }
 

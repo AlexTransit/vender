@@ -27,6 +27,9 @@ type TextDisplay struct { //nolint:maligned
 	width uint32
 	state State
 
+	line1 string
+	line2 string
+
 	tickd time.Duration
 	tick  uint32
 	upd   chan<- State
@@ -63,6 +66,16 @@ func NewTextDisplay(opt *TextDisplayConfig) (*TextDisplay, error) {
 	}
 
 	return td, nil
+}
+
+func (td *TextDisplay) GetLine(line int) string {
+	switch line {
+	case 1:
+		return td.line1
+	case 2:
+		return td.line2
+	}
+	return ""
 }
 
 func (td *TextDisplay) SetCodepage(cp string) error {
@@ -120,33 +133,51 @@ func (td *TextDisplay) Message(s1, s2 string, wait func()) {
 	td.mu.Unlock()
 }
 
-// nil: don't change
-// len=0: set empty
-func (td *TextDisplay) SetLinesBytes(b1, b2 []byte) {
+// func (td *TextDisplay) SetLinesBytes(b1, b2 []byte) {
+// 	td.mu.Lock()
+// 	defer td.mu.Unlock()
+// 	if b1 != nil {
+// 		td.state.L1 = b1
+// 	}
+// 	if b2 != nil {
+// 		td.state.L2 = b2
+// 	}
+// 	atomic.StoreUint32(&td.tick, 0)
+// 	td.flush()
+// }
+
+func (td *TextDisplay) SetLine(line int, value string) {
 	td.mu.Lock()
 	defer td.mu.Unlock()
 
-	if b1 != nil {
-		td.state.L1 = b1
+	bs := td.Translate(value)
+	if bs == nil {
+		types.Log.NoticeF("translate %s retutn nil", value)
 	}
-	if b2 != nil {
-		td.state.L2 = b2
+	switch line {
+	case 1:
+		td.state.L1 = bs
+		if td.line1 != value {
+			td.line1 = value
+			types.Log.NoticeF(fmt.Sprintf("Display.L%d=%s", line, value))
+		}
+	case 2:
+		td.state.L2 = bs
+		if td.line2 != value {
+			td.line2 = value
+			types.Log.NoticeF(fmt.Sprintf("Display.L%d=%s", line, value))
+		}
+
 	}
 	atomic.StoreUint32(&td.tick, 0)
 	td.flush()
+	time.Sleep(100 * time.Millisecond)
 }
 
-func (td *TextDisplay) SetLines(line1, line2 string) {
-	td.SetLinesBytes(td.Translate(line1), td.Translate(line2))
-	if types.VMC.HW.Display.L1 != line1 {
-		types.VMC.HW.Display.L1 = line1
-		types.Log.NoticeF(fmt.Sprintf("Display.L1=%s", line1))
-		// types.TeleN.Log(fmt.Sprintf("Display.L1=%s", line1))
-	}
-	if types.VMC.HW.Display.L2 != line2 {
-		types.VMC.HW.Display.L2 = line2
-		types.Log.NoticeF(fmt.Sprintf("Display.L2=%s", line2))
-	}
+func (td *TextDisplay) SetLines(line1 string, line2 string) {
+	// td.SetLinesBytes(td.Translate(line1), td.Translate(line2))
+	td.SetLine(1, line1)
+	td.SetLine(2, line2)
 }
 
 func (td *TextDisplay) Tick() {

@@ -22,8 +22,6 @@ var ScaleAlpha = []byte{
 }
 
 const (
-	MsgError = "error"
-
 	msgServiceInputAuth = "\x8d %s\x00"
 	msgServiceMenu      = "Menu"
 )

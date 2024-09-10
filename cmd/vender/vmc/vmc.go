@@ -45,7 +45,7 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 	subcmd.SdNotify(daemon.SdNotifyReady)
 
 	display := g.MustTextDisplay()
-	display.SetLines("boot "+g.BuildVersion, g.Config.UI.Front.MsgWait)
+	display.SetLine(1, "boot "+g.BuildVersion)
 
 	mdbus, err := g.Mdb()
 	if err != nil {

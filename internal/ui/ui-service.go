@@ -163,7 +163,7 @@ var lv bool
 
 func (ui *UI) onServiceInventory() types.UiState {
 	if len(ui.Service.invList) == 0 {
-		ui.display.SetLines(MsgError, "inv empty") // FIXME extract message string
+		ui.display.SetLine(1, "inv empty") // FIXME extract message string)
 		ui.serviceWaitInput()
 		return types.StateServiceMenu
 	}
@@ -189,7 +189,7 @@ func (ui *UI) onServiceInventory() types.UiState {
 	switch {
 	case e.Key == input.EvendKeyCreamLess || e.Key == input.EvendKeyCreamMore:
 		if len(ui.inputBuf) != 0 {
-			ui.display.SetLines(MsgError, "set or clear?") // FIXME extract message string
+			ui.display.SetLine(2, "set or clear?") // FIXME extract message string
 			ui.serviceWaitInput()
 			return types.StateServiceInventory
 		}
@@ -210,7 +210,7 @@ func (ui *UI) onServiceInventory() types.UiState {
 	case input.IsAccept(&e):
 		if len(ui.inputBuf) == 0 {
 			ui.g.Log.WarningF("ui onServiceInventory input=accept inputBuf=empty")
-			ui.display.SetLines(MsgError, "empty") // FIXME extract message string
+			ui.display.SetLine(2, "empty") // FIXME extract message string
 			ui.serviceWaitInput()
 			return types.StateServiceInventory
 		}
@@ -220,7 +220,7 @@ func (ui *UI) onServiceInventory() types.UiState {
 		ui.inputBuf = ui.inputBuf[:0]
 		if err != nil {
 			ui.g.Log.WarningF("ui onServiceInventory input=accept inputBuf='%s'", string(ui.inputBuf))
-			ui.display.SetLines(MsgError, "number-invalid") // FIXME extract message string
+			ui.display.SetLine(2, "number-invalid") // FIXME extract message string
 			ui.serviceWaitInput()
 			return types.StateServiceInventory
 		}
@@ -248,7 +248,7 @@ func (ui *UI) onServiceInventory() types.UiState {
 func (ui *UI) onServiceTest(ctx context.Context) types.UiState {
 	ui.inputBuf = ui.inputBuf[:0]
 	if len(ui.Service.testList) == 0 {
-		ui.display.SetLines(MsgError, "no tests") // FIXME extract message string
+		ui.g.MustTextDisplay().SetLine(1, "no tests") // FIXME extract message string
 		ui.serviceWaitInput()
 		return types.StateServiceMenu
 	}

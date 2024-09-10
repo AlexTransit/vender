@@ -9,7 +9,6 @@ import (
 	"github.com/juju/errors"
 
 	"github.com/AlexTransit/vender/internal/money"
-	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
 )
@@ -54,7 +53,6 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 	// ui.g.Log.Debugf("ui enter %s", s.String())
 	switch s {
 	case types.StateBoot:
-		ui.g.ShowPicture(state.PictureBoot)
 		watchdog.Enable()
 
 		onBootScript := ui.g.Config.Engine.OnBoot
@@ -97,8 +95,6 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		return types.StateDefault
 
 	case types.StateLocked:
-		ui.display.SetLines(ui.g.Config.UI.Front.MsgStateLocked, "")
-		// ui.g.Tele.State(tele_api.State_Lock)
 		for ui.g.Alive.IsRunning() {
 			e := ui.wait(lockPoll)
 			// TODO receive tele command to reboot or change state

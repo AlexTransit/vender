@@ -67,39 +67,6 @@ const (
 	PicturePayReject
 )
 
-func (g *Global) ShowPicture(pict Pic) {
-	if g.Hardware.Display.d == nil {
-		return
-	}
-	var file string
-	switch {
-	case pict == PictureBoot:
-		file = g.Config.UI.Front.PicBoot
-		types.VMC.HW.Display.Gdisplay = "PictureBoot"
-	case pict == PictureClient:
-		file = g.Config.UI.Front.PicClient
-		types.VMC.HW.Display.Gdisplay = "PictureClient"
-	case pict == PictureMake:
-		file = g.Config.UI.Front.PicMake
-		types.VMC.HW.Display.Gdisplay = "PictureMake"
-	case pict == PictureBroken:
-		file = g.Config.UI.Front.PicBroken
-		types.VMC.HW.Display.Gdisplay = "PictureBroken"
-	case pict == PictureQRPayError:
-		file = g.Config.UI.Front.PicQRPayError
-		types.VMC.HW.Display.Gdisplay = "PictureQRCreateerror"
-	case pict == PicturePayReject:
-		file = g.Config.UI.Front.PicPayReject
-		types.VMC.HW.Display.Gdisplay = "PictureBankReject"
-	default:
-		types.VMC.HW.Display.Gdisplay = "PictureDefault"
-	}
-	if file == "" {
-		file = g.Config.UI.Front.PicIdle
-	}
-	g.Hardware.Display.d.CopyFile2FB(file)
-}
-
 func (g *Global) VmcStop(ctx context.Context) {
 	if types.VMC.UiState != uint32(types.StateFrontSelect) {
 		watchdog.DevicesInitializationRequired()
@@ -109,7 +76,6 @@ func (g *Global) VmcStop(ctx context.Context) {
 
 func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 	watchdog.Disable()
-	g.ShowPicture(PictureBroken)
 	g.Log.Infof("--- event vmc stop ---")
 	go func() {
 		time.Sleep(3 * time.Second)
@@ -118,8 +84,6 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 	}()
 	g.LockCh <- struct{}{}
 	_ = g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken)
-	td := g.MustTextDisplay()
-	td.SetLines(g.Config.UI.Front.MsgBrokenL1, g.Config.UI.Front.MsgBrokenL2)
 	g.Tele.Close()
 	time.Sleep(2 * time.Second)
 	g.Log.Infof("--- vmc stop ---")
@@ -130,7 +94,6 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 
 func (g *Global) ClientBegin(ctx context.Context) {
 	_ = g.Engine.ExecList(ctx, "client-light", []string{"evend.cup.light_on"})
-	g.ShowPicture(PictureClient)
 	if !types.VMC.Lock {
 		// g.TimerUIStop <- struct{}{}
 		types.VMC.Lock = true
@@ -147,7 +110,6 @@ func (g *Global) ClientEnd(ctx context.Context) {
 		types.VMC.Client.WorkTime = time.Now()
 		g.Log.Infof("--- client activity end ---")
 	}
-	g.ShowPicture(PictureIdle)
 }
 
 func (g *Global) Init(ctx context.Context, cfg *Config) error {
@@ -284,7 +246,6 @@ func (g *Global) initDisplay() error {
 	d, err := g.Display()
 	if d != nil {
 		types.VMC.HW.Display.GdisplayValid = true
-		g.ShowPicture(PictureBoot)
 	}
 	return err
 }
@@ -499,9 +460,10 @@ func (g *Global) Broken() {
 	g.Tele.RoboSendBroken()
 	watchdog.DevicesInitializationRequired()
 	g.Display()
-	g.ShowPicture(PictureBroken)
 	display := g.MustTextDisplay()
-	display.SetLines(g.Config.UI.Front.MsgBrokenL1, g.Config.UI.Front.MsgBrokenL2)
+	// FIXME
+	display.SetLine(1, "ABTOMAT")
+	display.SetLine(2, "HE ABTOMAT :(")
 	g.RunBashSript(g.Config.ScriptIfBroken)
 	sound.Broken()
 }
