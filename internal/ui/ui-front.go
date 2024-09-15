@@ -111,7 +111,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 	}()
 	l1 := ui.display.GetLine(1)
 	// ui.g.Config.UI.Front.MsgStateIntro
-	l2 := " "
+	l2 := ui.display.GetLine(2)
 	tuneScreen := false
 	for {
 		ui.display.SetLines(l1, l2)
