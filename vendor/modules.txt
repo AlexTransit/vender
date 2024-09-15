@@ -76,7 +76,7 @@ github.com/mattn/go-runewidth
 # github.com/mattn/go-tty v0.0.5
 ## explicit; go 1.14
 github.com/mattn/go-tty
-# github.com/paulrosania/go-charset v0.0.0-20151028000031-621bb39fcc83
+# github.com/paulrosania/go-charset v0.0.0-20190326053356-55c9d7a5834c
 ## explicit
 github.com/paulrosania/go-charset/charset
 github.com/paulrosania/go-charset/data
@@ -125,7 +125,7 @@ golang.org/x/net/proxy
 # golang.org/x/sync v0.6.0
 ## explicit; go 1.18
 golang.org/x/sync/semaphore
-# golang.org/x/sys v0.16.0
+# golang.org/x/sys v0.22.0
 ## explicit; go 1.18
 golang.org/x/sys/unix
 golang.org/x/sys/windows

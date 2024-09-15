@@ -67,9 +67,6 @@ func Cook(ctx context.Context) error {
 			g.Log.Errorf("ui-front tuning stock=%s err=%v", name, err)
 		}
 	}
-	// AlexM FixMe наверно переделать вывод на текстовый экран
-	g.MustTextDisplay().SetLines(g.Config.UI.Front.MsgMaking1, g.Config.UI.Front.MsgMaking2)
-	g.ShowPicture(state.PictureMake)
 
 	err := g.Engine.Exec(itemCtx, types.UI.FrontResult.Item.D)
 	if err == nil {

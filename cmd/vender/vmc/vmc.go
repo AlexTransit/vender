@@ -45,7 +45,7 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 	subcmd.SdNotify(daemon.SdNotifyReady)
 
 	display := g.MustTextDisplay()
-	display.SetLines("boot "+g.BuildVersion, g.Config.UI.Front.MsgWait)
+	display.SetLine(1, "boot "+g.BuildVersion)
 
 	mdbus, err := g.Mdb()
 	if err != nil {
@@ -79,8 +79,9 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 func CmdMain(ctx context.Context, a ...[]string) error {
 	g := state.GetGlobal(ctx)
 	if len(a[0]) <= 1 {
-		g.Log.Infof("command %v - error. few parameters", a)
-		os.Exit(0)
+		a[0] = append(a[0], "help")
+		// g.Log.Infof("command %v - error. few parameters", a)
+		// os.Exit(0)
 	}
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -104,6 +105,8 @@ func CmdMain(ctx context.Context, a ...[]string) error {
 		os.Exit(0)
 	case "broken":
 		broken(ctx)
+	case "no_init":
+		watchdog.SetDeviceInited()
 	case "exitcode":
 		if len(args) < 3 || args[2] != "success" {
 			g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
@@ -147,7 +150,9 @@ func broken(ctx context.Context) {
 }
 
 func showHelpCMD() {
-	fmt.Println("vender cmd sound - play file from /audio directory (mono 24000Hz)")
+	fmt.Println("\n vender cmd sound - play file from /audio directory (mono 24000Hz)")
+	fmt.Println("vender cmd text line1_text line2_text (use _ instead space)")
 	fmt.Println("vender cmd broken - broken mode")
+	fmt.Println("vender cmd no_init - not relecase cup after start")
 	fmt.Println("vender cmd exitcode $EXIT_STATUS $SERVICE_RESULT - use systemd service exit code and exit result. if result not `success` the script_if_broken in the config will run")
 }

@@ -207,10 +207,7 @@ tele {
 
 ui {
   front {
-    msg_intro      = "TODO_EDIT showed after successful boot"
-    msg_broken_l1  = "TODO_EDIT showed after critical error line2 (recomended <17 symbol)"
-    msg_broken_l1  = "TODO_EDIT showed after critical error line2 (recomended <17 symbol)" 
-    msg_locked     = "remotely locked"
+    msg_menu_error = "error"
     msg_wait       = "please wait"
     msg_no_network = "TODO_EDIT showed if no connect to server"
 
@@ -223,8 +220,6 @@ ui {
     msg_cream                       = "Cream" // "Сливки"
     msg_sugar                       = "Sugar" // "Caxap"
     msg_credit                      = "Credit" //  "Кредит: "
-    msg_making1                     = "Making text line1" // "спасибо"
-    msg_making2                     = "Making text line2" // "готовлю"
     msg_input_code                  = "Code:%s\x00" // "Код: %s\x00"
     msg_price                       = "price:%sp." // "цена:%sp."
     
@@ -232,11 +227,6 @@ ui {
     msg_remote_pay_request        = "QR request sent" // "QR запрос отправлен"
     msg_remote_pay_reject         = "Bank refused :(" // "Банк послал :("
 
-    pic_boot         = "/path/boot-picture"
-    pic_idle         = "/path/idle-picture"
-    pic_client       = "/path/instruction-picture"
-    pic_make         = "/path/make-picture"
-    pic_broken       = "/path/broken-picture"
     pic_QR_pay_error = "/path/QR-error-picture"
     pic_pay_reject   = "/path/bank-pay-reject"
 

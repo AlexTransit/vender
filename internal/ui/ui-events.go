@@ -13,7 +13,8 @@ import (
 func (ui *UI) linesCreate(l1 *string, l2 *string, tuneScreen *bool) {
 	c := ui.ms.GetCredit()
 	if c == 0 {
-		*l1 = ui.g.Config.UI.Front.MsgStateIntro
+		currentLine := ui.g.Hardware.HD44780.Display.GetLine(1)
+		*l1 = currentLine
 	} else {
 		*l1 = ui.g.Config.UI.Front.MsgCredit + c.Format100I()
 	}
@@ -86,7 +87,7 @@ func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *b
 	if input.IsAccept(&e.Input) {
 		*tuneScreen = false
 		if len(ui.inputBuf) == 0 {
-			*l1 = ui.g.Config.UI.Front.MsgError
+			*l1 = ""
 			*l2 = ui.g.Config.UI.Front.MsgMenuCodeEmpty
 			return types.StateDoesNotChange
 		}

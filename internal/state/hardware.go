@@ -23,7 +23,7 @@ import (
 type hardware struct {
 	Display struct {
 		once
-		d *display.Display
+		Graphic *display.Display
 	}
 	HD44780 struct {
 		once
@@ -63,7 +63,7 @@ func (g *Global) Display() (*display.Display, error) {
 		cfg := &g.Config.Hardware.Display
 		switch {
 		case cfg.Framebuffer != "":
-			x.d, x.err = display.NewFb(cfg.Framebuffer)
+			x.Graphic, x.err = display.NewFb(cfg.Framebuffer)
 			return x.err
 
 		default:
@@ -71,7 +71,7 @@ func (g *Global) Display() (*display.Display, error) {
 			return nil
 		}
 	})
-	return x.d, x.err
+	return x.Graphic, x.err
 }
 
 func (g *Global) Iodin() (*iodin.Client, error) {
