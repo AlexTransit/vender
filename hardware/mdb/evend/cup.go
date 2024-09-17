@@ -96,7 +96,7 @@ func (c *DeviceCup) initLightSheduler(sh string) {
 
 	parts := cmd.FindAllStringSubmatch(sh, 7)
 	if (sh != "") && (len(parts) == 0) {
-		c.dev.Log.Errorf("shedule string error: %s", sh)
+		c.dev.Log.WarningF("light shedule string error: %s", sh)
 		return
 	}
 	for _, v := range parts {
