@@ -30,7 +30,7 @@ func Init(conf *Config, log *log2.Log, timeout int) {
 	WD.log = log
 	WD.disabled = conf.Disabled
 	if !WD.disabled {
-		setTimerSec(timeout * 2)
+		setTimerSec(timeout * 3)
 	}
 }
 
@@ -51,7 +51,7 @@ func Disable() {
 
 func setUsec(usec string) {
 	ok, err := daemon.SdNotify(false, "WATCHDOG_USEC="+usec)
-	if !ok {
+	if !ok || err != nil {
 		WD.log.Errorf("watchdog not set. interval:%s microsecond error:%v", usec, err)
 	}
 }
