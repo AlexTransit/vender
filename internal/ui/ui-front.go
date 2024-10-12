@@ -28,7 +28,8 @@ func (ui *UI) onFrontStart() types.UiState {
 	if ok, nextState := ui.checkTemperature(); !ok {
 		return nextState
 	}
-	sound.PlayVmcStarted()
+	// FIXME alexm
+	sound.PlayFile("started.mp3")
 	return types.StateFrontBegin
 }
 

@@ -27,7 +27,7 @@ func (mi *MenuItem) String() string {
 	return fmt.Sprintf("menu code=%s price=%d(raw) name='%s'", mi.Code, mi.Price, mi.Name)
 }
 
-// AlexM FIXME с меню переделать. посмотреть что массив нигде не используется и в конфиге сразу заполнить карту.
+// FIXME alexm. меню переделать. посмотреть что массив нигде не используется и в конфиге сразу заполнить карту.
 func FillMenu(ctx context.Context) {
 	items := state.GetGlobal(ctx).Config.Engine.Menu.Items
 	for _, x := range items {
