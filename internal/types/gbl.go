@@ -85,14 +85,6 @@ func init() {
 	UI = new(UItype)
 }
 
-func SetLight(v bool) {
-	if VMC.Client.Light == v {
-		return
-	}
-	VMC.Client.Light = v
-	// Log.Infof("light = %v", v)
-}
-
 func ShowEnvs() string {
 	s := fmt.Sprintf("GBL=%+v", VMC)
 	// Log.Info(s)
