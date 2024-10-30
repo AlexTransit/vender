@@ -39,7 +39,7 @@ func Enable() {
 		return
 	}
 	setUsec(WD.wdt)
-	sendNotify(daemon.SdNotifyWatchdog)
+	sendNotify(daemon.SdNotifyReady)
 }
 
 func Disable() {
@@ -47,12 +47,12 @@ func Disable() {
 		return
 	}
 	WD.log.Info("disable watchdog")
-	sendNotify(daemon.SdNotifyStopping)
+	// sendNotify(daemon.SdNotifyStopping)
+	sendNotify(daemon.SdNotifyReloading)
 	setUsec("0")
 }
 
 func setUsec(usec string) {
-	WD.log.Warning("feed watchdog")
 	ok, err := daemon.SdNotify(false, "WATCHDOG_USEC="+usec)
 	if !ok || err != nil {
 		WD.log.Errorf("watchdog not set. interval:%s microsecond error:%v", usec, err)
