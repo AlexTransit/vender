@@ -47,7 +47,7 @@ func Disable() {
 		return
 	}
 	WD.log.Info("disable watchdog")
-	// sendNotify(daemon.SdNotifyStopping)
+	// send disable watchdog for systemd
 	sendNotify(daemon.SdNotifyReloading)
 	setUsec("0")
 }
