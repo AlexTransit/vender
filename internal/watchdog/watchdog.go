@@ -39,6 +39,7 @@ func Enable() {
 		return
 	}
 	setUsec(WD.wdt)
+	sendNotify(daemon.SdNotifyReady)
 }
 
 func Disable() {
@@ -46,6 +47,8 @@ func Disable() {
 		return
 	}
 	WD.log.Info("disable watchdog")
+	// send disable watchdog for systemd
+	sendNotify(daemon.SdNotifyReloading)
 	setUsec("0")
 }
 
