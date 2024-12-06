@@ -74,10 +74,6 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 	}
 	watchdog.Refresh()
 	credit := ui.ms.GetCredit() / 100
-	types.UI.FrontResult = types.UIMenuResult{
-		Cream: DefaultCream,
-		Sugar: DefaultSugar,
-	}
 	if credit != 0 {
 		ui.g.Error(errors.Errorf("money timeout lost (%v)", credit))
 	}
@@ -97,8 +93,16 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 		return types.StateBroken
 
 	}
-	ui.g.Tele.RoboSendState(tele_api.State_Nominal)
+	rm := tele_api.FromRoboMessage{State: tele_api.State_Nominal}
+	canselQrOrder(&rm)
+	types.UI.FrontResult = types.UIMenuResult{
+		Cream: DefaultCream,
+		Sugar: DefaultSugar,
+	}
 
+	if ui.g.Tele.GetState() != tele_api.State_Nominal {
+		ui.g.Tele.RoboSend(&rm)
+	}
 	return types.StateFrontSelect
 }
 
@@ -158,7 +162,6 @@ func (ui *UI) sendRequestForQrPayment(rm *tele_api.FromRoboMessage) (message_for
 		ui.g.Hardware.Display.Graphic.CopyFile2FB(ui.g.Config.UI.Front.PicQRPayError)
 		return &ui.g.Config.UI.Front.MsgNoNetwork
 	}
-	types.UI.FrontResult.QRPaymenID = "0"
 	types.VMC.UiState = uint32(types.StatePrepare)
 	rm.State = tele_api.State_WaitingForExternalPayment
 	rm.RoboTime = time.Now().Unix()
@@ -170,8 +173,7 @@ func (ui *UI) sendRequestForQrPayment(rm *tele_api.FromRoboMessage) (message_for
 	return &ui.g.Config.UI.Front.MsgRemotePayRequest
 }
 
-func (ui *UI) canselQrOrder(rm *tele_api.FromRoboMessage) {
-	rm.State = tele_api.State_Nominal
+func canselQrOrder(rm *tele_api.FromRoboMessage) {
 	if types.UI.FrontResult.PaymenId > 0 {
 		rm.Order = &tele_api.Order{
 			Amount:      types.UI.FrontResult.QRPayAmount,
@@ -179,28 +181,8 @@ func (ui *UI) canselQrOrder(rm *tele_api.FromRoboMessage) {
 			OwnerInt:    types.UI.FrontResult.PaymenId,
 			OwnerType:   tele_api.OwnerType_qrCashLessUser,
 		}
+		types.UI.FrontResult.PaymenId = 0
 	}
-}
-
-func (ui *UI) cancelQRPay(s tele_api.State) {
-	ui.g.Tele.RoboSendState(tele_api.State_Client)
-	defer func() {
-		types.UI.FrontResult.QRPaymenID = ""
-		types.VMC.EvendKeyboardInput(true)
-	}()
-	if types.UI.FrontResult.QRPaymenID == "" || types.UI.FrontResult.QRPaymenID == "0" {
-		return
-	}
-	rm := tele_api.FromRoboMessage{
-		State: s,
-		Order: &tele_api.Order{
-			Amount:      types.UI.FrontResult.QRPayAmount,
-			OrderStatus: tele_api.OrderStatus_cancel,
-			OwnerStr:    types.UI.FrontResult.QRPaymenID,
-			OwnerType:   tele_api.OwnerType_qrCashLessUser,
-		},
-	}
-	ui.g.Tele.RoboSend(&rm)
 }
 
 func (ui *UI) onFrontTune(ctx context.Context) types.UiState {

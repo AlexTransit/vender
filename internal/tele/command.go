@@ -108,7 +108,7 @@ func (t *tele) mesageMakeOrger(ctx context.Context) {
 		// make selected code. payment via QR, etc
 		t.log.Infof("message make doSelected. robo state:%v", t.currentState)
 		if t.currentState != tele_api.State_WaitingForExternalPayment {
-			t.log.Errorf("doSelected t.currentState != tele_api.State_WaitingForExternalPayment (%v != %v) or types.UI.FrontResult.QRPaymenID != t.InMessage.MakeOrder.OwnerStr (%v !=%v)", t.currentState, tele_api.State_WaitingForExternalPayment, types.UI.FrontResult.QRPaymenID, t.InMessage.MakeOrder.OwnerStr)
+			t.log.Errorf("doSelected t.currentState != tele_api.State_WaitingForExternalPayment (%d != %d)", t.currentState, tele_api.State_WaitingForExternalPayment)
 			t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_orderError
 			return
 		}
@@ -167,8 +167,8 @@ func (t *tele) messageShowQr(ctx context.Context) {
 		if t.currentState == tele_api.State_WaitingForExternalPayment {
 			types.UI.FrontResult.QRPayAmount = uint32(t.InMessage.ShowQR.DataInt)
 			g.ShowQR(t.InMessage.ShowQR.QrText)
-			types.UI.FrontResult.QRPaymenID = t.InMessage.ShowQR.DataStr
 			var err error
+			// AlexM убрать хрень когда заказчик в заказе будет числом
 			types.UI.FrontResult.PaymenId, err = strconv.ParseInt(t.InMessage.ShowQR.DataStr, 10, 64)
 			if err != nil {
 				t.Error(err)

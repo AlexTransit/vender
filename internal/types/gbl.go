@@ -55,7 +55,6 @@ type UIMenuResult struct {
 	Item        MenuItemType
 	Cream       uint8
 	Sugar       uint8
-	QRPaymenID  string
 	PaymenId    int64
 	QRPayAmount uint32
 }
