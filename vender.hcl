@@ -253,13 +253,5 @@ sound { // resample resampling takes a few seconds. I use sample rate 22000Hz mo
   folder = "/home/vmc/vender-db/audio/"
   keybeep = "bb.mp3"
 #  keyBeepVolume = 10
-  starting = "start.mp3"
-  startingVolume = 10
-  started = "started.mp3"
-  StartedVolume = 10
-  moneyIn = "moneyIn.mp3"
-  moneyInVolume = 10
-  trash = "trash.mp3"
-  broken = "broken.mp3"
 
 }

@@ -55,7 +55,6 @@ type UIMenuResult struct {
 	Item        MenuItemType
 	Cream       uint8
 	Sugar       uint8
-	QRPaymenID  string
 	PaymenId    int64
 	QRPayAmount uint32
 }
@@ -83,14 +82,6 @@ type Doer interface {
 func init() {
 	VMC = new(VMCType)
 	UI = new(UItype)
-}
-
-func SetLight(v bool) {
-	if VMC.Client.Light == v {
-		return
-	}
-	VMC.Client.Light = v
-	// Log.Infof("light = %v", v)
 }
 
 func ShowEnvs() string {

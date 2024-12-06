@@ -21,7 +21,6 @@ type Sound struct {
 	audioPlayer  *audio.Player
 	keyBeep      soundStream
 	moneyIn      soundStream
-	trash        soundStream
 }
 type soundStream struct {
 	Stream []byte
@@ -30,25 +29,12 @@ type soundStream struct {
 
 // sound volume use fixed point. 12 = 1.2
 type Config struct {
-	Disabled              bool
-	Folder                string
-	KeyBeep               string
-	KeyBeepVolume         int
-	Starting              string
-	StartingVolume        int
-	Started               string
-	StartedVolume         int
-	MoneyIn               string
-	MoneyInVolume         int
-	Trash                 string
-	TrashVolume           int
-	Broken                string
-	BrokenVolume          int
-	StartedCooking        string
-	StartedCookingVolume  int
-	FinishedCooking       string
-	FinishedCookingVolume int
-	Custom                string
+	Disabled      bool
+	Folder        string
+	KeyBeep       string
+	KeyBeepVolume int
+	MoneyIn       string
+	MoneyInVolume int
 }
 
 var s Sound
@@ -66,30 +52,12 @@ func Init(conf *Config, log *log2.Log, startingVMC bool) {
 			// PlayVmcStarting()
 			s.keyBeep.prepare("keyBeep", s.sound.KeyBeep, s.sound.KeyBeepVolume)
 			s.moneyIn.prepare("money in", s.sound.MoneyIn, s.sound.MoneyInVolume)
-			s.trash.prepare("trash", s.sound.Trash, s.sound.TrashVolume)
 		}()
-	}
-}
-
-func PlayVmcStarted() {
-	if err := playMP3controlled(s.sound.Started, s.sound.StartedVolume); err != nil {
-		s.log.Errorf(" play Started (%v)", err)
 	}
 }
 
 func PlayKeyBeep() { playStream(&s.keyBeep) }
 func PlayMoneyIn() { playStream(&s.moneyIn) }
-func PlayTrash()   { playStream(&s.trash) }
-
-// play file and wait finishing
-func Broken() {
-	if s.sound == nil {
-		return
-	}
-	if err := PlayFile(s.sound.Broken, s.sound.BrokenVolume); err != nil {
-		s.log.Errorf(" play Broken (%v)", err)
-	}
-}
 
 func PlayFile(file string, volume ...int) error {
 	if volume == nil {

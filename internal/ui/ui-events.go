@@ -39,11 +39,11 @@ func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *b
 		ui.g.Log.Infof("money abort event.")
 		credit := ui.ms.GetCredit()
 		if credit > 0 {
-			sound.PlayTrash()
+			// FIXME alexm
+			sound.PlayFile("trash.mp3")
 			ui.display.SetLines("  :-(", fmt.Sprintf(" -%v", credit.Format100I()))
 			err := ui.ms.ReturnMoney()
 			ui.g.Error(errors.Trace(err))
-			ui.canselQrOrder(&rm)
 		}
 		return types.StateFrontEnd
 	}
@@ -51,7 +51,6 @@ func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *b
 	if input.IsReject(&e.Input) {
 		// 	// backspace semantic
 		if currentState == tele_api.State_WaitingForExternalPayment {
-			ui.canselQrOrder(&rm)
 			return types.StateFrontEnd
 		}
 		if len(ui.inputBuf) >= 1 {
@@ -73,7 +72,6 @@ func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *b
 	if currentState != tele_api.State_Client {
 		rm.State = tele_api.State_Client
 	}
-	// ui.g.ClientBegin(ctx)
 	if e.Input.IsTuneKey() {
 		*tuneScreen = true
 		*l1, *l2 = ui.tuneScreen(e.Input)
@@ -126,7 +124,14 @@ func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *b
 
 func (ui *UI) parseMoneyEvent(ek types.EventKind) types.UiState {
 	sound.PlayMoneyIn()
-	ui.cancelQRPay(tele_api.State_Client)
+	types.VMC.EvendKeyboardInput(true)
+	currentState := ui.g.Tele.GetState()
+	if currentState != tele_api.State_Client {
+		rm := tele_api.FromRoboMessage{State: tele_api.State_Client}
+		ui.g.ShowQR("QR disabled. ")
+		canselQrOrder(&rm)
+		ui.g.Tele.RoboSend(&rm)
+	}
 	credit := ui.ms.GetCredit()
 	price := types.UI.FrontResult.Item.Price
 	if price != 0 && credit >= price && types.UI.FrontResult.Item.D != nil {

@@ -1,19 +1,16 @@
 package inventory
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
 	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
-	"golang.org/x/sys/unix"
 )
 
 type Inventory struct {
@@ -47,26 +44,6 @@ func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engi
 		errs = append(errs, err)
 	}
 	inv.file = sd + "/store.file"
-
-	// check and set sync flag after write
-	file, err := os.OpenFile(inv.file, os.O_RDONLY, 0o666)
-	if err != nil {
-		inv.log.Errorf("open file for check atributes error(%v)", err)
-	}
-
-	if attr_int, err := unix.IoctlGetInt(int(file.Fd()), unix.FS_IOC_GETFLAGS); err == nil {
-		const FS_SYNC_FL = 0x00000008 /* Synchronous updates */
-		if (attr_int & FS_SYNC_FL) == 0 {
-			inv.log.Info("add autosync attriubute on store file")
-			attr_int |= FS_SYNC_FL
-			if err := unix.IoctlSetPointerInt(int(file.Fd()), unix.FS_IOC_SETFLAGS, int(attr_int)); err != nil {
-				inv.log.Errorf("set file atributes autosync error: %v", err)
-			}
-		}
-	} else {
-		inv.log.Errorf("read atributes store file error: %v", err)
-	}
-	file.Close()
 
 	inv.byName = make(map[string]*Stock, countBunkers)
 	inv.byCode = make(map[uint32]*Stock, countBunkers)
@@ -117,42 +94,50 @@ func initOverWriteStocks(c *engine_config.Inventory) (m map[uint32]engine_config
 }
 
 func (inv *Inventory) InventoryLoad() {
-	f, _ := os.Open(inv.file)
-	if f == nil {
+	f, err := os.OpenFile(inv.file, os.O_RDONLY|os.O_SYNC|os.O_CREATE, 0o644)
+	if err != nil {
+		inv.log.Errorf("problem load inventory error(%v)", err)
 		return
 	}
-	stat, _ := f.Stat()
 	defer f.Close()
-	td := make([]int32, stat.Size()/4)
-	if err := binary.Read(f, binary.BigEndian, &td); err == nil {
-		for _, cl := range inv.byCode {
-			inv.byCode[cl.Code].Set(float32(td[cl.Code-1]))
-		}
+
+	stat, err := f.Stat()
+	fl := int(stat.Size())
+	numInventory := len(inv.byCode)
+	if err != nil || fl != numInventory*4 {
+		inv.log.Errorf("load inventory file stat. len(%d) error(%v)", fl, err)
+		return
+	}
+
+	td := make([]int32, numInventory)
+	err = binary.Read(f, binary.BigEndian, &td)
+	if err != nil {
+		inv.log.Errorf("read inventory file error(%v)", err)
+		return
+	}
+	for _, cl := range inv.byCode {
+		inv.byCode[cl.Code].Set(float32(td[cl.Code-1]))
 	}
 }
 
 func (inv *Inventory) InventorySave() error {
-	buf := new(bytes.Buffer)
-	// td := make([]int32, len(inv.byCode))
-	td := make([]int32, 10)
-	for _, cl := range inv.byCode {
-		td[int32(cl.Code-1)] = int32(cl.value)
+	file, err := os.OpenFile(inv.file, os.O_WRONLY|os.O_SYNC|os.O_CREATE, 0o644)
+	if err != nil {
+		inv.log.Errorf("save inventory fail. error open file(%v)", err)
+		return err
 	}
-	binary.Write(buf, binary.BigEndian, td)
-	err := os.WriteFile(inv.file, buf.Bytes(), 0o666)
-	// check writen data
-	go func(memoryValue []int32) {
-		time.Sleep(5 * time.Second)
-		f, _ := os.Open(inv.file)
-		// stat, _ := f.Stat()
-		storedValue := make([]int32, 10)
-		binary.Read(f, binary.BigEndian, &storedValue)
-		for i, v := range storedValue {
-			if memoryValue[i] != storedValue[i] {
-				inv.log.Errorf("error stored stock inventory:%d memory value(%v) stored value(%v)", i, memoryValue[i], v)
-			}
-		}
-	}(td)
+	defer file.Close()
+
+	bs := make([]byte, len(inv.byCode)*4)
+	for i, cl := range inv.byCode {
+		pos := (i - 1) * 4
+		binary.BigEndian.PutUint32(bs[pos:pos+4], uint32(cl.value))
+	}
+	_, err = file.Write(bs)
+	if err != nil {
+		inv.log.Errorf("save inventory fail. error write file(%v)", err)
+		return err
+	}
 	return err
 }
 

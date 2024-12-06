@@ -185,7 +185,8 @@ func (g *Global) Error(err error, args ...interface{}) {
 
 func (g *Global) Fatal(err error, args ...interface{}) {
 	if err != nil {
-		sound.Broken()
+		// FIXME alexm
+		sound.PlayFile("broken.mp3")
 		g.Error(err, args...)
 		g.StopWait(5 * time.Second)
 		g.Log.Fatal(err)
@@ -408,22 +409,6 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		},
 	)
 
-	g.Engine.RegisterNewFunc(
-		"sound.started",
-		func(ctx context.Context) error {
-			sound.PlayVmcStarted()
-			return nil
-		},
-	)
-
-	g.Engine.RegisterNewFunc(
-		"sound.trash",
-		func(ctx context.Context) error {
-			sound.PlayTrash()
-			return nil
-		},
-	)
-
 	doEmuKey := engine.FuncArg{
 		// keys 0-9, 10 = C, 11 = Ok,
 		// 12-13 cream- cream+, 14-15 sugar- sugar+, 16 dot
@@ -461,9 +446,10 @@ func (g *Global) Broken() {
 	watchdog.DevicesInitializationRequired()
 	g.Display()
 	display := g.MustTextDisplay()
-	// FIXME
+	// FIXME alexm
 	display.SetLine(1, "ABTOMAT")
 	display.SetLine(2, "HE ABTOMAT :(")
 	g.RunBashSript(g.Config.ScriptIfBroken)
-	sound.Broken()
+	// FIXME alexm
+	sound.PlayFile("broken.mp3")
 }
