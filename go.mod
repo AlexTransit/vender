@@ -25,7 +25,7 @@ require (
 	github.com/temoto/iodin v0.0.0-20190211111721-99c87617ba86
 	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/sys v0.22.0
-	google.golang.org/protobuf v1.35.2 // indirect
+	google.golang.org/protobuf v1.35.2
 	periph.io/x/periph v3.6.4+incompatible
 )
 

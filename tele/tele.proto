@@ -1,10 +1,17 @@
 // for compile
+// install latest protoc from 
+// https://github.com/protocolbuffers/protobuf/releases
+//
+// or install old from repository
 // sudo apt update && sudo apt install protobuf-compiler
+//
+// intall golang plugin
 // go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 //
 // then run from progect root folder
-// protoc --proto_path=./tele --go_out=. --go_opt=paths=source_relative tele.proto
+// protoc --proto_path=./tele --go_out=./tele --go_opt=paths=source_relative tele.proto
 //
+
 syntax = "proto3";
 option go_package = "./tele";
 
