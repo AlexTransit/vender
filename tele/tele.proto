@@ -1,5 +1,12 @@
+// for compile
+// sudo apt update && sudo apt install protobuf-compiler
+// go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+//
+// then run from progect root folder
+// protoc --proto_path=./tele --go_out=. --go_opt=paths=source_relative tele.proto
+//
 syntax = "proto3";
-package tele;
+option go_package = "./tele";
 
 message Inventory {
   repeated StockItem stocks = 1;
