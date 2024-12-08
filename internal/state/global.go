@@ -438,18 +438,3 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 	}
 	g.Engine.Register(doEmuKey.Name, doEmuKey)
 }
-
-func (g *Global) Broken() {
-	watchdog.Disable()
-	watchdog.SetBroken()
-	g.Tele.RoboSendBroken()
-	watchdog.DevicesInitializationRequired()
-	g.Display()
-	display := g.MustTextDisplay()
-	// FIXME alexm
-	display.SetLine(1, "ABTOMAT")
-	display.SetLine(2, "HE ABTOMAT :(")
-	g.RunBashSript(g.Config.ScriptIfBroken)
-	// FIXME alexm
-	sound.PlayFile("broken.mp3")
-}

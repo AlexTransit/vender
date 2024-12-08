@@ -143,7 +143,15 @@ func broken(ctx context.Context) {
 	g := state.GetGlobal(ctx)
 	g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
 	sound.Init(&g.Config.Sound, g.Log, false)
-	g.Broken()
+	g.Tele.RoboSendBroken()
+	g.Display()
+	display := g.MustTextDisplay()
+	// FIXME alexm
+	display.SetLine(1, "ABTOMAT")
+	display.SetLine(2, "HE ABTOMAT :(")
+	g.RunBashSript(g.Config.ScriptIfBroken)
+	// FIXME alexm
+	sound.PlayFile("broken.mp3")
 	for {
 		time.Sleep(time.Second)
 	}
