@@ -73,7 +73,11 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		return ui.onFrontStart()
 
 	case types.StateBroken:
-		ui.g.Broken()
+		watchdog.Disable()
+		watchdog.DevicesInitializationRequired()
+		watchdog.SetBroken()
+		ui.g.Tele.RoboSendBroken()
+		ui.g.RunBashSript(ui.g.Config.ScriptIfBroken)
 		ui.g.Log.Infof("state=broken")
 		if !ui.broken {
 			// ui.g.Tele.RoboSendState(tele_api.State_Broken)

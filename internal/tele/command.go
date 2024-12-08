@@ -139,8 +139,8 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 		}
 		ui.OrderMenuAndTune(&remOr)
 		g := state.GetGlobal(ctx)
-		g.LockCh <- struct{}{}
 		t.RemCook(ctx, &remOr)
+		g.LockCh <- struct{}{} // дергаем state mashine
 	}()
 	om.State = tele_api.State_RemoteControl
 	om.Order.OrderStatus = tele_api.OrderStatus_executionStart
@@ -238,7 +238,7 @@ func (t *tele) cmdReport(ctx context.Context) error {
 type FromRoboMessage tele_api.FromRoboMessage
 
 func (t *tele) RemCook(ctx context.Context, orderMake *tele_api.Order) (err error) {
-	fmt.Printf("\033[41m %s \033[0m\n", orderMake.String())
+	t.log.Infof("start remote cook order:%s ", orderMake.String())
 	err = ui.Cook(ctx)
 	if types.VMC.MonSys.Dirty == 0 {
 		orderMake.OrderStatus = tele_api.OrderStatus_complete
@@ -251,14 +251,13 @@ func (t *tele) RemCook(ctx context.Context, orderMake *tele_api.Order) (err erro
 	}
 	if err == nil {
 		rm.State = tele_api.State_Nominal
-
 		types.VMC.UiState = uint32(types.StateFrontEnd)
 	} else {
 		rm.State = tele_api.State_Broken
 		rm.Err = &tele_api.Err{Message: err.Error()}
 		types.VMC.UiState = uint32(types.StateBroken)
 	}
-	fmt.Printf("\033[41m %s \033[0m\n", orderMake.String())
+	t.log.Infof("order report:%s", rm.String())
 	t.RoboSend(&rm)
 	return nil
 }
