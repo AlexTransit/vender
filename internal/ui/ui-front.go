@@ -246,7 +246,13 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	}
 	watchdog.DevicesInitializationRequired()
 	err := Cook(ctx)
-	rm := CreateOrderMessageAndFillSelected()
+	rm := tele_api.FromRoboMessage{
+		Order: &tele_api.Order{
+			Amount:        uint32(types.UI.FrontResult.Item.Price),
+			PaymentMethod: tele_api.PaymentMethod_Cash,
+		},
+	}
+	OrderMenuAndTune(rm.Order)
 	defer ui.g.Tele.RoboSend(&rm)
 
 	if err == nil { // success path
@@ -265,17 +271,6 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	}
 
 	return types.StateBroken
-}
-
-func CreateOrderMessageAndFillSelected() tele_api.FromRoboMessage {
-	rm := tele_api.FromRoboMessage{
-		Order: &tele_api.Order{
-			Amount:        uint32(types.UI.FrontResult.Item.Price),
-			PaymentMethod: tele_api.PaymentMethod_Cash,
-		},
-	}
-	OrderMenuAndTune(rm.Order)
-	return rm
 }
 
 func OrderMenuAndTune(o *tele_api.Order) {
