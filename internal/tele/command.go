@@ -141,6 +141,7 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 		g := state.GetGlobal(ctx)
 		g.LockCh <- struct{}{}
 		t.RemCook(ctx, &remOr)
+		g.LockCh <- struct{}{} // дергаем state mashine
 	}()
 	om.State = tele_api.State_RemoteControl
 	om.Order.OrderStatus = tele_api.OrderStatus_executionStart

@@ -126,7 +126,7 @@ func (ui *UI) parseMoneyEvent(ek types.EventKind) types.UiState {
 	sound.PlayMoneyIn()
 	types.VMC.EvendKeyboardInput(true)
 	currentState := ui.g.Tele.GetState()
-	if currentState != tele_api.State_Client {
+	if currentState == tele_api.State_WaitingForExternalPayment {
 		rm := tele_api.FromRoboMessage{State: tele_api.State_Client}
 		ui.g.ShowQR("QR disabled. ")
 		canselQrOrder(&rm)
