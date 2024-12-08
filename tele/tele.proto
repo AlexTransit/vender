@@ -222,6 +222,9 @@ message ShowQR {
   string qrText = 2;
   string dataStr = 3;
   int32 dataInt = 4;
+  int64 payerId = 5;
+  string orderId = 6;
+  int32 amount = 7;
 }
 
 message ToRoboMessage {
