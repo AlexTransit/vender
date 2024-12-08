@@ -12,8 +12,8 @@ import (
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/ui"
 	tele_api "github.com/AlexTransit/vender/tele"
-	"github.com/golang/protobuf/proto"
 	"github.com/juju/errors"
+	"google.golang.org/protobuf/proto"
 )
 
 var errInvalidArg = fmt.Errorf("invalid arg")
@@ -44,140 +44,140 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	if t.currentState == 0 {
 		return false
 	}
-	err := proto.Unmarshal(payload, &t.InMessage)
+	m := tele_api.ToRoboMessage{}
+	err := proto.Unmarshal(payload, &m)
 	if err != nil {
 		t.log.Errorf("tele command parse raw=%x err=%v", payload, err)
 		return false
 	}
-	t.log.Infof("incoming message:%v", t.InMessage)
-	switch t.InMessage.Cmd {
+	t.log.Infof("incoming message:%s", m.String())
+	switch m.Cmd {
 	case tele_api.MessageType_makeOrder:
-		t.mesageMakeOrger(ctx)
+		t.mesageMakeOrger(ctx, &m)
 	case tele_api.MessageType_reportState:
 		t.RoboSend(&tele_api.FromRoboMessage{
 			State: t.currentState,
 		})
 	case tele_api.MessageType_reportStock:
 	case tele_api.MessageType_showQR:
-		t.messageShowQr(ctx)
+		t.messageShowQr(ctx, &m)
 	case tele_api.MessageType_executeCommand:
 	default: // unknow mesage type
 	}
 	return true
 }
 
-func (t *tele) mesageMakeOrger(ctx context.Context) {
-	if t.InMessage.MakeOrder == nil {
-		return
-	}
-	if t.InMessage.MakeOrder.OrderStatus == tele_api.OrderStatus_doSelected &&
-		t.currentState == tele_api.State_RemoteControl &&
-		types.UI.FrontResult.PaymenId == t.InMessage.MakeOrder.OwnerInt {
-		t.log.Errorf("ignore doSelected message. is already doing it (%+v)", t.InMessage)
+func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
+	if m.MakeOrder == nil {
 		return
 	}
 
-	// prepare output message
-	g := state.GetGlobal(ctx)
-	t.OutMessage = tele_api.FromRoboMessage{
-		Order: &tele_api.Order{},
+	currentRobotState := t.GetState()
+	om := tele_api.FromRoboMessage{
+		Order: &tele_api.Order{
+			OwnerInt:  m.MakeOrder.OwnerInt,
+			OwnerType: m.MakeOrder.OwnerType,
+		},
 	}
-	t.OutMessage.Order.OwnerInt = t.InMessage.MakeOrder.OwnerInt
-	t.OutMessage.Order.OwnerStr = t.InMessage.MakeOrder.OwnerStr
-	t.OutMessage.Order.OwnerType = t.InMessage.MakeOrder.OwnerType
-	t.OutMessage.Order.PaymentMethod = t.InMessage.MakeOrder.PaymentMethod
-	defer t.RoboSend(&t.OutMessage)
 	rt := time.Now().Unix()
-	st := t.InMessage.ServerTime
+	st := m.ServerTime
+	defer t.RoboSend(&om)
 	if rt-st > 180 {
 		// затычка по тайм ауту. если команда пришла с задержкой
 		errM := fmt.Sprintf("remote make error. big time difference between server and robot. RTime:%v STime:%v", time.Unix(rt, 0), time.Unix(st, 0))
-		t.OutMessage.Err = &tele_api.Err{Message: errM}
 		t.log.Errorf(errM)
-		t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_orderError
+		om.Err = &tele_api.Err{Message: errM}
+		om.Order.OrderStatus = tele_api.OrderStatus_orderError
 		types.VMC.EvendKeyboardInput(true)
-		l1 := g.Config.UI.Front.MsgMenuInsufficientCredit
-		l2 := fmt.Sprintf(g.Config.UI.Front.MsgInputCode, types.UI.FrontResult.Item.Code)
-		// l2 := fmt.Sprintf(g.Config.UI.Front.MsgMenuInsufficientCreditL2, "0", types.UI.FrontResult.Item.Price.Format100I())
-		g.Hardware.HD44780.Display.SetLines(l1, l2)
 		return
 	}
-
-	switch t.InMessage.MakeOrder.OrderStatus {
-	case tele_api.OrderStatus_doSelected:
-		// make selected code. payment via QR, etc
-		t.log.Infof("message make doSelected. robo state:%v", t.currentState)
-		if t.currentState != tele_api.State_WaitingForExternalPayment {
-			t.log.Errorf("doSelected t.currentState != tele_api.State_WaitingForExternalPayment (%d != %d)", t.currentState, tele_api.State_WaitingForExternalPayment)
-			t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_orderError
+	switch m.MakeOrder.OrderStatus {
+	case tele_api.OrderStatus_doSelected: // make selected code. payment via QR, etc
+		if currentRobotState != tele_api.State_WaitingForExternalPayment || // robot state not wait
+			types.UI.FrontResult.PaymenId != m.MakeOrder.OwnerInt { // the payer and payer do not match
+			t.log.Errorf("make doSelected unposible. robo state:%s <> WaitingForExternalPayment or payerID:%d <> ownerID:%d", currentRobotState.String(), types.UI.FrontResult.PaymenId, m.MakeOrder.OwnerInt)
+			om.Order.OrderStatus = tele_api.OrderStatus_orderError
 			return
 		}
-		t.OutMessage.Order.Amount = t.InMessage.MakeOrder.Amount
-		types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
-		types.UI.FrontResult.PaymenId = t.InMessage.MakeOrder.OwnerInt
-
-	case tele_api.OrderStatus_doTransferred:
-		// TODO execute external order. сделать внешний заказ
+		types.VMC.MonSys.Dirty = currency.Amount(m.MakeOrder.Amount)
+	case tele_api.OrderStatus_doTransferred: // TODO execute external order. сделать внешний заказ
 		// check validity, price. проверить валидность, цену
-		if t.currentState != tele_api.State_Nominal {
-			t.log.Errorf("make doTransferred unposible. robo state:%v", t.currentState)
-			t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_robotIsBusy
+		if currentRobotState != tele_api.State_Nominal ||
+			m.MakeOrder.PaymentMethod != tele_api.PaymentMethod_Balance {
+			t.log.Errorf("make doTransferred unposible.robo state:%s <> Nominal or PaymentMethod %s <> Balance", currentRobotState.String(), tele_api.PaymentMethod_Balance.String())
+			om.Order.OrderStatus = tele_api.OrderStatus_robotIsBusy
 			return
 		}
-		// when paying by balance, the current balance of the client is sent. при оплате по балансу, присылвется текущий баланс клиента
-		if t.InMessage.MakeOrder.PaymentMethod != tele_api.PaymentMethod_Balance {
-			t.log.Errorf("make doTransferred unposible. PaymentMethod not balanse(%v)", t.currentState)
-			t.OutMessage.Err.Message = "command remote cook, not set balance"
+		i, found := types.UI.Menu[m.MakeOrder.MenuCode]
+		if !found {
+			t.log.Infof("remote cook error: code not found")
+			om.Order.OrderStatus = tele_api.OrderStatus_executionInaccessible
 			return
 		}
-		if !t.checkCodePriceValid(&t.InMessage.MakeOrder.MenuCode, t.InMessage.MakeOrder.Amount) {
-			t.log.Errorf("checkCodePriceValid not valid(%v)", t.InMessage.MakeOrder)
+		if err := i.D.Validate(); err != nil {
+			om.Order.OrderStatus = tele_api.OrderStatus_executionInaccessible
+			t.log.Infof("remote cook error: code not valid")
 			return
 		}
-		types.UI.FrontResult.Sugar = tuneCook(t.InMessage.MakeOrder.Sugar, ui.DefaultSugar, ui.SugarMax())
-		types.UI.FrontResult.Cream = tuneCook(t.InMessage.MakeOrder.Cream, ui.DefaultCream, ui.CreamMax())
-		t.OutMessage.Order.Amount = uint32(types.UI.FrontResult.Item.Price)
+		types.UI.FrontResult.Item = i
+		types.UI.FrontResult.Sugar = tuneCook(m.MakeOrder.GetSugar(), ui.DefaultSugar, ui.SugarMax())
+		types.UI.FrontResult.Cream = tuneCook(m.MakeOrder.GetCream(), ui.DefaultCream, ui.CreamMax())
+		om.Order.Amount = uint32(types.UI.FrontResult.Item.Price)
 		types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
 		sound.PlayMoneyIn()
-
 	default: // unknown status
-		t.log.Errorf("unknown order status(%v)", t.InMessage.MakeOrder.OrderStatus)
-		t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_orderError
+		t.log.Errorf("unknown order status(%v)", m.MakeOrder.OrderStatus)
+		om.Order.OrderStatus = tele_api.OrderStatus_orderError
 		return
 	}
-	ui.OrderMenuAndTune(t.OutMessage.Order)
-	om := t.OutMessage
-
 	go func() { // run cooking
-		t.RemCook(ctx, om)
+		remOr := tele_api.Order{
+			Amount:        uint32(types.VMC.MonSys.Dirty),
+			PaymentMethod: m.MakeOrder.PaymentMethod,
+			OwnerInt:      m.MakeOrder.OwnerInt,
+			OwnerType:     m.MakeOrder.OwnerType,
+		}
+		ui.OrderMenuAndTune(&remOr)
+		g := state.GetGlobal(ctx)
 		g.LockCh <- struct{}{}
+		t.RemCook(ctx, &remOr)
 	}()
-	// defer send OrderStatus_executionStart
-	t.OutMessage.State = tele_api.State_RemoteControl
-	t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_executionStart
+	om.State = tele_api.State_RemoteControl
+	om.Order.OrderStatus = tele_api.OrderStatus_executionStart
 }
 
-func (t *tele) messageShowQr(ctx context.Context) {
-	if t.InMessage.ShowQR == nil {
+func (t *tele) messageShowQr(ctx context.Context, m *tele_api.ToRoboMessage) {
+	if m.ShowQR == nil {
 		return
 	}
 	g := state.GetGlobal(ctx)
-	switch t.InMessage.ShowQR.QrType {
+	switch m.ShowQR.QrType {
 	case tele_api.ShowQR_order:
 		if t.currentState == tele_api.State_WaitingForExternalPayment {
-			types.UI.FrontResult.QRPayAmount = uint32(t.InMessage.ShowQR.DataInt)
-			g.ShowQR(t.InMessage.ShowQR.QrText)
-			var err error
-			// AlexM убрать хрень когда заказчик в заказе будет числом
-			types.UI.FrontResult.PaymenId, err = strconv.ParseInt(t.InMessage.ShowQR.DataStr, 10, 64)
-			if err != nil {
-				t.Error(err)
+			// FIXME AlexM proto add QR payer and orderid
+			// убрать услоивия когда все клиенты обносяться на верчию не менее 241207.0
+			if m.ShowQR.Amount != 0 {
+				types.UI.FrontResult.QRPayAmount = uint32(m.ShowQR.Amount)
+			} else {
+				types.UI.FrontResult.QRPayAmount = uint32(m.ShowQR.DataInt)
 			}
-			l1 := fmt.Sprintf(g.Config.UI.Front.MsgRemotePay+g.Config.UI.Front.MsgPrice, currency.Amount(t.InMessage.ShowQR.DataInt).Format100I())
+			if m.ShowQR.PayerId != 0 {
+				types.UI.FrontResult.PaymenId = m.ShowQR.PayerId
+			} else {
+				var err error
+				types.UI.FrontResult.PaymenId, err = strconv.ParseInt(m.ShowQR.DataStr, 10, 64)
+				if err != nil {
+					t.Error(err)
+				}
+			}
+			g.Log.Infof("show paymeng QR for order:%s", m.ShowQR.OrderId)
+			g.ShowQR(m.ShowQR.QrText)
+			l1 := fmt.Sprintf(g.Config.UI.Front.MsgRemotePay+g.Config.UI.Front.MsgPrice, currency.Amount(types.UI.FrontResult.QRPayAmount).Format100I())
 			g.Hardware.HD44780.Display.SetLines(l1, types.VMC.HW.Display.L2)
 		}
 	case tele_api.ShowQR_receipt:
-		g.ShowQR(t.InMessage.ShowQR.QrText)
+		t := m.ShowQR.QrText
+		g.ShowQR(t)
 	case tele_api.ShowQR_error:
 		g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI.Front.PicQRPayError)
 	case tele_api.ShowQR_errorOverdraft:
@@ -185,27 +185,6 @@ func (t *tele) messageShowQr(ctx context.Context) {
 			g.Config.UI.Front.MsgRemotePayReject)
 		g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI.Front.PicPayReject)
 	}
-}
-
-func (t *tele) checkCodePriceValid(menuCode *string, amount uint32) bool {
-	i, found := types.UI.Menu[*menuCode]
-	if !found {
-		t.log.Infof("remote cook error: code not found")
-		t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_executionInaccessible
-		types.UI.FrontResult.Item = types.MenuItemType{}
-		return false
-	}
-	if amount < uint32(i.Price) {
-		t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_overdraft
-		return false
-	}
-	if err := i.D.Validate(); err != nil {
-		t.OutMessage.Order.OrderStatus = tele_api.OrderStatus_executionInaccessible
-		t.log.Infof("remote cook error: code not valid")
-		return false
-	}
-	types.UI.FrontResult.Item = i
-	return true
 }
 
 func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error {
@@ -258,23 +237,29 @@ func (t *tele) cmdReport(ctx context.Context) error {
 
 type FromRoboMessage tele_api.FromRoboMessage
 
-func (t *tele) RemCook(ctx context.Context, o tele_api.FromRoboMessage) (err error) {
-	types.UI.FrontResult.PaymenId = o.Order.OwnerInt
+func (t *tele) RemCook(ctx context.Context, orderMake *tele_api.Order) (err error) {
+	fmt.Printf("\033[41m %s \033[0m\n", orderMake.String())
 	err = ui.Cook(ctx)
 	if types.VMC.MonSys.Dirty == 0 {
-		o.Order.OrderStatus = tele_api.OrderStatus_complete
+		orderMake.OrderStatus = tele_api.OrderStatus_complete
 	} else {
-		o.Order.OrderStatus = tele_api.OrderStatus_orderError
+		orderMake.OrderStatus = tele_api.OrderStatus_orderError
+	}
+	rm := tele_api.FromRoboMessage{
+		RoboTime: 0,
+		Order:    orderMake,
 	}
 	if err == nil {
-		o.State = tele_api.State_Nominal
+		rm.State = tele_api.State_Nominal
+
 		types.VMC.UiState = uint32(types.StateFrontEnd)
 	} else {
-		o.State = tele_api.State_Broken
-		o.Err = &tele_api.Err{Message: err.Error()}
+		rm.State = tele_api.State_Broken
+		rm.Err = &tele_api.Err{Message: err.Error()}
 		types.VMC.UiState = uint32(types.StateBroken)
 	}
-	t.RoboSend(&o)
+	fmt.Printf("\033[41m %s \033[0m\n", orderMake.String())
+	t.RoboSend(&rm)
 	return nil
 }
 

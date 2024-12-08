@@ -6,7 +6,7 @@ require (
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/eclipse/paho.mqtt.golang v1.4.3
-	github.com/golang/protobuf v1.5.2
+	github.com/golang/protobuf v1.5.4
 	github.com/hashicorp/hcl v1.0.0
 	github.com/juju/errors v1.0.0
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -25,7 +25,7 @@ require (
 	github.com/temoto/iodin v0.0.0-20190211111721-99c87617ba86
 	golang.org/x/net v0.20.0 // indirect
 	golang.org/x/sys v0.22.0
-	google.golang.org/protobuf v1.28.0 // indirect
+	google.golang.org/protobuf v1.35.2
 	periph.io/x/periph v3.6.4+incompatible
 )
 
