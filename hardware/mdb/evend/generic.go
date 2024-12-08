@@ -216,7 +216,6 @@ func (gen *Generic) NewWaitDone(tag string, timeout time.Duration) engine.Doer {
 	case proto2:
 		fun := func(p mdb.Packet) (bool, error) {
 			bs := p.Bytes()
-			fmt.Printf("\033[41m %v \033[0m\n", bs)
 			// gen.dev.Log.Debugf("%s POLL=%x", tag, bs)
 			if stop, err := gen.proto2PollCommon(tag, bs); stop || err != nil {
 				// gen.dev.Log.Debugf("%s ... return common stop=%t err=%v", tag, stop, err)

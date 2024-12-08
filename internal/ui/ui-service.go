@@ -363,7 +363,7 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
 		case types.EventStop, types.EventTime, types.EventService:
 			return types.StateServiceEnd
 		default:
-			fmt.Printf("\033[41m %v \033[0m\n", e.Kind)
+			ui.g.Tele.ErrorStr(fmt.Sprintf("vmid:%d imposiblya event:%d ", ui.g.Config.Tele.VmId, e.Kind))
 			// panic(fmt.Sprintf("code error onServiceMoneyLoad unhandled event=%v", e))
 		}
 	}
