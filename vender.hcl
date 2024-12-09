@@ -137,10 +137,7 @@ hardware {
       enable = true
       // TODO listen_addr = 0x78
     }
-
-    dev_input_event {
-      device = "/dev/input/event0"
-    }
+    service_key = "/dev/input/by-path/platform-gpio-keys-event" // if not specified, then it takes the first file with GPIO in the name in the directory /dev/input/by-path/  // если не указано, то берет первый файл с в имени которого есть GPIO в директории /dev/input/by-path/ 
   }
   iodin_path = "TODO_EDIT"
   mega {

@@ -51,9 +51,7 @@ type Config struct {
 				Enable bool `hcl:"enable"`
 				// TODO ListenAddr int
 			} `hcl:"evend_keyboard"`
-			DevInputEvent struct {
-				Device string `hcl:"device"`
-			} `hcl:"dev_input_event"`
+			ServiceKey string `hcl:"service_key"`
 		}
 		Mdb  mdb_config.Config `hcl:"mdb"`
 		Mega struct {
