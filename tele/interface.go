@@ -7,13 +7,6 @@ import (
 	tele_config "github.com/AlexTransit/vender/tele/config"
 )
 
-// alexm (install protobuf)
-// go get -u github.com/golang/protobuf/{proto,protoc-gen-go}
-// sudo apt-get install golang-goprotobuf-dev
-// run go generate - not no work working under the root user
-//go:generate protoc --go_out=./ tele.proto
-///go:generate runuser -u vmc -- protoc --go_out=./ tele.proto
-
 // Teler interface Telemetry client, vending machine side.
 // Not for external public usage.
 type Teler interface {

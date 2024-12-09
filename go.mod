@@ -6,7 +6,6 @@ require (
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/eclipse/paho.mqtt.golang v1.4.3
-	github.com/golang/protobuf v1.5.4
 	github.com/hashicorp/hcl v1.0.0
 	github.com/juju/errors v1.0.0
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -35,6 +34,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ebitengine/oto/v3 v3.1.0 // indirect
 	github.com/ebitengine/purego v0.5.1 // indirect
+	github.com/golang/protobuf v1.5.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect

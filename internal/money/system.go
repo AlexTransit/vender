@@ -22,7 +22,6 @@ import (
 	"github.com/AlexTransit/vender/log2"
 	tele_api "github.com/AlexTransit/vender/tele"
 
-	// "github.com/golang/protobuf/proto"
 	oerr "github.com/juju/errors"
 )
 

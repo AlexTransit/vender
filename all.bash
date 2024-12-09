@@ -13,7 +13,7 @@ main() {
 		export GO111MODULE=on
 		GO111MODULE=off go get -v github.com/xlab/c-for-go
 		GO111MODULE=off go get -v golang.org/x/tools/cmd/stringer
-		go get -v github.com/golang/protobuf/protoc-gen-go
+		go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
 		ensure_golangci_lint
 		go generate ./...
 		go build ./...

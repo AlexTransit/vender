@@ -7,8 +7,8 @@ import (
 	"github.com/AlexTransit/vender/log2"
 	tele_api "github.com/AlexTransit/vender/tele"
 	tele_config "github.com/AlexTransit/vender/tele/config"
-	"github.com/golang/protobuf/proto"
 	"github.com/juju/errors"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
