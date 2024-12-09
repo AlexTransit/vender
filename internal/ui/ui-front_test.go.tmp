@@ -98,8 +98,6 @@ engine {
 }
 ui {
 	front {
-		msg_intro = "hello,world"
-		msg_locked = "locked,wait"
 		reset_sec = 5
 	}
 }`)
@@ -135,7 +133,6 @@ money {
 }
 ui {
 	front {
-		msg_intro = "please buy"
 		reset_sec = 5
 	}
 }`)
