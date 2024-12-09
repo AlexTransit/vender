@@ -339,7 +339,7 @@ func (g *Global) initInput() {
 	}
 
 	// read service key
-	srcServiceKey, err := input.NewDevInputEventSource(g.Config.Hardware.Input.DevInputEvent.Device)
+	srcServiceKey, err := input.NewDevInputEventSource(g.Config.Hardware.Input.ServiceKey)
 	if err == nil {
 		go g.Hardware.Input.ReadEvendKeyboard(srcServiceKey)
 	} else {
