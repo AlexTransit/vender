@@ -9,9 +9,6 @@ import (
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
-
-	// tele_api "github.com/AlexTransit/vender/tele"
-	"github.com/juju/errors"
 )
 
 type Menu map[string]MenuItem
@@ -82,8 +79,6 @@ func Cook(ctx context.Context) error {
 		g.Log.Err(err)
 	}
 	if invErr := g.Inventory.InventorySave(); invErr != nil {
-		g.Error(errors.Annotate(invErr, "critical inventory persist"))
-		// err = errors.Wrap(err, invErr)
 		g.Tele.Error(invErr)
 	}
 	g.Log.Debugf("ui-front selected=%s end err=%v", types.UI.FrontResult.Item.String(), err)
@@ -117,7 +112,7 @@ func menuMaxPrice() (currency.Amount, error) {
 		}
 	}
 	if empty {
-		return 0, errors.Errorf("menu len=%d no valid items", len(types.UI.Menu))
+		return 0, fmt.Errorf("menu len=%d no valid items", len(types.UI.Menu))
 	}
 	return max, nil
 }

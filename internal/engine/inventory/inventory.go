@@ -175,3 +175,21 @@ func (inv *Inventory) locked_get(code uint32, name string) (*Stock, bool) {
 	s, ok := inv.byName[name]
 	return s, ok
 }
+
+func (inv *Inventory) DisableCheckInStock() (listDisabledIngrodoent []uint32) {
+	for i, v := range inv.byCode {
+		if inv.byCode[i].check {
+			listDisabledIngrodoent = append(listDisabledIngrodoent, i)
+		}
+		inv.byCode[i].check = false
+		inv.byName[v.Name].check = false
+	}
+	return listDisabledIngrodoent
+}
+
+func (inv *Inventory) EnableCheckInStock(listEnabledIngrodoent *[]uint32) {
+	for _, v := range *listEnabledIngrodoent {
+		inv.byCode[v].check = true
+		// inv.byName[v.Name].check = false
+	}
+}
