@@ -5,7 +5,7 @@ import (
 
 	state_new "github.com/AlexTransit/vender/internal/state/new"
 	tele_api "github.com/AlexTransit/vender/tele"
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
 	"github.com/stretchr/testify/require"
 )
 

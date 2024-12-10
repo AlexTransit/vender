@@ -6,7 +6,6 @@ import (
 
 	"github.com/AlexTransit/vender/helpers"
 	tele_api "github.com/AlexTransit/vender/tele"
-	"github.com/golang/protobuf/proto"
 )
 
 func (inv *Inventory) SetTele(src *tele_api.Inventory) (*tele_api.Inventory, error) {
@@ -14,7 +13,7 @@ func (inv *Inventory) SetTele(src *tele_api.Inventory) (*tele_api.Inventory, err
 	inv.mu.Lock()
 	defer inv.mu.Unlock()
 
-	inv.log.Debugf("%s src=%s", tag, proto.CompactTextString(src))
+	inv.log.Debugf("%s src=%s", tag, src.String())
 	if src == nil {
 		return inv.locked_tele(), nil
 	}

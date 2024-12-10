@@ -3,8 +3,6 @@ package state
 import (
 	"context"
 	"fmt"
-	"os"
-	"os/exec"
 	"regexp"
 	"strings"
 	"sync"
@@ -53,63 +51,6 @@ func GetGlobal(ctx context.Context) *Global {
 		return g
 	}
 	panic(fmt.Sprintf("context['%s'] expected type *Global actual=%#v", ContextKey, v))
-}
-
-type Pic uint32
-
-const (
-	PictureBoot Pic = iota
-	PictureIdle
-	PictureClient
-	PictureMake
-	PictureBroken
-	PictureQRPayError
-	PicturePayReject
-)
-
-func (g *Global) VmcStop(ctx context.Context) {
-	if types.VMC.UiState != uint32(types.StateFrontSelect) {
-		watchdog.DevicesInitializationRequired()
-	}
-	g.VmcStopWOInitRequared(ctx)
-}
-
-func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
-	watchdog.Disable()
-	g.Log.Infof("--- event vmc stop ---")
-	go func() {
-		time.Sleep(3 * time.Second)
-		g.Log.Infof("--- vmc timeout EXIT ---")
-		os.Exit(0)
-	}()
-	g.LockCh <- struct{}{}
-	_ = g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken)
-	g.Tele.Close()
-	time.Sleep(2 * time.Second)
-	g.Log.Infof("--- vmc stop ---")
-	g.Stop()
-	g.Alive.Done()
-	os.Exit(0)
-}
-
-func (g *Global) ClientBegin(ctx context.Context) {
-	_ = g.Engine.ExecList(ctx, "client-light", []string{"evend.cup.light_on"})
-	if !types.VMC.Lock {
-		// g.TimerUIStop <- struct{}{}
-		types.VMC.Lock = true
-		types.VMC.Client.WorkTime = time.Now()
-		g.Log.Infof("--- client activity begin ---")
-	}
-	g.Tele.RoboSendState(tele_api.State_Client)
-}
-
-func (g *Global) ClientEnd(ctx context.Context) {
-	types.VMC.EvendKeyboardInput(true)
-	if types.VMC.Lock {
-		types.VMC.Lock = false
-		types.VMC.Client.WorkTime = time.Now()
-		g.Log.Infof("--- client activity end ---")
-	}
 }
 
 func (g *Global) Init(ctx context.Context, cfg *Config) error {
@@ -163,37 +104,6 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 	return helpers.FoldErrChan(errch)
 }
 
-func (g *Global) MustInit(ctx context.Context, cfg *Config) {
-	err := g.Init(ctx, g.Config)
-	if err != nil {
-		g.Fatal(err)
-	}
-}
-
-func (g *Global) Error(err error, args ...interface{}) {
-	if err != nil {
-		if len(args) != 0 {
-			msg := args[0].(string)
-			args = args[1:]
-			err = errors.Annotatef(err, msg, args...)
-		}
-		// g.Tele.Error(err)
-		// эта бабуйня еще и в телеметрию отсылает
-		g.Log.Error(err)
-	}
-}
-
-func (g *Global) Fatal(err error, args ...interface{}) {
-	if err != nil {
-		// FIXME alexm
-		sound.PlayFile("broken.mp3")
-		g.Error(err, args...)
-		g.StopWait(5 * time.Second)
-		g.Log.Fatal(err)
-		os.Exit(1)
-	}
-}
-
 func (g *Global) ScheduleSync(ctx context.Context, fun types.TaskFunc) error {
 	// TODO task := g.Schedule(ctx, priority, fun)
 	// return task.wait()
@@ -218,20 +128,6 @@ func (g *Global) ScheduleSync(ctx context.Context, fun types.TaskFunc) error {
 	// }
 }
 
-func (g *Global) Stop() {
-	g.Alive.Stop()
-}
-
-func (g *Global) StopWait(timeout time.Duration) bool {
-	g.Alive.Stop()
-	select {
-	case <-g.Alive.WaitChan():
-		return true
-	case <-time.After(timeout):
-		return false
-	}
-}
-
 func (g *Global) UI() types.UIer {
 	for {
 		x := g.XXX_uier.Load()
@@ -241,32 +137,6 @@ func (g *Global) UI() types.UIer {
 		g.Log.Errorf("CRITICAL g.uier is not set")
 		time.Sleep(5 * time.Second)
 	}
-}
-
-func (g *Global) initDisplay() error {
-	d, err := g.Display()
-	if d != nil {
-		types.VMC.HW.Display.GdisplayValid = true
-	}
-	return err
-}
-
-func (g *Global) ShowQR(t string) {
-	display, err := g.Display()
-	if err != nil {
-		g.Log.Error(err, "display")
-		return
-	}
-	if display == nil {
-		g.Log.Error("display is not configured")
-		return
-	}
-	g.Log.Infof("show QR:'%v'", t)
-	err = display.QR(t, true, 2)
-	if err != nil {
-		g.Log.Error(err, "QR show error")
-	}
-	types.VMC.HW.Display.Gdisplay = t
 }
 
 func (g *Global) initEngine() error {
@@ -309,57 +179,6 @@ func (g *Global) initEngine() error {
 	}
 
 	return helpers.FoldErrors(errs)
-}
-
-func (g *Global) initInventory(ctx context.Context) error {
-	// TODO ctx should be enough
-	if err := g.Inventory.Init(ctx, &g.Config.Engine.Inventory, g.Engine, g.Config.Persist.Root); err != nil {
-		return err
-	}
-	g.Inventory.InventoryLoad()
-	return nil
-}
-
-func VmcLock(ctx context.Context) {
-	g := GetGlobal(ctx)
-	g.Log.Info("Vmc Locked")
-	types.VMC.Lock = true
-	types.VMC.EvendKeyboardInput(false)
-	if types.VMC.UiState == uint32(types.StateFrontSelect) || types.VMC.UiState == uint32(types.StatePrepare) {
-		g.LockCh <- struct{}{}
-	}
-}
-
-func VmcUnLock(ctx context.Context) {
-	g := GetGlobal(ctx)
-	g.Log.Info("Vmc UnLocked")
-	types.VMC.Lock = false
-	types.VMC.EvendKeyboardInput(true)
-	if types.VMC.UiState == uint32(types.StateFrontLock) {
-		g.LockCh <- struct{}{}
-	}
-}
-
-func (g *Global) UpgradeVender() {
-	go func() {
-		if err := g.RunBashSript(g.Config.UpgradeScript); err != nil {
-			g.Log.Errorf("upgrade err(%v)", err)
-			return
-		}
-		types.VMC.NeedRestart = true
-	}()
-}
-
-func (g *Global) RunBashSript(script string) (err error) {
-	if script == "" {
-		return nil
-	}
-	cmd := exec.Command("/usr/bin/bash", "-c", script)
-	stdout, e := cmd.Output()
-	if e == nil {
-		return nil
-	}
-	return fmt.Errorf("script(%s) stdout(%s) error(%s)", script, stdout, cmd.Stderr)
 }
 
 func (g *Global) RegisterCommands(ctx context.Context) {
@@ -408,6 +227,37 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 			return err
 		},
 	)
+
+	g.Engine.RegisterNewFunc(
+		"check.menu",
+		func(ctx context.Context) error {
+			return g.CheckMenuExecution(ctx)
+		},
+	)
+
+	g.Engine.RegisterNewFuncAgr("line1(?)", func(ctx context.Context, arg engine.Arg) error {
+		g.MustTextDisplay().SetLine(1, arg.(string))
+		return nil
+	})
+
+	g.Engine.RegisterNewFuncAgr("line2(?)", func(ctx context.Context, arg engine.Arg) error {
+		g.MustTextDisplay().SetLine(2, arg.(string))
+		return nil
+	})
+
+	g.Engine.RegisterNewFuncAgr("sound(?)", func(ctx context.Context, arg engine.Arg) error {
+		sound.PlayFileNoWait(arg.(string))
+		return nil
+	})
+
+	g.Engine.RegisterNewFuncAgr("picture(?)", func(ctx context.Context, arg engine.Arg) error {
+		if g.Hardware.Display.Graphic != nil {
+			g.Hardware.Display.Graphic.CopyFile2FB(arg.(string))
+			return nil
+		}
+		g.Log.Warning("display not set")
+		return nil
+	})
 
 	doEmuKey := engine.FuncArg{
 		// keys 0-9, 10 = C, 11 = Ok,

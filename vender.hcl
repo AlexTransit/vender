@@ -204,16 +204,16 @@ tele {
 
 ui {
   front {
+    msg_no_network = "TODO_EDIT showed if no connect to server"
     msg_menu_error = "error"
     msg_wait       = "please wait"
-    msg_no_network = "TODO_EDIT showed if no connect to server"
 
     msg_menu_code_empty             = "Code empty" // "Закончился ингридиент. Выверите другой ."
     msg_menu_code_invalid           = "Code invalid" // "Неправильный код"
     msg_menu_insufficient_credit_l1 = "Мало денег"
     msg_menu_insufficient_credit_l2 = "дали:%s нужно:%s"
-
     msg_menu_not_available          = "Not available" // "Не доступен"
+
     msg_cream                       = "Cream" // "Сливки"
     msg_sugar                       = "Sugar" // "Caxap"
     msg_credit                      = "Credit" //  "Кредит: "
@@ -250,5 +250,5 @@ sound { // resample resampling takes a few seconds. I use sample rate 22000Hz mo
   folder = "/home/vmc/vender-db/audio/"
   keybeep = "bb.mp3"
 #  keyBeepVolume = 10
-
+  moneyIn = "moneyIn.mp3"
 }

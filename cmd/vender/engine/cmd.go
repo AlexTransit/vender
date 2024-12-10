@@ -37,8 +37,6 @@ func Main(ctx context.Context, _ ...[]string) error {
 	g := state.GetGlobal(ctx)
 	sound.Init(&g.Config.Sound, g.Log, false)
 	g.MustInit(ctx, g.Config)
-	// g.Log.Debugf("config=%+v", g.Config)
-
 	if err := g.Engine.ValidateExec(ctx, doMdbBusReset); err != nil {
 		return errors.Annotate(err, "mdb bus reset")
 	}

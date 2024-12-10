@@ -27,8 +27,8 @@ github.com/ebitengine/purego/objc
 ## explicit; go 1.18
 github.com/eclipse/paho.mqtt.golang
 github.com/eclipse/paho.mqtt.golang/packets
-# github.com/golang/protobuf v1.5.4
-## explicit; go 1.17
+# github.com/golang/protobuf v1.5.0
+## explicit; go 1.9
 github.com/golang/protobuf/proto
 # github.com/gorilla/websocket v1.5.1
 ## explicit; go 1.20

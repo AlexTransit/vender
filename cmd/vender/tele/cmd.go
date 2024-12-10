@@ -10,8 +10,8 @@ import (
 	"github.com/AlexTransit/vender/internal/state"
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/c-bata/go-prompt"
-	"github.com/golang/protobuf/proto"
 	"github.com/juju/errors"
+	"google.golang.org/protobuf/proto"
 )
 
 const modName = "tele"
@@ -47,6 +47,7 @@ func Main(ctx context.Context, args ...[]string) error {
 }
 
 func newCompleter(ctx context.Context) func(d prompt.Document) []prompt.Suggest {
+	_ = ctx
 	// suggests := []prompt.Suggest{}
 	return func(d prompt.Document) []prompt.Suggest {
 		// return prompt.FilterFuzzy(suggests, d.GetWordBeforeCursor(), true)
@@ -70,6 +71,6 @@ func newExecutor(ctx context.Context) func(string) {
 		if err := proto.Unmarshal(b, &tm); err != nil {
 			g.Log.Errorf("proto.Unmarshal err=%v", err)
 		}
-		g.Log.Info(proto.MarshalTextString(&tm))
+		g.Log.Info(tm.String())
 	}
 }
