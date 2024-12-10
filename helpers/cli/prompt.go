@@ -2,9 +2,10 @@ package cli
 
 import (
 	"bytes"
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
+	"os/exec"
 	"os/signal"
 	"syscall"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/mattn/go-isatty"
 )
 
-func MainLoop(tag string, exec func(line string), complete func(d prompt.Document) []prompt.Suggest) {
+func MainLoop(tag string, execP func(line string), complete func(d prompt.Document) []prompt.Suggest) {
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh,
 		syscall.SIGHUP,
@@ -29,16 +30,22 @@ func MainLoop(tag string, exec func(line string), complete func(d prompt.Documen
 
 	if isatty.IsTerminal(os.Stdin.Fd()) {
 		// TODO OptionHistory
-		prompt.New(exec, complete).Run()
+		prompt.New(execP, complete).Run()
+		// AlexM в какой то момент перестало работать эхо в stty после выхода
+		// пришлось сделать эту затычку
+		rawModeOff := exec.Command("/bin/stty", "-raw", "echo")
+		rawModeOff.Stdin = os.Stdin
+		_ = rawModeOff.Run()
+		rawModeOff.Wait()
 	} else {
-		stdinAll, err := ioutil.ReadAll(os.Stdin)
+		stdinAll, err := io.ReadAll(os.Stdin)
 		if err != nil {
 			log.Fatal(err)
 		}
 		linesb := bytes.Split(stdinAll, []byte{'\n'})
 		for _, lineb := range linesb {
 			line := string(bytes.TrimSpace(lineb))
-			exec(line)
+			execP(line)
 		}
 	}
 }
