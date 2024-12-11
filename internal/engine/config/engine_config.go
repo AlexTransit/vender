@@ -16,7 +16,7 @@ type Config struct {
 	OnServiceEnd   []string `hcl:"on_service_end"`
 	OnFrontBegin   []string `hcl:"on_front_begin"`
 	OnBroken       []string `hcl:"on_broken"`
-	Inventory      Inventory
+	Inventory      Inventory 
 	Menu           struct {
 		Items []*MenuItem `hcl:"item"`
 	}

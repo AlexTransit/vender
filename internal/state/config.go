@@ -1,6 +1,7 @@
 package state
 
 import (
+	"context"
 	"fmt"
 	"path/filepath"
 
@@ -15,7 +16,11 @@ import (
 	"github.com/AlexTransit/vender/internal/watchdog"
 	"github.com/AlexTransit/vender/log2"
 	tele_config "github.com/AlexTransit/vender/tele/config"
-	"github.com/hashicorp/hcl"
+	hcl1 "github.com/hashicorp/hcl"
+
+	// "github.com/hashicorp/hcl/v2/gohcl"
+
+	"github.com/hashicorp/hcl/v2/hclsimple"
 	"github.com/juju/errors"
 )
 
@@ -91,6 +96,19 @@ type ConfigSource struct {
 	Optional bool   `hcl:"optional"`
 }
 
+type CT struct {
+	UpgradeScript string `hcl:"upgrade_script"`
+}
+
+func ReadConf(ctx context.Context, fp *string) *Config {
+	var c CT
+	*fp = "/home/vmc/c.hcl"
+	// gohcl.DecodeBody()
+	er := hclsimple.DecodeFile(*fp, nil, &c)
+	fmt.Printf("\033[41m %v \033[0m\n", er)
+	return nil
+}
+
 func (c *Config) ScaleI(i int) currency.Amount {
 	return currency.Amount(i) * currency.Amount(c.Money.Scale)
 }
@@ -119,8 +137,8 @@ func (c *Config) read(log *log2.Log, fs FullReader, source ConfigSource, errs *[
 		*errs = append(*errs, errors.Annotatef(err, "config source=%s", source.Name))
 		return
 	}
-
-	err = hcl.Unmarshal(bs, c)
+	// gohcl.DecodeBody(bs, nil, c)
+	err = hcl1.Unmarshal(bs, c)
 	if err != nil {
 		err = fmt.Errorf("%v parse error (%v)", source.Name, err)
 		*errs = append(*errs, err)

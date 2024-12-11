@@ -28,17 +28,29 @@ require (
 	periph.io/x/periph v3.6.4+incompatible
 )
 
-require github.com/hajimehoshi/ebiten/v2 v2.6.3
+require (
+	github.com/hajimehoshi/ebiten/v2 v2.6.3
+	github.com/hashicorp/hcl/v2 v2.23.0
+)
 
 require (
+	github.com/agext/levenshtein v1.2.1 // indirect
+	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
+	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ebitengine/oto/v3 v3.1.0 // indirect
 	github.com/ebitengine/purego v0.5.1 // indirect
 	github.com/golang/protobuf v1.5.0 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
+	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
+	github.com/zclconf/go-cty v1.13.0 // indirect
+	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/sync v0.6.0 // indirect
+	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/tools v0.13.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )

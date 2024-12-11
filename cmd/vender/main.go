@@ -75,8 +75,10 @@ func main() {
 		log.LogToSyslog(mod.Name)
 	}
 
-	config := state.MustReadConfig(log, state.NewOsFullReader(), *configPath)
 	ctx, g := state_new.NewContext(log, tele.New())
+	config := state.ReadConf(ctx, configPath)
+	config1 := state.MustReadConfig(log, state.NewOsFullReader(), *configPath)
+	_ = config1
 	g.BuildVersion = BuildVersion
 	g.Config = config
 	types.Log = log
