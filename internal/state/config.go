@@ -8,9 +8,9 @@ import (
 	mdb_config "github.com/AlexTransit/vender/hardware/mdb/config"
 	evend_config "github.com/AlexTransit/vender/hardware/mdb/evend/config"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
-	"github.com/AlexTransit/vender/internal/sound"
+	sound_config "github.com/AlexTransit/vender/internal/sound/config"
 	ui_config "github.com/AlexTransit/vender/internal/ui/config"
-	"github.com/AlexTransit/vender/internal/watchdog"
+	watchdog_config "github.com/AlexTransit/vender/internal/watchdog/config"
 	"github.com/AlexTransit/vender/log2"
 	tele_config "github.com/AlexTransit/vender/tele/config"
 
@@ -18,6 +18,20 @@ import (
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
 )
+
+type Config struct {
+	UpgradeScript  string                 `hcl:"upgrade_script,optional"`
+	ScriptIfBroken string                 `hcl:"script_if_broken,optional"`
+	Money          MoneyStruct            `hcl:"money,block"`
+	Hardware       HardwareStruct         `hcl:"hardware,block"`
+	Persist        PersistStruct          `hcl:"persist,block"`
+	Tele           tele_config.Config     `hcl:"tele,block"`
+	UI             ui_config.Config       `hcl:"ui,block"`
+	Sound          sound_config.Config    `hcl:"sound,block"`
+	Watchdog       watchdog_config.Config `hcl:"watchdog,block"`
+	Engine         engine_config.Config   `hcl:"engine,block"`
+	Remains        hcl.Body               `hcl:",remain"`
+}
 
 // type Config struct {
 // 	// includeSeen contains absolute paths to prevent include loops
@@ -89,6 +103,7 @@ type ConfigSource struct {
 	Name     string `hcl:"name"`
 	Optional bool   `hcl:"o"`
 }
+
 type HardwareStruct struct {
 	XXX_Devices []DeviceConfig      `hcl:"device,block"`
 	Evend       evend_config.Config `hcl:"evend,block"`
@@ -99,6 +114,7 @@ type HardwareStruct struct {
 	Mdb         mdb_config.Config   `hcl:"mdb,block"`
 	Mega        MegaStruct          `hcl:"mega,block"`
 }
+
 type PersistStruct struct {
 	Root string `hcl:"root"`
 }
@@ -123,9 +139,11 @@ type InputStruct struct {
 	EvendKeyboard EvendKeyboardStruct `hcl:"evend_keyboard,block"`
 	ServiceKey    string              `hcl:"service_key,optional"`
 }
+
 type EvendKeyboardStruct struct {
 	Enable bool `hcl:"enable,optional"`
 }
+
 type MegaStruct struct {
 	LogDebug bool   `hcl:"log_debug,optional"`
 	Spi      string `hcl:"spi,optional"`
@@ -139,21 +157,6 @@ type MoneyStruct struct {
 	CreditMax              int  `hcl:"credit_max"`
 	EnableChangeBillToCoin bool `hcl:"enable_change_bill_to_coin,optional"`
 	ChangeOverCompensate   int  `hcl:"change_over_compensate,optional"`
-}
-type Config struct {
-	// IncludeSeen    map[string]struct{} `hcl:"include,block"`
-	// XXX_Include    []ConfigSource `hcl:"include,block"`
-	UpgradeScript  string               `hcl:"upgrade_script,optional"`
-	ScriptIfBroken string               `hcl:"script_if_broken,optional"`
-	Money          MoneyStruct          `hcl:"money,block"`
-	Hardware       HardwareStruct       `hcl:"hardware,block"`
-	Persist        PersistStruct        `hcl:"persist,block"`
-	Tele           tele_config.Config   `hcl:"tele,block"`
-	UI             ui_config.Config     `hcl:"ui,block"`
-	Sound          sound.Config         `hcl:"sound,block"`
-	Watchdog       watchdog.Config      `hcl:"watchdog,block"`
-	Engine         engine_config.Config `hcl:"engine,block"`
-	Remains        hcl.Body             `hcl:",remain"`
 }
 
 // func ReadConf(ctx context.Context, fp *string) *Config {
@@ -188,7 +191,6 @@ func (c *Config) ScaleA(a currency.Amount) currency.Amount { return a * currency
 // 	}
 // 	c.includeSeen[source.Name] = struct{}{}
 // 	c.includeSeen[norm] = struct{}{}
-
 // 	bs, err := fs.ReadAll(norm)
 // 	if bs == nil && err == nil {
 // 		if !source.Optional {
@@ -201,7 +203,6 @@ func (c *Config) ScaleA(a currency.Amount) currency.Amount { return a * currency
 // 		*errs = append(*errs, errors.Annotatef(err, "config source=%s", source.Name))
 // 		return
 // 	}
-
 // 	// gohcl.DecodeBody(bs, nil, c)
 // 	err = hcl1.Unmarshal(bs, c)
 // 	if err != nil {
@@ -209,7 +210,6 @@ func (c *Config) ScaleA(a currency.Amount) currency.Amount { return a * currency
 // 		*errs = append(*errs, err)
 // 		return
 // 	}
-
 // 	var includes []ConfigSource
 // 	includes, c.XXX_Include = c.XXX_Include, nil
 // 	for _, include := range includes {
@@ -227,7 +227,6 @@ func (c *Config) ScaleA(a currency.Amount) currency.Amount { return a * currency
 // 	if len(names) == 0 {
 // 		log.Fatal("code error [Must]ReadConfig() without names")
 // 	}
-
 // 	if osfs, ok := fs.(*OsFullReader); ok {
 // 		dir, name := filepath.Split(names[0])
 // 		osfs.SetBase(dir)

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
+	sound_config "github.com/AlexTransit/vender/internal/sound/config"
 	"github.com/AlexTransit/vender/log2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
@@ -15,7 +16,7 @@ import (
 const sampleRate = 24000
 
 type Sound struct {
-	sound        *Config
+	sound        *sound_config.Config
 	log          *log2.Log
 	audioContext *audio.Context
 	audioPlayer  *audio.Player
@@ -27,19 +28,9 @@ type soundStream struct {
 	volume float64
 }
 
-// sound volume use fixed point. 12 = 1.2
-type Config struct {
-	Disabled      bool   `hcl:"disabled,optional"`
-	Folder        string `hcl:"folder,optional"`
-	KeyBeep       string `hcl:"keyBeep,optional"`
-	KeyBeepVolume int    `hcl:"keyBeepVolume,optional"`
-	MoneyIn       string `hcl:"moneyIn,optional"`
-	MoneyInVolume int    `hcl:"moneyInVolume,optional"`
-}
-
 var s Sound
 
-func Init(conf *Config, log *log2.Log, startingVMC bool) {
+func Init(conf *sound_config.Config, log *log2.Log, startingVMC bool) {
 	s.sound = conf
 	if conf.Disabled {
 		return

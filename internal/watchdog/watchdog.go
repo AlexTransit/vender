@@ -6,14 +6,11 @@ import (
 	"strconv"
 
 	"github.com/AlexTransit/vender/helpers"
+	watchdog_config "github.com/AlexTransit/vender/internal/watchdog/config"
 	"github.com/AlexTransit/vender/log2"
 	"github.com/coreos/go-systemd/daemon"
 )
 
-type Config struct {
-	Disabled bool   `hcl:"disabled,optional"`
-	Folder   string `hcl:"folder,optional"`
-}
 type wdStruct struct {
 	disabled bool
 	folder   string
@@ -25,7 +22,7 @@ const brokenFile = "/home/vmc/broken"
 
 var WD wdStruct
 
-func Init(conf *Config, log *log2.Log, timeout int) {
+func Init(conf *watchdog_config.Config, log *log2.Log, timeout int) {
 	WD.folder = helpers.ConfigDefaultStr(conf.Folder, "/run/user/1000/")
 	WD.log = log
 	WD.disabled = conf.Disabled
