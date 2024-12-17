@@ -8,61 +8,75 @@ import (
 )
 
 type Config struct {
-	Aliases        []Alias  `hcl:"alias"`
-	OnBoot         []string `hcl:"on_boot"`
-	FirstInit      []string `hcl:"first_init"`
-	OnMenuError    []string `hcl:"on_menu_error"`
-	OnServiceBegin []string `hcl:"on_service_begin"`
-	OnServiceEnd   []string `hcl:"on_service_end"`
-	OnFrontBegin   []string `hcl:"on_front_begin"`
-	OnBroken       []string `hcl:"on_broken"`
-	Inventory      Inventory 
-	Menu           struct {
-		Items []*MenuItem `hcl:"item"`
-	}
-	Profile struct {
-		Regexp    string `hcl:"regexp"`
-		MinUs     int    `hcl:"min_us"`
-		LogFormat string `hcl:"log_format"`
-	}
+	Aliases        []Alias       `hcl:"alias,block"`
+	OnBoot         []string      `hcl:"on_boot,optional"`
+	FirstInit      []string      `hcl:"first_init,optional"`
+	OnMenuError    []string      `hcl:"on_menu_error,optional"`
+	OnServiceBegin []string      `hcl:"on_service_begin,optional"`
+	OnServiceEnd   []string      `hcl:"on_service_end,optional"`
+	OnFrontBegin   []string      `hcl:"on_front_begin,optional"`
+	OnBroken       []string      `hcl:"on_broken,optional"`
+	OnShutdown     []string      `hcl:"on_shutdown,optional"`
+	Inventory      Inventory     `hcl:"inventory,block"`
+	Profile        ProfileStruct `hcl:"profile,block"`
+	Menu           MenuStruct    `hcl:"menu,block"`
+}
+type Conf struct {
+	Menua MStr `hcl:"menua,block"`
+}
+type MStr struct {
+	Items []MI `hcl:"itemmmm,block"`
+}
+
+type MenuStruct struct {
+	Items []*MenuItem `hcl:"item,block"`
+}
+type ProfileStruct struct {
+	Regexp    string `hcl:"regexp,optional"`
+	MinUs     int    `hcl:"min_us,optional"`
+	LogFormat string `hcl:"log_format,optional"`
 }
 
 type Alias struct {
-	Name     string `hcl:"name,key"`
+	Name     string `hcl:"name,label"`
 	Scenario string `hcl:"scenario"`
 
-	Doer engine.Doer `hcl:"-"`
+	Doer engine.Doer
+}
+
+type MI struct {
+	Code string `hcl:"codeaa"`
 }
 
 type MenuItem struct {
-	Disabled  bool   `hcl:"disabled"`
-	Code      string `hcl:"code,key"`
-	Name      string `hcl:"name"`
+	Code      string `hcl:"code,label"`
+	Disabled  bool   `hcl:"disabled,optional"`
+	Name      string `hcl:"name,optional"`
 	XXX_Price int    `hcl:"price"` // use scaled `Price`, this is for decoding config only
 	Scenario  string `hcl:"scenario"`
-	CreamMax  int    `hcl:"creamMax"`
-	SugarMax  int    `hcl:"sugarMax"`
+	CreamMax  int    `hcl:"creamMax,optional"`
+	SugarMax  int    `hcl:"sugarMax,optional"`
 
-	Price currency.Amount `hcl:"-"`
-	Doer  engine.Doer     `hcl:"-"`
+	Price currency.Amount
+	Doer  engine.Doer
 }
 
 func (mi *MenuItem) String() string { return fmt.Sprintf("menu.%s %s", mi.Code, mi.Name) }
 
 type Inventory struct { //nolint:maligned
-	Persist     bool    `hcl:"persist"`
-	Stocks      []Stock `hcl:"stock"`
-	TeleAddName bool    `hcl:"tele_add_name"` // send stock names to telemetry; false to save network usage
+	Persist     bool    `hcl:"persist,optional"`
+	TeleAddName bool    `hcl:"tele_add_name,optional"` // send stock names to telemetry; false to save network usage
+	Stocks      []Stock `hcl:"stock,block"`
 }
 
 type Stock struct { //nolint:maligned
-	Name        string  `hcl:"name,key"`
+	Name        string  `hcl:",label"`
 	Code        int     `hcl:"code"`
-	Check       bool    `hcl:"check"`
-	Min         float32 `hcl:"min"`
-	SpendRate   float32 `hcl:"spend_rate"`
-	RegisterAdd string  `hcl:"register_add"`
-	Level       string  `hcl:"level"`
+	Check       bool    `hcl:"check,optional"`
+	Min         float32 `hcl:"min,optional"`
+	SpendRate   float32 `hcl:"spend_rate,optional"`
+	RegisterAdd string  `hcl:"register_add,optional"`
+	Level       string  `hcl:"level,optional"`
 	TuneKey     string
 }
 

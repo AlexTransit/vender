@@ -220,15 +220,6 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 	)
 
 	g.Engine.RegisterNewFunc(
-		"envs.print",
-		func(ctx context.Context) error {
-			err := errors.Errorf(types.ShowEnvs())
-			// AlexM надо бы сделать что бы слала как сообщение а не ошибку.
-			return err
-		},
-	)
-
-	g.Engine.RegisterNewFunc(
 		"check.menu",
 		func(ctx context.Context) error {
 			return g.CheckMenuExecution(ctx)

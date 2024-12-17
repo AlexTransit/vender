@@ -11,8 +11,8 @@ import (
 )
 
 type Config struct {
-	Disabled bool
-	Folder   string
+	Disabled bool   `hcl:"disabled,optional"`
+	Folder   string `hcl:"folder,optional"`
 }
 type wdStruct struct {
 	disabled bool

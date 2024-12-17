@@ -29,12 +29,12 @@ type soundStream struct {
 
 // sound volume use fixed point. 12 = 1.2
 type Config struct {
-	Disabled      bool
-	Folder        string
-	KeyBeep       string
-	KeyBeepVolume int
-	MoneyIn       string
-	MoneyInVolume int
+	Disabled      bool   `hcl:"disabled,optional"`
+	Folder        string `hcl:"folder,optional"`
+	KeyBeep       string `hcl:"keyBeep,optional"`
+	KeyBeepVolume int    `hcl:"keyBeepVolume,optional"`
+	MoneyIn       string `hcl:"moneyIn,optional"`
+	MoneyInVolume int    `hcl:"moneyInVolume,optional"`
 }
 
 var s Sound

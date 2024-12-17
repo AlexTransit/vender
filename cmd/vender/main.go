@@ -76,9 +76,7 @@ func main() {
 	}
 
 	ctx, g := state_new.NewContext(log, tele.New())
-	config := state.ReadConf(ctx, configPath)
-	config1 := state.MustReadConfig(log, state.NewOsFullReader(), *configPath)
-	_ = config1
+	config := state.ReadConfig(log, *configPath)
 	g.BuildVersion = BuildVersion
 	g.Config = config
 	types.Log = log
