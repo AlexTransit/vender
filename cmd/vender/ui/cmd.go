@@ -20,8 +20,11 @@ func Main(ctx context.Context, args ...[]string) error {
 	g := state.GetGlobal(ctx)
 	g.Config.Engine.OnBoot = nil
 	g.Config.Engine.OnMenuError = nil
-	g.Config.Engine.Menu.Items = []*engine_config.MenuItem{
-		{Code: "333", Name: "test item", XXX_Price: 5, Scenario: "sleep(3s)"},
+	g.Config.Engine.Menu.Items["333"] = engine_config.MenuItem{
+		Code:      "333",
+		Name:      "test item",
+		XXX_Price: 5,
+		Scenario:  "sleep(3s)",
 	}
 	g.MustInit(ctx, g.Config)
 	g.Log.Debugf("config=%+v", g.Config)

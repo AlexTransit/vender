@@ -155,7 +155,7 @@ func (g *Global) initEngine() error {
 
 	for _, x := range g.Config.Engine.Menu.Items {
 		var err error
-		x.Price = g.Config.ScaleI(x.XXX_Price)
+		// x.Price = g.Config.ScaleI(x.XXX_Price)
 		x.Doer, err = g.Engine.ParseText(x.Name, x.Scenario)
 		if err != nil {
 			errs = append(errs, err)

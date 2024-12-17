@@ -8,7 +8,8 @@ import (
 )
 
 type Config struct {
-	Aliases        []Alias       `hcl:"alias,block"`
+	XXX_Aliases    []Alias `hcl:"alias,block"`
+	Aliases        map[string]Alias
 	OnBoot         []string      `hcl:"on_boot,optional"`
 	FirstInit      []string      `hcl:"first_init,optional"`
 	OnMenuError    []string      `hcl:"on_menu_error,optional"`
@@ -21,15 +22,10 @@ type Config struct {
 	Profile        ProfileStruct `hcl:"profile,block"`
 	Menu           MenuStruct    `hcl:"menu,block"`
 }
-type Conf struct {
-	Menua MStr `hcl:"menua,block"`
-}
-type MStr struct {
-	Items []MI `hcl:"itemmmm,block"`
-}
 
 type MenuStruct struct {
-	Items []*MenuItem `hcl:"item,block"`
+	XXX_Items []MenuItem `hcl:"item,block"`
+	Items     map[string]MenuItem
 }
 type ProfileStruct struct {
 	Regexp    string `hcl:"regexp,optional"`
@@ -66,7 +62,8 @@ func (mi *MenuItem) String() string { return fmt.Sprintf("menu.%s %s", mi.Code, 
 type Inventory struct { //nolint:maligned
 	Persist     bool    `hcl:"persist,optional"`
 	TeleAddName bool    `hcl:"tele_add_name,optional"` // send stock names to telemetry; false to save network usage
-	Stocks      []Stock `hcl:"stock,block"`
+	XXX_Stocks  []Stock `hcl:"stock,block"`
+	Stocks      map[string]Stock
 }
 
 type Stock struct { //nolint:maligned

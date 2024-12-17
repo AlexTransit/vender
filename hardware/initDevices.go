@@ -16,7 +16,7 @@ func InitMDBDevices(ctx context.Context) error {
 	errch := make(chan error, 16)
 	wg := sync.WaitGroup{}
 
-	for _, rd := range g.Config.Hardware.XXX_Devices {
+	for _, rd := range g.Config.Hardware.EvendDevices {
 		wg.Add(1)
 		switch rd.Name {
 		case "bill":

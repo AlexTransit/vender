@@ -43,7 +43,7 @@ func Main(ctx context.Context, args ...[]string) error {
 	g.MustInit(ctx, g.Config)
 
 	synthConfig := &state.Config{}
-	synthConfig.Hardware.XXX_Devices = nil
+	synthConfig.Hardware.EvendDevices = nil
 	synthConfig.Hardware.IodinPath = g.Config.Hardware.IodinPath // *iodinPath
 	synthConfig.Hardware.Mdb = g.Config.Hardware.Mdb             // *uarterName *devicePath
 	synthConfig.Hardware.Mega = g.Config.Hardware.Mega           // *megaSpi *megaPin

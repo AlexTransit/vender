@@ -23,7 +23,7 @@ func Main(ctx context.Context, args ...[]string) error {
 	synthConfig := &state.Config{
 		Tele: g.Config.Tele,
 	}
-	synthConfig.Hardware.XXX_Devices = nil
+	synthConfig.Hardware.EvendDevices = nil
 	synthConfig.Tele.Enabled = true
 	// synthConfig.Tele.PersistPath = spq.OnlyForTesting
 	synthConfig.Tele.LogDebug = true

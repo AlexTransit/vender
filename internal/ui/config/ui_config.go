@@ -38,13 +38,9 @@ type FrontStruct struct {
 }
 
 type ServiceStruct struct {
-	// Auth struct {
-	// 	Enable    bool     `hcl:"enable"`
-	// 	Passwords []string `hcl:"passwords"`
-	// }
-	// MsgAuth         string `hcl:"msg_auth"`
 	ResetTimeoutSec int           `hcl:"reset_sec"`
-	Tests           []TestsStruct `hcl:"test,block"`
+	XXX_Tests       []TestsStruct `hcl:"test,block"`
+	Tests           map[string]TestsStruct
 }
 
 type TestsStruct struct {

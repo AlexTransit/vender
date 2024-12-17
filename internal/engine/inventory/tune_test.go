@@ -54,7 +54,7 @@ menu {
 	ctx, err = g.Inventory.WithTuning(ctx, "sugar", 0.25)
 	require.NoError(t, err)
 
-	menuDo := g.Config.Engine.Menu.Items[0].Doer
+	menuDo := g.Config.Engine.Menu.Items["0"].Doer
 	// TODO make sure tuning survives transformations like Force
 	require.NotNil(t, menuDo)
 	require.NoError(t, g.Engine.ValidateExec(ctx, menuDo))
