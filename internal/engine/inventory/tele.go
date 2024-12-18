@@ -48,12 +48,12 @@ func (inv *Inventory) Tele() *tele_api.Inventory {
 func (inv *Inventory) locked_tele() *tele_api.Inventory {
 	pb := &tele_api.Inventory{Stocks: make([]*tele_api.Inventory_StockItem, 0, 16)}
 
-	for _, s := range inv.byName {
-		if s.Enabled() {
+	for _, s := range inv.config.Stocks {
+		if s.Check {
 			si := &tele_api.Inventory_StockItem{
-				Code: s.Code,
+				Code: uint32(s.Code),
 				// XXX TODO retype Value to float
-				Value: int32(s.Value()),
+				Value: int32(s.Value),
 				// Valuef: s.Value(),
 			}
 			if inv.config.TeleAddName {

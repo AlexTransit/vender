@@ -25,8 +25,6 @@ type Inventory struct {
 
 func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engine *engine.Engine, root string) error {
 	inv.config = c
-	bunkers, countBunkers := initOverWriteStocks(c)
-	inv.config.Stocks = nil
 	inv.log = log2.ContextValueLogger(ctx)
 
 	inv.mu.Lock()
@@ -44,10 +42,10 @@ func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engi
 		errs = append(errs, err)
 	}
 	inv.file = sd + "/store.file"
-
+	countBunkers := len(c.Stocks)
 	inv.byName = make(map[string]*Stock, countBunkers)
 	inv.byCode = make(map[uint32]*Stock, countBunkers)
-	for _, stockConfig := range bunkers {
+	for _, stockConfig := range c.Stocks {
 
 		stock, err := NewStock(stockConfig, engine)
 		if err != nil {
@@ -61,37 +59,37 @@ func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engi
 	return helpers.FoldErrors(errs)
 }
 
-func initOverWriteStocks(c *engine_config.Inventory) (m map[uint32]engine_config.Stock, countBunkers int) {
-	m = make(map[uint32]engine_config.Stock)
-	for _, v := range c.Stocks {
-		if v.Code == 0 {
-			continue
-		}
-		n := uint32(v.Code)
-		if m[n].Code == 0 {
-			m[n] = v
-			continue
-		}
-		ss := m[n]
-		if v.Name != "" {
-			ss.Name = v.Name
-		}
-		if v.Level != "" {
-			ss.Level = v.Level
-		}
-		if v.Min != 0 {
-			ss.Min = v.Min
-		}
-		if v.RegisterAdd != "" {
-			ss.RegisterAdd = v.RegisterAdd
-		}
-		if v.SpendRate != 0 {
-			ss.SpendRate = v.SpendRate
-		}
-		m[n] = ss
-	}
-	return m, len(m)
-}
+// func initOverWriteStocks(c *engine_config.Inventory) (m map[uint32]engine_config.Stock, countBunkers int) {
+// 	m = make(map[uint32]engine_config.Stock)
+// 	for _, v := range c.Stocks {
+// 		if v.Code == 0 {
+// 			continue
+// 		}
+// 		n := uint32(v.Code)
+// 		if m[n].Code == 0 {
+// 			m[n] = v
+// 			continue
+// 		}
+// 		ss := m[n]
+// 		if v.Name != "" {
+// 			ss.Name = v.Name
+// 		}
+// 		if v.Level != "" {
+// 			ss.Level = v.Level
+// 		}
+// 		if v.Min != 0 {
+// 			ss.Min = v.Min
+// 		}
+// 		if v.RegisterAdd != "" {
+// 			ss.RegisterAdd = v.RegisterAdd
+// 		}
+// 		if v.SpendRate != 0 {
+// 			ss.SpendRate = v.SpendRate
+// 		}
+// 		m[n] = ss
+// 	}
+// 	return m, len(m)
+// }
 
 func (inv *Inventory) InventoryLoad() {
 	f, err := os.OpenFile(inv.file, os.O_RDONLY|os.O_SYNC|os.O_CREATE, 0o644)
@@ -103,7 +101,7 @@ func (inv *Inventory) InventoryLoad() {
 
 	stat, err := f.Stat()
 	fl := int(stat.Size())
-	numInventory := len(inv.byCode)
+	numInventory := len(inv.config.Stocks)
 	if err != nil || fl != numInventory*4 {
 		inv.log.Errorf("load inventory file stat. len(%d) error(%v)", fl, err)
 		return
@@ -128,7 +126,7 @@ func (inv *Inventory) InventorySave() error {
 	}
 	defer file.Close()
 
-	bs := make([]byte, len(inv.byCode)*4)
+	bs := make([]byte, len(inv.config.Stocks)*4)
 	for i, cl := range inv.byCode {
 		pos := (i - 1) * 4
 		binary.BigEndian.PutUint32(bs[pos:pos+4], uint32(cl.value))

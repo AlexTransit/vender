@@ -75,6 +75,7 @@ type Stock struct { //nolint:maligned
 	RegisterAdd string  `hcl:"register_add,optional"`
 	Level       string  `hcl:"level,optional"`
 	TuneKey     string
+	Value       float32
 }
 
 func (s *Stock) String() string {
