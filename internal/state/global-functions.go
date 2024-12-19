@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
 	config_global "github.com/AlexTransit/vender/internal/config"
@@ -16,18 +15,18 @@ import (
 	"github.com/juju/errors"
 )
 
-func (g *Global) CheckMenuExecution(ctx context.Context) (err error) {
-	ch := g.Inventory.DisableCheckInStock()
-	for _, v := range g.Config.Engine.Menu.Items {
-		e := v.Doer.Validate()
-		if e != nil {
-			s := strings.Split(e.Error(), "\n")
-			g.Log.Errorf("menu code:%s not valid (%s) in scenario(%s)", v.Code, s[0], v.Scenario)
-		}
-	}
-	g.Inventory.EnableCheckInStock(&ch)
-	return err
-}
+// func (g *Global) CheckMenuExecution(ctx context.Context) (err error) {
+// 	ch := g.Inventory.DisableCheckInStock()
+// 	for _, v := range g.Config.Engine.Menu.Items {
+// 		e := v.Doer.Validate()
+// 		if e != nil {
+// 			s := strings.Split(e.Error(), "\n")
+// 			g.Log.Errorf("menu code:%s not valid (%s) in scenario(%s)", v.Code, s[0], v.Scenario)
+// 		}
+// 	}
+// 	g.Inventory.EnableCheckInStock(&ch)
+// 	return err
+// }
 
 func VmcLock(ctx context.Context) {
 	g := GetGlobal(ctx)

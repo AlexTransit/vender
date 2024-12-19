@@ -9,12 +9,10 @@ import (
 	"strconv"
 
 	"github.com/AlexTransit/vender/internal/engine"
-	inventory_config "github.com/AlexTransit/vender/internal/engine/inventory/config"
-	"github.com/AlexTransit/vender/internal/types"
 	"github.com/juju/errors"
 )
 
-const tuneKeyFormat = "run/inventory-%s-tune"
+// const tuneKeyFormat = "run/inventory-%s-tune"
 
 type Stock struct {
 	Name        string  `hcl:",label"`
@@ -107,13 +105,13 @@ func (s *Stock) String() string {
 // 	return s, nil
 // }
 
-func (s *Stock) GetSpendRate() float32 { return s.spendRate }
+func (s *Stock) GetSpendRate() float32 { return s.SpendRate }
 
 func (s *Stock) SpendValue(value byte) {
-	if !s.enabled {
+	if !s.Check {
 		return
 	}
-	s.value -= float32(value) / s.spendRate
+	s.value -= float32(value) / s.SpendRate
 }
 
 func (s *Stock) ShowLevel() string {
@@ -122,37 +120,37 @@ func (s *Stock) ShowLevel() string {
 	if valuePerDelay == 0 {
 		return "0"
 	}
-	ost := currenValue - s.level[i].val
-	valOst := float64(s.level[i].lev)/100 + math.Round(float64(ost/valuePerDelay))/100
+	ost := currenValue - s.levelValue[i].val
+	valOst := float64(s.levelValue[i].lev)/100 + math.Round(float64(ost/valuePerDelay))/100
 	return fmt.Sprintf("%.2f", valOst)
 }
 
 func (s *Stock) SetLevel(level int) {
 	valuePerDelay, i := s.valuePerDelay(level, true)
-	ost := level - s.level[i].lev
-	l1 := s.level[i].val
+	ost := level - s.levelValue[i].lev
+	l1 := s.levelValue[i].val
 	l2 := ost * valuePerDelay
 	s.value = float32((l1 + l2) / 100)
 }
 
 // returns the number per 0.01 division and the index of the smaller value
 func (s *Stock) valuePerDelay(value int, valueIsLevel bool) (valuePerDelay int, index int) {
-	countLevels := len(s.level) - 1
+	countLevels := len(s.levelValue) - 1
 	for index = countLevels; index >= 0; index-- {
 		var v int
 		if valueIsLevel {
-			v = s.level[index].lev
+			v = s.levelValue[index].lev
 		} else {
-			v = s.level[index].val
+			v = s.levelValue[index].val
 		}
 		if v < value {
 			switch {
 			case countLevels == index && index == 0: // levels not sets
 				return 0, 0
 			case countLevels == index && index > 0: // level > max rate
-				valuePerDelay = (s.level[index].val - s.level[index-1].val) / (s.level[index].lev - s.level[index-1].lev)
+				valuePerDelay = (s.levelValue[index].val - s.levelValue[index-1].val) / (s.levelValue[index].lev - s.levelValue[index-1].lev)
 			default: // level between
-				valuePerDelay = (s.level[index+1].val - s.level[index].val) / (s.level[index+1].lev - s.level[index].lev)
+				valuePerDelay = (s.levelValue[index+1].val - s.levelValue[index].val) / (s.levelValue[index+1].lev - s.levelValue[index].lev)
 			}
 			return valuePerDelay, index
 		}
@@ -160,10 +158,30 @@ func (s *Stock) valuePerDelay(value int, valueIsLevel bool) (valuePerDelay int, 
 	return 0, 0
 }
 
-func (s *Stock) fillLevels(c *inventory_config.Stock) {
+// func (s *Stock) fillLevels(c *inventory_config.Stock) {
+// 	rm := `([0-9]*[.,]?[0-9]+)\(([0-9]*[.,]?[0-9]+)\)`
+// 	parts := regexp.MustCompile(rm).FindAllStringSubmatch(c.Level, 50)
+// 	s.levelValue = make([]struct {
+// 		lev int
+// 		val int
+// 	}, len(parts)+1)
+
+// 	if len(parts) == 0 {
+// 		return
+// 	}
+
+//		for i, v := range parts {
+//			s.levelValue[i+1].lev = stringToFixInt(v[1])
+//			s.levelValue[i+1].val = stringToFixInt(v[2])
+//		}
+//		sort.Slice(s.levelValue, func(i, j int) bool {
+//			return s.levelValue[i].lev < s.levelValue[j].lev
+//		})
+//	}
+func (s *Stock) fillLevels() {
 	rm := `([0-9]*[.,]?[0-9]+)\(([0-9]*[.,]?[0-9]+)\)`
-	parts := regexp.MustCompile(rm).FindAllStringSubmatch(c.Level, 50)
-	s.level = make([]struct {
+	parts := regexp.MustCompile(rm).FindAllStringSubmatch(s.Level, 50)
+	s.levelValue = make([]struct {
 		lev int
 		val int
 	}, len(parts)+1)
@@ -173,11 +191,11 @@ func (s *Stock) fillLevels(c *inventory_config.Stock) {
 	}
 
 	for i, v := range parts {
-		s.level[i+1].lev = stringToFixInt(v[1])
-		s.level[i+1].val = stringToFixInt(v[2])
+		s.levelValue[i+1].lev = stringToFixInt(v[1])
+		s.levelValue[i+1].val = stringToFixInt(v[2])
 	}
-	sort.Slice(s.level, func(i, j int) bool {
-		return s.level[i].lev < s.level[j].lev
+	sort.Slice(s.levelValue, func(i, j int) bool {
+		return s.levelValue[i].lev < s.levelValue[j].lev
 	})
 }
 
@@ -188,23 +206,24 @@ func stringToFixInt(s string) int {
 	return 0
 }
 
-func (s *Stock) Enabled() bool { return s.enabled }
+// func (s *Stock) Enabled() bool { return s.enabled }
 
 func (s *Stock) Value() float32 { return s.value }
 
 // func (s *Stock) Set(new float32)    { s.value.Store(new) }
 func (s *Stock) Set(v float32)      { s.value = v }
-func (s *Stock) Has(v float32) bool { return s.value-v >= s.min }
-func (s *Stock) String() string {
-	return fmt.Sprintf("source(name=%s value=%f)", s.Name, s.Value())
-}
+func (s *Stock) Has(v float32) bool { return s.value-v >= s.Min }
+
+// func (s *Stock) String() string {
+// 	return fmt.Sprintf("source(name=%s value=%f)", s.Name, s.Value())
+// }
 
 func (s *Stock) Wrap(d engine.Doer) engine.Doer {
 	return &custom{stock: s, before: d}
 }
 
 func (s *Stock) TranslateSpend(arg engine.Arg) float32 {
-	return translate(int32(arg.(int16)), s.spendRate)
+	return translate(int32(arg.(int16)), s.SpendRate)
 }
 
 // signature match engine.Func0.F
@@ -220,7 +239,7 @@ func (s *Stock) spendArg(ctx context.Context, arg engine.Arg) error {
 }
 
 func (s *Stock) spendValue(v float32) {
-	if s.Enabled() {
+	if s.Check {
 		s.value -= v
 	}
 }
@@ -245,25 +264,25 @@ func (c *custom) Validate() error {
 	if err := c.after.Validate(); err != nil {
 		return errors.Annotatef(err, "stock=%s", c.stock.Name)
 	}
-	if !c.stock.Enabled() {
-		return nil
-	}
-	if !c.stock.check {
+	// if !c.stock.Enabled() {
+	// 	return nil
+	// }
+	if !c.stock.Check {
 		return nil
 	}
 	if c.stock.Has(c.spend) {
 		return nil
 	}
-	if !c.stock.TeleLow {
-		types.TeleError(c.stock.Name + " - low")
-		c.stock.TeleLow = true
-	}
+	// if !c.stock.TeleLow {
+	// 	types.TeleError(c.stock.Name + " - low")
+	// 	c.stock.TeleLow = true
+	// }
 	return errors.Errorf("%s low", c.stock.Name)
 }
 
 func (c *custom) Do(ctx context.Context) error {
 	e := engine.GetGlobal(ctx)
-	if tunedCtx, tuneRate, ok := takeTuneRate(ctx, c.stock.tuneKey); ok {
+	if tunedCtx, tuneRate, ok := takeTuneRate(ctx, c.stock.TuneKey); ok {
 		tunedArg := engine.Arg(int16(math.Round(float64(c.arg.(int16)) * float64(tuneRate))))
 		d, _, err := c.apply(tunedArg)
 		// log.Printf("stock=%s before=%#v arg=%v tuneRate=%v tunedArg=%v d=%v err=%v", c.stock.String(), c.before, c.arg, tuneRate, tunedArg, d, err)
@@ -275,7 +294,7 @@ func (c *custom) Do(ctx context.Context) error {
 
 	// log.Printf("stock=%s value=%f arg=%v spending=%f", c.stock.Name, c.stock.Value(), c.arg, c.spend)
 	// TODO remove this redundant check when sure that Validate() is called in all proper places
-	if c.stock.check && !c.stock.Has(c.spend) {
+	if c.stock.Check && !c.stock.Has(c.spend) {
 		return errors.Errorf("stock=%s check fail", c.stock.Name)
 	}
 

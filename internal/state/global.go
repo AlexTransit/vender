@@ -220,12 +220,12 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		},
 	)
 
-	g.Engine.RegisterNewFunc(
-		"check.menu",
-		func(ctx context.Context) error {
-			return g.CheckMenuExecution(ctx)
-		},
-	)
+	// g.Engine.RegisterNewFunc(
+	// 	"check.menu",
+	// 	func(ctx context.Context) error {
+	// 		return g.CheckMenuExecution(ctx)
+	// 	},
+	// )
 
 	g.Engine.RegisterNewFuncAgr("line1(?)", func(ctx context.Context, arg engine.Arg) error {
 		g.MustTextDisplay().SetLine(1, arg.(string))

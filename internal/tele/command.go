@@ -200,7 +200,8 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 		return t.cmdExec(ctx, cmd, task.Exec)
 
 	case *tele_api.Command_SetInventory:
-		return t.cmdSetInventory(ctx, task.SetInventory)
+		// return t.cmdSetInventory(ctx, task.SetInventory)
+		return nil
 
 	case *tele_api.Command_ValidateCode:
 		t.cmdValidateCode(cmd, task.ValidateCode.Code)
@@ -314,15 +315,15 @@ func (t *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	return err
 }
 
-func (t *tele) cmdSetInventory(ctx context.Context, arg *tele_api.Command_ArgSetInventory) error {
-	if arg == nil || arg.New == nil {
-		return errInvalidArg
-	}
+// func (t *tele) cmdSetInventory(ctx context.Context, arg *tele_api.Command_ArgSetInventory) error {
+// 	if arg == nil || arg.New == nil {
+// 		return errInvalidArg
+// 	}
 
-	g := state.GetGlobal(ctx)
-	_, err := g.Inventory.SetTele(arg.New)
-	return err
-}
+// 	g := state.GetGlobal(ctx)
+// 	_, err := g.Inventory.SetTele(arg.New)
+// 	return err
+// }
 
 func (t *tele) cmdShowQR(ctx context.Context, arg *tele_api.Command_ArgShowQR) error {
 	if arg == nil {

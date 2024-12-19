@@ -232,7 +232,7 @@ func (ui *UI) onServiceInventory() types.UiState {
 			invCurrent.Set(float32(x) / 100)
 		}
 		ui.Service.askReport = true
-		invCurrent.TeleLow = false
+		// invCurrent.TeleLow = false
 
 	case input.IsReject(&e):
 		// backspace semantic
