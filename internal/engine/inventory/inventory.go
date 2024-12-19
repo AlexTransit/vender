@@ -4,91 +4,94 @@ import (
 	"context"
 	"encoding/binary"
 	"os"
-	"sync"
+	"regexp"
 
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
-	engine_config "github.com/AlexTransit/vender/internal/engine/config"
-	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
 )
 
 type Inventory struct {
-	// persist.Persist
-	config *engine_config.Inventory
-	log    *log2.Log
-	mu     sync.RWMutex
-	byName map[string]*Stock
-	byCode map[uint32]*Stock
-	file   string
+	Persist          bool    `hcl:"persist,optional"`
+	TeleAddName      bool    `hcl:"tele_add_name,optional"`
+	XXX_Stocks       []Stock `hcl:"stock,block"`
+	Stocks           map[string]Stock
+	StocksNameByCode map[int]string
+
+	// config *inventory_config.Inventory
 }
 
-func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engine *engine.Engine, root string) error {
-	inv.config = c
-	inv.log = log2.ContextValueLogger(ctx)
+// type Inventory struct {
+// 	// persist.Persist
+// 	log    *log2.Log
+// 	mu     sync.RWMutex
+// 	byName map[string]*Stock
+// 	byCode map[uint32]*Stock
+// 	file   string
+// }
 
-	inv.mu.Lock()
-	defer inv.mu.Unlock()
+func (inv *Inventory) Init(ctx context.Context, c *Inventory, engine *engine.Engine, root string) error {
+	// inv.config = c
+	// inv.log = log2.ContextValueLogger(ctx)
+
+	// inv.mu.Lock()
+	// defer inv.mu.Unlock()
 	errs := make([]error, 0)
-	sd := root + "/inventory"
-	if _, err := os.Stat(sd); os.IsNotExist(err) {
-		err := os.MkdirAll(sd, os.ModePerm)
-		errs = append(errs, err)
-	}
-	// AlexM инит директории для ошибок. надо от сюда вынести.
-	sde := root + "/errors"
-	if _, err := os.Stat(sde); os.IsNotExist(err) {
-		err := os.MkdirAll(sde, os.ModePerm)
-		errs = append(errs, err)
-	}
-	inv.file = sd + "/store.file"
-	countBunkers := len(c.Stocks)
-	inv.byName = make(map[string]*Stock, countBunkers)
-	inv.byCode = make(map[uint32]*Stock, countBunkers)
-	for _, stockConfig := range c.Stocks {
-
-		stock, err := NewStock(stockConfig, engine)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-		inv.byName[stock.Name] = stock
-		inv.byCode[stock.Code] = stock
-	}
+	// sd := root + "/inventory"
+	// if _, err := os.Stat(sd); os.IsNotExist(err) {
+	// 	err := os.MkdirAll(sd, os.ModePerm)
+	// 	errs = append(errs, err)
+	// }
+	// // AlexM инит директории для ошибок. надо от сюда вынести.
+	// sde := root + "/errors"
+	// if _, err := os.Stat(sde); os.IsNotExist(err) {
+	// 	err := os.MkdirAll(sde, os.ModePerm)
+	// 	errs = append(errs, err)
+	// }
+	// inv.file = sd + "/store.file"
+	// countBunkers := len(c.Stocks)
+	// // inv.byName = make(map[string]*Stock, countBunkers)
+	// // inv.byCode = make(map[uint32]*Stock, countBunkers)
+	// for _, s := range c.Stocks {
+	// 	// stock, err := NewStock(stockConfig, engine)
+	// 	// if err != nil {
+	// 	// 	errs = append(errs, err)
+	// 	// 	continue
+	// 	// }
+	// 	// inv.byName[stock.Name] = stock
+	// 	// inv.byCode[stock.Code] = stock
+	// }
 
 	return helpers.FoldErrors(errs)
 }
 
-// func initOverWriteStocks(c *engine_config.Inventory) (m map[uint32]engine_config.Stock, countBunkers int) {
-// 	m = make(map[uint32]engine_config.Stock)
-// 	for _, v := range c.Stocks {
-// 		if v.Code == 0 {
-// 			continue
-// 		}
-// 		n := uint32(v.Code)
-// 		if m[n].Code == 0 {
-// 			m[n] = v
-// 			continue
-// 		}
-// 		ss := m[n]
-// 		if v.Name != "" {
-// 			ss.Name = v.Name
-// 		}
-// 		if v.Level != "" {
-// 			ss.Level = v.Level
-// 		}
-// 		if v.Min != 0 {
-// 			ss.Min = v.Min
-// 		}
-// 		if v.RegisterAdd != "" {
-// 			ss.RegisterAdd = v.RegisterAdd
-// 		}
-// 		if v.SpendRate != 0 {
-// 			ss.SpendRate = v.SpendRate
-// 		}
-// 		m[n] = ss
+func fillLevel(s *Stock) {
+	rm := `([0-9]*[.,]?[0-9]+)\(([0-9]*[.,]?[0-9]+)\)`
+	parts := regexp.MustCompile(rm).FindAllStringSubmatch(s.Level, 50)
+	for i, v := range parts {
+		_, _ = i, v
+	}
+}
+
+// func (s *stock) fillLevels() {
+// 	rm := `([0-9]*[.,]?[0-9]+)\(([0-9]*[.,]?[0-9]+)\)`
+// 	parts := regexp.MustCompile(rm).FindAllStringSubmatch(c.Level, 50)
+// 	s.level = make([]struct {
+// 		lev int
+// 		val int
+// 	}, len(parts)+1)
+
+// 	if len(parts) == 0 {
+// 		return
 // 	}
-// 	return m, len(m)
+
+// 	for i, v := range parts {
+// 		s.level[i+1].lev = stringToFixInt(v[1])
+// 		s.level[i+1].val = stringToFixInt(v[2])
+// 	}
+// 	sort.Slice(s.level, func(i, j int) bool {
+// 		return s.level[i].lev < s.level[j].lev
+// 	})
 // }
 
 func (inv *Inventory) InventoryLoad() {

@@ -7,6 +7,7 @@ import (
 	"github.com/AlexTransit/vender/cmd/vender/subcmd"
 	"github.com/AlexTransit/vender/hardware"
 	"github.com/AlexTransit/vender/helpers/cli"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/state"
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/c-bata/go-prompt"
@@ -20,7 +21,7 @@ var Mod = subcmd.Mod{Name: modName, Main: Main}
 
 func Main(ctx context.Context, args ...[]string) error {
 	g := state.GetGlobal(ctx)
-	synthConfig := &state.Config{
+	synthConfig := &config_global.Config{
 		Tele: g.Config.Tele,
 	}
 	synthConfig.Hardware.EvendDevices = nil

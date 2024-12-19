@@ -9,83 +9,106 @@ import (
 	"strconv"
 
 	"github.com/AlexTransit/vender/internal/engine"
-	engine_config "github.com/AlexTransit/vender/internal/engine/config"
+	inventory_config "github.com/AlexTransit/vender/internal/engine/inventory/config"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/juju/errors"
 )
 
 const tuneKeyFormat = "run/inventory-%s-tune"
 
-type Stock struct { //nolint:maligned
-	Code uint32
-	Name string
-	// enabled   uint32 // atomic
-	enabled   bool
-	check     bool
-	TeleLow   bool
-	spendRate float32
-	min       float32
-	value     float32
-	tuneKey   string
-	level     []struct { // used fixed comma x.xx
+type Stock struct {
+	Name        string  `hcl:",label"`
+	Code        int     `hcl:"code"`
+	Check       bool    `hcl:"check,optional"`
+	Min         float32 `hcl:"min,optional"`
+	SpendRate   float32 `hcl:"spend_rate,optional"`
+	RegisterAdd string  `hcl:"register_add,optional"`
+	Level       string  `hcl:"level,optional"`
+	TuneKey     string
+	value       float32
+	levelValue  []struct { // used fixed comma x.xx
 		lev int
 		val int
 	}
 }
 
-func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
-	if c.Name == "" {
-		return nil, errors.Errorf("stock=(empty) is invalid")
-	}
-	if c.SpendRate == 0 {
-		c.SpendRate = 1
-	}
-	tk := fmt.Sprintf(tuneKeyFormat, c.Name)
-	if c.TuneKey != "" {
-		tk = fmt.Sprintf(tuneKeyFormat, c.TuneKey)
-	}
-	s := &Stock{
-		Name:      c.Name,
-		Code:      uint32(c.Code),
-		check:     c.Check,
-		enabled:   true,
-		spendRate: c.SpendRate,
-		min:       c.Min,
-		tuneKey:   tk,
-	}
-	s.fillLevels(&c)
-	doSpend1 := engine.Func0{
-		Name: fmt.Sprintf("stock.%s.spend1", s.Name),
-		F:    s.spend1,
-	}
-	doSpendArg := engine.FuncArg{
-		Name: fmt.Sprintf("stock.%s.spend(?)", s.Name),
-		F:    s.spendArg,
-	}
-	addName := fmt.Sprintf("add.%s(?)", s.Name)
-	if c.RegisterAdd != "" {
-		doAdd, err := e.ParseText(addName, c.RegisterAdd)
-		if err != nil {
-			return nil, errors.Annotatef(err, "stock=%s register_add", s.Name)
-		}
-		_, ok, err := engine.ArgApply(doAdd, 0)
-		switch {
-		case err == nil && !ok:
-			return nil, errors.Errorf("stock=%s register_add=%s no free argument", s.Name, c.RegisterAdd)
-
-		case (err == nil && ok) || engine.IsNotResolved(err): // success path
-			e.Register(addName, s.Wrap(doAdd))
-
-		case err != nil:
-			return nil, errors.Annotatef(err, "stock=%s register_add=%s", s.Name, c.RegisterAdd)
-		}
-	}
-	e.Register(doSpend1.Name, doSpend1)
-	e.Register(doSpendArg.Name, doSpendArg)
-	return s, nil
+func (s *Stock) String() string {
+	return fmt.Sprintf("inventory.%s #%d check=%t spend_rate=%f min=%f",
+		s.Name, s.Code, s.Check, s.SpendRate, s.Min)
 }
 
+// type Stock struct { //nolint:maligned
+//
+//		Code uint32
+//		Name string
+//		// enabled   uint32 // atomic
+//		enabled   bool
+//		check     bool
+//		TeleLow   bool
+//		spendRate float32
+//		min       float32
+//		value     float32
+//		tuneKey   string
+//		level     []struct { // used fixed comma x.xx
+//			lev int
+//			val int
+//		}
+//	}
+
+// func NewStock(c inventory_config.Stock, e *engine.Engine) (*Stock, error) {
+// 	if c.Name == "" {
+// 		return nil, errors.Errorf("stock=(empty) is invalid")
+// 	}
+// 	if c.SpendRate == 0 {
+// 		c.SpendRate = 1
+// 	}
+// 	tk := fmt.Sprintf(tuneKeyFormat, c.Name)
+// 	if c.TuneKey != "" {
+// 		tk = fmt.Sprintf(tuneKeyFormat, c.TuneKey)
+// 	}
+// 	s := &Stock{
+// 		Name:      c.Name,
+// 		Code:      uint32(c.Code),
+// 		check:     c.Check,
+// 		enabled:   true,
+// 		spendRate: c.SpendRate,
+// 		min:       c.Min,
+// 		tuneKey:   tk,
+// 	}
+// 	s.fillLevels(&c)
+// 	doSpend1 := engine.Func0{
+// 		Name: fmt.Sprintf("stock.%s.spend1", s.Name),
+// 		F:    s.spend1,
+// 	}
+// 	doSpendArg := engine.FuncArg{
+// 		Name: fmt.Sprintf("stock.%s.spend(?)", s.Name),
+// 		F:    s.spendArg,
+// 	}
+// 	addName := fmt.Sprintf("add.%s(?)", s.Name)
+// 	if c.RegisterAdd != "" {
+// 		doAdd, err := e.ParseText(addName, c.RegisterAdd)
+// 		if err != nil {
+// 			return nil, errors.Annotatef(err, "stock=%s register_add", s.Name)
+// 		}
+// 		_, ok, err := engine.ArgApply(doAdd, 0)
+// 		switch {
+// 		case err == nil && !ok:
+// 			return nil, errors.Errorf("stock=%s register_add=%s no free argument", s.Name, c.RegisterAdd)
+
+// 		case (err == nil && ok) || engine.IsNotResolved(err): // success path
+// 			e.Register(addName, s.Wrap(doAdd))
+
+// 		case err != nil:
+// 			return nil, errors.Annotatef(err, "stock=%s register_add=%s", s.Name, c.RegisterAdd)
+// 		}
+// 	}
+// 	e.Register(doSpend1.Name, doSpend1)
+// 	e.Register(doSpendArg.Name, doSpendArg)
+// 	return s, nil
+// }
+
 func (s *Stock) GetSpendRate() float32 { return s.spendRate }
+
 func (s *Stock) SpendValue(value byte) {
 	if !s.enabled {
 		return
@@ -137,7 +160,7 @@ func (s *Stock) valuePerDelay(value int, valueIsLevel bool) (valuePerDelay int, 
 	return 0, 0
 }
 
-func (s *Stock) fillLevels(c *engine_config.Stock) {
+func (s *Stock) fillLevels(c *inventory_config.Stock) {
 	rm := `([0-9]*[.,]?[0-9]+)\(([0-9]*[.,]?[0-9]+)\)`
 	parts := regexp.MustCompile(rm).FindAllStringSubmatch(c.Level, 50)
 	s.level = make([]struct {
@@ -311,3 +334,8 @@ func translate(arg int32, rate float32) float32 {
 	}
 	return result
 }
+
+// func (s *Stock) overwrite(v *[]inventory.Stock) {
+// 	for _, v := range v {
+// 	}
+// }

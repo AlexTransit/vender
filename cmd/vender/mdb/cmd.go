@@ -10,6 +10,7 @@ import (
 	"github.com/AlexTransit/vender/hardware"
 	"github.com/AlexTransit/vender/hardware/mdb"
 	"github.com/AlexTransit/vender/helpers/cli"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
 	prompt "github.com/c-bata/go-prompt"
@@ -42,7 +43,7 @@ func Main(ctx context.Context, args ...[]string) error {
 	g := state.GetGlobal(ctx)
 	g.MustInit(ctx, g.Config)
 
-	synthConfig := &state.Config{}
+	synthConfig := &config_global.Config{}
 	synthConfig.Hardware.EvendDevices = nil
 	synthConfig.Hardware.IodinPath = g.Config.Hardware.IodinPath // *iodinPath
 	synthConfig.Hardware.Mdb = g.Config.Hardware.Mdb             // *uarterName *devicePath
@@ -78,6 +79,7 @@ var doBusReset = engine.Func{Name: "reset", F: func(ctx context.Context) error {
 }}
 
 func newCompleter(ctx context.Context) func(d prompt.Document) []prompt.Suggest {
+	_ = ctx
 	suggests := []prompt.Suggest{
 		{Text: "reset", Description: "MDB bus reset"},
 		{Text: "sN", Description: "pause for N ms"},
@@ -95,13 +97,13 @@ func newExecutor(ctx context.Context) func(string) {
 	return func(line string) {
 		d, err := parseLine(ctx, line)
 		if err != nil {
-			g.Log.Errorf(errors.ErrorStack(err))
+			g.Log.Errorf("%s", errors.ErrorStack(err))
 			// TODO continue when input is interactive (tty)
 			return
 		}
 		err = g.Engine.ValidateExec(ctx, d)
 		if err != nil {
-			g.Log.Errorf(errors.ErrorStack(err))
+			g.Log.Errorf("%s", errors.ErrorStack(err))
 		}
 	}
 }
@@ -116,7 +118,7 @@ func newTx(request mdb.Packet) engine.Doer {
 		response := new(mdb.Packet)
 		err = m.Tx(request, response)
 		if err != nil {
-			g.Log.Errorf(errors.ErrorStack(err))
+			g.Log.Errorf("%s", errors.ErrorStack(err))
 		} else {
 			g.Log.Infof("< %s", response.Format())
 		}

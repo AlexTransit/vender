@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
 	"github.com/AlexTransit/vender/internal/sound"
@@ -24,7 +25,7 @@ import (
 type Global struct {
 	Alive        *alive.Alive
 	BuildVersion string
-	Config       *Config
+	Config       *config_global.Config
 	Engine       *engine.Engine
 	Hardware     hardware // hardware.go
 	Inventory    *inventory.Inventory
@@ -53,7 +54,7 @@ func GetGlobal(ctx context.Context) *Global {
 	panic(fmt.Sprintf("context['%s'] expected type *Global actual=%#v", ContextKey, v))
 }
 
-func (g *Global) Init(ctx context.Context, cfg *Config) error {
+func (g *Global) Init(ctx context.Context, cfg *config_global.Config) error {
 	g.Log.Infof("build version=%s", g.BuildVersion)
 	types.VMC.Version = g.BuildVersion
 

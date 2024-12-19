@@ -5,22 +5,23 @@ import (
 
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/internal/engine"
+	"github.com/AlexTransit/vender/internal/engine/inventory"
 )
 
 type Config struct {
 	XXX_Aliases    []Alias `hcl:"alias,block"`
 	Aliases        map[string]Alias
-	OnBoot         []string      `hcl:"on_boot,optional"`
-	FirstInit      []string      `hcl:"first_init,optional"`
-	OnMenuError    []string      `hcl:"on_menu_error,optional"`
-	OnServiceBegin []string      `hcl:"on_service_begin,optional"`
-	OnServiceEnd   []string      `hcl:"on_service_end,optional"`
-	OnFrontBegin   []string      `hcl:"on_front_begin,optional"`
-	OnBroken       []string      `hcl:"on_broken,optional"`
-	OnShutdown     []string      `hcl:"on_shutdown,optional"`
-	Inventory      Inventory     `hcl:"inventory,block"`
-	Profile        ProfileStruct `hcl:"profile,block"`
-	Menu           MenuStruct    `hcl:"menu,block"`
+	OnBoot         []string            `hcl:"on_boot,optional"`
+	FirstInit      []string            `hcl:"first_init,optional"`
+	OnMenuError    []string            `hcl:"on_menu_error,optional"`
+	OnServiceBegin []string            `hcl:"on_service_begin,optional"`
+	OnServiceEnd   []string            `hcl:"on_service_end,optional"`
+	OnFrontBegin   []string            `hcl:"on_front_begin,optional"`
+	OnBroken       []string            `hcl:"on_broken,optional"`
+	OnShutdown     []string            `hcl:"on_shutdown,optional"`
+	Inventory      inventory.Inventory `hcl:"inventory,block"`
+	Profile        ProfileStruct       `hcl:"profile,block"`
+	Menu           MenuStruct          `hcl:"menu,block"`
 }
 
 type MenuStruct struct {
@@ -58,27 +59,3 @@ type MenuItem struct {
 }
 
 func (mi *MenuItem) String() string { return fmt.Sprintf("menu.%s %s", mi.Code, mi.Name) }
-
-type Inventory struct { //nolint:maligned
-	Persist     bool    `hcl:"persist,optional"`
-	TeleAddName bool    `hcl:"tele_add_name,optional"` // send stock names to telemetry; false to save network usage
-	XXX_Stocks  []Stock `hcl:"stock,block"`
-	Stocks      map[string]Stock
-}
-
-type Stock struct { //nolint:maligned
-	Name        string  `hcl:",label"`
-	Code        int     `hcl:"code"`
-	Check       bool    `hcl:"check,optional"`
-	Min         float32 `hcl:"min,optional"`
-	SpendRate   float32 `hcl:"spend_rate,optional"`
-	RegisterAdd string  `hcl:"register_add,optional"`
-	Level       string  `hcl:"level,optional"`
-	TuneKey     string
-	Value       float32
-}
-
-func (s *Stock) String() string {
-	return fmt.Sprintf("inventory.%s #%d check=%t spend_rate=%f min=%f",
-		s.Name, s.Code, s.Check, s.SpendRate, s.Min)
-}

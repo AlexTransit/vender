@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
@@ -164,7 +165,7 @@ func (g *Global) ClientEnd(ctx context.Context) {
 	}
 }
 
-func (g *Global) MustInit(ctx context.Context, cfg *Config) {
+func (g *Global) MustInit(ctx context.Context, cfg *config_global.Config) {
 	err := g.Init(ctx, g.Config)
 	if err != nil {
 		g.Fatal(err)

@@ -14,7 +14,7 @@ import (
 	cmd_tele "github.com/AlexTransit/vender/cmd/vender/tele"
 	"github.com/AlexTransit/vender/cmd/vender/ui"
 	"github.com/AlexTransit/vender/cmd/vender/vmc"
-	"github.com/AlexTransit/vender/internal/state"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	state_new "github.com/AlexTransit/vender/internal/state/new"
 	"github.com/AlexTransit/vender/internal/tele"
 	"github.com/AlexTransit/vender/internal/types"
@@ -76,7 +76,7 @@ func main() {
 	}
 
 	ctx, g := state_new.NewContext(log, tele.New())
-	config := state.ReadConfig(log, *configPath)
+	config := config_global.ReadConfig(log, *configPath)
 	g.BuildVersion = BuildVersion
 	g.Config = config
 	types.Log = log

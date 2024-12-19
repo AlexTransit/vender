@@ -14,6 +14,7 @@ import (
 	"github.com/AlexTransit/vender/hardware/mega-client"
 	"github.com/AlexTransit/vender/hardware/text_display"
 	"github.com/AlexTransit/vender/helpers"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
@@ -53,7 +54,7 @@ type hardware struct {
 
 type devWrap struct {
 	sync.RWMutex
-	config DeviceConfig
+	config config_global.DeviceConfig
 	dev    types.Devicer
 }
 
@@ -228,13 +229,13 @@ func (g *Global) GetDevice(name string) (types.Devicer, error) {
 	return d.dev, nil
 }
 
-func (g *Global) GetDeviceConfig(name string) (DeviceConfig, error) {
+func (g *Global) GetDeviceConfig(name string) (config_global.DeviceConfig, error) {
 	d, ok, err := g.getDevice(name)
 	if err != nil {
-		return DeviceConfig{}, err
+		return config_global.DeviceConfig{}, err
 	}
 	if !ok {
-		return DeviceConfig{}, errors.NotFoundf("device=%s", name)
+		return config_global.DeviceConfig{}, errors.NotFoundf("device=%s", name)
 	}
 
 	d.RLock()
