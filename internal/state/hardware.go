@@ -307,6 +307,9 @@ func (g *Global) initDevices() error {
 		errs := make([]error, 0, len(g.Config.Hardware.EvendDevices))
 		x.m = make(map[string]*devWrap)
 		for _, d := range g.Config.Hardware.EvendDevices {
+			if d.Disabled {
+				continue
+			}
 			if d.Name == "" {
 				errs = append(errs, errors.Errorf("invalid device name=%s", d.Name))
 				continue

@@ -67,13 +67,17 @@ func (inv *Inventory) Init(ctx context.Context, c *Inventory, e *engine.Engine, 
 				return fmt.Errorf("stock(%s) register_add(%s) parse error(%v)", s.Name, s.RegisterAdd, err)
 			}
 			_, ok, err := engine.ArgApply(doAdd, 0)
-			if err != nil {
+			switch {
+			case err == nil && !ok:
+				return errors.Errorf("stock=%s register_add=%s no free argument", s.Name, s.RegisterAdd)
+
+			case (err == nil && ok) || engine.IsNotResolved(err): // success path
+				e.Register(addName, s.Wrap(doAdd))
+
+			case err != nil:
 				return errors.Errorf("stock=%s register_add=%s error(%v)", s.Name, s.RegisterAdd, err)
 			}
-			if !ok {
-				return errors.Errorf("stock=%s register_add=%s no free argument", s.Name, s.RegisterAdd)
-			}
-			e.Register(addName, s.Wrap(doAdd))
+
 		}
 		e.Register(doSpend1.Name, doSpend1)
 		e.Register(doSpendArg.Name, doSpendArg)

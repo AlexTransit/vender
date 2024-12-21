@@ -12,25 +12,29 @@ import (
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
 	"github.com/hashicorp/hcl/v2/hclsyntax"
+	"github.com/hashicorp/hcl/v2/hclwrite"
 )
 
 // for test/ make config from ctrusture
-// func ReadConf(ctx context.Context, fp *string) *Config {
-// 	c := CT{
-// 		Inv: InvStruct{
-// 			Persist: false,
-// 			Stocks:  Stocktruct{},
-// 		},
-// 	}
-// 	f := hclwrite.NewEmptyFile()
-// 	gohcl.EncodeIntoBody(&c, f.Body())
-// 	fmt.Printf("%s", f.Bytes())
-// 	// gohcl.DecodeBody()
-// 	er := hclsimple.DecodeFile(*fp, nil, &c)
-// 	*fp = "/home/alexm/c.hcl"
-// 	fmt.Printf("\033[41m %v \033[0m\n%+v", er, c)
-// 	return nil
-// }
+func WriteDefaultConf() {
+	// 	c := CT{
+	// 		Inv: InvStruct{
+	// 			Persist: false,
+	// 			Stocks:  Stocktruct{},
+	// 		},
+	// 	}
+	f := hclwrite.NewEmptyFile()
+	gohcl.EncodeIntoBody(&cfgDefault, f.Body())
+	file, err := os.OpenFile("defaultConfig.hcl", os.O_WRONLY|os.O_CREATE, 0o644)
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+	_, err = file.Write(f.Bytes())
+	if err != nil {
+		panic(err)
+	}
+}
 
 func (c *Config) ScaleI(i int) currency.Amount {
 	return currency.Amount(i) * currency.Amount(c.Money.Scale)
@@ -74,6 +78,7 @@ func (c *configLoadStruct) readConfig(fileName string) {
 }
 
 func ReadConfig(log *log2.Log, fn string) *Config {
+	// WriteDefaultConf()
 	cc := configLoadStruct{log: log}
 	cc.readConfig(fn) // read all config files
 	// overwrite duplacates values
@@ -96,9 +101,6 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 			uiTest := ui_config.TestsStruct{
 				Name:     v.Name,
 				Scenario: v.Scenario,
-			}
-			if v.Scenario != "" {
-				uiTest.Scenario = v.Scenario
 			}
 			cfgDefault.UI.Service.Tests[v.Name] = uiTest
 		}
@@ -131,19 +133,12 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 			cfgDefault.Engine.Inventory.Stocks[v.Name] = confStock
 		}
 		cfgDefault.Engine.Inventory.XXX_Stocks = nil
-		for _, v := range cfgDefault.Engine.Inventory.XXX_Stocks {
-			s := inventory.Stock{
-				Name:        v.Name,
-				Code:        0,
-				Check:       false,
-				Min:         0,
-				SpendRate:   0,
-				RegisterAdd: "",
-				Level:       "",
-				TuneKey:     "",
+		for _, v := range cfgDefault.Engine.XXX_Aliases {
+			s := engine_config.Alias{
+				Name:     v.Name,
+				Scenario: v.Scenario,
 			}
-			cfgDefault.Engine.Inventory.Stocks[v.Name] = s
-			cfgDefault.Engine.Inventory.StocksNameByCode[s.Code] = s.Name
+			cfgDefault.Engine.Aliases[v.Name] = s
 		}
 		cfgDefault.Engine.XXX_Aliases = nil
 		for _, v := range cfgDefault.Engine.Menu.XXX_Items {

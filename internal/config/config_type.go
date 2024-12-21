@@ -38,7 +38,7 @@ type HardwareStruct struct {
 	XXX_Devices  []DeviceConfig      `hcl:"device,block"`
 	Evend        evend_config.Config `hcl:"evend,block"`
 	Display      DisplayStruct       `hcl:"display,block"`
-	HD44780      HD44780Struct       `hcl:"HD44780,block"`
+	HD44780      HD44780Struct       `hcl:"hd44780,block"`
 	IodinPath    string              `hcl:"iodin_path,optional"`
 	Input        InputStruct         `hcl:"input,block"`
 	Mdb          mdb_config.Config   `hcl:"mdb,block"`
