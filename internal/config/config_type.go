@@ -6,6 +6,7 @@ import (
 	evend_config "github.com/AlexTransit/vender/hardware/mdb/evend/config"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
+	menu_config "github.com/AlexTransit/vender/internal/menu/menu_config"
 	sound_config "github.com/AlexTransit/vender/internal/sound/config"
 	ui_config "github.com/AlexTransit/vender/internal/ui/config"
 	watchdog_config "github.com/AlexTransit/vender/internal/watchdog/config"
@@ -140,9 +141,9 @@ var cfgDefault = Config{
 			StocksNameByCode: map[int]string{},
 		},
 		Profile: engine_config.ProfileStruct{},
-		Menu: engine_config.MenuStruct{
-			XXX_Items: []engine_config.MenuItem{},
-			Items:     map[string]engine_config.MenuItem{},
+		Menu: menu_config.MenuStruct{
+			XXX_Items: []menu_config.MenuItem{},
+			Items:     map[string]menu_config.MenuItem{},
 		},
 	},
 	Remains: nil,

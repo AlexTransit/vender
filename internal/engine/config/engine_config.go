@@ -1,33 +1,27 @@
 package engine_config
 
 import (
-	"fmt"
-
-	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
+	"github.com/AlexTransit/vender/internal/menu/menu_config"
 )
 
 type Config struct {
 	XXX_Aliases    []Alias `hcl:"alias,block"`
 	Aliases        map[string]Alias
-	OnBoot         []string            `hcl:"on_boot,optional"`
-	FirstInit      []string            `hcl:"first_init,optional"`
-	OnMenuError    []string            `hcl:"on_menu_error,optional"`
-	OnServiceBegin []string            `hcl:"on_service_begin,optional"`
-	OnServiceEnd   []string            `hcl:"on_service_end,optional"`
-	OnFrontBegin   []string            `hcl:"on_front_begin,optional"`
-	OnBroken       []string            `hcl:"on_broken,optional"`
-	OnShutdown     []string            `hcl:"on_shutdown,optional"`
-	Inventory      inventory.Inventory `hcl:"inventory,block"`
-	Profile        ProfileStruct       `hcl:"profile,block"`
-	Menu           MenuStruct          `hcl:"menu,block"`
+	OnBoot         []string               `hcl:"on_boot,optional"`
+	FirstInit      []string               `hcl:"first_init,optional"`
+	OnMenuError    []string               `hcl:"on_menu_error,optional"`
+	OnServiceBegin []string               `hcl:"on_service_begin,optional"`
+	OnServiceEnd   []string               `hcl:"on_service_end,optional"`
+	OnFrontBegin   []string               `hcl:"on_front_begin,optional"`
+	OnBroken       []string               `hcl:"on_broken,optional"`
+	OnShutdown     []string               `hcl:"on_shutdown,optional"`
+	Inventory      inventory.Inventory    `hcl:"inventory,block"`
+	Profile        ProfileStruct          `hcl:"profile,block"`
+	Menu           menu_config.MenuStruct `hcl:"menu,block"`
 }
 
-type MenuStruct struct {
-	XXX_Items []MenuItem `hcl:"item,block"`
-	Items     map[string]MenuItem
-}
 type ProfileStruct struct {
 	Regexp    string `hcl:"regexp,optional"`
 	MinUs     int    `hcl:"min_us,optional"`
@@ -37,25 +31,5 @@ type ProfileStruct struct {
 type Alias struct {
 	Name     string `hcl:"name,label"`
 	Scenario string `hcl:"scenario"`
-
-	Doer engine.Doer
+	Doer     engine.Doer
 }
-
-type MI struct {
-	Code string `hcl:"codeaa"`
-}
-
-type MenuItem struct {
-	Code      string `hcl:"code,label"`
-	Disabled  bool   `hcl:"disabled,optional"`
-	Name      string `hcl:"name,optional"`
-	XXX_Price int    `hcl:"price"` // use scaled `Price`, this is for decoding config only
-	Scenario  string `hcl:"scenario"`
-	CreamMax  int    `hcl:"creamMax,optional"`
-	SugarMax  int    `hcl:"sugarMax,optional"`
-
-	Price currency.Amount
-	Doer  engine.Doer
-}
-
-func (mi *MenuItem) String() string { return fmt.Sprintf("menu.%s %s", mi.Code, mi.Name) }

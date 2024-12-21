@@ -6,6 +6,7 @@ import (
 	"github.com/AlexTransit/vender/currency"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
+	menu_config "github.com/AlexTransit/vender/internal/menu/menu_config"
 	ui_config "github.com/AlexTransit/vender/internal/ui/config"
 	"github.com/AlexTransit/vender/log2"
 
@@ -142,7 +143,7 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 		}
 		cfgDefault.Engine.XXX_Aliases = nil
 		for _, v := range cfgDefault.Engine.Menu.XXX_Items {
-			mi := engine_config.MenuItem{
+			mi := menu_config.MenuItem{
 				Code: v.Code,
 			}
 			if v.Disabled {
