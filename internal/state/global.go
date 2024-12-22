@@ -56,14 +56,14 @@ func GetGlobal(ctx context.Context) *Global {
 
 func (g *Global) Init(ctx context.Context, cfg *config_global.Config) error {
 	g.Log.Infof("build version=%s", g.BuildVersion)
-	types.VMC.Version = g.BuildVersion
+	config_global.VMC.Version = g.BuildVersion
 
 	if g.Config.Persist.Root == "" {
 		g.Config.Persist.Root = "./vender-db"
 		g.Log.WarningF("config: persist.root=empty changed=%s", g.Config.Persist.Root)
 	}
 	g.Log.Debugf("config: persist.root=%s", g.Config.Persist.Root)
-	watchdog.Init(&g.Config.Watchdog, g.Log, cfg.UI.Front.ResetTimeoutSec)
+	watchdog.Init(&g.Config.Watchdog, g.Log, cfg.UI_config.Front.ResetTimeoutSec)
 
 	// Since tele is remote error reporting mechanism, it must be inited before anything else
 	// Tele.Init gets g.Log clone before SetErrorFunc, so Tele.Log.Error doesn't recurse on itself
@@ -71,7 +71,6 @@ func (g *Global) Init(ctx context.Context, cfg *config_global.Config) error {
 		g.Tele = tele_api.Noop{}
 		return errors.Annotate(err, "tele init")
 	}
-	types.TeleN = g.Tele
 	g.Log.SetErrorFunc(g.Tele.Error)
 
 	if g.BuildVersion == "unknown" {
@@ -94,7 +93,6 @@ func (g *Global) Init(ctx context.Context, cfg *config_global.Config) error {
 	wg.Add(initTasks)
 	errch := make(chan error, initTasks)
 	g.initInput()
-	go helpers.WrapErrChan(&wg, errch, g.initDisplay)                                // AlexM хрень переделать
 	go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
 	go helpers.WrapErrChan(&wg, errch, g.initEngine)
 	// TODO init money system, load money state from storage
@@ -189,27 +187,6 @@ func (g *Global) initEngine() error {
 }
 
 func (g *Global) RegisterCommands(ctx context.Context) {
-	g.Engine.RegisterNewFunc(
-		"vmc.lock!",
-		func(ctx context.Context) error {
-			if !types.VMC.Lock {
-				VmcLock(ctx)
-			}
-			return nil
-		},
-	)
-
-	g.Engine.RegisterNewFunc(
-		"vmc.unlock!",
-		func(ctx context.Context) error {
-			if types.VMC.Lock {
-				VmcUnLock(ctx)
-				// g.LockCh <- struct{}{}
-			}
-			return nil
-		},
-	)
-
 	g.Engine.RegisterNewFunc(
 		"vmc.stop!",
 		func(ctx context.Context) error {

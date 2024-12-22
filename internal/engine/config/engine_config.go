@@ -21,6 +21,7 @@ type Config struct {
 	Profile        ProfileStruct              `hcl:"profile,block"`
 	XXX_Menu       menu_config.XXX_MenuStruct `hcl:"menu,block"`
 	Menu           menu_config.MenuStruct
+	NeedRestart    bool
 }
 
 type ProfileStruct struct {

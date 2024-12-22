@@ -17,7 +17,6 @@ import (
 	config_global "github.com/AlexTransit/vender/internal/config"
 	state_new "github.com/AlexTransit/vender/internal/state/new"
 	"github.com/AlexTransit/vender/internal/tele"
-	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/log2"
 )
 
@@ -79,7 +78,7 @@ func main() {
 	config := config_global.ReadConfig(log, *configPath)
 	g.BuildVersion = BuildVersion
 	g.Config = config
-	types.Log = log
+	g.Log = log
 	log.Debugf("starting %s", flagset.Args())
 
 	if err := mod.Main(ctx, flagset.Args()); err != nil {

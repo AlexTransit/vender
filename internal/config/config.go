@@ -98,14 +98,14 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 			VMC.Hardware.EvendDevices[v.Name] = devConf
 		}
 		VMC.Hardware.XXX_Devices = nil
-		for _, v := range VMC.UI.Service.XXX_Tests {
+		for _, v := range VMC.UI_config.Service.XXX_Tests {
 			uiTest := ui_config.TestsStruct{
 				Name:     v.Name,
 				Scenario: v.Scenario,
 			}
-			VMC.UI.Service.Tests[v.Name] = uiTest
+			VMC.UI_config.Service.Tests[v.Name] = uiTest
 		}
-		VMC.UI.Service.XXX_Tests = nil
+		VMC.UI_config.Service.XXX_Tests = nil
 		for _, v := range VMC.Engine.Inventory.XXX_Stocks {
 			confStock := inventory.Stock{
 				Name: v.Name,
@@ -169,4 +169,17 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 		VMC.Engine.XXX_Menu.XXX_Items = nil
 	}
 	return &VMC
+}
+
+func (u *Config) KeyboardReader(v ...bool) bool {
+	if len(v) > 0 {
+		u.User.KeyboardReadEnable = v[0]
+	}
+	return u.User.KeyboardReadEnable
+}
+
+func (u *Config) UIState(v ...uint32) uint32 {
+	if len(v) > 0 {
+	}
+	return u.User.UiState
 }

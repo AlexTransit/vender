@@ -13,6 +13,7 @@ import (
 
 	// "github.com/AlexTransit/vender/hardware/money"
 	"github.com/AlexTransit/vender/helpers"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
@@ -247,12 +248,12 @@ func (ms *MoneySystem) XXX_InjectCoin(n currency.Nominal) error {
 
 func (ms *MoneySystem) AddDirty(dirty currency.Amount) {
 	ms.dirty += dirty
-	types.VMC.MonSys.Dirty = ms.dirty
+	config_global.VMC.User.DirtyMoney = ms.dirty
 }
 
 func (ms *MoneySystem) SetDirty(dirty currency.Amount) {
 	ms.dirty = dirty
-	types.VMC.MonSys.Dirty = ms.dirty
+	config_global.VMC.User.DirtyMoney = ms.dirty
 }
 
 func (ms *MoneySystem) GetDirty() currency.Amount {

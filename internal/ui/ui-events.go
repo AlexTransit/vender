@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/AlexTransit/vender/hardware/input"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
 	tele_api "github.com/AlexTransit/vender/tele"
@@ -16,11 +17,11 @@ func (ui *UI) linesCreate(l1 *string, l2 *string, tuneScreen *bool) {
 		currentLine := ui.g.Hardware.HD44780.Display.GetLine(1)
 		*l1 = currentLine
 	} else {
-		*l1 = ui.g.Config.UI.Front.MsgCredit + c.Format100I()
+		*l1 = ui.g.Config.UI_config.Front.MsgCredit + c.Format100I()
 	}
 	if len(ui.inputBuf) > 0 {
-		*l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgInputCode, string(ui.inputBuf))
-		*l1 = ui.g.Config.UI.Front.MsgCredit + c.Format100I()
+		*l2 = fmt.Sprintf(ui.g.Config.UI_config.Front.MsgInputCode, string(ui.inputBuf))
+		*l1 = ui.g.Config.UI_config.Front.MsgCredit + c.Format100I()
 	} else {
 		*l2 = " "
 	}
@@ -66,7 +67,7 @@ func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *b
 	}
 	if currentState == tele_api.State_WaitingForExternalPayment { // ignore key press
 		ui.g.Log.Info("qr selected. ignore key")
-		*l1 = types.VMC.HW.Display.L1
+		*l1 = config_global.VMC.User.TDL1
 		return types.StateDoesNotChange
 	}
 	if currentState != tele_api.State_Client {
@@ -86,35 +87,37 @@ func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *b
 		*tuneScreen = false
 		if len(ui.inputBuf) == 0 {
 			*l1 = ""
-			*l2 = ui.g.Config.UI.Front.MsgMenuCodeEmpty
+			*l2 = ui.g.Config.UI_config.Front.MsgMenuCodeEmpty
 			return types.StateDoesNotChange
 		}
-		var checkValidCode bool
-		types.UI.FrontResult.Item, checkValidCode = types.UI.Menu[string(ui.inputBuf)]
+		// var checkValidCode bool
+		// types.UI.FrontResult.Item, checkValidCode = types.UI.Menu[string(ui.inputBuf)]
+		mi, checkValidCode := config_global.GetMenuItem(string(ui.inputBuf))
 		if !checkValidCode {
-			*l1 = ui.g.Config.UI.Front.MsgMenuError
-			*l2 = ui.g.Config.UI.Front.MsgMenuCodeInvalid
+			*l1 = ui.g.Config.UI_config.Front.MsgMenuError
+			*l2 = ui.g.Config.UI_config.Front.MsgMenuCodeInvalid
 			ui.inputBuf = []byte{}
 			return types.StateDoesNotChange
 		}
-		if err := types.UI.FrontResult.Item.D.Validate(); err != nil {
-			ui.g.Log.WarningF("validate menu:%v error:%v", types.UI.FrontResult.Item.Code, err)
-			*l1 = ui.g.Config.UI.Front.MsgMenuError
-			*l2 = ui.g.Config.UI.Front.MsgMenuNotAvailable
+		if err := mi.Doer.Validate(); err != nil {
+			ui.g.Log.WarningF("validate menu:%v error:%v", mi.Code, err)
+			*l1 = ui.g.Config.UI_config.Front.MsgMenuError
+			*l2 = ui.g.Config.UI_config.Front.MsgMenuNotAvailable
 			ui.inputBuf = []byte{}
 			return types.StateDoesNotChange
 		}
 		credit := ui.ms.GetCredit()
-		if types.UI.FrontResult.Item.Price > credit {
-			*l2 = fmt.Sprintf(ui.g.Config.UI.Front.MsgInputCode+" "+ui.g.Config.UI.Front.MsgPrice, types.UI.FrontResult.Item.Code, types.UI.FrontResult.Item.Price.Format100I())
+		config_global.VMC.User.SelectedItem = mi
+		if mi.Price > credit {
+			*l2 = fmt.Sprintf(ui.g.Config.UI_config.Front.MsgInputCode+" "+ui.g.Config.UI_config.Front.MsgPrice, mi.Code, mi.Price.Format100I())
 			if credit == 0 {
 				*l1 = *ui.sendRequestForQrPayment(&rm)
 			} else {
-				*l1 = ui.g.Config.UI.Front.MsgMenuInsufficientCredit
+				*l1 = ui.g.Config.UI_config.Front.MsgMenuInsufficientCredit
 			}
 			return types.StateDoesNotChange
 		}
-		if ui.ms.WaitEscrowAccept(types.UI.FrontResult.Item.Price) {
+		if ui.ms.WaitEscrowAccept(mi.Price) {
 			return types.StateDoesNotChange
 		}
 		return types.StateFrontAccept // success path
@@ -124,7 +127,7 @@ func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *b
 
 func (ui *UI) parseMoneyEvent(ek types.EventKind) types.UiState {
 	sound.PlayMoneyIn()
-	types.VMC.EvendKeyboardInput(true)
+	config_global.VMC.KeyboardReader(true)
 	currentState := ui.g.Tele.GetState()
 	if currentState == tele_api.State_WaitingForExternalPayment {
 		rm := tele_api.FromRoboMessage{State: tele_api.State_Client}
@@ -133,10 +136,10 @@ func (ui *UI) parseMoneyEvent(ek types.EventKind) types.UiState {
 		ui.g.Tele.RoboSend(&rm)
 	}
 	credit := ui.ms.GetCredit()
-	price := types.UI.FrontResult.Item.Price
-	if price != 0 && credit >= price && types.UI.FrontResult.Item.D != nil {
+	price := config_global.VMC.User.SelectedItem.Price
+	if price != 0 && credit >= price && config_global.VMC.User.SelectedItem.Doer != nil {
 		// menu selected, almost paided and have item doer
-		if err := types.UI.FrontResult.Item.D.Validate(); err == nil {
+		if err := config_global.VMC.User.SelectedItem.Doer.Validate(); err == nil {
 			// item valid
 			if ek == types.EventMoneyPreCredit {
 				// send command escrow to stacker and wait

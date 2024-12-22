@@ -1,6 +1,8 @@
 package menu_config
 
 import (
+	"fmt"
+
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/internal/engine"
 )
@@ -28,3 +30,13 @@ type MenuItem struct {
 	Price currency.Amount
 	Doer  engine.Doer
 }
+
+type UIMenuStruct struct {
+	SelectedItem MenuItem
+	Cream        uint8
+	Sugar        uint8
+	PaymenId     int64
+	QRPayAmount  uint32
+}
+
+func (m *MenuItem) String() string { return fmt.Sprintf("menu.%s %s", m.Code, m.Code) }

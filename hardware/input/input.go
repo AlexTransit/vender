@@ -4,6 +4,7 @@ package input
 import (
 	"fmt"
 
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
@@ -60,7 +61,7 @@ func (d *Dispatch) ReadEvendKeyboard(s Source) {
 		}
 
 		if len(d.Bus) == 0 {
-			if event.Source == DevInputEventTag || types.VMC.InputEnable {
+			if event.Source == DevInputEventTag || config_global.VMC.User.KeyboardReadEnable {
 				d.Log.Infof("key press (%s) ", kn)
 				d.Bus <- event
 			} else {

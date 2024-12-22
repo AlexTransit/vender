@@ -31,9 +31,9 @@ import (
 func VmcLock(ctx context.Context) {
 	g := GetGlobal(ctx)
 	g.Log.Info("Vmc Locked")
-	types.VMC.Lock = true
-	types.VMC.EvendKeyboardInput(false)
-	if types.VMC.UiState == uint32(types.StateFrontSelect) || types.VMC.UiState == uint32(types.StatePrepare) {
+	config_global.VMC.User.Lock = true
+	config_global.VMC.User.KeyboardReadEnable = false
+	if config_global.VMC.User.UiState == uint32(types.StateFrontSelect) || config_global.VMC.User.UiState == uint32(types.StatePrepare) {
 		g.LockCh <- struct{}{}
 	}
 }
@@ -41,9 +41,9 @@ func VmcLock(ctx context.Context) {
 func VmcUnLock(ctx context.Context) {
 	g := GetGlobal(ctx)
 	g.Log.Info("Vmc UnLocked")
-	types.VMC.Lock = false
-	types.VMC.EvendKeyboardInput(true)
-	if types.VMC.UiState == uint32(types.StateFrontLock) {
+	config_global.VMC.User.Lock = false
+	config_global.VMC.KeyboardReader(true)
+	if config_global.VMC.User.UiState == uint32(types.StateFrontLock) {
 		g.LockCh <- struct{}{}
 	}
 }
@@ -54,12 +54,12 @@ func (g *Global) UpgradeVender() {
 			g.Log.Errorf("upgrade err(%v)", err)
 			return
 		}
-		types.VMC.NeedRestart = true
+		config_global.VMC.Engine.NeedRestart = true
 	}()
 }
 
 func (g *Global) VmcStop(ctx context.Context) {
-	if types.VMC.UiState != uint32(types.StateFrontSelect) {
+	if config_global.VMC.User.UiState != uint32(types.StateFrontSelect) {
 		watchdog.DevicesInitializationRequired()
 	}
 	g.VmcStopWOInitRequared(ctx)
@@ -104,14 +104,6 @@ func (g *Global) RunBashSript(script string) (err error) {
 	return fmt.Errorf("script(%s) stdout(%s) error(%s)", script, stdout, cmd.Stderr)
 }
 
-func (g *Global) initDisplay() error {
-	d, err := g.Display()
-	if d != nil {
-		types.VMC.HW.Display.GdisplayValid = true
-	}
-	return err
-}
-
 func (g *Global) ShowQR(t string) {
 	display, err := g.Display()
 	if err != nil {
@@ -127,7 +119,7 @@ func (g *Global) ShowQR(t string) {
 	if err != nil {
 		g.Log.Error(err, "QR show error")
 	}
-	types.VMC.HW.Display.Gdisplay = t
+	config_global.VMC.User.QrText = t
 }
 
 func (g *Global) Stop() {
@@ -146,20 +138,17 @@ func (g *Global) StopWait(timeout time.Duration) bool {
 
 func (g *Global) ClientBegin(ctx context.Context) {
 	_ = g.Engine.ExecList(ctx, "client-light", []string{"evend.cup.light_on"})
-	if !types.VMC.Lock {
-		// g.TimerUIStop <- struct{}{}
-		types.VMC.Lock = true
-		types.VMC.Client.WorkTime = time.Now()
+	if !config_global.VMC.User.Lock {
+		config_global.VMC.User.Lock = true
 		g.Log.Infof("--- client activity begin ---")
 	}
 	g.Tele.RoboSendState(tele_api.State_Client)
 }
 
 func (g *Global) ClientEnd(ctx context.Context) {
-	types.VMC.EvendKeyboardInput(true)
-	if types.VMC.Lock {
-		types.VMC.Lock = false
-		types.VMC.Client.WorkTime = time.Now()
+	config_global.VMC.KeyboardReader(true)
+	if config_global.VMC.User.Lock {
+		config_global.VMC.User.Lock = false
 		g.Log.Infof("--- client activity end ---")
 	}
 }

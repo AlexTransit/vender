@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/AlexTransit/vender/internal/types"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/juju/errors"
 	"github.com/paulrosania/go-charset/charset"
 	_ "github.com/paulrosania/go-charset/data"
@@ -152,20 +152,20 @@ func (td *TextDisplay) SetLine(line int, value string) {
 
 	bs := td.Translate(value)
 	if bs == nil {
-		types.Log.NoticeF("translate %s retutn nil", value)
+		config_global.VMC.Log.NoticeF("translate %s retutn nil", value)
 	}
 	switch line {
 	case 1:
 		td.state.L1 = bs
 		if td.line1 != value {
 			td.line1 = value
-			types.Log.NoticeF(fmt.Sprintf("Display.L%d=%s", line, value))
+			config_global.VMC.Log.NoticeF("Display.L%d=%s", line, value)
 		}
 	case 2:
 		td.state.L2 = bs
 		if td.line2 != value {
 			td.line2 = value
-			types.Log.NoticeF(fmt.Sprintf("Display.L%d=%s", line, value))
+			config_global.VMC.Log.NoticeF("Display.L%d=%s", line, value)
 		}
 
 	}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/AlexTransit/vender/hardware/input"
 	"github.com/AlexTransit/vender/helpers"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
 	"github.com/AlexTransit/vender/internal/state"
@@ -59,7 +60,7 @@ type uiService struct { //nolint:maligned
 
 func (ui *uiService) Init(ctx context.Context) {
 	g := state.GetGlobal(ctx)
-	config := g.Config.UI.Service
+	config := g.Config.UI_config.Service
 	ui.SecretSalt = []byte{0} // FIXME read from config
 	ui.resetTimeout = helpers.IntSecondDefault(config.ResetTimeoutSec, 3*time.Second)
 	errs := make([]error, 0, len(config.Tests))
@@ -76,7 +77,7 @@ func (ui *uiService) Init(ctx context.Context) {
 }
 
 func (ui *UI) onServiceBegin(ctx context.Context) types.UiState {
-	types.VMC.InputEnable = true
+	config_global.VMC.KeyboardReader(true)
 	ui.inputBuf = ui.inputBuf[:0]
 	ui.Service.askReport = false
 	ui.Service.menuIdx = 0

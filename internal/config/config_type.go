@@ -10,22 +10,28 @@ import (
 	sound_config "github.com/AlexTransit/vender/internal/sound/config"
 	ui_config "github.com/AlexTransit/vender/internal/ui/config"
 	watchdog_config "github.com/AlexTransit/vender/internal/watchdog/config"
+	"github.com/AlexTransit/vender/log2"
+	tele_api "github.com/AlexTransit/vender/tele"
 	tele_config "github.com/AlexTransit/vender/tele/config"
 	"github.com/hashicorp/hcl/v2"
 )
 
 type Config struct {
+	Version        string
+	Log            *log2.Log
+	TeleN          tele_api.Teler
 	UpgradeScript  string                 `hcl:"upgrade_script,optional"`
 	ScriptIfBroken string                 `hcl:"script_if_broken,optional"`
 	Money          MoneyStruct            `hcl:"money,block"`
 	Hardware       HardwareStruct         `hcl:"hardware,block"`
 	Persist        PersistStruct          `hcl:"persist,block"`
 	Tele           tele_config.Config     `hcl:"tele,block"`
-	UI             ui_config.Config       `hcl:"ui,block"`
+	UI_config      ui_config.Config       `hcl:"ui,block"`
 	Sound          sound_config.Config    `hcl:"sound,block"`
 	Watchdog       watchdog_config.Config `hcl:"watchdog,block"`
 	Engine         engine_config.Config   `hcl:"engine,block"`
 	Remains        hcl.Body               `hcl:",remain"`
+	User           ui_config.UIUser
 }
 
 type DeviceConfig struct {
@@ -113,7 +119,7 @@ var VMC = Config{
 	},
 	Persist: PersistStruct{},
 	Tele:    tele_config.Config{},
-	UI: ui_config.Config{
+	UI_config: ui_config.Config{
 		LogDebug: false,
 		Front:    ui_config.FrontStruct{},
 		Service: ui_config.ServiceStruct{
@@ -169,4 +175,9 @@ func SugarMax() uint8 {
 
 func CreamMax() uint8 {
 	return VMC.Engine.Menu.DefaultCreamMax
+}
+
+func GetMenuItem(menuCode string) (mi menu_config.MenuItem, ok bool) {
+	mi, ok = VMC.Engine.Menu.Items[menuCode]
+	return
 }

@@ -1,5 +1,10 @@
 package ui_config
 
+import (
+	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/internal/menu/menu_config"
+)
+
 type Config struct { //nolint:maligned
 	LogDebug bool          `hcl:"log_debug,optional"`
 	Front    FrontStruct   `hcl:"front,block"`
@@ -46,4 +51,16 @@ type ServiceStruct struct {
 type TestsStruct struct {
 	Name     string `hcl:"name,label"`
 	Scenario string `hcl:"scenario"`
+}
+
+type UIUser struct {
+	TDL1               string
+	TDL2               string
+	QrText             string
+	UiState            uint32
+	Lock               bool
+	ReportInv          int
+	DirtyMoney         currency.Amount
+	KeyboardReadEnable bool
+	menu_config.UIMenuStruct
 }
