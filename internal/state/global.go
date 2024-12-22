@@ -163,6 +163,12 @@ func (g *Global) initEngine() error {
 			continue
 		}
 		// g.Log.Debugf("config.engine.menu %s pxxx=%d ps=%d", x.String(), x.XXX_Price, x.Price)
+		if x.CreamMax == 0 {
+			x.CreamMax = g.Config.Engine.Menu.DefaultCreamMax
+		}
+		if x.SugarMax == 0 {
+			x.SugarMax = g.Config.Engine.Menu.DefaultSugarMax
+		}
 		g.Engine.Register("menu."+x.Code, x.Doer)
 	}
 

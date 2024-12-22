@@ -9,6 +9,7 @@ import (
 	"github.com/AlexTransit/vender/hardware/input"
 	"github.com/AlexTransit/vender/hardware/mdb/evend"
 	"github.com/AlexTransit/vender/helpers"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
@@ -96,8 +97,8 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 	rm := tele_api.FromRoboMessage{State: tele_api.State_Nominal}
 	canselQrOrder(&rm)
 	types.UI.FrontResult = types.UIMenuResult{
-		Cream: DefaultCream,
-		Sugar: DefaultSugar,
+		Cream: config_global.VMC.Engine.Menu.DefaultCream,
+		Sugar: config_global.VMC.Engine.Menu.DefaultSugar,
 	}
 
 	if ui.g.Tele.GetState() != tele_api.State_Nominal {
@@ -197,7 +198,7 @@ func (ui *UI) tuneScreen(e types.InputEvent) (l1, l2 string) {
 			types.UI.FrontResult.Cream--
 		}
 	case input.EvendKeyCreamMore:
-		if types.UI.FrontResult.Cream < MaxCream {
+		if types.UI.FrontResult.Cream < config_global.CreamMax() {
 			types.UI.FrontResult.Cream++
 		}
 	case input.EvendKeySugarLess:
@@ -205,7 +206,7 @@ func (ui *UI) tuneScreen(e types.InputEvent) (l1, l2 string) {
 			types.UI.FrontResult.Sugar--
 		}
 	case input.EvendKeySugarMore:
-		if types.UI.FrontResult.Sugar < MaxSugar {
+		if types.UI.FrontResult.Sugar < config_global.SugarMax() {
 			types.UI.FrontResult.Sugar++
 		}
 	default:
@@ -214,10 +215,10 @@ func (ui *UI) tuneScreen(e types.InputEvent) (l1, l2 string) {
 	switch e.Key {
 	case input.EvendKeyCreamLess, input.EvendKeyCreamMore:
 		l1 = fmt.Sprintf("%s  /%d", ui.g.Config.UI.Front.MsgCream, types.UI.FrontResult.Cream)
-		l2b = createScale(types.UI.FrontResult.Cream, MaxCream, DefaultCream)
+		l2b = createScale(types.UI.FrontResult.Cream, config_global.CreamMax(), config_global.DefaultCream())
 	case input.EvendKeySugarLess, input.EvendKeySugarMore:
 		l1 = fmt.Sprintf("%s  /%d", ui.g.Config.UI.Front.MsgSugar, types.UI.FrontResult.Sugar)
-		l2b = createScale(types.UI.FrontResult.Sugar, MaxSugar, DefaultSugar)
+		l2b = createScale(types.UI.FrontResult.Sugar, config_global.SugarMax(), config_global.DefaultSugar())
 	default:
 	}
 	l2 = string(l2b[:])
@@ -275,8 +276,8 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 
 func OrderMenuAndTune(o *tele_api.Order) {
 	o.MenuCode = types.UI.FrontResult.Item.Code
-	o.Cream = types.TuneValueToByte(types.UI.FrontResult.Cream, DefaultCream)
-	o.Sugar = types.TuneValueToByte(types.UI.FrontResult.Sugar, DefaultSugar)
+	o.Cream = types.TuneValueToByte(types.UI.FrontResult.Cream, config_global.VMC.Engine.Menu.DefaultCream)
+	o.Sugar = types.TuneValueToByte(types.UI.FrontResult.Sugar, config_global.VMC.Engine.Menu.DefaultCream)
 }
 
 func (ui *UI) onFrontTimeout(ctx context.Context) types.UiState {

@@ -275,6 +275,9 @@ func (td *TextDisplay) SetUpdateChan(ch chan<- State) {
 func (td *TextDisplay) State() State { return td.state.Copy() }
 
 func (td *TextDisplay) flush() {
+	if td.dev == nil {
+		return
+	}
 	var buf1 [MaxWidth]byte
 	var buf2 [MaxWidth]byte
 	b1 := buf1[:td.width]

@@ -4,13 +4,6 @@ package ui
 
 import "time"
 
-const (
-	DefaultCream uint8 = 4
-	MaxCream     uint8 = 6
-	DefaultSugar uint8 = 4
-	MaxSugar     uint8 = 8
-)
-
 const modTuneTimeout = 3 * time.Second
 
 var ScaleAlpha = []byte{

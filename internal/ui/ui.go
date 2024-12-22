@@ -16,21 +16,18 @@ import (
 
 type UI struct { //nolint:maligned
 	FrontMaxPrice currency.Amount
-	// FrontResult   UIMenuResult
-	Service uiService
+	Service       uiService
 
-	config *ui_config.Config
-	g      *state.Global
-	ms     *money.MoneySystem
-	state  types.UiState
-	broken bool
-	// menu     Menu
-	display  *text_display.TextDisplay // FIXME
-	inputBuf []byte
-	eventch  chan types.Event
-	inputch  chan types.InputEvent
-	lock     uiLock
-
+	config            *ui_config.Config
+	g                 *state.Global
+	ms                *money.MoneySystem
+	state             types.UiState
+	broken            bool
+	display           *text_display.TextDisplay // FIXME
+	inputBuf          []byte
+	eventch           chan types.Event
+	inputch           chan types.InputEvent
+	lock              uiLock
 	frontResetTimeout time.Duration
 
 	XXX_testHook func(types.UiState)
@@ -43,8 +40,10 @@ func (ui *UI) GetUiState() uint32 {
 }
 
 func (ui *UI) Init(ctx context.Context) error {
-	ui.g = state.GetGlobal(ctx)
+	g := state.GetGlobal(ctx)
+	ui.g = g
 	ui.config = &ui.g.Config.UI
+
 	ui.setState(types.StateBoot)
 
 	// ui.menu = make(Menu)

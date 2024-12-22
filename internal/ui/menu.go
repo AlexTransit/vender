@@ -5,24 +5,24 @@ import (
 	"fmt"
 
 	"github.com/AlexTransit/vender/currency"
-	"github.com/AlexTransit/vender/internal/engine"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
 )
 
-type Menu map[string]MenuItem
+// type Menu map[string]MenuItem
 
-type MenuItem struct {
-	Name  string
-	D     engine.Doer
-	Price currency.Amount
-	Code  string
-}
+// type MenuItem struct {
+// 	Name  string
+// 	D     engine.Doer
+// 	Price currency.Amount
+// 	Code  string
+// }
 
-func (mi *MenuItem) String() string {
-	return fmt.Sprintf("menu code=%s price=%d(raw) name='%s'", mi.Code, mi.Price, mi.Name)
-}
+// func (mi *MenuItem) String() string {
+// 	return fmt.Sprintf("menu code=%s price=%d(raw) name='%s'", mi.Code, mi.Price, mi.Name)
+// }
 
 // FIXME alexm. меню переделать. посмотреть что массив нигде не используется и в конфиге сразу заполнить карту.
 func FillMenu(ctx context.Context) {
@@ -48,7 +48,7 @@ func Cook(ctx context.Context) error {
 	state.VmcLock(ctx)
 
 	itemCtx := money.SetCurrentPrice(ctx, types.UI.FrontResult.Item.Price)
-	if tuneCream := ScaleTuneRate(&types.UI.FrontResult.Cream, CreamMax(), DefaultCream); tuneCream != 1 {
+	if tuneCream := ScaleTuneRate(&types.UI.FrontResult.Cream, config_global.CreamMax(), config_global.DefaultCream()); tuneCream != 1 {
 		const name = "cream"
 		var err error
 		g.Log.Debugf("ui-front tuning stock=%s tune=%v", name, tuneCream)
@@ -56,7 +56,7 @@ func Cook(ctx context.Context) error {
 			g.Log.Errorf("ui-front tuning stock=%s err=%v", name, err)
 		}
 	}
-	if tuneSugar := ScaleTuneRate(&types.UI.FrontResult.Sugar, SugarMax(), DefaultSugar); tuneSugar != 1 {
+	if tuneSugar := ScaleTuneRate(&types.UI.FrontResult.Sugar, config_global.SugarMax(), config_global.DefaultSugar()); tuneSugar != 1 {
 		const name = "sugar"
 		var err error
 		g.Log.Debugf("ui-front tuning stock=%s tune=%v", name, tuneSugar)
@@ -83,20 +83,6 @@ func Cook(ctx context.Context) error {
 	}
 	g.Log.Debugf("ui-front selected=%s end err=%v", types.UI.FrontResult.Item.String(), err)
 	return err
-}
-
-func CreamMax() uint8 {
-	if types.UI.FrontResult.Item.CreamMax == 0 {
-		return MaxCream
-	}
-	return types.UI.FrontResult.Item.CreamMax
-}
-
-func SugarMax() uint8 {
-	if types.UI.FrontResult.Item.SugarMax == 0 {
-		return MaxSugar
-	}
-	return types.UI.FrontResult.Item.SugarMax
 }
 
 func menuMaxPrice() (currency.Amount, error) {

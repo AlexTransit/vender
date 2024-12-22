@@ -48,20 +48,21 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 	display.SetLine(1, "boot "+g.BuildVersion)
 
 	mdbus, err := g.Mdb()
-	if err != nil {
-		return errors.Annotate(err, "mdb init")
-	}
-	if err = mdbus.ResetDefault(); err != nil {
-		return errors.Annotate(err, "mdb bus reset")
-	}
+	if mdbus != nil {
+		if err != nil {
+			return errors.Annotate(err, "mdb init")
+		}
+		if err = mdbus.ResetDefault(); err != nil {
+			return errors.Annotate(err, "mdb bus reset")
+		}
 
-	if err = hardware.InitMDBDevices(ctx); err != nil {
-		return errors.Annotate(err, "hardware init")
-	}
-
-	moneysys := new(money.MoneySystem)
-	if err := moneysys.Start(ctx); err != nil {
-		return errors.Annotate(err, "money system Start()")
+		if err = hardware.InitMDBDevices(ctx); err != nil {
+			return errors.Annotate(err, "hardware init")
+		}
+		moneysys := new(money.MoneySystem)
+		if err := moneysys.Start(ctx); err != nil {
+			return errors.Annotate(err, "money system Start()")
+		}
 	}
 
 	ui := ui.UI{}

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/AlexTransit/vender/currency"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
@@ -85,7 +86,7 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 	if rt-st > 180 {
 		// затычка по тайм ауту. если команда пришла с задержкой
 		errM := fmt.Sprintf("remote make error. big time difference between server and robot. RTime:%v STime:%v", time.Unix(rt, 0), time.Unix(st, 0))
-		t.log.Errorf(errM)
+		t.log.Error(errM)
 		om.Err = &tele_api.Err{Message: errM}
 		om.Order.OrderStatus = tele_api.OrderStatus_orderError
 		types.VMC.EvendKeyboardInput(true)
@@ -120,8 +121,8 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 			return
 		}
 		types.UI.FrontResult.Item = i
-		types.UI.FrontResult.Sugar = tuneCook(m.MakeOrder.GetSugar(), ui.DefaultSugar, ui.SugarMax())
-		types.UI.FrontResult.Cream = tuneCook(m.MakeOrder.GetCream(), ui.DefaultCream, ui.CreamMax())
+		types.UI.FrontResult.Sugar = tuneCook(m.MakeOrder.GetSugar(), config_global.VMC.Engine.Menu.DefaultSugar, config_global.VMC.Engine.Menu.DefaultSugarMax)
+		types.UI.FrontResult.Cream = tuneCook(m.MakeOrder.GetCream(), config_global.VMC.Engine.Menu.DefaultCream, config_global.VMC.Engine.Menu.DefaultCreamMax)
 		om.Order.Amount = uint32(types.UI.FrontResult.Item.Price)
 		types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
 		sound.PlayMoneyIn()

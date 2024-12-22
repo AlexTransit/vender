@@ -58,7 +58,7 @@ func (t *tele) Error(e error) {
 }
 
 func (t *tele) Log(s string) {
-	t.log.Infof(s)
+	t.log.Info(s)
 }
 
 func (t *tele) ErrorStr(s string) {

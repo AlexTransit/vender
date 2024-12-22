@@ -91,7 +91,7 @@ type MoneyStruct struct {
 }
 
 // config wich presetted default values
-var cfgDefault = Config{
+var VMC = Config{
 	UpgradeScript:  "",
 	ScriptIfBroken: "",
 	Money: MoneyStruct{
@@ -141,10 +141,32 @@ var cfgDefault = Config{
 			StocksNameByCode: map[int]string{},
 		},
 		Profile: engine_config.ProfileStruct{},
-		Menu: menu_config.MenuStruct{
+		XXX_Menu: menu_config.XXX_MenuStruct{
 			XXX_Items: []menu_config.MenuItem{},
-			Items:     map[string]menu_config.MenuItem{},
+		},
+		Menu: menu_config.MenuStruct{
+			DefaultCream:    4,
+			DefaultCreamMax: 6,
+			DefaultSugar:    4,
+			DefaultSugarMax: 8,
+			Items:           map[string]menu_config.MenuItem{},
 		},
 	},
 	Remains: nil,
+}
+
+func DefaultSugar() uint8 {
+	return VMC.Engine.Menu.DefaultSugar
+}
+
+func DefaultCream() uint8 {
+	return VMC.Engine.Menu.DefaultCream
+}
+
+func SugarMax() uint8 {
+	return VMC.Engine.Menu.DefaultSugarMax
+}
+
+func CreamMax() uint8 {
+	return VMC.Engine.Menu.DefaultCreamMax
 }

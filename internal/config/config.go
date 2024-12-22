@@ -25,7 +25,7 @@ func WriteDefaultConf() {
 	// 		},
 	// 	}
 	f := hclwrite.NewEmptyFile()
-	gohcl.EncodeIntoBody(&cfgDefault, f.Body())
+	gohcl.EncodeIntoBody(&VMC, f.Body())
 	file, err := os.OpenFile("defaultConfig.hcl", os.O_WRONLY|os.O_CREATE, 0o644)
 	if err != nil {
 		panic(err)
@@ -84,8 +84,8 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 	cc.readConfig(fn) // read all config files
 	// overwrite duplacates values
 	for i := range cc.bodies {
-		_ = gohcl.DecodeBody(cc.bodies[i], nil, &cfgDefault)
-		for _, v := range cfgDefault.Hardware.XXX_Devices {
+		_ = gohcl.DecodeBody(cc.bodies[i], nil, &VMC)
+		for _, v := range VMC.Hardware.XXX_Devices {
 			devConf := DeviceConfig{
 				Name: v.Name,
 			}
@@ -95,18 +95,18 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 			if v.Disabled {
 				devConf.Disabled = true
 			}
-			cfgDefault.Hardware.EvendDevices[v.Name] = devConf
+			VMC.Hardware.EvendDevices[v.Name] = devConf
 		}
-		cfgDefault.Hardware.XXX_Devices = nil
-		for _, v := range cfgDefault.UI.Service.XXX_Tests {
+		VMC.Hardware.XXX_Devices = nil
+		for _, v := range VMC.UI.Service.XXX_Tests {
 			uiTest := ui_config.TestsStruct{
 				Name:     v.Name,
 				Scenario: v.Scenario,
 			}
-			cfgDefault.UI.Service.Tests[v.Name] = uiTest
+			VMC.UI.Service.Tests[v.Name] = uiTest
 		}
-		cfgDefault.UI.Service.XXX_Tests = nil
-		for _, v := range cfgDefault.Engine.Inventory.XXX_Stocks {
+		VMC.UI.Service.XXX_Tests = nil
+		for _, v := range VMC.Engine.Inventory.XXX_Stocks {
 			confStock := inventory.Stock{
 				Name: v.Name,
 			}
@@ -131,18 +131,18 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 			if v.TuneKey != "" {
 				confStock.TuneKey = v.TuneKey
 			}
-			cfgDefault.Engine.Inventory.Stocks[v.Name] = confStock
+			VMC.Engine.Inventory.Stocks[v.Name] = confStock
 		}
-		cfgDefault.Engine.Inventory.XXX_Stocks = nil
-		for _, v := range cfgDefault.Engine.XXX_Aliases {
+		VMC.Engine.Inventory.XXX_Stocks = nil
+		for _, v := range VMC.Engine.XXX_Aliases {
 			s := engine_config.Alias{
 				Name:     v.Name,
 				Scenario: v.Scenario,
 			}
-			cfgDefault.Engine.Aliases[v.Name] = s
+			VMC.Engine.Aliases[v.Name] = s
 		}
-		cfgDefault.Engine.XXX_Aliases = nil
-		for _, v := range cfgDefault.Engine.Menu.XXX_Items {
+		VMC.Engine.XXX_Aliases = nil
+		for _, v := range VMC.Engine.XXX_Menu.XXX_Items {
 			mi := menu_config.MenuItem{
 				Code: v.Code,
 			}
@@ -164,9 +164,9 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 			if v.XXX_Price != 0 {
 				mi.Price = currency.Amount(v.XXX_Price)
 			}
-			cfgDefault.Engine.Menu.Items[v.Code] = mi
+			VMC.Engine.Menu.Items[v.Code] = mi
 		}
-		cfgDefault.Engine.Menu.XXX_Items = nil
+		VMC.Engine.XXX_Menu.XXX_Items = nil
 	}
-	return &cfgDefault
+	return &VMC
 }

@@ -87,6 +87,10 @@ func (g *Global) Iodin() (*iodin.Client, error) {
 
 func (g *Global) Mdb() (*mdb.Bus, error) {
 	x := &g.Hardware.Mdb // short alias
+	if g.Config.Hardware.Mdb.UartDriver == "" {
+		g.Log.Info("mdb driver not set")
+		return x.Bus, nil
+	}
 	_ = x.do(func() error {
 		if x.Bus != nil { // state-new testing mode
 			return nil
@@ -154,6 +158,11 @@ func (g *Global) Mega() (*mega.Client, error) {
 }
 
 func (g *Global) MustTextDisplay() *text_display.TextDisplay {
+	if !g.Config.Hardware.HD44780.Enable {
+		g.Log.Info("text display hd44780 is disabled")
+		td := text_display.TextDisplay{}
+		return &td
+	}
 	d, err := g.TextDisplay()
 	if err != nil {
 		g.Log.Fatal(err)
@@ -329,6 +338,9 @@ func (g *Global) initDevices() error {
 }
 
 func (g *Global) initInput() {
+	if !g.Config.Hardware.Input.EvendKeyboard.Enable {
+		return
+	}
 	g.Hardware.Input = &input.Dispatch{
 		Log: g.Log,
 		Bus: make(chan types.InputEvent),
