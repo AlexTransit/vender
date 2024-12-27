@@ -58,7 +58,6 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 	const devNameCoin = "coin"
 	ms.bill = bill.Stub{}
 	ms.coin = coin.Stub{}
-	// ms.enableBillChanger = g.Config.Money.EnableChangeBillToCoin
 	errs := make([]error, 0, 2)
 	if dev, err := g.GetDevice(devNameBill); err == nil {
 		ms.bill = dev.(bill.Biller)

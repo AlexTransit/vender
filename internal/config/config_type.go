@@ -90,20 +90,15 @@ type MegaStruct struct {
 }
 
 type MoneyStruct struct {
-	Scale                  int  `hcl:"scale"`
-	CreditMax              int  `hcl:"credit_max"`
-	EnableChangeBillToCoin bool `hcl:"enable_change_bill_to_coin,optional"`
-	ChangeOverCompensate   int  `hcl:"change_over_compensate,optional"`
+	Scale                int `hcl:"scale"`
+	CreditMax            int `hcl:"credit_max"`
+	ChangeOverCompensate int `hcl:"change_over_compensate,optional"`
 }
 
 // config wich presetted default values
 var VMC = Config{
-	Version:        "",
-	Log:            &log2.Log{},
-	TeleN:          nil,
-	UpgradeScript:  "",
-	ScriptIfBroken: "",
-	Money:          MoneyStruct{Scale: 0, CreditMax: 0, EnableChangeBillToCoin: false, ChangeOverCompensate: 0},
+	Log:   &log2.Log{},
+	Money: MoneyStruct{Scale: 0, CreditMax: 0, ChangeOverCompensate: 0},
 	Hardware: HardwareStruct{
 		EvendDevices: map[string]DeviceConfig{}, XXX_Devices: []DeviceConfig{},
 		Evend: evend_config.Config{},
@@ -125,15 +120,18 @@ var VMC = Config{
 		MoneyIn:       "moneyIn.mp3",
 	},
 	Watchdog: watchdog_config.Config{Folder: "/run/user/1000/"},
-	Engine:   engine_config.Config{XXX_Aliases: []engine_config.Alias{}, Aliases: map[string]engine_config.Alias{}, OnBoot: []string{}, FirstInit: []string{}, OnMenuError: []string{}, OnServiceBegin: []string{}, OnServiceEnd: []string{}, OnFrontBegin: []string{}, OnBroken: []string{}, OnShutdown: []string{}, Inventory: inventory.Inventory{XXX_Stocks: []inventory.Stock{}, Stocks: map[string]inventory.Stock{}, StocksNameByCode: map[int]string{}}, Profile: engine_config.ProfileStruct{}, XXX_Menu: menu_config.XXX_MenuStruct{XXX_Items: []menu_config.MenuItem{}}, Menu: menu_config.MenuStruct{DefaultCream: 4, DefaultCreamMax: 6, DefaultSugar: 4, DefaultSugarMax: 8, Items: map[string]menu_config.MenuItem{}}, NeedRestart: false},
-	Remains:  nil,
-	User: ui_config.UIUser{
-		Lock:               false,
-		ReportInv:          0,
-		DirtyMoney:         0,
-		KeyboardReadEnable: false,
-		UIMenuStruct:       menu_config.UIMenuStruct{},
+	Engine: engine_config.Config{
+		Aliases: map[string]engine_config.Alias{},
+		Inventory: inventory.Inventory{
+			XXX_Stocks: []inventory.Stock{},
+			Stocks:     map[string]inventory.Stock{},
+		},
+		Menu: menu_config.MenuStruct{
+			Items: map[string]menu_config.MenuItem{},
+		},
 	},
+	Remains: nil,
+	User:    ui_config.UIUser{},
 }
 
 func DefaultSugar() uint8 {
