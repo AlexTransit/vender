@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/AlexTransit/vender/helpers"
 	sound_config "github.com/AlexTransit/vender/internal/sound/config"
 	"github.com/AlexTransit/vender/log2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
@@ -16,56 +15,58 @@ import (
 const sampleRate = 24000
 
 type Sound struct {
-	sound        *sound_config.Config
-	log          *log2.Log
-	audioContext *audio.Context
-	audioPlayer  *audio.Player
-	keyBeep      soundStream
-	moneyIn      soundStream
+	config        *sound_config.Config
+	log           *log2.Log
+	audioContext  *audio.Context
+	audioPlayer   *audio.Player
+	keyBeep       soundStream
+	moneyIn       soundStream
+	currentVolume float64
 }
 type soundStream struct {
 	Stream []byte
-	volume float64
 }
 
 var s Sound
 
 func Init(conf *sound_config.Config, log *log2.Log, startingVMC bool) {
-	s.sound = conf
+	s.config = conf
 	if conf.Disabled {
 		return
 	}
 	s.log = log
+	SetDefaultVolume()
 	audioContext := audio.NewContext(sampleRate)
 	s.audioContext = audioContext
 	if startingVMC {
 		go func() {
 			// PlayVmcStarting()
-			s.keyBeep.prepare("keyBeep", s.sound.KeyBeep, s.sound.KeyBeepVolume)
-			s.moneyIn.prepare("money in", s.sound.MoneyIn, s.sound.MoneyInVolume)
+			s.keyBeep.prepare("keyBeep", s.config.KeyBeep)
+			s.moneyIn.prepare("money in", s.config.MoneyIn)
 		}()
 	}
 }
 
 func PlayKeyBeep() { playStream(&s.keyBeep) }
 func PlayMoneyIn() { playStream(&s.moneyIn) }
+func SetVolume(v int16) {
+	s.currentVolume = float64(v) / 10
+}
 
-func PlayFile(file string, volume ...int) error {
-	if volume == nil {
-		PlayFileNoWait(file)
-	} else {
-		PlayFileNoWait(file, volume[0])
-	}
+// set volume from config
+// value is fixed point. 10 = 100%
+func SetDefaultVolume() {
+	s.currentVolume = float64(s.config.DefaultVolume) / 10
+}
+
+func PlayFile(file string) error {
+	PlayFileNoWait(file)
 	waitingEndPlay()
 	return nil
 }
 
-func PlayFileNoWait(file string, volume ...int) error {
-	v := 10
-	if volume != nil {
-		v = volume[0]
-	}
-	if err := playMP3controlled(file, v); err != nil {
+func PlayFileNoWait(file string) error {
+	if err := playMP3controlled(file); err != nil {
 		s.log.Errorf(" play file (%v)", err)
 		return err
 	}
@@ -82,15 +83,15 @@ func Stop() {
 	}
 }
 
-func playMP3controlled(file string, volume int) (err error) {
-	if s.sound == nil || s.sound.Disabled {
+func playMP3controlled(file string) (err error) {
+	if s.config == nil || s.config.Disabled {
 		return nil
 	}
 	if file == "" {
 		return errors.New("play imposible")
 	}
 	Stop()
-	f, err := os.Open(s.sound.Folder + file)
+	f, err := os.Open(s.config.Folder + file)
 	if err != nil {
 		return
 	}
@@ -99,7 +100,7 @@ func playMP3controlled(file string, volume int) (err error) {
 		return
 	}
 	s.audioPlayer, err = s.audioContext.NewPlayer(str)
-	s.audioPlayer.SetVolume(float64(helpers.ConfigDefaultInt(volume, 10)) / 10)
+	s.audioPlayer.SetVolume(s.currentVolume)
 	if err != nil {
 		return
 	}
@@ -121,17 +122,16 @@ func waitingEndPlay() {
 	}
 }
 
-func (ss *soundStream) prepare(name string, file string, volume int) {
+func (ss *soundStream) prepare(name string, file string) {
 	var err error
 	ss.Stream, err = loadSteram(file)
 	if err != nil {
 		s.log.Errorf("load sound %s (%+v)", name, err)
 	}
-	ss.volume = float64(helpers.ConfigDefaultInt(volume, 10)) / 10
 }
 
 func loadSteram(file string) ([]byte, error) {
-	f, err := os.Open(s.sound.Folder + file)
+	f, err := os.Open(s.config.Folder + file)
 	if err != nil {
 		return nil, err
 	}
@@ -145,11 +145,11 @@ func loadSteram(file string) ([]byte, error) {
 }
 
 func playStream(ss *soundStream) *audio.Player {
-	if s.sound.Disabled {
+	if s.config.Disabled {
 		return nil
 	}
 	p := s.audioContext.NewPlayerFromBytes(ss.Stream)
-	p.SetVolume(ss.volume)
+	p.SetVolume(s.currentVolume)
 	p.Play()
 	return p
 }

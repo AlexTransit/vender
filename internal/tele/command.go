@@ -124,8 +124,8 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 		config_global.VMC.User.SelectedItem = i
 		config_global.VMC.User.Sugar = tuneCook(m.MakeOrder.GetSugar(), config_global.VMC.Engine.Menu.DefaultSugar, config_global.VMC.Engine.Menu.DefaultSugarMax)
 		config_global.VMC.User.Cream = tuneCook(m.MakeOrder.GetCream(), config_global.VMC.Engine.Menu.DefaultCream, config_global.VMC.Engine.Menu.DefaultCreamMax)
-		om.Order.Amount = uint32(config_global.VMC.User.SelectedItem.Price)
-		config_global.VMC.User.DirtyMoney = config_global.VMC.User.SelectedItem.Price
+		om.Order.Amount = uint32(i.Price)
+		config_global.VMC.User.DirtyMoney = i.Price
 		sound.PlayMoneyIn()
 	default: // unknown status
 		t.log.Errorf("unknown order status(%v)", m.MakeOrder.OrderStatus)

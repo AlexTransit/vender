@@ -85,7 +85,7 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 
 func (g *Global) initInventory(ctx context.Context) error {
 	// TODO ctx should be enough
-	if err := g.Inventory.Init(ctx, &g.Config.Engine.Inventory, g.Engine, g.Config.Persist.Root); err != nil {
+	if err := g.Inventory.Init(ctx, g.Engine, g.Config.Persist.Root); err != nil {
 		return err
 	}
 	g.Inventory.InventoryLoad()
@@ -181,5 +181,12 @@ func (g *Global) Fatal(err error, args ...interface{}) {
 		g.StopWait(5 * time.Second)
 		g.Log.Fatal(err)
 		os.Exit(1)
+	}
+}
+
+func (g *Global) initDisplay() {
+	d, err := g.Display()
+	if d == nil || err != nil {
+		g.Config.Hardware.Display.Framebuffer = ""
 	}
 }

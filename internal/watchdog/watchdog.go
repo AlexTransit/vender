@@ -5,17 +5,15 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/AlexTransit/vender/helpers"
 	watchdog_config "github.com/AlexTransit/vender/internal/watchdog/config"
 	"github.com/AlexTransit/vender/log2"
 	"github.com/coreos/go-systemd/daemon"
 )
 
 type wdStruct struct {
-	disabled bool
-	folder   string
-	log      *log2.Log
-	wdt      string // watchdog tics
+	config *watchdog_config.Config
+	log    *log2.Log
+	wdt    string // watchdog tics
 }
 
 const brokenFile = "/home/vmc/broken"
@@ -23,16 +21,15 @@ const brokenFile = "/home/vmc/broken"
 var WD wdStruct
 
 func Init(conf *watchdog_config.Config, log *log2.Log, timeout int) {
-	WD.folder = helpers.ConfigDefaultStr(conf.Folder, "/run/user/1000/")
+	WD.config = conf
 	WD.log = log
-	WD.disabled = conf.Disabled
-	if !WD.disabled {
+	if !WD.config.Disabled {
 		setTimerSec(timeout * 3)
 	}
 }
 
 func Enable() {
-	if WD.disabled || WD.wdt == "0" {
+	if WD.config.Disabled || WD.wdt == "0" {
 		return
 	}
 	setUsec(WD.wdt)
@@ -40,7 +37,7 @@ func Enable() {
 }
 
 func Disable() {
-	if WD.disabled {
+	if WD.config.Disabled {
 		return
 	}
 	WD.log.Info("disable watchdog")
@@ -64,14 +61,14 @@ func setTimerSec(sec int) {
 }
 
 func Refresh() {
-	if WD.disabled {
+	if WD.config.Disabled {
 		return
 	}
 	sendNotify(daemon.SdNotifyWatchdog)
 }
 
 func ReinitRequired() bool {
-	if _, err := os.Stat(WD.folder + "vmc"); os.IsNotExist(err) {
+	if _, err := os.Stat(WD.config.Folder + "vmc"); os.IsNotExist(err) {
 		return true
 	}
 	return false
@@ -79,14 +76,14 @@ func ReinitRequired() bool {
 
 func SetDeviceInited() {
 	WD.log.Info("devices inited")
-	if err := os.MkdirAll(WD.folder+"vmc", os.ModePerm); err != nil {
+	if err := os.MkdirAll(WD.config.Folder+"vmc", os.ModePerm); err != nil {
 		WD.log.Warning(errors.New("create vender folder"), err)
 	}
 }
 
 func DevicesInitializationRequired() {
 	WD.log.Info("devices initialization required")
-	os.RemoveAll(WD.folder + "vmc")
+	os.RemoveAll(WD.config.Folder + "vmc")
 }
 
 func SetBroken() {

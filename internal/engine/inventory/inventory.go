@@ -32,7 +32,7 @@ type Inventory struct {
 // 	byCode map[uint32]*Stock
 // }
 
-func (inv *Inventory) Init(ctx context.Context, c *Inventory, e *engine.Engine, root string) error {
+func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, root string) error {
 	inv.log = log2.ContextValueLogger(ctx)
 
 	inv.mu.Lock()

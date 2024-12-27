@@ -11,6 +11,7 @@ import (
 	"github.com/AlexTransit/vender/helpers"
 	config_global "github.com/AlexTransit/vender/internal/config"
 	menu_vmc "github.com/AlexTransit/vender/internal/menu"
+	"github.com/AlexTransit/vender/internal/menu/menu_config"
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
@@ -97,8 +98,10 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 	}
 	rm := tele_api.FromRoboMessage{State: tele_api.State_Nominal}
 	canselQrOrder(&rm)
-	config_global.VMC.User.Cream = config_global.VMC.Engine.Menu.DefaultCream
-	config_global.VMC.User.Sugar = config_global.VMC.Engine.Menu.DefaultSugar
+	config_global.VMC.User.UIMenuStruct = menu_config.UIMenuStruct{
+		Cream: config_global.VMC.Engine.Menu.DefaultCream,
+		Sugar: config_global.VMC.Engine.Menu.DefaultSugar,
+	}
 
 	if ui.g.Tele.GetState() != tele_api.State_Nominal {
 		ui.g.Tele.RoboSend(&rm)
@@ -319,30 +322,30 @@ func (ui *UI) onFrontLock() types.UiState {
 	return types.StateFrontEnd
 }
 
-// tightly coupled to len(alphabet)=4
-func formatScale(value, min, max uint8, alphabet []byte) []byte {
-	var vicon [6]byte
-	switch value {
-	case min:
-		vicon[0], vicon[1], vicon[2], vicon[3], vicon[4], vicon[5] = 0, 0, 0, 0, 0, 0
-	case max:
-		vicon[0], vicon[1], vicon[2], vicon[3], vicon[4], vicon[5] = 3, 3, 3, 3, 3, 3
-	default:
-		rng := uint16(max) - uint16(min)
-		part := uint8((float32(value-min) / float32(rng)) * 24)
-		// log.Printf("scale(%d,%d..%d) part=%d", value, min, max, part)
-		for i := 0; i < len(vicon); i++ {
-			if part >= 4 {
-				vicon[i] = 3
-				part -= 4
-			} else {
-				vicon[i] = part
-				break
-			}
-		}
-	}
-	for i := 0; i < len(vicon); i++ {
-		vicon[i] = alphabet[vicon[i]]
-	}
-	return vicon[:]
-}
+// // tightly coupled to len(alphabet)=4
+// func formatScale(value, min, max uint8, alphabet []byte) []byte {
+// 	var vicon [6]byte
+// 	switch value {
+// 	case min:
+// 		vicon[0], vicon[1], vicon[2], vicon[3], vicon[4], vicon[5] = 0, 0, 0, 0, 0, 0
+// 	case max:
+// 		vicon[0], vicon[1], vicon[2], vicon[3], vicon[4], vicon[5] = 3, 3, 3, 3, 3, 3
+// 	default:
+// 		rng := uint16(max) - uint16(min)
+// 		part := uint8((float32(value-min) / float32(rng)) * 24)
+// 		// log.Printf("scale(%d,%d..%d) part=%d", value, min, max, part)
+// 		for i := 0; i < len(vicon); i++ {
+// 			if part >= 4 {
+// 				vicon[i] = 3
+// 				part -= 4
+// 			} else {
+// 				vicon[i] = part
+// 				break
+// 			}
+// 		}
+// 	}
+// 	for i := 0; i < len(vicon); i++ {
+// 		vicon[i] = alphabet[vicon[i]]
+// 	}
+// 	return vicon[:]
+// }

@@ -5,8 +5,6 @@ import (
 
 	"github.com/AlexTransit/vender/currency"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
-	"github.com/AlexTransit/vender/internal/engine/inventory"
-	menu_config "github.com/AlexTransit/vender/internal/menu/menu_config"
 	ui_config "github.com/AlexTransit/vender/internal/ui/config"
 	"github.com/AlexTransit/vender/log2"
 
@@ -86,9 +84,8 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 	for i := range cc.bodies {
 		_ = gohcl.DecodeBody(cc.bodies[i], nil, &VMC)
 		for _, v := range VMC.Hardware.XXX_Devices {
-			devConf := DeviceConfig{
-				Name: v.Name,
-			}
+			devConf := VMC.Hardware.EvendDevices[v.Name]
+			devConf.Name = v.Name
 			if v.Required {
 				devConf.Required = true
 			}
@@ -107,9 +104,8 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 		}
 		VMC.UI_config.Service.XXX_Tests = nil
 		for _, v := range VMC.Engine.Inventory.XXX_Stocks {
-			confStock := inventory.Stock{
-				Name: v.Name,
-			}
+			confStock := VMC.Engine.Inventory.Stocks[v.Name]
+			confStock.Name = v.Name
 			if v.Check {
 				confStock.Check = true
 			}
@@ -143,9 +139,8 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 		}
 		VMC.Engine.XXX_Aliases = nil
 		for _, v := range VMC.Engine.XXX_Menu.XXX_Items {
-			mi := menu_config.MenuItem{
-				Code: v.Code,
-			}
+			mi := VMC.Engine.Menu.Items[v.Code]
+			mi.Code = v.Code
 			if v.Disabled {
 				mi.Disabled = true
 			}
@@ -162,7 +157,7 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 				mi.SugarMax = v.SugarMax
 			}
 			if v.XXX_Price != 0 {
-				mi.Price = currency.Amount(v.XXX_Price)
+				mi.Price = VMC.ScaleI(v.XXX_Price)
 			}
 			VMC.Engine.Menu.Items[v.Code] = mi
 		}

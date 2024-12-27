@@ -58,10 +58,6 @@ func (g *Global) Init(ctx context.Context, cfg *config_global.Config) error {
 	g.Log.Infof("build version=%s", g.BuildVersion)
 	config_global.VMC.Version = g.BuildVersion
 
-	if g.Config.Persist.Root == "" {
-		g.Config.Persist.Root = "./vender-db"
-		g.Log.WarningF("config: persist.root=empty changed=%s", g.Config.Persist.Root)
-	}
 	g.Log.Debugf("config: persist.root=%s", g.Config.Persist.Root)
 	watchdog.Init(&g.Config.Watchdog, g.Log, cfg.UI_config.Front.ResetTimeoutSec)
 
@@ -88,14 +84,17 @@ func (g *Global) Init(ctx context.Context, cfg *config_global.Config) error {
 	g.Config.Money.CreditMax *= g.Config.Money.Scale
 	g.Config.Money.ChangeOverCompensate *= g.Config.Money.Scale
 
-	const initTasks = 3
+	const initTasks = 2
 	wg := sync.WaitGroup{}
 	wg.Add(initTasks)
 	errch := make(chan error, initTasks)
 	g.initInput()
-	go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
+	g.Inventory = &g.Config.Engine.Inventory
+	g.initDisplay()
+	// go helpers.WrapErrChan(&wg, errch, g.initDisplay) // AlexM хрень переделать
 	go helpers.WrapErrChan(&wg, errch, g.initEngine)
-	// TODO init money system, load money state from storage
+	go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
+
 	g.RegisterCommands(ctx)
 	wg.Wait()
 	close(errch)
@@ -148,26 +147,24 @@ func (g *Global) initEngine() error {
 			errs = append(errs, err)
 			continue
 		}
-		// g.Log.Debugf("config.engine.alias name=%s scenario=%s", x.Name, x.Scenario)
 		g.Engine.Register(x.Name, x.Doer)
 	}
 
 	for _, x := range g.Config.Engine.Menu.Items {
 		var err error
-		// x.Price = g.Config.ScaleI(x.XXX_Price)
 		x.Doer, err = g.Engine.ParseText(x.Name, x.Scenario)
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		// g.Log.Debugf("config.engine.menu %s pxxx=%d ps=%d", x.String(), x.XXX_Price, x.Price)
 		if x.CreamMax == 0 {
 			x.CreamMax = g.Config.Engine.Menu.DefaultCreamMax
 		}
 		if x.SugarMax == 0 {
 			x.SugarMax = g.Config.Engine.Menu.DefaultSugarMax
 		}
-		g.Engine.Register("menu."+x.Code, x.Doer)
+		g.Config.Engine.Menu.Items[x.Code] = x
+		// g.Engine.Register("menu."+x.Code, x.Doer)
 	}
 
 	if pcfg := g.Config.Engine.Profile; pcfg.Regexp != "" {
@@ -224,6 +221,15 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		sound.PlayFileNoWait(arg.(string))
 		return nil
 	})
+	g.Engine.RegisterNewFuncAgr("sound.volume(?)", func(ctx context.Context, arg engine.Arg) error {
+		sound.SetVolume(arg.(int16))
+		return nil
+	})
+	g.Engine.RegisterNewFunc("sound.volume.default", func(ctx context.Context) error {
+		sound.SetDefaultVolume()
+		return nil
+	},
+	)
 
 	g.Engine.RegisterNewFuncAgr("picture(?)", func(ctx context.Context, arg engine.Arg) error {
 		if g.Hardware.Display.Graphic != nil {

@@ -178,9 +178,10 @@ func (s *Stock) valuePerDelay(value int, valueIsLevel bool) (valuePerDelay int, 
 //			return s.levelValue[i].lev < s.levelValue[j].lev
 //		})
 //	}
+const RegexLevels = `([0-9]*[.,]?[0-9]+)\(([0-9]*[.,]?[0-9]+)\)`
+
 func (s *Stock) fillLevels() {
-	rm := `([0-9]*[.,]?[0-9]+)\(([0-9]*[.,]?[0-9]+)\)`
-	parts := regexp.MustCompile(rm).FindAllStringSubmatch(s.Level, 50)
+	parts := regexp.MustCompile(RegexLevels).FindAllStringSubmatch(s.Level, 50)
 	s.levelValue = make([]struct {
 		lev int
 		val int
