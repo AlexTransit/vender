@@ -59,10 +59,10 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 		if err = hardware.InitMDBDevices(ctx); err != nil {
 			return errors.Annotate(err, "hardware init")
 		}
-		moneysys := new(money.MoneySystem)
-		if err := moneysys.Start(ctx); err != nil {
-			return errors.Annotate(err, "money system Start()")
-		}
+	}
+	moneysys := new(money.MoneySystem)
+	if err := moneysys.Start(ctx); err != nil {
+		return errors.Annotate(err, "money system Start()")
 	}
 
 	ui := ui.UI{}
