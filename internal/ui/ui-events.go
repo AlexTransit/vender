@@ -113,7 +113,7 @@ func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *b
 			if credit == 0 {
 				*l1 = *ui.sendRequestForQrPayment(&rm)
 			} else {
-				*l1 = ui.g.Config.UI_config.Front.MsgMenuInsufficientCredit
+				*l1 = ui.g.Config.UI_config.Front.MsgMenuInsufficientCreditL1
 			}
 			return types.StateDoesNotChange
 		}

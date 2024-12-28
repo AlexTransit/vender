@@ -14,27 +14,42 @@ import (
 )
 
 type Inventory struct {
-	log              *log2.Log
-	Persist          bool    `hcl:"persist,optional"`
-	TeleAddName      bool    `hcl:"tele_add_name,optional"`
-	XXX_Stocks       []Stock `hcl:"stock,block"`
-	Stocks           map[string]Stock
-	StocksNameByCode map[int]string
-	mu               sync.RWMutex
-	file             string
+	log         *log2.Log
+	Persist     bool    `hcl:"persist,optional"`
+	TeleAddName bool    `hcl:"tele_add_name,optional"`
+	Stocks      []Stock `hcl:"stock,block"`
+	XXX_Stocks  map[string]Stock
+	mu          sync.RWMutex
+	file        string
 
 	// config *inventory_config.Inventory
 }
 
-// type Inventory struct {
-// 	// persist.Persist
-// 	byName map[string]*Stock
-// 	byCode map[uint32]*Stock
-// }
+//	type Inventory struct {
+//		// persist.Persist
+//		byName map[string]*Stock
+//		byCode map[uint32]*Stock
+//	}
+func (inv *Inventory) GetStockByName(name string) *Stock {
+	for i, v := range inv.Stocks {
+		if v.Name == name {
+			return &inv.Stocks[i]
+		}
+	}
+	return nil
+}
+
+func (inv *Inventory) GetStockByCode(code int) *Stock {
+	for i, v := range inv.Stocks {
+		if v.Code == code {
+			return &inv.Stocks[i]
+		}
+	}
+	return nil
+}
 
 func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, root string) error {
 	inv.log = log2.ContextValueLogger(ctx)
-
 	inv.mu.Lock()
 	defer inv.mu.Unlock()
 	errs := make([]error, 0)
@@ -183,10 +198,15 @@ func (inv *Inventory) WithTuning(ctx context.Context, stockName string, adj floa
 	// 	return ctx, errors.Annotate(err, "WithTuning")
 	// }
 	// ctx = context.WithValue(ctx, stock.TuneKey, adj)
-	tk := inv.Stocks[stockName].TuneKey
-	if tk != "" {
-		ctx = context.WithValue(ctx, tk, adj)
+	if s := inv.GetStockByName(stockName); s != nil {
+		if tk := s.TuneKey; tk != "" {
+			ctx = context.WithValue(ctx, tk, adj)
+		}
 	}
+	// tk := inv.Stocks[stockName].TuneKey
+	// if tk != "" {
+	// 	ctx = context.WithValue(ctx, tk, adj)
+	// }
 	return ctx, nil
 }
 

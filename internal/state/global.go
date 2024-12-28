@@ -82,18 +82,18 @@ func (g *Global) Init(ctx context.Context, cfg *config_global.Config) error {
 		return errors.NotValidf("config: money.scale < 0")
 	}
 	g.Config.Money.CreditMax *= g.Config.Money.Scale
-	g.Config.Money.ChangeOverCompensate *= g.Config.Money.Scale
 
-	const initTasks = 2
+	const initTasks = 1
 	wg := sync.WaitGroup{}
 	wg.Add(initTasks)
 	errch := make(chan error, initTasks)
 	g.initInput()
 	g.Inventory = &g.Config.Engine.Inventory
-	g.initDisplay()
 	// go helpers.WrapErrChan(&wg, errch, g.initDisplay) // AlexM хрень переделать
+	g.initDisplay()
 	go helpers.WrapErrChan(&wg, errch, g.initEngine)
-	go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
+	// go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
+	g.initInventory(ctx)
 
 	g.RegisterCommands(ctx)
 	wg.Wait()

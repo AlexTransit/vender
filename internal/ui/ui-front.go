@@ -38,6 +38,11 @@ func (ui *UI) onFrontStart() types.UiState {
 
 // check current temperature. retunt next state if temperature not correct
 func (ui *UI) checkTemperature() (correct bool, stateIfNotCorrect types.UiState) {
+	/* test
+	if true {
+		return true, 0
+	}
+	//*/
 	if ui.g.Config.Hardware.Evend.Valve.TemperatureHot != 0 {
 		curTemp, e := evend.EValve.GetTemperature()
 		if e != nil {

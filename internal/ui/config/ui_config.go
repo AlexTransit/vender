@@ -18,7 +18,7 @@ type FrontStruct struct {
 
 	MsgMenuCodeEmpty            string `hcl:"msg_menu_code_empty"`
 	MsgMenuCodeInvalid          string `hcl:"msg_menu_code_invalid"`
-	MsgMenuInsufficientCredit   string `hcl:"msg_menu_insufficient_credit_l1"` // Мало денег
+	MsgMenuInsufficientCreditL1 string `hcl:"msg_menu_insufficient_credit_l1"` // Мало денег
 	MsgMenuInsufficientCreditL2 string `hcl:"msg_menu_insufficient_credit_l2"` // дали:%s нужно:%s
 	MsgMenuNotAvailable         string `hcl:"msg_menu_not_available"`          //"Not available" // "Не доступен"
 

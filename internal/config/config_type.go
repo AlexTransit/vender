@@ -90,29 +90,84 @@ type MegaStruct struct {
 }
 
 type MoneyStruct struct {
-	Scale                int `hcl:"scale"`
-	CreditMax            int `hcl:"credit_max"`
-	ChangeOverCompensate int `hcl:"change_over_compensate,optional"`
+	Scale     int `hcl:"scale"`
+	CreditMax int `hcl:"credit_max"`
 }
 
 // config wich presetted default values
 var VMC = Config{
-	Log:   &log2.Log{},
-	Money: MoneyStruct{Scale: 0, CreditMax: 0, ChangeOverCompensate: 0},
+	Money: MoneyStruct{Scale: 100, CreditMax: 100},
 	Hardware: HardwareStruct{
-		EvendDevices: map[string]DeviceConfig{}, XXX_Devices: []DeviceConfig{},
-		Evend: evend_config.Config{},
-		Display: DisplayStruct{
-			Framebuffer: "/dev/fb0",
+		EvendDevices: map[string]DeviceConfig{},
+		Evend: evend_config.Config{
+			Cup:      evend_config.CupStruct{TimeoutSec: 60},
+			Elevator: evend_config.ElevatorStruct{MoveTimeoutSec: 100},
+			Espresso: evend_config.EspressoStruct{TimeoutSec: 300},
+			Valve:    evend_config.ValveStruct{TemperatureHot: 86},
 		},
-		HD44780:   HD44780Struct{},
-		IodinPath: "",
-		Input:     InputStruct{}, Mdb: mdb_config.Config{},
-		Mega: MegaStruct{},
+		Display: DisplayStruct{Framebuffer: "/dev/fb0"},
+		HD44780: HD44780Struct{
+			Codepage: "windows-1251",
+			PinChip:  "/dev/gpiochip0",
+			Pinmap: hd44780.PinMap{
+				RS: "13",
+				RW: "14",
+				E:  "110",
+				D4: "68",
+				D5: "71",
+				D6: "2",
+				D7: "21",
+			},
+			Width:       16,
+			ScrollDelay: 120,
+		},
+		IodinPath: "", //?????????????????????????????????????????
+		Input: InputStruct{
+			EvendKeyboard: EvendKeyboardStruct{Enable: true},
+			ServiceKey:    "", //?????????????????????????????????????????
+		},
+		Mdb: mdb_config.Config{
+			UartDevice: "", //?????????????????????????????????????????
+			UartDriver: "mega",
+		},
+		Mega: MegaStruct{
+			Spi:      "", //?????????????????????????????????????????
+			SpiSpeed: "100kHz",
+			PinChip:  "/dev/gpiochip0",
+			Pin:      "6",
+		},
 	},
-	Persist:   PersistStruct{Root: "/home/vmc/vender-db"},
-	Tele:      tele_config.Config{},
-	UI_config: ui_config.Config{LogDebug: false, Front: ui_config.FrontStruct{}, Service: ui_config.ServiceStruct{ResetTimeoutSec: 0, XXX_Tests: []ui_config.TestsStruct{}, Tests: map[string]ui_config.TestsStruct{}}},
+	Persist: PersistStruct{Root: "/home/vmc/vender-db"},
+	Tele:    tele_config.Config{},
+	UI_config: ui_config.Config{
+		Front: ui_config.FrontStruct{
+			MsgMenuError:                "ОШИБКА",
+			MsgWait:                     "пожалуйста, подождите",
+			MsgWaterTemp:                "температура: %d",
+			MsgMenuCodeEmpty:            "Укажите код.",
+			MsgMenuCodeInvalid:          "Неправильный код",
+			MsgMenuInsufficientCreditL1: "Мало денег",
+			MsgMenuInsufficientCreditL2: "дали:%s нужно:%s",
+			MsgMenuNotAvailable:         "Не доступен. Выверите другой, или вернем деньги.",
+			MsgCream:                    "Сливки",
+			MsgSugar:                    "Caxap",
+			MsgCredit:                   "Кредит: ",
+			MsgInputCode:                "Код: %s",
+			MsgPrice:                    "цена:%sp.",
+			MsgRemotePay:                "QR ",
+			MsgRemotePayRequest:         "запрос QR кода",
+			MsgRemotePayReject:          "Банк послал :(",
+			MsgNoNetwork:                "нет связи :(",
+			ResetTimeoutSec:             300,
+			PicQRPayError:               "/home/vmc/pic-qrerror",
+			PicPayReject:                "/home/vmc/pic-pay-reject",
+			LightShedule:                "(* 06:00-23:00)",
+		},
+		Service: ui_config.ServiceStruct{
+			ResetTimeoutSec: 1800,
+			Tests:           map[string]ui_config.TestsStruct{},
+		},
+	},
 	Sound: sound_config.Config{
 		DefaultVolume: 10,
 		Folder:        "/home/vmc/vender-db/audio/",
@@ -121,17 +176,10 @@ var VMC = Config{
 	},
 	Watchdog: watchdog_config.Config{Folder: "/run/user/1000/"},
 	Engine: engine_config.Config{
-		Aliases: map[string]engine_config.Alias{},
-		Inventory: inventory.Inventory{
-			XXX_Stocks: []inventory.Stock{},
-			Stocks:     map[string]inventory.Stock{},
-		},
-		Menu: menu_config.MenuStruct{
-			Items: map[string]menu_config.MenuItem{},
-		},
+		Aliases:   map[string]engine_config.Alias{},
+		Inventory: inventory.Inventory{XXX_Stocks: map[string]inventory.Stock{}},
+		Menu:      menu_config.MenuStruct{Items: map[string]menu_config.MenuItem{}},
 	},
-	Remains: nil,
-	User:    ui_config.UIUser{},
 }
 
 func DefaultSugar() uint8 {

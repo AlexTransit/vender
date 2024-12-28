@@ -84,7 +84,10 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 }
 
 func (g *Global) initInventory(ctx context.Context) error {
-	// TODO ctx should be enough
+	// put overrided stock to stock
+	for _, v := range g.Inventory.XXX_Stocks {
+		g.Inventory.Stocks = append(g.Inventory.Stocks, v)
+	}
 	if err := g.Inventory.Init(ctx, g.Engine, g.Config.Persist.Root); err != nil {
 		return err
 	}
