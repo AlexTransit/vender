@@ -15,8 +15,8 @@ import (
 // const tuneKeyFormat = "run/inventory-%s-tune"
 
 type Stock struct {
-	Name        string  `hcl:",label"`
-	Code        int     `hcl:"code"`
+	Code        int     `hcl:"code,label"`
+	Name        string  `hcl:"name"`
 	Check       bool    `hcl:"check,optional"`
 	Min         float32 `hcl:"min,optional"`
 	SpendRate   float32 `hcl:"spend_rate,optional"`
@@ -212,7 +212,9 @@ func stringToFixInt(s string) int {
 func (s *Stock) Value() float32 { return s.value }
 
 // func (s *Stock) Set(new float32)    { s.value.Store(new) }
-func (s *Stock) Set(v float32)      { s.value = v }
+func (s *Stock) Set(v float32) {
+	s.value = v
+}
 func (s *Stock) Has(v float32) bool { return s.value-v >= s.Min }
 
 // func (s *Stock) String() string {

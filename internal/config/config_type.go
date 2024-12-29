@@ -177,7 +177,7 @@ var VMC = Config{
 	Watchdog: watchdog_config.Config{Folder: "/run/user/1000/"},
 	Engine: engine_config.Config{
 		Aliases:   map[string]engine_config.Alias{},
-		Inventory: inventory.Inventory{XXX_Stocks: map[string]inventory.Stock{}},
+		Inventory: inventory.Inventory{XXX_Stocks: map[int]inventory.Stock{}},
 		Menu:      menu_config.MenuStruct{Items: map[string]menu_config.MenuItem{}},
 	},
 }

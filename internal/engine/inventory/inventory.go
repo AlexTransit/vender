@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"sort"
 	"sync"
 
 	"github.com/AlexTransit/vender/helpers"
@@ -18,7 +19,7 @@ type Inventory struct {
 	Persist     bool    `hcl:"persist,optional"`
 	TeleAddName bool    `hcl:"tele_add_name,optional"`
 	Stocks      []Stock `hcl:"stock,block"`
-	XXX_Stocks  map[string]Stock
+	XXX_Stocks  map[int]Stock
 	mu          sync.RWMutex
 	file        string
 
@@ -65,8 +66,18 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, root string) e
 		errs = append(errs, err)
 	}
 	inv.file = sd + "/store.file"
-	for _, s := range inv.Stocks {
-		s.fillLevels()
+	// sort bunkers array by code.
+	sort.Slice(inv.Stocks, func(a, b int) bool {
+		xa := inv.Stocks[a]
+		xb := inv.Stocks[b]
+		if xa.Code != xb.Code {
+			return xa.Code < xb.Code
+		}
+		return xa.Name < xb.Name
+	})
+
+	for i, s := range inv.Stocks {
+		inv.Stocks[i].fillLevels()
 		doSpend1 := engine.Func0{
 			Name: fmt.Sprintf("stock.%s.spend1", s.Name),
 			F:    s.spend1,
@@ -87,7 +98,7 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, root string) e
 				return errors.Errorf("stock=%s register_add=%s no free argument", s.Name, s.RegisterAdd)
 
 			case (err == nil && ok) || engine.IsNotResolved(err): // success path
-				e.Register(addName, s.Wrap(doAdd))
+				e.Register(addName, inv.Stocks[i].Wrap(doAdd))
 
 			case err != nil:
 				return errors.Errorf("stock=%s register_add=%s error(%v)", s.Name, s.RegisterAdd, err)
@@ -146,8 +157,8 @@ func (inv *Inventory) InventoryLoad() {
 		inv.log.Errorf("read inventory file error(%v)", err)
 		return
 	}
-	for _, cl := range inv.Stocks {
-		cl.Set(float32(td[cl.Code-1]))
+	for i, cl := range inv.Stocks {
+		inv.Stocks[i].Set(float32(td[cl.Code-1]))
 	}
 }
 

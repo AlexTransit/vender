@@ -88,6 +88,7 @@ func (g *Global) initInventory(ctx context.Context) error {
 	for _, v := range g.Inventory.XXX_Stocks {
 		g.Inventory.Stocks = append(g.Inventory.Stocks, v)
 	}
+	g.Inventory.XXX_Stocks = nil
 	if err := g.Inventory.Init(ctx, g.Engine, g.Config.Persist.Root); err != nil {
 		return err
 	}

@@ -15,9 +15,8 @@ import (
 )
 
 type UI struct { //nolint:maligned
-	FrontMaxPrice currency.Amount
-	Service       uiService
-
+	FrontMaxPrice     currency.Amount
+	Service           uiService
 	g                 *state.Global
 	ms                *money.MoneySystem
 	state             types.UiState

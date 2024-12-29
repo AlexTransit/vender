@@ -104,12 +104,12 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 		}
 		VMC.UI_config.Service.XXX_Tests = nil
 		for _, v := range VMC.Engine.Inventory.Stocks {
-			confStock := VMC.Engine.Inventory.XXX_Stocks[v.Name]
-			confStock.Name = v.Name
+			confStock := VMC.Engine.Inventory.XXX_Stocks[v.Code]
+			confStock.Code = v.Code
 			if v.Check {
 				confStock.Check = true
 			}
-			if v.Code != 0 {
+			if v.Name != "" {
 				confStock.Code = v.Code
 			}
 			if v.Min != 0 {
@@ -127,7 +127,7 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 			if v.TuneKey != "" {
 				confStock.TuneKey = v.TuneKey
 			}
-			VMC.Engine.Inventory.XXX_Stocks[v.Name] = confStock
+			VMC.Engine.Inventory.XXX_Stocks[v.Code] = confStock
 		}
 		VMC.Engine.Inventory.Stocks = nil
 		for _, v := range VMC.Engine.XXX_Aliases {
