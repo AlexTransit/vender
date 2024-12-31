@@ -47,16 +47,14 @@ func (inv *Inventory) locked_tele() *tele_api.Inventory {
 	pb := &tele_api.Inventory{Stocks: make([]*tele_api.Inventory_StockItem, 0, 16)}
 
 	for _, s := range inv.Stocks {
-		if s.Check {
+		if s.Ingredient.Min != 0 {
 			si := &tele_api.Inventory_StockItem{
 				Code: uint32(s.Code),
 				// XXX TODO retype Value to float
 				Value: int32(s.value),
 				// Valuef: s.Value(),
 			}
-			if inv.TeleAddName {
-				si.Name = s.Name
-			}
+			si.Name = s.Name
 			pb.Stocks = append(pb.Stocks, si)
 		}
 	}

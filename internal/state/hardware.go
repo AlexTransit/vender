@@ -210,6 +210,7 @@ func (g *Global) TextDisplay() (*text_display.TextDisplay, error) {
 		if err != nil {
 			return errors.Annotatef(err, "NewTextDisplay config=%#v", displayConfig)
 		}
+		disp.SetLogger(g.Log)
 		x.Display = disp
 		x.Display.SetDevice(devWrap)
 		go x.Display.Run()

@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	config_global "github.com/AlexTransit/vender/internal/config"
+	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
 	"github.com/paulrosania/go-charset/charset"
 	_ "github.com/paulrosania/go-charset/data"
@@ -20,6 +20,7 @@ const MaxWidth = 40
 var spaceBytes = bytes.Repeat([]byte{' '}, MaxWidth)
 
 type TextDisplay struct { //nolint:maligned
+	log   *log2.Log
 	alive *alive.Alive
 	mu    sync.Mutex
 	dev   Devicer
@@ -47,6 +48,10 @@ type Devicer interface {
 	// SetControl(new Control) Control
 	CursorYX(y, x uint8) bool
 	Write(b []byte)
+}
+
+func (td *TextDisplay) SetLogger(l *log2.Log) {
+	td.log = l
 }
 
 func NewTextDisplay(opt *TextDisplayConfig) (*TextDisplay, error) {
@@ -152,20 +157,20 @@ func (td *TextDisplay) SetLine(line int, value string) {
 
 	bs := td.Translate(value)
 	if bs == nil {
-		config_global.VMC.Log.NoticeF("translate %s retutn nil", value)
+		td.log.NoticeF("translate %s retutn nil", value)
 	}
 	switch line {
 	case 1:
 		td.state.L1 = bs
 		if td.line1 != value {
 			td.line1 = value
-			config_global.VMC.Log.NoticeF("Display.L%d=%s", line, value)
+			td.log.NoticeF("Display.L%d=%s", line, value)
 		}
 	case 2:
 		td.state.L2 = bs
 		if td.line2 != value {
 			td.line2 = value
-			config_global.VMC.Log.NoticeF("Display.L%d=%s", line, value)
+			td.log.NoticeF("Display.L%d=%s", line, value)
 		}
 
 	}

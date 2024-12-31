@@ -10,7 +10,6 @@ import (
 	sound_config "github.com/AlexTransit/vender/internal/sound/config"
 	ui_config "github.com/AlexTransit/vender/internal/ui/config"
 	watchdog_config "github.com/AlexTransit/vender/internal/watchdog/config"
-	"github.com/AlexTransit/vender/log2"
 	tele_api "github.com/AlexTransit/vender/tele"
 	tele_config "github.com/AlexTransit/vender/tele/config"
 	"github.com/hashicorp/hcl/v2"
@@ -18,19 +17,20 @@ import (
 
 type Config struct {
 	Version        string
-	Log            *log2.Log
 	TeleN          tele_api.Teler
-	UpgradeScript  string                 `hcl:"upgrade_script,optional"`
-	ScriptIfBroken string                 `hcl:"script_if_broken,optional"`
-	Money          MoneyStruct            `hcl:"money,block"`
-	Hardware       HardwareStruct         `hcl:"hardware,block"`
-	Persist        PersistStruct          `hcl:"persist,block"`
-	Tele           tele_config.Config     `hcl:"tele,block"`
-	UI_config      ui_config.Config       `hcl:"ui,block"`
-	Sound          sound_config.Config    `hcl:"sound,block"`
-	Watchdog       watchdog_config.Config `hcl:"watchdog,block"`
-	Engine         engine_config.Config   `hcl:"engine,block"`
-	Remains        hcl.Body               `hcl:",remain"`
+	UpgradeScript  string `hcl:"upgrade_script,optional"`
+	ScriptIfBroken string `hcl:"script_if_broken,optional"`
+	Inventory      inventory.Inventory
+	XXX_Inventory  inventory.XXX_Inventory `hcl:"inventory,block"`
+	Money          MoneyStruct             `hcl:"money,block"`
+	Hardware       HardwareStruct          `hcl:"hardware,block"`
+	Persist        PersistStruct           `hcl:"persist,block"`
+	Tele           tele_config.Config      `hcl:"tele,block"`
+	UI_config      ui_config.Config        `hcl:"ui,block"`
+	Sound          sound_config.Config     `hcl:"sound,block"`
+	Watchdog       watchdog_config.Config  `hcl:"watchdog,block"`
+	Engine         engine_config.Config    `hcl:"engine,block"`
+	Remains        hcl.Body                `hcl:",remain"`
 	User           ui_config.UIUser
 }
 
@@ -96,6 +96,10 @@ type MoneyStruct struct {
 
 // config wich presetted default values
 var VMC = Config{
+	XXX_Inventory: inventory.XXX_Inventory{
+		XXX_Stocks:     map[int]inventory.Conf_Stock{},
+		XXX_Ingredient: map[string]inventory.Conf_Ingredient{},
+	},
 	Money: MoneyStruct{Scale: 100, CreditMax: 100},
 	Hardware: HardwareStruct{
 		EvendDevices: map[string]DeviceConfig{},
@@ -176,9 +180,8 @@ var VMC = Config{
 	},
 	Watchdog: watchdog_config.Config{Folder: "/run/user/1000/"},
 	Engine: engine_config.Config{
-		Aliases:   map[string]engine_config.Alias{},
-		Inventory: inventory.Inventory{XXX_Stocks: map[int]inventory.Stock{}},
-		Menu:      menu_config.MenuStruct{Items: map[string]menu_config.MenuItem{}},
+		Aliases: map[string]engine_config.Alias{},
+		Menu:    menu_config.MenuStruct{Items: map[string]menu_config.MenuItem{}},
 	},
 }
 

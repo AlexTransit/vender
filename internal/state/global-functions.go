@@ -8,6 +8,7 @@ import (
 	"time"
 
 	config_global "github.com/AlexTransit/vender/internal/config"
+	"github.com/AlexTransit/vender/internal/engine/inventory"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
@@ -85,10 +86,23 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 
 func (g *Global) initInventory(ctx context.Context) error {
 	// put overrided stock to stock
-	for _, v := range g.Inventory.XXX_Stocks {
-		g.Inventory.Stocks = append(g.Inventory.Stocks, v)
+	for _, v := range g.Config.XXX_Inventory.XXX_Ingredient {
+		ing := inventory.Ingredient{
+			Conf_Ingredient: &v,
+		}
+		g.Inventory.Ingredient = append(g.Inventory.Ingredient, ing)
 	}
-	g.Inventory.XXX_Stocks = nil
+	g.Config.XXX_Inventory.XXX_Ingredient = nil
+
+	for _, v := range g.Config.XXX_Inventory.XXX_Stocks {
+		s := inventory.Stock{
+			Conf_Stock: &v,
+			Ingredient: g.Inventory.GetIngredientByName(v.XXX_Ingredient),
+		}
+		g.Inventory.Stocks = append(g.Inventory.Stocks, s)
+	}
+	g.Config.XXX_Inventory.XXX_Stocks = nil
+
 	if err := g.Inventory.Init(ctx, g.Engine, g.Config.Persist.Root); err != nil {
 		return err
 	}

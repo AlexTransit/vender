@@ -88,7 +88,7 @@ func (g *Global) Init(ctx context.Context, cfg *config_global.Config) error {
 	wg.Add(initTasks)
 	errch := make(chan error, initTasks)
 	g.initInput()
-	g.Inventory = &g.Config.Engine.Inventory
+	g.Inventory = &g.Config.Inventory
 	// go helpers.WrapErrChan(&wg, errch, g.initDisplay) // AlexM хрень переделать
 	g.initDisplay()
 	go helpers.WrapErrChan(&wg, errch, g.initEngine)

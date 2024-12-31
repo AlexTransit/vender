@@ -76,6 +76,13 @@ func (c *configLoadStruct) readConfig(fileName string) {
 	}
 }
 
+// конфигурация может быть перезаписана
+// есть базывый конфиг, который может быть скорректирован записями ниже и записями во вложенных файлах.
+// для перезаписи создается карта в которой обновляются данные из масива
+// при инициалицации данные их карты перемещаются в рабочий масив
+// в инвенторе есть списоки ингридиентов и складов ( бункеров)
+// в складе указывается ссылка на ингредиент
+// ключи ингредиента - название, для склада - код
 func ReadConfig(log *log2.Log, fn string) *Config {
 	// WriteDefaultConf()
 	cc := configLoadStruct{log: log}
@@ -103,33 +110,39 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 			VMC.UI_config.Service.Tests[v.Name] = uiTest
 		}
 		VMC.UI_config.Service.XXX_Tests = nil
-		for _, v := range VMC.Engine.Inventory.Stocks {
-			confStock := VMC.Engine.Inventory.XXX_Stocks[v.Code]
+		for _, v := range VMC.XXX_Inventory.Conf_Loaded_Stocks {
+			confStock := VMC.XXX_Inventory.XXX_Stocks[v.Code]
 			confStock.Code = v.Code
-			if v.Check {
-				confStock.Check = true
-			}
 			if v.Name != "" {
-				confStock.Code = v.Code
-			}
-			if v.Min != 0 {
-				confStock.Min = v.Min
-			}
-			if v.SpendRate != 0 {
-				confStock.SpendRate = v.SpendRate
+				confStock.Name = v.Name
 			}
 			if v.RegisterAdd != "" {
 				confStock.RegisterAdd = v.RegisterAdd
 			}
+			if v.XXX_Ingredient != "" {
+				confStock.XXX_Ingredient = v.XXX_Ingredient
+			}
+			VMC.XXX_Inventory.XXX_Stocks[v.Code] = confStock
+		}
+		VMC.XXX_Inventory.Conf_Loaded_Stocks = nil
+		for _, v := range VMC.XXX_Inventory.Conf_Loaded_Ingredient {
+			ing := VMC.XXX_Inventory.XXX_Ingredient[v.Name]
+			ing.Name = v.Name
+			if v.SpendRate != 0 {
+				ing.SpendRate = v.SpendRate
+			}
 			if v.Level != "" {
-				confStock.Level = v.Level
+				ing.Level = v.Level
+			}
+			if v.Min != 0 {
+				ing.Min = v.Min
 			}
 			if v.TuneKey != "" {
-				confStock.TuneKey = v.TuneKey
+				ing.TuneKey = v.TuneKey
 			}
-			VMC.Engine.Inventory.XXX_Stocks[v.Code] = confStock
+			VMC.XXX_Inventory.XXX_Ingredient[v.Name] = ing
+			VMC.XXX_Inventory.Conf_Loaded_Ingredient = nil
 		}
-		VMC.Engine.Inventory.Stocks = nil
 		for _, v := range VMC.Engine.XXX_Aliases {
 			s := engine_config.Alias{
 				Name:     v.Name,

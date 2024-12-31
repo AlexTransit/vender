@@ -75,11 +75,10 @@ func main() {
 	}
 
 	ctx, g := state_new.NewContext(log, tele.New())
-	config := config_global.ReadConfig(log, *configPath)
-	config.Log = log
+	g.Config = config_global.ReadConfig(log, *configPath)
+	// config.Log = log
 	g.BuildVersion = BuildVersion
-	g.Config = config
-	g.Log = config.Log
+	g.Log = log
 	log.Debugf("starting %s", flagset.Args())
 
 	if err := mod.Main(ctx, flagset.Args()); err != nil {

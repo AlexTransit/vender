@@ -15,34 +15,55 @@ import (
 )
 
 type Inventory struct {
-	log         *log2.Log
-	Persist     bool    `hcl:"persist,optional"`
-	TeleAddName bool    `hcl:"tele_add_name,optional"`
-	Stocks      []Stock `hcl:"stock,block"`
-	XXX_Stocks  map[int]Stock
-	mu          sync.RWMutex
-	file        string
-
-	// config *inventory_config.Inventory
+	log        *log2.Log
+	mu         sync.RWMutex
+	file       string
+	Stocks     []Stock
+	Ingredient []Ingredient
 }
 
-//	type Inventory struct {
-//		// persist.Persist
-//		byName map[string]*Stock
-//		byCode map[uint32]*Stock
-//	}
-func (inv *Inventory) GetStockByName(name string) *Stock {
-	for i, v := range inv.Stocks {
-		if v.Name == name {
-			return &inv.Stocks[i]
+// временная структура.
+// конфигурация читается во временную
+// в карту кладет значения включая корректировку из других конфигов
+// при инициализации формируется рабочий инвентарь
+type XXX_Inventory struct {
+	Conf_Loaded_Stocks     []Conf_Stock      `hcl:"stock,block"`
+	Conf_Loaded_Ingredient []Conf_Ingredient `hcl:"ingredient,block"`
+	XXX_Stocks             map[int]Conf_Stock
+	XXX_Ingredient         map[string]Conf_Ingredient
+}
+
+// if the minimum ingredient is not specified (equal to zero), then the consumption check is disabled
+// если минимум ингридиента не указан (равен нулю), тогда проверка расхода выключена
+type Ingredient struct {
+	*Conf_Ingredient
+	levelValue []struct { // used fixed comma x.xx
+		lev int
+		val int
+	}
+}
+
+type Conf_Ingredient struct {
+	Name      string  `hcl:"name,label"`
+	Min       int     `hcl:"min,optional"`
+	SpendRate float32 `hcl:"spend_rate,optional"`
+	Level     string  `hcl:"level,optional"`
+	TuneKey   string  `hcl:"tuning_key,optional"`
+}
+
+func (inv *Inventory) GetIngredientByName(ingredientName string) *Ingredient {
+	for i, v := range inv.Ingredient {
+		if v.Name == ingredientName {
+			return &inv.Ingredient[i] // sucsess patch
 		}
 	}
+	inv.log.Errorf("ingredient:%s not found in config", ingredientName)
 	return nil
 }
 
-func (inv *Inventory) GetStockByCode(code int) *Stock {
+func (inv *Inventory) GetStockByName(name string) *Stock {
 	for i, v := range inv.Stocks {
-		if v.Code == code {
+		if v.Name == name {
 			return &inv.Stocks[i]
 		}
 	}
@@ -75,9 +96,10 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, root string) e
 		}
 		return xa.Name < xb.Name
 	})
-
+	for i := range inv.Ingredient {
+		inv.Ingredient[i].fillLevels()
+	}
 	for i, s := range inv.Stocks {
-		inv.Stocks[i].fillLevels()
 		doSpend1 := engine.Func0{
 			Name: fmt.Sprintf("stock.%s.spend1", s.Name),
 			F:    s.spend1,
@@ -110,27 +132,6 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, root string) e
 	}
 	return helpers.FoldErrors(errs)
 }
-
-// func (s *stock) fillLevels() {
-// 	rm := `([0-9]*[.,]?[0-9]+)\(([0-9]*[.,]?[0-9]+)\)`
-// 	parts := regexp.MustCompile(rm).FindAllStringSubmatch(c.Level, 50)
-// 	s.level = make([]struct {
-// 		lev int
-// 		val int
-// 	}, len(parts)+1)
-
-// 	if len(parts) == 0 {
-// 		return
-// 	}
-
-// 	for i, v := range parts {
-// 		s.level[i+1].lev = stringToFixInt(v[1])
-// 		s.level[i+1].val = stringToFixInt(v[2])
-// 	}
-// 	sort.Slice(s.level, func(i, j int) bool {
-// 		return s.level[i].lev < s.level[j].lev
-// 	})
-// }
 
 // store file
 // инвентарь храниться как int32 ( для возможности сохраннения в CMOS)
@@ -183,18 +184,6 @@ func (inv *Inventory) InventorySave() error {
 	return err
 }
 
-// func (inv *Inventory) Get(name string) (s *Stock, err error) {
-// 	inv.mu.RLock()
-// 	defer inv.mu.RUnlock()
-// 	a := inv.Stocks[name]
-
-// 	// if inv.Stocks[name]
-// 	// if s, ok := inv.locked_get(0, name); ok {
-// 	// 	return s, nil
-// 	// }
-// 	return nil, errors.Errorf("stock=%s is not registered", name)
-// }
-
 func (inv *Inventory) Iter(fun func(s *Stock)) {
 	inv.mu.Lock()
 	for _, stock := range inv.Stocks {
@@ -210,7 +199,7 @@ func (inv *Inventory) WithTuning(ctx context.Context, stockName string, adj floa
 	// }
 	// ctx = context.WithValue(ctx, stock.TuneKey, adj)
 	if s := inv.GetStockByName(stockName); s != nil {
-		if tk := s.TuneKey; tk != "" {
+		if tk := s.Ingredient.TuneKey; tk != "" {
 			ctx = context.WithValue(ctx, tk, adj)
 		}
 	}
@@ -220,15 +209,6 @@ func (inv *Inventory) WithTuning(ctx context.Context, stockName string, adj floa
 	// }
 	return ctx, nil
 }
-
-// func (inv *Inventory) locked_get(code uint32, name string) (*Stock, bool) {
-// 	if name == "" {
-// 		s, ok := inv.Stocks[code]
-// 		return s, ok
-// 	}
-// 	s, ok := inv.byName[name]
-// 	return s, ok
-// }
 
 // func (inv *Inventory) DisableCheckInStock() (listDisabledIngrodoent []uint32) {
 // 	for i, v := range inv.byCode {
