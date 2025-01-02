@@ -2,10 +2,11 @@ package engine
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
-	"github.com/juju/errors"
 )
 
 const seqBuffer uint = 8
@@ -30,18 +31,13 @@ func (seq *Seq) Append(d Doer) *Seq {
 	return seq
 }
 
-func (seq *Seq) Validate() error {
-	errs := make([]error, 0, len(seq.items))
-
+func (seq *Seq) Validate() (err error) {
 	for _, d := range seq.items {
-		// log.Printf("Seq.Validate d=%#v", d)
-		if err := d.Validate(); err != nil {
-			err = errors.Annotatef(err, "seq=%s node=%s validate", seq.String(), d.String())
-			errs = append(errs, err)
+		if e := d.Validate(); e != nil {
+			err = errors.Join(err, fmt.Errorf("seq=%s node=%s validate (%v)", seq.String(), d.String(), e))
 		}
 	}
-
-	return helpers.FoldErrors(errs)
+	return err
 }
 
 func (seq *Seq) Do(ctx context.Context) error {

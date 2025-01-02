@@ -2,6 +2,7 @@ package config_global
 
 import (
 	"os"
+	"strconv"
 
 	"github.com/AlexTransit/vender/currency"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
@@ -111,6 +112,14 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 		}
 		VMC.UI_config.Service.XXX_Tests = nil
 		for _, v := range VMC.XXX_Inventory.Conf_Loaded_Stocks {
+			if v.Code == 0 {
+				i, err := strconv.Atoi(v.Name)
+				if err != nil || i == 0 {
+					log.Errorf("stock (%+v) not setted number code", v)
+					continue
+				}
+				v.Code = i
+			}
 			confStock := VMC.XXX_Inventory.XXX_Stocks[v.Code]
 			confStock.Code = v.Code
 			if v.Name != "" {

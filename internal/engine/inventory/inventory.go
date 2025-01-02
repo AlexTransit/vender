@@ -17,7 +17,7 @@ import (
 type Inventory struct {
 	log        *log2.Log
 	mu         sync.RWMutex
-	file       string
+	file       string //`hcl:"stock_file,optional"`
 	Stocks     []Stock
 	Ingredient []Ingredient
 }
@@ -63,7 +63,7 @@ func (inv *Inventory) GetIngredientByName(ingredientName string) *Ingredient {
 
 func (inv *Inventory) GetStockByName(name string) *Stock {
 	for i, v := range inv.Stocks {
-		if v.Name == name {
+		if v.Ingredient.Name == name {
 			return &inv.Stocks[i]
 		}
 	}
@@ -101,29 +101,29 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, root string) e
 	}
 	for i, s := range inv.Stocks {
 		doSpend1 := engine.Func0{
-			Name: fmt.Sprintf("stock.%s.spend1", s.Name),
+			Name: fmt.Sprintf("stock.%s.spend1", s.Ingredient.Name),
 			F:    s.spend1,
 		}
 		doSpendArg := engine.FuncArg{
-			Name: fmt.Sprintf("stock.%s.spend(?)", s.Name),
+			Name: fmt.Sprintf("stock.%s.spend(?)", s.Ingredient.Name),
 			F:    s.spendArg,
 		}
-		addName := fmt.Sprintf("add.%s(?)", s.Name)
+		addName := fmt.Sprintf("add.%s(?)", s.Ingredient.Name)
 		if s.RegisterAdd != "" {
 			doAdd, err := e.ParseText(addName, s.RegisterAdd)
 			if err != nil {
-				return fmt.Errorf("stock(%s) register_add(%s) parse error(%v)", s.Name, s.RegisterAdd, err)
+				return fmt.Errorf("stock(%s) register_add(%s) parse error(%v)", s.Ingredient.Name, s.RegisterAdd, err)
 			}
 			_, ok, err := engine.ArgApply(doAdd, 0)
 			switch {
 			case err == nil && !ok:
-				return errors.Errorf("stock=%s register_add=%s no free argument", s.Name, s.RegisterAdd)
+				return errors.Errorf("stock=%s register_add=%s no free argument", s.Ingredient.Name, s.RegisterAdd)
 
 			case (err == nil && ok) || engine.IsNotResolved(err): // success path
 				e.Register(addName, inv.Stocks[i].Wrap(doAdd))
 
 			case err != nil:
-				return errors.Errorf("stock=%s register_add=%s error(%v)", s.Name, s.RegisterAdd, err)
+				return errors.Errorf("stock=%s register_add=%s error(%v)", s.Ingredient.Name, s.RegisterAdd, err)
 			}
 
 		}

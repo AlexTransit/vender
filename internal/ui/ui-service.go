@@ -142,17 +142,17 @@ func (ui *UI) onServiceInventory() types.UiState {
 		ui.serviceWaitInput()
 		return types.StateServiceMenu
 	}
-	invCurrent := ui.g.Inventory.Stocks[ui.Service.invIdx]
-	iname := fmt.Sprintf("%d %s", invCurrent.Code, invCurrent.Name)
+	s := ui.g.Inventory.Stocks[ui.Service.invIdx]
+	iname := fmt.Sprintf("%d %s", s.Code, s.Ingredient.Name)
 	if lv {
 		ui.display.SetLines(
-			fmt.Sprintf("V:%.0f %s\x00", invCurrent.Value(), iname),
-			fmt.Sprintf("L:%s %s", invCurrent.ShowLevel(), string(ui.inputBuf)), // TODO configurable decimal point
+			fmt.Sprintf("V:%.0f %s\x00", s.Value(), iname),
+			fmt.Sprintf("L:%s %s", s.ShowLevel(), string(ui.inputBuf)), // TODO configurable decimal point
 		)
 	} else {
 		ui.display.SetLines(
-			fmt.Sprintf("L:%s %s", invCurrent.ShowLevel(), iname),
-			fmt.Sprintf("V:%.0f %s\x00", invCurrent.Value(), string(ui.inputBuf)), // TODO configurable decimal point
+			fmt.Sprintf("L:%s %s", s.ShowLevel(), iname),
+			fmt.Sprintf("V:%.0f %s\x00", s.Value(), string(ui.inputBuf)), // TODO configurable decimal point
 		)
 	}
 	next, e := ui.serviceWaitInput()

@@ -18,9 +18,9 @@ import (
 type Config struct {
 	Version        string
 	TeleN          tele_api.Teler
-	UpgradeScript  string `hcl:"upgrade_script,optional"`
-	ScriptIfBroken string `hcl:"script_if_broken,optional"`
-	Inventory      inventory.Inventory
+	UpgradeScript  string                  `hcl:"upgrade_script,optional"`
+	ScriptIfBroken string                  `hcl:"script_if_broken,optional"`
+	Inventory      inventory.Inventory     //`hcl:"inventory,block"`
 	XXX_Inventory  inventory.XXX_Inventory `hcl:"inventory,block"`
 	Money          MoneyStruct             `hcl:"money,block"`
 	Hardware       HardwareStruct          `hcl:"hardware,block"`
@@ -96,6 +96,9 @@ type MoneyStruct struct {
 
 // config wich presetted default values
 var VMC = Config{
+	// Inventory: inventory.Inventory{
+	// 	file: "/home/vmc/vender-db/store.file",
+	// },
 	XXX_Inventory: inventory.XXX_Inventory{
 		XXX_Stocks:     map[int]inventory.Conf_Stock{},
 		XXX_Ingredient: map[string]inventory.Conf_Ingredient{},
@@ -111,19 +114,15 @@ var VMC = Config{
 		},
 		Display: DisplayStruct{Framebuffer: "/dev/fb0"},
 		HD44780: HD44780Struct{
-			Codepage: "windows-1251",
-			PinChip:  "/dev/gpiochip0",
-			Pinmap: hd44780.PinMap{
-				RS: "13",
-				RW: "14",
-				E:  "110",
-				D4: "68",
-				D5: "71",
-				D6: "2",
-				D7: "21",
-			},
-			Width:       16,
-			ScrollDelay: 120,
+			Enable:        true,
+			Codepage:      "windows-1251",
+			PinChip:       "/dev/gpiochip0",
+			Pinmap:        hd44780.PinMap{RS: "13", RW: "14", E: "110", D4: "68", D5: "71", D6: "2", D7: "21"},
+			Page1:         true,
+			Width:         16,
+			ControlBlink:  false,
+			ControlCursor: false,
+			ScrollDelay:   210,
 		},
 		IodinPath: "", //?????????????????????????????????????????
 		Input: InputStruct{
@@ -181,7 +180,13 @@ var VMC = Config{
 	Watchdog: watchdog_config.Config{Folder: "/run/user/1000/"},
 	Engine: engine_config.Config{
 		Aliases: map[string]engine_config.Alias{},
-		Menu:    menu_config.MenuStruct{Items: map[string]menu_config.MenuItem{}},
+		Menu: menu_config.MenuStruct{
+			DefaultCream:    4,
+			DefaultCreamMax: 6,
+			DefaultSugar:    4,
+			DefaultSugarMax: 8,
+			Items:           map[string]menu_config.MenuItem{},
+		},
 	},
 }
 

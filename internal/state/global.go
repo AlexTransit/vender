@@ -152,6 +152,9 @@ func (g *Global) initEngine() error {
 
 	for _, x := range g.Config.Engine.Menu.Items {
 		var err error
+		if x.Price == 0 {
+			g.Log.Errorf("item:%s price=0", x.Code)
+		}
 		x.Doer, err = g.Engine.ParseText(x.Name, x.Scenario)
 		if err != nil {
 			errs = append(errs, err)

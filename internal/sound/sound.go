@@ -67,7 +67,7 @@ func PlayFile(file string) error {
 
 func PlayFileNoWait(file string) error {
 	if err := playMP3controlled(file); err != nil {
-		s.log.Errorf(" play file (%v)", err)
+		s.log.Errorf(" play file error(%v)", err)
 		return err
 	}
 	return nil
