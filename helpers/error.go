@@ -47,8 +47,8 @@ func WrapErrChan(wg *sync.WaitGroup, ch chan<- error, fun func() error) {
 
 type LogDoItems map[time.Time]string
 
-func SaveAndShowDoError(li []string, err error) {
-	sf := "/home/vmc/vender-db/errors/" + li[0]
+func SaveAndShowDoError(li []string, err error, errorFolder string) {
+	sf := errorFolder + li[0]
 	var d string
 	for _, val := range li {
 		d = d + val + "\n"

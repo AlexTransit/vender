@@ -6,22 +6,21 @@ import (
 	"math"
 
 	"github.com/AlexTransit/vender/internal/engine"
+	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
 )
 
 // const tuneKeyFormat = "run/inventory-%s-tune"
 
 type Stock struct {
-	*Conf_Stock
-	Ingredient *Ingredient
-	value      float32
-}
-
-type Conf_Stock struct {
+	Log            *log2.Log
+	ErrorSend      bool
 	Name           string `hcl:"name,label"`
 	Code           int    `hcl:"code"`
 	XXX_Ingredient string `hcl:"ingredient"`
 	RegisterAdd    string `hcl:"register_add,optional"`
+	Ingredient     *Ingredient
+	value          float32
 }
 
 func (s *Stock) String() string {
@@ -46,58 +45,6 @@ func (s *Stock) String() string {
 //			val int
 //		}
 //	}
-
-// func NewStock(c inventory_config.Stock, e *engine.Engine) (*Stock, error) {
-// 	if c.Name == "" {
-// 		return nil, errors.Errorf("stock=(empty) is invalid")
-// 	}
-// 	if c.SpendRate == 0 {
-// 		c.SpendRate = 1
-// 	}
-// 	tk := fmt.Sprintf(tuneKeyFormat, c.Name)
-// 	if c.TuneKey != "" {
-// 		tk = fmt.Sprintf(tuneKeyFormat, c.TuneKey)
-// 	}
-// 	s := &Stock{
-// 		Name:      c.Name,
-// 		Code:      uint32(c.Code),
-// 		check:     c.Check,
-// 		enabled:   true,
-// 		spendRate: c.SpendRate,
-// 		min:       c.Min,
-// 		tuneKey:   tk,
-// 	}
-// 	s.fillLevels(&c)
-// 	doSpend1 := engine.Func0{
-// 		Name: fmt.Sprintf("stock.%s.spend1", s.Name),
-// 		F:    s.spend1,
-// 	}
-// 	doSpendArg := engine.FuncArg{
-// 		Name: fmt.Sprintf("stock.%s.spend(?)", s.Name),
-// 		F:    s.spendArg,
-// 	}
-// 	addName := fmt.Sprintf("add.%s(?)", s.Name)
-// 	if c.RegisterAdd != "" {
-// 		doAdd, err := e.ParseText(addName, c.RegisterAdd)
-// 		if err != nil {
-// 			return nil, errors.Annotatef(err, "stock=%s register_add", s.Name)
-// 		}
-// 		_, ok, err := engine.ArgApply(doAdd, 0)
-// 		switch {
-// 		case err == nil && !ok:
-// 			return nil, errors.Errorf("stock=%s register_add=%s no free argument", s.Name, c.RegisterAdd)
-
-// 		case (err == nil && ok) || engine.IsNotResolved(err): // success path
-// 			e.Register(addName, s.Wrap(doAdd))
-
-// 		case err != nil:
-// 			return nil, errors.Annotatef(err, "stock=%s register_add=%s", s.Name, c.RegisterAdd)
-// 		}
-// 	}
-// 	e.Register(doSpend1.Name, doSpend1)
-// 	e.Register(doSpendArg.Name, doSpendArg)
-// 	return s, nil
-// }
 
 func (s *Stock) GetSpendRate() float32 { return s.Ingredient.SpendRate }
 
@@ -152,40 +99,11 @@ func (s *Stock) valuePerDelay(value int, valueIsLevel bool) (valuePerDelay int, 
 	return 0, 0
 }
 
-// func (s *Stock) fillLevels(c *inventory_config.Stock) {
-// 	rm := `([0-9]*[.,]?[0-9]+)\(([0-9]*[.,]?[0-9]+)\)`
-// 	parts := regexp.MustCompile(rm).FindAllStringSubmatch(c.Level, 50)
-// 	s.levelValue = make([]struct {
-// 		lev int
-// 		val int
-// 	}, len(parts)+1)
-
-// 	if len(parts) == 0 {
-// 		return
-// 	}
-
-//		for i, v := range parts {
-//			s.levelValue[i+1].lev = stringToFixInt(v[1])
-//			s.levelValue[i+1].val = stringToFixInt(v[2])
-//		}
-//		sort.Slice(s.levelValue, func(i, j int) bool {
-//			return s.levelValue[i].lev < s.levelValue[j].lev
-//		})
-//	}
-
-// func (s *Stock) Enabled() bool { return s.enabled }
-
 func (s *Stock) Value() float32 { return s.value }
 
-// func (s *Stock) Set(new float32)    { s.value.Store(new) }
-func (s *Stock) Set(v float32) {
-	s.value = v
-}
-func (s *Stock) Has(v float32) bool { return s.value-v >= float32(s.Ingredient.Min) }
+func (s *Stock) Set(v float32) { s.value = v }
 
-// func (s *Stock) String() string {
-// 	return fmt.Sprintf("source(name=%s value=%f)", s.Name, s.Value())
-// }
+func (s *Stock) Has(v float32) bool { return s.value-v >= float32(s.Ingredient.Min) }
 
 func (s *Stock) Wrap(d engine.Doer) engine.Doer {
 	return &custom{stock: s, before: d}
@@ -239,10 +157,10 @@ func (c *custom) Validate() error {
 	if c.stock.Has(c.spend) {
 		return nil
 	}
-	// if !c.stock.TeleLow {
-	// 	types.TeleError(c.stock.Name + " - low")
-	// 	c.stock.TeleLow = true
-	// }
+	if !c.stock.ErrorSend {
+		c.stock.Log.Errorf("low-%s", c.stock.Name)
+		c.stock.ErrorSend = true
+	}
 	return errors.Errorf("%s low", c.stock.Name)
 }
 

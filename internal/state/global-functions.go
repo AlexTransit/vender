@@ -86,24 +86,21 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 
 func (g *Global) initInventory(ctx context.Context) error {
 	// put overrided stock to stock
-	for _, v := range g.Config.XXX_Inventory.XXX_Ingredient {
-		ing := inventory.Ingredient{
-			Conf_Ingredient: &v,
-		}
-		g.Inventory.Ingredient = append(g.Inventory.Ingredient, ing)
+	for _, v := range g.Config.Inventory.XXX_Ingredient {
+		g.Inventory.Ingredient = append(g.Inventory.Ingredient, v)
 	}
-	g.Config.XXX_Inventory.XXX_Ingredient = nil
+	g.Config.Inventory.XXX_Ingredient = nil
 
-	for _, v := range g.Config.XXX_Inventory.XXX_Stocks {
-		s := inventory.Stock{
-			Conf_Stock: &v,
-			Ingredient: g.Inventory.GetIngredientByName(v.XXX_Ingredient),
-		}
+	for _, v := range g.Config.Inventory.XXX_Stocks {
+		s := inventory.Stock{}
+		s = v
+		s.Log = g.Log
+		s.Ingredient = g.Inventory.GetIngredientByName(v.XXX_Ingredient)
 		g.Inventory.Stocks = append(g.Inventory.Stocks, s)
 	}
-	g.Config.XXX_Inventory.XXX_Stocks = nil
+	g.Config.Inventory.XXX_Stocks = nil
 
-	if err := g.Inventory.Init(ctx, g.Engine, g.Config.Persist.Root); err != nil {
+	if err := g.Inventory.Init(ctx, g.Engine); err != nil {
 		return err
 	}
 	g.Inventory.InventoryLoad()

@@ -50,7 +50,8 @@ func (seq *Seq) Do(ctx context.Context) error {
 		err := e.Exec(ctx, d)
 		itemsList = append(itemsList, time.Now().Format("<- 15:04:05.00000 ")+d.String())
 		if err != nil {
-			helpers.SaveAndShowDoError(itemsList, err)
+			// FIXME AlexM
+			helpers.SaveAndShowDoError(itemsList, err, "/home/vmc/vender-db/errors/")
 			return err
 		}
 	}

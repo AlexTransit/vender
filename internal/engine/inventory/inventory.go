@@ -3,52 +3,44 @@ package inventory
 import (
 	"context"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"sync"
 
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/log2"
-	"github.com/juju/errors"
 )
 
-type Inventory struct {
-	log        *log2.Log
-	mu         sync.RWMutex
-	file       string //`hcl:"stock_file,optional"`
-	Stocks     []Stock
-	Ingredient []Ingredient
-}
+// XXX временная карта
+// при чтении когфига, все перекладывается в карту. ( перезапись значений )
+// потом из карты переноситья в рабочий масив
 
-// временная структура.
-// конфигурация читается во временную
-// в карту кладет значения включая корректировку из других конфигов
-// при инициализации формируется рабочий инвентарь
-type XXX_Inventory struct {
-	Conf_Loaded_Stocks     []Conf_Stock      `hcl:"stock,block"`
-	Conf_Loaded_Ingredient []Conf_Ingredient `hcl:"ingredient,block"`
-	XXX_Stocks             map[int]Conf_Stock
-	XXX_Ingredient         map[string]Conf_Ingredient
+type Inventory struct {
+	log            *log2.Log
+	mu             sync.RWMutex
+	File           string       `hcl:"stock_file,optional"`
+	Stocks         []Stock      `hcl:"stock,block"`
+	Ingredient     []Ingredient `hcl:"ingredient,block"`
+	XXX_Stocks     map[int]Stock
+	XXX_Ingredient map[string]Ingredient
 }
 
 // if the minimum ingredient is not specified (equal to zero), then the consumption check is disabled
 // если минимум ингридиента не указан (равен нулю), тогда проверка расхода выключена
 type Ingredient struct {
-	*Conf_Ingredient
+	Name       string     `hcl:"name,label"`
+	Min        int        `hcl:"min,optional"`
+	SpendRate  float32    `hcl:"spend_rate,optional"`
+	Level      string     `hcl:"level,optional"`
+	TuneKey    string     `hcl:"tuning_key,optional"`
 	levelValue []struct { // used fixed comma x.xx
 		lev int
 		val int
 	}
-}
-
-type Conf_Ingredient struct {
-	Name      string  `hcl:"name,label"`
-	Min       int     `hcl:"min,optional"`
-	SpendRate float32 `hcl:"spend_rate,optional"`
-	Level     string  `hcl:"level,optional"`
-	TuneKey   string  `hcl:"tuning_key,optional"`
 }
 
 func (inv *Inventory) GetIngredientByName(ingredientName string) *Ingredient {
@@ -70,23 +62,17 @@ func (inv *Inventory) GetStockByName(name string) *Stock {
 	return nil
 }
 
-func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, root string) error {
+func (inv *Inventory) Init(ctx context.Context, e *engine.Engine) error {
 	inv.log = log2.ContextValueLogger(ctx)
 	inv.mu.Lock()
 	defer inv.mu.Unlock()
 	errs := make([]error, 0)
-	sd := root + "/inventory"
-	if _, err := os.Stat(sd); os.IsNotExist(err) {
-		err := os.MkdirAll(sd, os.ModePerm)
+	// sd := root + "/inventory"
+	fp := filepath.Dir(inv.File)
+	if _, err := os.Stat(fp); os.IsNotExist(err) {
+		err := os.MkdirAll(fp, os.ModePerm)
 		errs = append(errs, err)
 	}
-	// AlexM инит директории для ошибок. надо от сюда вынести.
-	sde := root + "/errors"
-	if _, err := os.Stat(sde); os.IsNotExist(err) {
-		err := os.MkdirAll(sde, os.ModePerm)
-		errs = append(errs, err)
-	}
-	inv.file = sd + "/store.file"
 	// sort bunkers array by code.
 	sort.Slice(inv.Stocks, func(a, b int) bool {
 		xa := inv.Stocks[a]
@@ -117,13 +103,13 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, root string) e
 			_, ok, err := engine.ArgApply(doAdd, 0)
 			switch {
 			case err == nil && !ok:
-				return errors.Errorf("stock=%s register_add=%s no free argument", s.Ingredient.Name, s.RegisterAdd)
+				return fmt.Errorf("stock=%s register_add=%s no free argument", s.Ingredient.Name, s.RegisterAdd)
 
 			case (err == nil && ok) || engine.IsNotResolved(err): // success path
 				e.Register(addName, inv.Stocks[i].Wrap(doAdd))
 
 			case err != nil:
-				return errors.Errorf("stock=%s register_add=%s error(%v)", s.Ingredient.Name, s.RegisterAdd, err)
+				return errors.Join(err, fmt.Errorf("stock=%s register_add=%s error(%v)", s.Ingredient.Name, s.RegisterAdd, err))
 			}
 
 		}
@@ -137,7 +123,7 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, root string) e
 // инвентарь храниться как int32 ( для возможности сохраннения в CMOS)
 // код соответствует позиции в файле
 func (inv *Inventory) InventoryLoad() {
-	f, err := os.OpenFile(inv.file, os.O_RDONLY|os.O_SYNC|os.O_CREATE, 0o644)
+	f, err := os.OpenFile(inv.File, os.O_RDONLY|os.O_SYNC|os.O_CREATE, 0o644)
 	if err != nil {
 		inv.log.Errorf("problem load inventory error(%v)", err)
 		return
@@ -164,7 +150,7 @@ func (inv *Inventory) InventoryLoad() {
 }
 
 func (inv *Inventory) InventorySave() error {
-	file, err := os.OpenFile(inv.file, os.O_WRONLY|os.O_SYNC|os.O_CREATE, 0o644)
+	file, err := os.OpenFile(inv.File, os.O_WRONLY|os.O_SYNC|os.O_CREATE, 0o644)
 	if err != nil {
 		inv.log.Errorf("save inventory fail. error open file(%v)", err)
 		return err
@@ -193,37 +179,10 @@ func (inv *Inventory) Iter(fun func(s *Stock)) {
 }
 
 func (inv *Inventory) WithTuning(ctx context.Context, stockName string, adj float32) (context.Context, error) {
-	// stock, err := inv.Get(stockName)
-	// if err != nil {
-	// 	return ctx, errors.Annotate(err, "WithTuning")
-	// }
-	// ctx = context.WithValue(ctx, stock.TuneKey, adj)
 	if s := inv.GetStockByName(stockName); s != nil {
 		if tk := s.Ingredient.TuneKey; tk != "" {
 			ctx = context.WithValue(ctx, tk, adj)
 		}
 	}
-	// tk := inv.Stocks[stockName].TuneKey
-	// if tk != "" {
-	// 	ctx = context.WithValue(ctx, tk, adj)
-	// }
 	return ctx, nil
 }
-
-// func (inv *Inventory) DisableCheckInStock() (listDisabledIngrodoent []uint32) {
-// 	for i, v := range inv.byCode {
-// 		if inv.byCode[i].check {
-// 			listDisabledIngrodoent = append(listDisabledIngrodoent, i)
-// 		}
-// 		inv.byCode[i].check = false
-// 		inv.byName[v.Name].check = false
-// 	}
-// 	return listDisabledIngrodoent
-// }
-
-// func (inv *Inventory) EnableCheckInStock(listEnabledIngrodoent *[]uint32) {
-// 	for _, v := range *listEnabledIngrodoent {
-// 		inv.byCode[v].check = true
-// 		// inv.byName[v.Name].check = false
-// 	}
-// }

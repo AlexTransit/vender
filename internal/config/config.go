@@ -111,7 +111,7 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 			VMC.UI_config.Service.Tests[v.Name] = uiTest
 		}
 		VMC.UI_config.Service.XXX_Tests = nil
-		for _, v := range VMC.XXX_Inventory.Conf_Loaded_Stocks {
+		for _, v := range VMC.Inventory.Stocks {
 			if v.Code == 0 {
 				i, err := strconv.Atoi(v.Name)
 				if err != nil || i == 0 {
@@ -120,7 +120,7 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 				}
 				v.Code = i
 			}
-			confStock := VMC.XXX_Inventory.XXX_Stocks[v.Code]
+			confStock := VMC.Inventory.XXX_Stocks[v.Code]
 			confStock.Code = v.Code
 			if v.Name != "" {
 				confStock.Name = v.Name
@@ -131,11 +131,11 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 			if v.XXX_Ingredient != "" {
 				confStock.XXX_Ingredient = v.XXX_Ingredient
 			}
-			VMC.XXX_Inventory.XXX_Stocks[v.Code] = confStock
+			VMC.Inventory.XXX_Stocks[v.Code] = confStock
 		}
-		VMC.XXX_Inventory.Conf_Loaded_Stocks = nil
-		for _, v := range VMC.XXX_Inventory.Conf_Loaded_Ingredient {
-			ing := VMC.XXX_Inventory.XXX_Ingredient[v.Name]
+		VMC.Inventory.Stocks = nil
+		for _, v := range VMC.Inventory.Ingredient {
+			ing := VMC.Inventory.XXX_Ingredient[v.Name]
 			ing.Name = v.Name
 			if v.SpendRate != 0 {
 				ing.SpendRate = v.SpendRate
@@ -149,9 +149,9 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 			if v.TuneKey != "" {
 				ing.TuneKey = v.TuneKey
 			}
-			VMC.XXX_Inventory.XXX_Ingredient[v.Name] = ing
-			VMC.XXX_Inventory.Conf_Loaded_Ingredient = nil
+			VMC.Inventory.XXX_Ingredient[v.Name] = ing
 		}
+		VMC.Inventory.Ingredient = nil
 		for _, v := range VMC.Engine.XXX_Aliases {
 			s := engine_config.Alias{
 				Name:     v.Name,

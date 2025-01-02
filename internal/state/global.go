@@ -58,7 +58,6 @@ func (g *Global) Init(ctx context.Context, cfg *config_global.Config) error {
 	g.Log.Infof("build version=%s", g.BuildVersion)
 	config_global.VMC.Version = g.BuildVersion
 
-	g.Log.Debugf("config: persist.root=%s", g.Config.Persist.Root)
 	watchdog.Init(&g.Config.Watchdog, g.Log, cfg.UI_config.Front.ResetTimeoutSec)
 
 	// Since tele is remote error reporting mechanism, it must be inited before anything else

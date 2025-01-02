@@ -76,7 +76,6 @@ func main() {
 
 	ctx, g := state_new.NewContext(log, tele.New())
 	g.Config = config_global.ReadConfig(log, *configPath)
-	// config.Log = log
 	g.BuildVersion = BuildVersion
 	g.Log = log
 	log.Debugf("starting %s", flagset.Args())

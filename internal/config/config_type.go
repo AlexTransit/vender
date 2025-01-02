@@ -18,20 +18,21 @@ import (
 type Config struct {
 	Version        string
 	TeleN          tele_api.Teler
-	UpgradeScript  string                  `hcl:"upgrade_script,optional"`
-	ScriptIfBroken string                  `hcl:"script_if_broken,optional"`
-	Inventory      inventory.Inventory     //`hcl:"inventory,block"`
-	XXX_Inventory  inventory.XXX_Inventory `hcl:"inventory,block"`
-	Money          MoneyStruct             `hcl:"money,block"`
-	Hardware       HardwareStruct          `hcl:"hardware,block"`
-	Persist        PersistStruct           `hcl:"persist,block"`
-	Tele           tele_config.Config      `hcl:"tele,block"`
-	UI_config      ui_config.Config        `hcl:"ui,block"`
-	Sound          sound_config.Config     `hcl:"sound,block"`
-	Watchdog       watchdog_config.Config  `hcl:"watchdog,block"`
-	Engine         engine_config.Config    `hcl:"engine,block"`
-	Remains        hcl.Body                `hcl:",remain"`
-	User           ui_config.UIUser
+	UpgradeScript  string `hcl:"upgrade_script,optional"`
+	ScriptIfBroken string `hcl:"script_if_broken,optional"`
+	ErrorFolder    string `hcl:"error_folder,optional"`
+
+	Inventory inventory.Inventory `hcl:"inventory,block"`
+	Money     MoneyStruct         `hcl:"money,block"`
+	Hardware  HardwareStruct      `hcl:"hardware,block"`
+	// Persist        PersistStruct          `hcl:"persist,block"`
+	Tele      tele_config.Config     `hcl:"tele,block"`
+	UI_config ui_config.Config       `hcl:"ui,block"`
+	Sound     sound_config.Config    `hcl:"sound,block"`
+	Watchdog  watchdog_config.Config `hcl:"watchdog,block"`
+	Engine    engine_config.Config   `hcl:"engine,block"`
+	Remains   hcl.Body               `hcl:",remain"`
+	User      ui_config.UIUser
 }
 
 type DeviceConfig struct {
@@ -96,12 +97,13 @@ type MoneyStruct struct {
 
 // config wich presetted default values
 var VMC = Config{
-	// Inventory: inventory.Inventory{
-	// 	file: "/home/vmc/vender-db/store.file",
-	// },
-	XXX_Inventory: inventory.XXX_Inventory{
-		XXX_Stocks:     map[int]inventory.Conf_Stock{},
-		XXX_Ingredient: map[string]inventory.Conf_Ingredient{},
+	// ErrorFolder: "/home/vmc/vender-db/errors/",
+	Inventory: inventory.Inventory{
+		File:           "/home/vmc/vender-db/inventory/store.file",
+		Stocks:         []inventory.Stock{},
+		Ingredient:     []inventory.Ingredient{},
+		XXX_Stocks:     map[int]inventory.Stock{},
+		XXX_Ingredient: map[string]inventory.Ingredient{},
 	},
 	Money: MoneyStruct{Scale: 100, CreditMax: 100},
 	Hardware: HardwareStruct{
@@ -140,8 +142,8 @@ var VMC = Config{
 			Pin:      "6",
 		},
 	},
-	Persist: PersistStruct{Root: "/home/vmc/vender-db"},
-	Tele:    tele_config.Config{},
+	// Persist: PersistStruct{Root: "/home/vmc/vender-db"},
+	Tele: tele_config.Config{},
 	UI_config: ui_config.Config{
 		Front: ui_config.FrontStruct{
 			MsgMenuError:                "ОШИБКА",
