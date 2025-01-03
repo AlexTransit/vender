@@ -88,16 +88,6 @@ func (t *tele) Report(ctx context.Context, serviceTag bool) error {
 	return nil
 }
 
-// func (t *tele) State(s tele_api.State) {
-// 	if t.currentState != s {
-// 		t.currentState = s
-// 		m := tele_api.FromRoboMessage{
-// 			State:                s,
-// 		}
-// 		t.RoboSend(&m)
-// 	}
-// }
-
 func (t *tele) StatModify(fun func(s *tele_api.Stat)) {
 	if !t.config.Enabled {
 		t.log.Infof(logMsgDisabled)

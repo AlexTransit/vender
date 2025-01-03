@@ -28,24 +28,6 @@ func (s *Stock) String() string {
 		s.Name, s.Code, s.Ingredient.SpendRate, s.Ingredient.Min)
 }
 
-// type Stock struct { //nolint:maligned
-//
-//		Code uint32
-//		Name string
-//		// enabled   uint32 // atomic
-//		enabled   bool
-//		check     bool
-//		TeleLow   bool
-//		spendRate float32
-//		min       float32
-//		value     float32
-//		tuneKey   string
-//		level     []struct { // used fixed comma x.xx
-//			lev int
-//			val int
-//		}
-//	}
-
 func (s *Stock) GetSpendRate() float32 { return s.Ingredient.SpendRate }
 
 func (s *Stock) SpendValue(value byte) {
