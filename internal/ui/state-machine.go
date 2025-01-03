@@ -138,7 +138,6 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		return ui.onFrontLock()
 
 	case types.StateServiceBegin:
-		watchdog.Disable()
 		return ui.onServiceBegin(ctx)
 	case types.StateServiceMenu:
 		return ui.onServiceMenu()

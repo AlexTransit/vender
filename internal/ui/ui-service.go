@@ -18,6 +18,7 @@ import (
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/internal/watchdog"
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
 	"github.com/temoto/alive/v2"
@@ -71,6 +72,7 @@ func (ui *uiService) Init(ctx context.Context) {
 
 func (ui *UI) onServiceBegin(ctx context.Context) types.UiState {
 	config_global.VMC.KeyboardReader(true)
+	watchdog.Disable()
 	ui.inputBuf = ui.inputBuf[:0]
 	if errs := ui.g.Engine.ExecList(ctx, "on_service_begin", ui.g.Config.Engine.OnServiceBegin); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_service_begin"))
@@ -367,6 +369,7 @@ func (ui *UI) onServiceEnd(ctx context.Context) types.UiState {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_service_end"))
 		return types.StateBroken
 	}
+	watchdog.Enable()
 	return types.StateDefault
 }
 
