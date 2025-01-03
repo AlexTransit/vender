@@ -96,6 +96,7 @@ func (g *Global) initInventory(ctx context.Context) error {
 		s = v
 		s.Log = g.Log
 		s.Ingredient = g.Inventory.GetIngredientByName(v.XXX_Ingredient)
+		s.XXX_Ingredient = ""
 		g.Inventory.Stocks = append(g.Inventory.Stocks, s)
 	}
 	g.Config.Inventory.XXX_Stocks = nil

@@ -149,7 +149,7 @@ func (c *custom) Apply(arg engine.Arg) (engine.Doer, bool, error) {
 
 func (c *custom) Validate() error {
 	if err := c.after.Validate(); err != nil {
-		return errors.Annotatef(err, "stock=%s", c.stock.Name)
+		return errors.Annotatef(err, "stock=%s", c.stock.Ingredient.Name)
 	}
 	if c.stock.Ingredient.Min == 0 {
 		return nil
@@ -158,10 +158,10 @@ func (c *custom) Validate() error {
 		return nil
 	}
 	if !c.stock.ErrorSend {
-		c.stock.Log.Errorf("low-%s", c.stock.Name)
+		c.stock.Log.Errorf("low-%s", c.stock.Ingredient.Name)
 		c.stock.ErrorSend = true
 	}
-	return errors.Errorf("%s low", c.stock.Name)
+	return errors.Errorf("%s low", c.stock.Ingredient.Name)
 }
 
 func (c *custom) Do(ctx context.Context) error {
