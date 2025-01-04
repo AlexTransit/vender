@@ -130,7 +130,7 @@ hardware {
 
   mega {
     log_debug = false
-    spi       = ""
+    spi       = "" // ???
     spi_speed = "100kHz"
     pin_chip  = "/dev/gpiochip1"
     pin       = "6"
