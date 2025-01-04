@@ -218,6 +218,14 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		},
 	)
 
+	g.Engine.RegisterNewFunc(
+		"write.config",
+		func(ctx context.Context) error {
+			config_global.WriteConfigToFile()
+			return nil
+		},
+	)
+
 	g.Engine.RegisterNewFuncAgr("line1(?)", func(ctx context.Context, arg engine.Arg) error {
 		g.MustTextDisplay().SetLine(1, arg.(string))
 		return nil

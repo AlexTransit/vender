@@ -16,7 +16,7 @@ import (
 )
 
 // for test/ make config from ctrusture
-func WriteDefaultConf() {
+func WriteConfigToFile() {
 	// 	c := CT{
 	// 		Inv: InvStruct{
 	// 			Persist: false,
