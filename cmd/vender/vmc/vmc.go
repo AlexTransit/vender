@@ -32,8 +32,10 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 		broken(ctx)
 	}
 	sound.Init(&g.Config.Sound, g.Log, true)
-	g.MustInit(ctx, g.Config)
-
+	err := g.Init(ctx, g.Config)
+	if err != nil {
+		g.Fatal(err)
+	}
 	// working term signal
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGABRT)
@@ -60,6 +62,7 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 			return errors.Annotate(err, "hardware init")
 		}
 	}
+
 	moneysys := new(money.MoneySystem)
 	if err := moneysys.Start(ctx); err != nil {
 		return errors.Annotate(err, "money system Start()")
@@ -69,8 +72,7 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 	if err := ui.Init(ctx); err != nil {
 		return errors.Annotate(err, "ui Init()")
 	}
-
-	// subcmd.SdNotify(daemon.SdNotifyReady)
+	g.CheckMenuExecution()
 	g.Log.Debugf("VMC init complete")
 
 	ui.Loop(ctx)

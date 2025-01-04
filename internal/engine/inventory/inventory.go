@@ -10,7 +10,6 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/log2"
 )
@@ -62,16 +61,15 @@ func (inv *Inventory) GetStockByName(name string) *Stock {
 	return nil
 }
 
-func (inv *Inventory) Init(ctx context.Context, e *engine.Engine) error {
+func (inv *Inventory) Init(ctx context.Context, e *engine.Engine) (errs error) {
 	inv.log = log2.ContextValueLogger(ctx)
 	inv.mu.Lock()
 	defer inv.mu.Unlock()
-	errs := make([]error, 0)
+	// errs := make([]error, 0)
 	// sd := root + "/inventory"
 	fp := filepath.Dir(inv.File)
 	if _, err := os.Stat(fp); os.IsNotExist(err) {
-		err := os.MkdirAll(fp, os.ModePerm)
-		errs = append(errs, err)
+		errs = os.MkdirAll(fp, os.ModePerm)
 	}
 	// sort bunkers array by code.
 	sort.Slice(inv.Stocks, func(a, b int) bool {
@@ -86,6 +84,10 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine) error {
 		inv.Ingredient[i].fillLevels()
 	}
 	for i, s := range inv.Stocks {
+		if s.Ingredient == nil {
+			inv.log.Errorf("in stock:%s ingridient not present", s.Name)
+			continue
+		}
 		doSpend1 := engine.Func0{
 			Name: fmt.Sprintf("stock.%s.spend1", s.Ingredient.Name),
 			F:    s.spend1,
@@ -98,12 +100,12 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine) error {
 		if s.RegisterAdd != "" {
 			doAdd, err := e.ParseText(addName, s.RegisterAdd)
 			if err != nil {
-				return fmt.Errorf("stock(%s) register_add(%s) parse error(%v)", s.Ingredient.Name, s.RegisterAdd, err)
+				return errors.Join(errs, fmt.Errorf("stock(%s) register_add(%s) parse error(%v)", s.Ingredient.Name, s.RegisterAdd, err))
 			}
 			_, ok, err := engine.ArgApply(doAdd, 0)
 			switch {
 			case err == nil && !ok:
-				return fmt.Errorf("stock=%s register_add=%s no free argument", s.Ingredient.Name, s.RegisterAdd)
+				return errors.Join(errs, fmt.Errorf("stock=%s register_add=%s no free argument", s.Ingredient.Name, s.RegisterAdd))
 
 			case (err == nil && ok) || engine.IsNotResolved(err): // success path
 				e.Register(addName, inv.Stocks[i].Wrap(doAdd))
@@ -116,7 +118,7 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine) error {
 		e.Register(doSpend1.Name, doSpend1)
 		e.Register(doSpendArg.Name, doSpendArg)
 	}
-	return helpers.FoldErrors(errs)
+	return errs
 }
 
 // store file

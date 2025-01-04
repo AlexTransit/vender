@@ -12,7 +12,6 @@ import (
 	watchdog_config "github.com/AlexTransit/vender/internal/watchdog/config"
 	tele_api "github.com/AlexTransit/vender/tele"
 	tele_config "github.com/AlexTransit/vender/tele/config"
-	"github.com/hashicorp/hcl/v2"
 )
 
 type Config struct {
@@ -31,8 +30,8 @@ type Config struct {
 	Sound     sound_config.Config    `hcl:"sound,block"`
 	Watchdog  watchdog_config.Config `hcl:"watchdog,block"`
 	Engine    engine_config.Config   `hcl:"engine,block"`
-	Remains   hcl.Body               `hcl:",remain"`
-	User      ui_config.UIUser
+	// Remains   hcl.Body               `hcl:",remain"`
+	User ui_config.UIUser
 }
 
 type DeviceConfig struct {
@@ -51,10 +50,6 @@ type HardwareStruct struct {
 	Input        InputStruct         `hcl:"input,block"`
 	Mdb          mdb_config.Config   `hcl:"mdb,block"`
 	Mega         MegaStruct          `hcl:"mega,block"`
-}
-
-type PersistStruct struct {
-	Root string `hcl:"root"`
 }
 
 type DisplayStruct struct {

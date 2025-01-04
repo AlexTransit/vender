@@ -29,8 +29,8 @@
             "buildFlags": "-ldflags=' -X main.BuildVersion=debugCLI'",
             // "env": {"DEBUG_AS_ROOT": "true",    },
             "args": [
-                "-config",
-                "/home/vmc/config1.hcl",
+                // "-config",
+                // "/home/vmc/config1.hcl",
                 "engine-cli"
             ],
         },

@@ -26,7 +26,11 @@ func Main(ctx context.Context, args ...[]string) error {
 		XXX_Price: 5,
 		Scenario:  "sleep(3s)",
 	}
-	g.MustInit(ctx, g.Config)
+	err := g.Init(ctx, g.Config)
+	if err != nil {
+		g.Fatal(err)
+	}
+
 	g.Log.Debugf("config=%+v", g.Config)
 
 	g.Log.Debugf("Init display")

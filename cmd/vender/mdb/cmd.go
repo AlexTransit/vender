@@ -41,7 +41,6 @@ var Mod = subcmd.Mod{
 
 func Main(ctx context.Context, args ...[]string) error {
 	g := state.GetGlobal(ctx)
-	g.MustInit(ctx, g.Config)
 
 	synthConfig := &config_global.Config{}
 	synthConfig.Hardware.EvendDevices = nil
@@ -49,7 +48,10 @@ func Main(ctx context.Context, args ...[]string) error {
 	synthConfig.Hardware.Mdb = g.Config.Hardware.Mdb             // *uarterName *devicePath
 	synthConfig.Hardware.Mega = g.Config.Hardware.Mega           // *megaSpi *megaPin
 	synthConfig.Tele.Enabled = false
-	g.MustInit(ctx, synthConfig)
+	err := g.Init(ctx, synthConfig)
+	if err != nil {
+		g.Fatal(err)
+	}
 
 	if _, err := g.Mdb(); err != nil {
 		g.Log.Fatalf("%v", err)

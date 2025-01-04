@@ -3,6 +3,7 @@ package state
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"time"
@@ -13,21 +14,21 @@ import (
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
 	tele_api "github.com/AlexTransit/vender/tele"
-	"github.com/juju/errors"
 )
 
-// func (g *Global) CheckMenuExecution(ctx context.Context) (err error) {
-// 	ch := g.Inventory.DisableCheckInStock()
-// 	for _, v := range g.Config.Engine.Menu.Items {
-// 		e := v.Doer.Validate()
-// 		if e != nil {
-// 			s := strings.Split(e.Error(), "\n")
-// 			g.Log.Errorf("menu code:%s not valid (%s) in scenario(%s)", v.Code, s[0], v.Scenario)
-// 		}
-// 	}
-// 	g.Inventory.EnableCheckInStock(&ch)
-// 	return err
-// }
+func (g *Global) CheckMenuExecution() {
+	// FIXME aAlexM переделать проверку сценария меню
+	// сейчас заполняю по максимуму склад, что бы проверить сченарий через валидатор
+	for i := range g.Inventory.Stocks {
+		g.Inventory.Stocks[i].Set(math.MaxFloat32)
+	}
+	for _, v := range g.Config.Engine.Menu.Items {
+		if e := v.Doer.Validate(); e != nil {
+			g.Log.Errorf("scenario menu code:%s error (%v)", v.Code, e)
+		}
+	}
+	g.Inventory.InventoryLoad()
+}
 
 func VmcLock(ctx context.Context) {
 	g := GetGlobal(ctx)
@@ -84,7 +85,7 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 	os.Exit(0)
 }
 
-func (g *Global) initInventory(ctx context.Context) error {
+func (g *Global) prepareInventory() {
 	// put overrided stock to stock
 	for _, v := range g.Config.Inventory.XXX_Ingredient {
 		g.Inventory.Ingredient = append(g.Inventory.Ingredient, v)
@@ -100,12 +101,6 @@ func (g *Global) initInventory(ctx context.Context) error {
 		g.Inventory.Stocks = append(g.Inventory.Stocks, s)
 	}
 	g.Config.Inventory.XXX_Stocks = nil
-
-	if err := g.Inventory.Init(ctx, g.Engine); err != nil {
-		return err
-	}
-	g.Inventory.InventoryLoad()
-	return nil
 }
 
 func (g *Global) RunBashSript(script string) (err error) {
@@ -169,29 +164,25 @@ func (g *Global) ClientEnd(ctx context.Context) {
 	}
 }
 
-func (g *Global) MustInit(ctx context.Context, cfg *config_global.Config) {
-	err := g.Init(ctx, g.Config)
-	if err != nil {
-		g.Fatal(err)
-	}
+// func (g *Global) Error(err error, args ...interface{}) {
+func (g *Global) Error(err error) {
+	// if err != nil {
+	// 	if len(args) != 0 {
+	// 		msg := args[0].(string)
+	// 		args = args[1:]
+	// 		err = errors.Annotatef(err, msg, args...)
+	// 	}
+	g.Log.Error(err)
+	// }
 }
 
-func (g *Global) Error(err error, args ...interface{}) {
-	if err != nil {
-		if len(args) != 0 {
-			msg := args[0].(string)
-			args = args[1:]
-			err = errors.Annotatef(err, msg, args...)
-		}
-		g.Log.Error(err)
-	}
-}
-
-func (g *Global) Fatal(err error, args ...interface{}) {
+// func (g *Global) Fatal(err error, args ...interface{}) {
+func (g *Global) Fatal(err error) {
 	if err != nil {
 		// FIXME alexm
 		sound.PlayFile("broken.mp3")
-		g.Error(err, args...)
+		// g.Error(err, args...)
+		g.Error(err)
 		g.StopWait(5 * time.Second)
 		g.Log.Fatal(err)
 		os.Exit(1)

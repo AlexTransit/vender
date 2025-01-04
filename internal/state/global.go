@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -54,7 +53,7 @@ func GetGlobal(ctx context.Context) *Global {
 	panic(fmt.Sprintf("context['%s'] expected type *Global actual=%#v", ContextKey, v))
 }
 
-func (g *Global) Init(ctx context.Context, cfg *config_global.Config) error {
+func (g *Global) Init(ctx context.Context, cfg *config_global.Config) (err error) {
 	g.Log.Infof("build version=%s", g.BuildVersion)
 	config_global.VMC.Version = g.BuildVersion
 
@@ -82,23 +81,28 @@ func (g *Global) Init(ctx context.Context, cfg *config_global.Config) error {
 	}
 	g.Config.Money.CreditMax *= g.Config.Money.Scale
 
-	const initTasks = 1
-	wg := sync.WaitGroup{}
-	wg.Add(initTasks)
-	errch := make(chan error, initTasks)
+	// const initTasks = 1
+	// wg := sync.WaitGroup{}
+	// wg.Add(initTasks)
+	// errch := make(chan error, initTasks)
 	g.initInput()
 	g.Inventory = &g.Config.Inventory
 	// go helpers.WrapErrChan(&wg, errch, g.initDisplay) // AlexM хрень переделать
 	g.initDisplay()
-	go helpers.WrapErrChan(&wg, errch, g.initEngine)
+	g.prepareInventory()
+	// g.Inventory.InventoryLoad()
+	err = g.initEngine()
+	// go helpers.WrapErrChan(&wg, errch, g.initEngine)
 	// go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
-	g.initInventory(ctx)
+	if err := g.Inventory.Init(ctx, g.Engine); err != nil {
+		return err
+	}
 
 	g.RegisterCommands(ctx)
-	wg.Wait()
-	close(errch)
+	// wg.Wait()
+	// close(errch)
 
-	return helpers.FoldErrChan(errch)
+	return err
 }
 
 func (g *Global) ScheduleSync(ctx context.Context, fun types.TaskFunc) error {
@@ -150,6 +154,10 @@ func (g *Global) initEngine() error {
 	}
 
 	for _, x := range g.Config.Engine.Menu.Items {
+		if x.Disabled {
+			delete(g.Config.Engine.Menu.Items, x.Code)
+			continue
+		}
 		var err error
 		if x.Price == 0 {
 			g.Log.Errorf("item:%s price=0", x.Code)
@@ -202,12 +210,13 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		},
 	)
 
-	// g.Engine.RegisterNewFunc(
-	// 	"check.menu",
-	// 	func(ctx context.Context) error {
-	// 		return g.CheckMenuExecution(ctx)
-	// 	},
-	// )
+	g.Engine.RegisterNewFunc(
+		"check.menu",
+		func(ctx context.Context) error {
+			g.CheckMenuExecution()
+			return nil
+		},
+	)
 
 	g.Engine.RegisterNewFuncAgr("line1(?)", func(ctx context.Context, arg engine.Arg) error {
 		g.MustTextDisplay().SetLine(1, arg.(string))

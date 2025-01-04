@@ -28,7 +28,10 @@ func Main(ctx context.Context, args ...[]string) error {
 	synthConfig.Tele.Enabled = true
 	// synthConfig.Tele.PersistPath = spq.OnlyForTesting
 	synthConfig.Tele.LogDebug = true
-	g.MustInit(ctx, synthConfig)
+	err := g.Init(ctx, synthConfig)
+	if err != nil {
+		g.Fatal(err)
+	}
 
 	if err := hardware.InitMDBDevices(ctx); err != nil {
 		err = errors.Annotate(err, "hardware enum")
