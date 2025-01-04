@@ -3,98 +3,129 @@ package inventory
 import (
 	"context"
 	"encoding/binary"
+	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
+	"sort"
 	"sync"
 
-	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
-	engine_config "github.com/AlexTransit/vender/internal/engine/config"
 	"github.com/AlexTransit/vender/log2"
-	"github.com/juju/errors"
 )
 
+// XXX временная карта
+// при чтении когфига, все перекладывается в карту. ( перезапись значений )
+// потом из карты переноситья в рабочий масив
+
 type Inventory struct {
-	// persist.Persist
-	config *engine_config.Inventory
-	log    *log2.Log
-	mu     sync.RWMutex
-	byName map[string]*Stock
-	byCode map[uint32]*Stock
-	file   string
+	log            *log2.Log
+	mu             sync.RWMutex
+	File           string       `hcl:"stock_file,optional"`
+	Stocks         []Stock      `hcl:"stock,block"`
+	Ingredient     []Ingredient `hcl:"ingredient,block"`
+	XXX_Stocks     map[int]Stock
+	XXX_Ingredient map[string]Ingredient
 }
 
-func (inv *Inventory) Init(ctx context.Context, c *engine_config.Inventory, engine *engine.Engine, root string) error {
-	inv.config = c
-	bunkers, countBunkers := initOverWriteStocks(c)
-	inv.config.Stocks = nil
-	inv.log = log2.ContextValueLogger(ctx)
+// if the minimum ingredient is not specified (equal to zero), then the consumption check is disabled
+// если минимум ингридиента не указан (равен нулю), тогда проверка расхода выключена
+type Ingredient struct {
+	Name       string     `hcl:"name,label"`
+	Min        int        `hcl:"min,optional"`
+	SpendRate  float32    `hcl:"spend_rate,optional"`
+	Level      string     `hcl:"level,optional"`
+	TuneKey    string     `hcl:"tuning_key,optional"`
+	levelValue []struct { // used fixed comma x.xx
+		lev int
+		val int
+	}
+}
 
+func (inv *Inventory) GetIngredientByName(ingredientName string) *Ingredient {
+	for i, v := range inv.Ingredient {
+		if v.Name == ingredientName {
+			return &inv.Ingredient[i] // sucsess patch
+		}
+	}
+	inv.log.Errorf("ingredient:%s not found in config", ingredientName)
+	return nil
+}
+
+func (inv *Inventory) GetStockByName(name string) *Stock {
+	for i, v := range inv.Stocks {
+		if v.Ingredient.Name == name {
+			return &inv.Stocks[i]
+		}
+	}
+	return nil
+}
+
+func (inv *Inventory) Init(ctx context.Context, e *engine.Engine) (errs error) {
+	inv.log = log2.ContextValueLogger(ctx)
 	inv.mu.Lock()
 	defer inv.mu.Unlock()
-	errs := make([]error, 0)
-	sd := root + "/inventory"
-	if _, err := os.Stat(sd); os.IsNotExist(err) {
-		err := os.MkdirAll(sd, os.ModePerm)
-		errs = append(errs, err)
+	// errs := make([]error, 0)
+	// sd := root + "/inventory"
+	fp := filepath.Dir(inv.File)
+	if _, err := os.Stat(fp); os.IsNotExist(err) {
+		errs = os.MkdirAll(fp, os.ModePerm)
 	}
-	// AlexM инит директории для ошибок. надо от сюда вынести.
-	sde := root + "/errors"
-	if _, err := os.Stat(sde); os.IsNotExist(err) {
-		err := os.MkdirAll(sde, os.ModePerm)
-		errs = append(errs, err)
+	// sort bunkers array by code.
+	sort.Slice(inv.Stocks, func(a, b int) bool {
+		xa := inv.Stocks[a]
+		xb := inv.Stocks[b]
+		if xa.Code != xb.Code {
+			return xa.Code < xb.Code
+		}
+		return xa.Name < xb.Name
+	})
+	for i := range inv.Ingredient {
+		inv.Ingredient[i].fillLevels()
 	}
-	inv.file = sd + "/store.file"
-
-	inv.byName = make(map[string]*Stock, countBunkers)
-	inv.byCode = make(map[uint32]*Stock, countBunkers)
-	for _, stockConfig := range bunkers {
-
-		stock, err := NewStock(stockConfig, engine)
-		if err != nil {
-			errs = append(errs, err)
+	for i, s := range inv.Stocks {
+		if s.Ingredient == nil {
+			inv.log.Errorf("in stock:%s ingridient not present", s.Name)
 			continue
 		}
-		inv.byName[stock.Name] = stock
-		inv.byCode[stock.Code] = stock
-	}
+		doSpend1 := engine.Func0{
+			Name: fmt.Sprintf("stock.%s.spend1", s.Ingredient.Name),
+			F:    s.spend1,
+		}
+		doSpendArg := engine.FuncArg{
+			Name: fmt.Sprintf("stock.%s.spend(?)", s.Ingredient.Name),
+			F:    s.spendArg,
+		}
+		addName := fmt.Sprintf("add.%s(?)", s.Ingredient.Name)
+		if s.RegisterAdd != "" {
+			doAdd, err := e.ParseText(addName, s.RegisterAdd)
+			if err != nil {
+				return errors.Join(errs, fmt.Errorf("stock(%s) register_add(%s) parse error(%v)", s.Ingredient.Name, s.RegisterAdd, err))
+			}
+			_, ok, err := engine.ArgApply(doAdd, 0)
+			switch {
+			case err == nil && !ok:
+				return errors.Join(errs, fmt.Errorf("stock=%s register_add=%s no free argument", s.Ingredient.Name, s.RegisterAdd))
 
-	return helpers.FoldErrors(errs)
+			case (err == nil && ok) || engine.IsNotResolved(err): // success path
+				e.Register(addName, inv.Stocks[i].Wrap(doAdd))
+
+			case err != nil:
+				return errors.Join(err, fmt.Errorf("stock=%s register_add=%s error(%v)", s.Ingredient.Name, s.RegisterAdd, err))
+			}
+
+		}
+		e.Register(doSpend1.Name, doSpend1)
+		e.Register(doSpendArg.Name, doSpendArg)
+	}
+	return errs
 }
 
-func initOverWriteStocks(c *engine_config.Inventory) (m map[uint32]engine_config.Stock, countBunkers int) {
-	m = make(map[uint32]engine_config.Stock)
-	for _, v := range c.Stocks {
-		if v.Code == 0 {
-			continue
-		}
-		n := uint32(v.Code)
-		if m[n].Code == 0 {
-			m[n] = v
-			continue
-		}
-		ss := m[n]
-		if v.Name != "" {
-			ss.Name = v.Name
-		}
-		if v.Level != "" {
-			ss.Level = v.Level
-		}
-		if v.Min != 0 {
-			ss.Min = v.Min
-		}
-		if v.RegisterAdd != "" {
-			ss.RegisterAdd = v.RegisterAdd
-		}
-		if v.SpendRate != 0 {
-			ss.SpendRate = v.SpendRate
-		}
-		m[n] = ss
-	}
-	return m, len(m)
-}
-
+// store file
+// инвентарь храниться как int32 ( для возможности сохраннения в CMOS)
+// код соответствует позиции в файле
 func (inv *Inventory) InventoryLoad() {
-	f, err := os.OpenFile(inv.file, os.O_RDONLY|os.O_SYNC|os.O_CREATE, 0o644)
+	f, err := os.OpenFile(inv.File, os.O_RDONLY|os.O_SYNC|os.O_CREATE, 0o644)
 	if err != nil {
 		inv.log.Errorf("problem load inventory error(%v)", err)
 		return
@@ -103,7 +134,7 @@ func (inv *Inventory) InventoryLoad() {
 
 	stat, err := f.Stat()
 	fl := int(stat.Size())
-	numInventory := len(inv.byCode)
+	numInventory := len(inv.Stocks)
 	if err != nil || fl != numInventory*4 {
 		inv.log.Errorf("load inventory file stat. len(%d) error(%v)", fl, err)
 		return
@@ -115,22 +146,22 @@ func (inv *Inventory) InventoryLoad() {
 		inv.log.Errorf("read inventory file error(%v)", err)
 		return
 	}
-	for _, cl := range inv.byCode {
-		inv.byCode[cl.Code].Set(float32(td[cl.Code-1]))
+	for i, cl := range inv.Stocks {
+		inv.Stocks[i].Set(float32(td[cl.Code-1]))
 	}
 }
 
 func (inv *Inventory) InventorySave() error {
-	file, err := os.OpenFile(inv.file, os.O_WRONLY|os.O_SYNC|os.O_CREATE, 0o644)
+	file, err := os.OpenFile(inv.File, os.O_WRONLY|os.O_SYNC|os.O_CREATE, 0o644)
 	if err != nil {
 		inv.log.Errorf("save inventory fail. error open file(%v)", err)
 		return err
 	}
 	defer file.Close()
 
-	bs := make([]byte, len(inv.byCode)*4)
-	for i, cl := range inv.byCode {
-		pos := (i - 1) * 4
+	bs := make([]byte, len(inv.Stocks)*4)
+	for _, cl := range inv.Stocks {
+		pos := (cl.Code - 1) * 4
 		binary.BigEndian.PutUint32(bs[pos:pos+4], uint32(cl.value))
 	}
 	_, err = file.Write(bs)
@@ -141,55 +172,19 @@ func (inv *Inventory) InventorySave() error {
 	return err
 }
 
-func (inv *Inventory) Get(name string) (*Stock, error) {
-	inv.mu.RLock()
-	defer inv.mu.RUnlock()
-	if s, ok := inv.locked_get(0, name); ok {
-		return s, nil
-	}
-	return nil, errors.Errorf("stock=%s is not registered", name)
-}
-
 func (inv *Inventory) Iter(fun func(s *Stock)) {
 	inv.mu.Lock()
-	for _, stock := range inv.byCode {
-		fun(stock)
+	for _, stock := range inv.Stocks {
+		fun(&stock)
 	}
 	inv.mu.Unlock()
 }
 
 func (inv *Inventory) WithTuning(ctx context.Context, stockName string, adj float32) (context.Context, error) {
-	stock, err := inv.Get(stockName)
-	if err != nil {
-		return ctx, errors.Annotate(err, "WithTuning")
-	}
-	ctx = context.WithValue(ctx, stock.tuneKey, adj)
-	return ctx, nil
-}
-
-func (inv *Inventory) locked_get(code uint32, name string) (*Stock, bool) {
-	if name == "" {
-		s, ok := inv.byCode[code]
-		return s, ok
-	}
-	s, ok := inv.byName[name]
-	return s, ok
-}
-
-func (inv *Inventory) DisableCheckInStock() (listDisabledIngrodoent []uint32) {
-	for i, v := range inv.byCode {
-		if inv.byCode[i].check {
-			listDisabledIngrodoent = append(listDisabledIngrodoent, i)
+	if s := inv.GetStockByName(stockName); s != nil {
+		if tk := s.Ingredient.TuneKey; tk != "" {
+			ctx = context.WithValue(ctx, tk, adj)
 		}
-		inv.byCode[i].check = false
-		inv.byName[v.Name].check = false
 	}
-	return listDisabledIngrodoent
-}
-
-func (inv *Inventory) EnableCheckInStock(listEnabledIngrodoent *[]uint32) {
-	for _, v := range *listEnabledIngrodoent {
-		inv.byCode[v].check = true
-		// inv.byName[v.Name].check = false
-	}
+	return ctx, nil
 }

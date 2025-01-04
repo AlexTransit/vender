@@ -14,6 +14,7 @@ import (
 	"github.com/AlexTransit/vender/hardware/mega-client"
 	"github.com/AlexTransit/vender/hardware/text_display"
 	"github.com/AlexTransit/vender/helpers"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
@@ -53,7 +54,7 @@ type hardware struct {
 
 type devWrap struct {
 	sync.RWMutex
-	config DeviceConfig
+	config config_global.DeviceConfig
 	dev    types.Devicer
 }
 
@@ -86,6 +87,10 @@ func (g *Global) Iodin() (*iodin.Client, error) {
 
 func (g *Global) Mdb() (*mdb.Bus, error) {
 	x := &g.Hardware.Mdb // short alias
+	if g.Config.Hardware.Mdb.UartDriver == "" {
+		g.Log.Info("mdb driver not set")
+		return x.Bus, nil
+	}
 	_ = x.do(func() error {
 		if x.Bus != nil { // state-new testing mode
 			return nil
@@ -153,6 +158,11 @@ func (g *Global) Mega() (*mega.Client, error) {
 }
 
 func (g *Global) MustTextDisplay() *text_display.TextDisplay {
+	if !g.Config.Hardware.HD44780.Enable {
+		g.Log.Info("text display hd44780 is disabled")
+		td := text_display.TextDisplay{}
+		return &td
+	}
 	d, err := g.TextDisplay()
 	if err != nil {
 		g.Log.Fatal(err)
@@ -200,6 +210,7 @@ func (g *Global) TextDisplay() (*text_display.TextDisplay, error) {
 		if err != nil {
 			return errors.Annotatef(err, "NewTextDisplay config=%#v", displayConfig)
 		}
+		disp.SetLogger(g.Log)
 		x.Display = disp
 		x.Display.SetDevice(devWrap)
 		go x.Display.Run()
@@ -228,13 +239,13 @@ func (g *Global) GetDevice(name string) (types.Devicer, error) {
 	return d.dev, nil
 }
 
-func (g *Global) GetDeviceConfig(name string) (DeviceConfig, error) {
+func (g *Global) GetDeviceConfig(name string) (config_global.DeviceConfig, error) {
 	d, ok, err := g.getDevice(name)
 	if err != nil {
-		return DeviceConfig{}, err
+		return config_global.DeviceConfig{}, err
 	}
 	if !ok {
-		return DeviceConfig{}, errors.NotFoundf("device=%s", name)
+		return config_global.DeviceConfig{}, errors.NotFoundf("device=%s", name)
 	}
 
 	d.RLock()
@@ -303,9 +314,12 @@ func (g *Global) initDevices() error {
 	return x.do(func() error {
 		g.Log.Debugf("initDevices")
 
-		errs := make([]error, 0, len(g.Config.Hardware.XXX_Devices))
+		errs := make([]error, 0, len(g.Config.Hardware.EvendDevices))
 		x.m = make(map[string]*devWrap)
-		for _, d := range g.Config.Hardware.XXX_Devices {
+		for _, d := range g.Config.Hardware.EvendDevices {
+			if d.Disabled {
+				continue
+			}
 			if d.Name == "" {
 				errs = append(errs, errors.Errorf("invalid device name=%s", d.Name))
 				continue
@@ -325,6 +339,9 @@ func (g *Global) initDevices() error {
 }
 
 func (g *Global) initInput() {
+	if !g.Config.Hardware.Input.EvendKeyboard.Enable {
+		return
+	}
 	g.Hardware.Input = &input.Dispatch{
 		Log: g.Log,
 		Bus: make(chan types.InputEvent),

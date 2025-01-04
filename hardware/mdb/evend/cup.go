@@ -7,11 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/state"
 )
-
-const DefaultTimeout = 60
 
 type DeviceCup struct {
 	Generic
@@ -33,8 +30,8 @@ func (c *DeviceCup) init(ctx context.Context) error {
 	c.Generic.Init(ctx, 0xe0, "cup", proto2)
 	Cup = c
 	g := state.GetGlobal(ctx)
-	c.initLightSheduler(g.Config.UI.Front.LightShedule)
-	c.timeout = uint16(helpers.ConfigDefaultInt(g.Config.Hardware.Evend.Cup.TimeoutSec, DefaultTimeout)) * 5
+	c.initLightSheduler(g.Config.UI_config.Front.LightShedule)
+	c.timeout = uint16(g.Config.Hardware.Evend.Cup.TimeoutSec) * 5
 	g.Engine.RegisterNewFunc(c.name+".ensure", func(ctx context.Context) error { return c.CommandWaitSuccess(c.timeout, 0x04) })
 	g.Engine.RegisterNewFunc(c.name+".dispense", func(ctx context.Context) error { return c.CommandWaitSuccess(c.timeout, 0x01) })
 	g.Engine.RegisterNewFunc(c.name+".wait_complete", func(ctx context.Context) error { return c.WaitSuccess(c.timeout, true) })

@@ -57,7 +57,7 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 	})
 
 	if err := c.reset(); err != nil {
-		return errors.Join(fmt.Errorf(c.name+".init"), err)
+		return errors.Join(errors.New(c.name+".init"), err)
 	}
 	return nil
 }
@@ -79,7 +79,7 @@ func (c *DeviceConveyor) move(position int16) (err error) {
 func (c *DeviceConveyor) mv(position int16) (err error) {
 	defer func() {
 		if err != nil {
-			err = errors.Join(fmt.Errorf(c.dev.Action), err)
+			err = errors.Join(errors.New(c.dev.Action), err)
 		}
 	}()
 	if c.position == -1 {
@@ -94,7 +94,7 @@ func (c *DeviceConveyor) mv(position int16) (err error) {
 	}
 	if err = c.CommandWaitSuccess(c.timeout, commandMove, byte(position&0xff), byte(position>>8)); err == nil {
 		if err = c.ReadError(); err != nil {
-			err = errors.Join(fmt.Errorf(c.dev.Action), err)
+			err = errors.Join(errors.New(c.dev.Action), err)
 			c.position = -1
 			return err
 		}

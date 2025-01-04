@@ -8,6 +8,7 @@ import (
 	"github.com/AlexTransit/vender/helpers"
 	"github.com/juju/errors"
 
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
@@ -23,7 +24,7 @@ func (ui *UI) Loop(ctx context.Context) {
 	next := types.StateDefault
 	for next != types.StateStop && ui.g.Alive.IsRunning() {
 		current := ui.State()
-		types.VMC.UiState = uint32(current)
+		config_global.VMC.UIState(uint32(current))
 		next = ui.enter(ctx, current)
 		if next == types.StateDefault {
 			ui.g.Log.Fatalf("ui state=%v next=default", current)
@@ -137,7 +138,6 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		return ui.onFrontLock()
 
 	case types.StateServiceBegin:
-		watchdog.Disable()
 		return ui.onServiceBegin(ctx)
 	case types.StateServiceMenu:
 		return ui.onServiceMenu()

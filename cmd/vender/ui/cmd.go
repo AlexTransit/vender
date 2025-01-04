@@ -7,7 +7,7 @@ import (
 
 	"github.com/AlexTransit/vender/cmd/vender/subcmd"
 	"github.com/AlexTransit/vender/hardware"
-	engine_config "github.com/AlexTransit/vender/internal/engine/config"
+	menu_config "github.com/AlexTransit/vender/internal/menu/menu_config"
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/ui"
@@ -20,10 +20,17 @@ func Main(ctx context.Context, args ...[]string) error {
 	g := state.GetGlobal(ctx)
 	g.Config.Engine.OnBoot = nil
 	g.Config.Engine.OnMenuError = nil
-	g.Config.Engine.Menu.Items = []*engine_config.MenuItem{
-		{Code: "333", Name: "test item", XXX_Price: 5, Scenario: "sleep(3s)"},
+	g.Config.Engine.Menu.Items["333"] = menu_config.MenuItem{
+		Code:      "333",
+		Name:      "test item",
+		XXX_Price: 5,
+		Scenario:  "sleep(3s)",
 	}
-	g.MustInit(ctx, g.Config)
+	err := g.Init(ctx, g.Config)
+	if err != nil {
+		g.Fatal(err)
+	}
+
 	g.Log.Debugf("config=%+v", g.Config)
 
 	g.Log.Debugf("Init display")

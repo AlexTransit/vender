@@ -8,17 +8,17 @@ import (
 
 	// "net"
 	"os/exec"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/AlexTransit/vender/hardware/input"
 	"github.com/AlexTransit/vender/helpers"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/engine"
-	"github.com/AlexTransit/vender/internal/engine/inventory"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/internal/watchdog"
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
 	"github.com/temoto/alive/v2"
@@ -44,24 +44,19 @@ var /*const*/ serviceMenu = []string{
 var /*const*/ serviceMenuMax = uint8(len(serviceMenu) - 1)
 
 type uiService struct { //nolint:maligned
-	// config
 	resetTimeout time.Duration
-	SecretSalt   []byte
-
-	// state
-	askReport bool
-	menuIdx   uint8
-	invIdx    uint8
-	invList   []*inventory.Stock
-	testIdx   uint8
-	testList  []engine.Doer
+	askReport    bool
+	menuIdx      uint8
+	invIdx       uint8
+	// invList   []*inventory.Stock
+	testIdx  uint8
+	testList []engine.Doer
 }
 
 func (ui *uiService) Init(ctx context.Context) {
 	g := state.GetGlobal(ctx)
-	config := g.Config.UI.Service
-	ui.SecretSalt = []byte{0} // FIXME read from config
-	ui.resetTimeout = helpers.IntSecondDefault(config.ResetTimeoutSec, 3*time.Second)
+	config := g.Config.UI_config.Service
+	ui.resetTimeout = time.Second * time.Duration(config.ResetTimeoutSec)
 	errs := make([]error, 0, len(config.Tests))
 	for _, t := range config.Tests {
 		if d, err := g.Engine.ParseText(t.Name, t.Scenario); err != nil {
@@ -76,27 +71,9 @@ func (ui *uiService) Init(ctx context.Context) {
 }
 
 func (ui *UI) onServiceBegin(ctx context.Context) types.UiState {
-	types.VMC.InputEnable = true
+	config_global.VMC.KeyboardReader(true)
+	watchdog.Disable()
 	ui.inputBuf = ui.inputBuf[:0]
-	ui.Service.askReport = false
-	ui.Service.menuIdx = 0
-	ui.Service.invIdx = 0
-	ui.Service.invList = make([]*inventory.Stock, 0, 16)
-	ui.Service.testIdx = 0
-	ui.g.Inventory.Iter(func(s *inventory.Stock) {
-		ui.g.Log.Debugf("ui service inventory: - %s", s.String())
-		ui.Service.invList = append(ui.Service.invList, s)
-	})
-	sort.Slice(ui.Service.invList, func(a, b int) bool {
-		xa := ui.Service.invList[a]
-		xb := ui.Service.invList[b]
-		if xa.Code != xb.Code {
-			return xa.Code < xb.Code
-		}
-		return xa.Name < xb.Name
-	})
-	// ui.g.Log.Debugf("invlist=%v, invidx=%d", ui.Service.invList, ui.Service.invIdx)
-
 	if errs := ui.g.Engine.ExecList(ctx, "on_service_begin", ui.g.Config.Engine.OnServiceBegin); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_service_begin"))
 		return types.StateBroken
@@ -162,22 +139,22 @@ func (ui *UI) onServiceMenu() types.UiState {
 var lv bool
 
 func (ui *UI) onServiceInventory() types.UiState {
-	if len(ui.Service.invList) == 0 {
+	if len(ui.g.Inventory.Stocks) == 0 {
 		ui.display.SetLine(1, "inv empty") // FIXME extract message string)
 		ui.serviceWaitInput()
 		return types.StateServiceMenu
 	}
-	invCurrent := ui.Service.invList[ui.Service.invIdx]
-	iname := fmt.Sprintf("%d %s", invCurrent.Code, invCurrent.Name)
+	s := ui.g.Inventory.Stocks[ui.Service.invIdx]
+	iname := fmt.Sprintf("%d %s", s.Code, s.Ingredient.Name)
 	if lv {
 		ui.display.SetLines(
-			fmt.Sprintf("V:%.0f %s\x00", invCurrent.Value(), iname),
-			fmt.Sprintf("L:%s %s", invCurrent.ShowLevel(), string(ui.inputBuf)), // TODO configurable decimal point
+			fmt.Sprintf("V:%.0f %s\x00", s.Value(), iname),
+			fmt.Sprintf("L:%s %s", s.ShowLevel(), string(ui.inputBuf)), // TODO configurable decimal point
 		)
 	} else {
 		ui.display.SetLines(
-			fmt.Sprintf("L:%s %s", invCurrent.ShowLevel(), iname),
-			fmt.Sprintf("V:%.0f %s\x00", invCurrent.Value(), string(ui.inputBuf)), // TODO configurable decimal point
+			fmt.Sprintf("L:%s %s", s.ShowLevel(), iname),
+			fmt.Sprintf("V:%.0f %s\x00", s.Value(), string(ui.inputBuf)), // TODO configurable decimal point
 		)
 	}
 	next, e := ui.serviceWaitInput()
@@ -185,7 +162,7 @@ func (ui *UI) onServiceInventory() types.UiState {
 		return next
 	}
 
-	invIdxMax := uint8(len(ui.Service.invList))
+	invIdxMax := uint8(len(ui.g.Inventory.Stocks))
 	switch {
 	case e.Key == input.EvendKeyCreamLess || e.Key == input.EvendKeyCreamMore:
 		if len(ui.inputBuf) != 0 {
@@ -225,14 +202,13 @@ func (ui *UI) onServiceInventory() types.UiState {
 			return types.StateServiceInventory
 		}
 
-		invCurrent := ui.Service.invList[ui.Service.invIdx]
 		if lv {
-			invCurrent.SetLevel(x)
+			ui.g.Inventory.Stocks[ui.Service.invIdx].SetLevel(x)
 		} else {
-			invCurrent.Set(float32(x) / 100)
+			ui.g.Inventory.Stocks[ui.Service.invIdx].Set(float32(x) / 100)
 		}
 		ui.Service.askReport = true
-		invCurrent.TeleLow = false
+		// invCurrent.TeleLow = false
 
 	case input.IsReject(&e):
 		// backspace semantic
@@ -393,6 +369,7 @@ func (ui *UI) onServiceEnd(ctx context.Context) types.UiState {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_service_end"))
 		return types.StateBroken
 	}
+	watchdog.Enable()
 	return types.StateDefault
 }
 

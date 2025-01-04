@@ -13,6 +13,7 @@ import (
 
 	// "github.com/AlexTransit/vender/hardware/money"
 	"github.com/AlexTransit/vender/helpers"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
@@ -57,7 +58,6 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 	const devNameCoin = "coin"
 	ms.bill = bill.Stub{}
 	ms.coin = coin.Stub{}
-	// ms.enableBillChanger = g.Config.Money.EnableChangeBillToCoin
 	errs := make([]error, 0, 2)
 	if dev, err := g.GetDevice(devNameBill); err == nil {
 		ms.bill = dev.(bill.Biller)
@@ -247,12 +247,12 @@ func (ms *MoneySystem) XXX_InjectCoin(n currency.Nominal) error {
 
 func (ms *MoneySystem) AddDirty(dirty currency.Amount) {
 	ms.dirty += dirty
-	types.VMC.MonSys.Dirty = ms.dirty
+	config_global.VMC.User.DirtyMoney = ms.dirty
 }
 
 func (ms *MoneySystem) SetDirty(dirty currency.Amount) {
 	ms.dirty = dirty
-	types.VMC.MonSys.Dirty = ms.dirty
+	config_global.VMC.User.DirtyMoney = ms.dirty
 }
 
 func (ms *MoneySystem) GetDirty() currency.Amount {

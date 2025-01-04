@@ -48,9 +48,9 @@ type PinMap struct {
 	D7 string `hcl:"d7"`
 }
 
-func (self *LCD) Init(chipName string, pinmap PinMap, page1 bool) error {
+func (lcd *LCD) Init(chipName string, pinmap PinMap, page1 bool) error {
 	var err error
-	self.pinChip, err = gpio.Open(chipName, "lcd")
+	lcd.pinChip, err = gpio.Open(chipName, "lcd")
 	if err != nil {
 		return err
 	}
@@ -61,69 +61,69 @@ func (self *LCD) Init(chipName string, pinmap PinMap, page1 bool) error {
 	nD5 := mustAtou32(pinmap.D5)
 	nD6 := mustAtou32(pinmap.D6)
 	nD7 := mustAtou32(pinmap.D7)
-	self.pins, err = self.pinChip.OpenLines(
+	lcd.pins, err = lcd.pinChip.OpenLines(
 		gpio.GPIOHANDLE_REQUEST_OUTPUT, "lcd",
 		nRS, nRW, nE, nD4, nD5, nD6, nD7,
 	)
 	if err != nil {
 		return err
 	}
-	self.pin_rs = self.pins.SetFunc(nRS)
-	self.pin_rw = self.pins.SetFunc(nRW)
-	self.pin_e = self.pins.SetFunc(nE)
-	self.pin_d4 = self.pins.SetFunc(nD4)
-	self.pin_d5 = self.pins.SetFunc(nD5)
-	self.pin_d6 = self.pins.SetFunc(nD6)
-	self.pin_d7 = self.pins.SetFunc(nD7)
+	lcd.pin_rs = lcd.pins.SetFunc(nRS)
+	lcd.pin_rw = lcd.pins.SetFunc(nRW)
+	lcd.pin_e = lcd.pins.SetFunc(nE)
+	lcd.pin_d4 = lcd.pins.SetFunc(nD4)
+	lcd.pin_d5 = lcd.pins.SetFunc(nD5)
+	lcd.pin_d6 = lcd.pins.SetFunc(nD6)
+	lcd.pin_d7 = lcd.pins.SetFunc(nD7)
 
-	self.init4(page1)
+	lcd.init4(page1)
 	return nil
 }
 
-func (self *LCD) setAllPins(b byte) {
-	self.pin_rs(b)
-	self.pin_rw(b)
-	self.pin_e(b)
-	self.pin_d4(b)
-	self.pin_d5(b)
-	self.pin_d6(b)
-	self.pin_d7(b)
-	self.pins.Flush() //nolint:errcheck
+func (lcd *LCD) setAllPins(b byte) {
+	lcd.pin_rs(b)
+	lcd.pin_rw(b)
+	lcd.pin_e(b)
+	lcd.pin_d4(b)
+	lcd.pin_d5(b)
+	lcd.pin_d6(b)
+	lcd.pin_d7(b)
+	lcd.pins.Flush() //nolint:errcheck
 }
 
-func (self *LCD) blinkE() {
-	self.pin_e(1)
+func (lcd *LCD) blinkE() {
+	lcd.pin_e(1)
 	// FIXME check error
-	self.pins.Flush() //nolint:errcheck
+	lcd.pins.Flush() //nolint:errcheck
 	time.Sleep(1 * time.Microsecond)
-	self.pin_e(0)
+	lcd.pin_e(0)
 	// FIXME check error
-	self.pins.Flush() //nolint:errcheck
+	lcd.pins.Flush() //nolint:errcheck
 	time.Sleep(1 * time.Microsecond)
 }
 
-func (self *LCD) send4(rs, d4, d5, d6, d7 byte) {
+func (lcd *LCD) send4(rs, d4, d5, d6, d7 byte) {
 	// log.Printf("sn4 %v %v %v %v %v\n", rs, d7, d6, d5, d4)
-	self.pin_rs(rs)
-	self.pin_d4(d4)
-	self.pin_d5(d5)
-	self.pin_d6(d6)
-	self.pin_d7(d7)
-	self.blinkE()
+	lcd.pin_rs(rs)
+	lcd.pin_d4(d4)
+	lcd.pin_d5(d5)
+	lcd.pin_d6(d6)
+	lcd.pin_d7(d7)
+	lcd.blinkE()
 }
 
-func (self *LCD) init4(page1 bool) {
+func (lcd *LCD) init4(page1 bool) {
 	time.Sleep(20 * time.Millisecond)
 
 	// special sequence
-	self.Command(0x33)
-	self.Command(0x32)
+	lcd.Command(0x33)
+	lcd.Command(0x32)
 
-	self.SetFunction(false, page1)
-	self.SetControl(0) // off
-	self.SetControl(ControlOn)
-	self.Clear()
-	self.SetEntryMode(true, false)
+	lcd.SetFunction(false, page1)
+	lcd.SetControl(0) // off
+	lcd.SetControl(ControlOn)
+	lcd.Clear()
+	lcd.SetEntryMode(true, false)
 }
 
 func bb(b, bit byte) byte {
@@ -133,42 +133,44 @@ func bb(b, bit byte) byte {
 	return 1
 }
 
-func (self *LCD) Command(c Command) {
+func (lcd *LCD) Command(c Command) {
 	b := byte(c)
 	// log.Printf("cmd %0x\n", b)
-	self.send4(0, bb(b, 4), bb(b, 5), bb(b, 6), bb(b, 7))
-	self.send4(0, bb(b, 0), bb(b, 1), bb(b, 2), bb(b, 3))
+	lcd.send4(0, bb(b, 4), bb(b, 5), bb(b, 6), bb(b, 7))
+	time.Sleep(40 * time.Microsecond)
+	lcd.send4(0, bb(b, 0), bb(b, 1), bb(b, 2), bb(b, 3))
 	// TODO poll busy flag
 	time.Sleep(40 * time.Microsecond)
-	self.setAllPins(0)
+	lcd.setAllPins(0)
 }
 
-func (self *LCD) Data(b byte) {
+func (lcd *LCD) Data(b byte) {
 	// log.Printf("dat %0x\n", b)
-	self.send4(1, bb(b, 4), bb(b, 5), bb(b, 6), bb(b, 7))
-	self.send4(1, bb(b, 0), bb(b, 1), bb(b, 2), bb(b, 3))
+	lcd.send4(1, bb(b, 4), bb(b, 5), bb(b, 6), bb(b, 7))
+	time.Sleep(40 * time.Microsecond)
+	lcd.send4(1, bb(b, 0), bb(b, 1), bb(b, 2), bb(b, 3))
 	// TODO poll busy flag
 	time.Sleep(40 * time.Microsecond)
-	self.setAllPins(0)
+	lcd.setAllPins(0)
 }
 
-func (self *LCD) Write(bs []byte) {
+func (lcd *LCD) Write(bs []byte) {
 	for _, b := range bs {
-		self.Data(b)
+		lcd.Data(b)
 	}
 }
 
-func (self *LCD) Clear() {
-	self.Command(CommandClear)
+func (lcd *LCD) Clear() {
+	lcd.Command(CommandClear)
 	// TODO poll busy flag
 	time.Sleep(2 * time.Millisecond)
 }
 
-func (self *LCD) Return() {
-	self.Command(CommandReturn)
+func (lcd *LCD) Return() {
+	lcd.Command(CommandReturn)
 }
 
-func (self *LCD) SetEntryMode(right, shift bool) {
+func (lcd *LCD) SetEntryMode(right, shift bool) {
 	var cmd Command = 0x04
 	if right {
 		cmd |= 0x02
@@ -176,20 +178,21 @@ func (self *LCD) SetEntryMode(right, shift bool) {
 	if shift {
 		cmd |= 0x01
 	}
-	self.Command(cmd)
+	lcd.Command(cmd)
 }
 
-func (self *LCD) Control() Control {
-	return self.control
+func (lcd *LCD) Control() Control {
+	return lcd.control
 }
-func (self *LCD) SetControl(new Control) Control {
-	old := self.control
-	self.control = new
-	self.Command(CommandControl | Command(new))
+
+func (lcd *LCD) SetControl(new Control) Control {
+	old := lcd.control
+	lcd.control = new
+	lcd.Command(CommandControl | Command(new))
 	return old
 }
 
-func (self *LCD) SetFunction(bits8, page1 bool) {
+func (lcd *LCD) SetFunction(bits8, page1 bool) {
 	var cmd Command = 0x28
 	if bits8 {
 		cmd |= 0x10
@@ -197,10 +200,10 @@ func (self *LCD) SetFunction(bits8, page1 bool) {
 	if page1 {
 		cmd |= 0x02
 	}
-	self.Command(cmd)
+	lcd.Command(cmd)
 }
 
-func (self *LCD) CursorYX(row uint8, column uint8) bool {
+func (lcd *LCD) CursorYX(row uint8, column uint8) bool {
 	if !(row > 0 && row <= 2) {
 		return false
 	}
@@ -208,7 +211,7 @@ func (self *LCD) CursorYX(row uint8, column uint8) bool {
 		return false
 	}
 	addr := (row-1)*ddramWidth + (column - 1)
-	self.Command(CommandAddress | Command(addr))
+	lcd.Command(CommandAddress | Command(addr))
 	return true
 }
 
