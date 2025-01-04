@@ -3,37 +3,39 @@ package state
 import (
 	"context"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
-	"strings"
 	"time"
 
+	config_global "github.com/AlexTransit/vender/internal/config"
+	"github.com/AlexTransit/vender/internal/engine/inventory"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
 	tele_api "github.com/AlexTransit/vender/tele"
-	"github.com/juju/errors"
 )
 
-func (g *Global) CheckMenuExecution(ctx context.Context) (err error) {
-	ch := g.Inventory.DisableCheckInStock()
+func (g *Global) CheckMenuExecution() {
+	// FIXME aAlexM переделать проверку сценария меню
+	// сейчас заполняю по максимуму склад, что бы проверить сченарий через валидатор
+	for i := range g.Inventory.Stocks {
+		g.Inventory.Stocks[i].Set(math.MaxFloat32)
+	}
 	for _, v := range g.Config.Engine.Menu.Items {
-		e := v.Doer.Validate()
-		if e != nil {
-			s := strings.Split(e.Error(), "\n")
-			g.Log.Errorf("menu code:%s not valid (%s) in scenario(%s)", v.Code, s[0], v.Scenario)
+		if e := v.Doer.Validate(); e != nil {
+			g.Log.Errorf("scenario menu code:%s error (%v)", v.Code, e)
 		}
 	}
-	g.Inventory.EnableCheckInStock(&ch)
-	return err
+	g.Inventory.InventoryLoad()
 }
 
 func VmcLock(ctx context.Context) {
 	g := GetGlobal(ctx)
 	g.Log.Info("Vmc Locked")
-	types.VMC.Lock = true
-	types.VMC.EvendKeyboardInput(false)
-	if types.VMC.UiState == uint32(types.StateFrontSelect) || types.VMC.UiState == uint32(types.StatePrepare) {
+	config_global.VMC.User.Lock = true
+	config_global.VMC.User.KeyboardReadEnable = false
+	if config_global.VMC.User.UiState == uint32(types.StateFrontSelect) || config_global.VMC.User.UiState == uint32(types.StatePrepare) {
 		g.LockCh <- struct{}{}
 	}
 }
@@ -41,9 +43,9 @@ func VmcLock(ctx context.Context) {
 func VmcUnLock(ctx context.Context) {
 	g := GetGlobal(ctx)
 	g.Log.Info("Vmc UnLocked")
-	types.VMC.Lock = false
-	types.VMC.EvendKeyboardInput(true)
-	if types.VMC.UiState == uint32(types.StateFrontLock) {
+	config_global.VMC.User.Lock = false
+	config_global.VMC.KeyboardReader(true)
+	if config_global.VMC.User.UiState == uint32(types.StateFrontLock) {
 		g.LockCh <- struct{}{}
 	}
 }
@@ -54,12 +56,12 @@ func (g *Global) UpgradeVender() {
 			g.Log.Errorf("upgrade err(%v)", err)
 			return
 		}
-		types.VMC.NeedRestart = true
+		config_global.VMC.Engine.NeedRestart = true
 	}()
 }
 
 func (g *Global) VmcStop(ctx context.Context) {
-	if types.VMC.UiState != uint32(types.StateFrontSelect) {
+	if config_global.VMC.User.UiState != uint32(types.StateFrontSelect) {
 		watchdog.DevicesInitializationRequired()
 	}
 	g.VmcStopWOInitRequared(ctx)
@@ -83,13 +85,22 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 	os.Exit(0)
 }
 
-func (g *Global) initInventory(ctx context.Context) error {
-	// TODO ctx should be enough
-	if err := g.Inventory.Init(ctx, &g.Config.Engine.Inventory, g.Engine, g.Config.Persist.Root); err != nil {
-		return err
+func (g *Global) prepareInventory() {
+	// put overrided stock to stock
+	for _, v := range g.Config.Inventory.XXX_Ingredient {
+		g.Inventory.Ingredient = append(g.Inventory.Ingredient, v)
 	}
-	g.Inventory.InventoryLoad()
-	return nil
+	g.Config.Inventory.XXX_Ingredient = nil
+
+	for _, v := range g.Config.Inventory.XXX_Stocks {
+		s := inventory.Stock{}
+		s = v
+		s.Log = g.Log
+		s.Ingredient = g.Inventory.GetIngredientByName(v.XXX_Ingredient)
+		s.XXX_Ingredient = ""
+		g.Inventory.Stocks = append(g.Inventory.Stocks, s)
+	}
+	g.Config.Inventory.XXX_Stocks = nil
 }
 
 func (g *Global) RunBashSript(script string) (err error) {
@@ -102,14 +113,6 @@ func (g *Global) RunBashSript(script string) (err error) {
 		return nil
 	}
 	return fmt.Errorf("script(%s) stdout(%s) error(%s)", script, stdout, cmd.Stderr)
-}
-
-func (g *Global) initDisplay() error {
-	d, err := g.Display()
-	if d != nil {
-		types.VMC.HW.Display.GdisplayValid = true
-	}
-	return err
 }
 
 func (g *Global) ShowQR(t string) {
@@ -127,7 +130,7 @@ func (g *Global) ShowQR(t string) {
 	if err != nil {
 		g.Log.Error(err, "QR show error")
 	}
-	types.VMC.HW.Display.Gdisplay = t
+	config_global.VMC.User.QrText = t
 }
 
 func (g *Global) Stop() {
@@ -146,51 +149,49 @@ func (g *Global) StopWait(timeout time.Duration) bool {
 
 func (g *Global) ClientBegin(ctx context.Context) {
 	_ = g.Engine.ExecList(ctx, "client-light", []string{"evend.cup.light_on"})
-	if !types.VMC.Lock {
-		// g.TimerUIStop <- struct{}{}
-		types.VMC.Lock = true
-		types.VMC.Client.WorkTime = time.Now()
+	if !config_global.VMC.User.Lock {
+		config_global.VMC.User.Lock = true
 		g.Log.Infof("--- client activity begin ---")
 	}
 	g.Tele.RoboSendState(tele_api.State_Client)
 }
 
 func (g *Global) ClientEnd(ctx context.Context) {
-	types.VMC.EvendKeyboardInput(true)
-	if types.VMC.Lock {
-		types.VMC.Lock = false
-		types.VMC.Client.WorkTime = time.Now()
+	config_global.VMC.KeyboardReader(true)
+	if config_global.VMC.User.Lock {
+		config_global.VMC.User.Lock = false
 		g.Log.Infof("--- client activity end ---")
 	}
 }
 
-func (g *Global) MustInit(ctx context.Context, cfg *Config) {
-	err := g.Init(ctx, g.Config)
-	if err != nil {
-		g.Fatal(err)
-	}
+// func (g *Global) Error(err error, args ...interface{}) {
+func (g *Global) Error(err error) {
+	// if err != nil {
+	// 	if len(args) != 0 {
+	// 		msg := args[0].(string)
+	// 		args = args[1:]
+	// 		err = errors.Annotatef(err, msg, args...)
+	// 	}
+	g.Log.Error(err)
+	// }
 }
 
-func (g *Global) Error(err error, args ...interface{}) {
-	if err != nil {
-		if len(args) != 0 {
-			msg := args[0].(string)
-			args = args[1:]
-			err = errors.Annotatef(err, msg, args...)
-		}
-		// g.Tele.Error(err)
-		// эта бабуйня еще и в телеметрию отсылает
-		g.Log.Error(err)
-	}
-}
-
-func (g *Global) Fatal(err error, args ...interface{}) {
+// func (g *Global) Fatal(err error, args ...interface{}) {
+func (g *Global) Fatal(err error) {
 	if err != nil {
 		// FIXME alexm
 		sound.PlayFile("broken.mp3")
-		g.Error(err, args...)
+		// g.Error(err, args...)
+		g.Error(err)
 		g.StopWait(5 * time.Second)
 		g.Log.Fatal(err)
 		os.Exit(1)
+	}
+}
+
+func (g *Global) initDisplay() {
+	d, err := g.Display()
+	if d == nil || err != nil {
+		g.Config.Hardware.Display.Framebuffer = ""
 	}
 }

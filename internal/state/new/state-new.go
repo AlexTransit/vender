@@ -37,9 +37,9 @@ func NewContext(log *log2.Log, teler tele_api.Teler) (context.Context, *state.Gl
 }
 
 func NewTestContext(t testing.TB, buildVersion string, confString string) (context.Context, *state.Global) {
-	fs := state.NewMockFullReader(map[string]string{
-		"test-inline": confString,
-	})
+	// fs := state.NewMockFullReader(map[string]string{
+	// 	"test-inline": confString,
+	// })
 
 	var log *log2.Log
 	if os.Getenv("vender_test_log_stderr") == "1" {
@@ -50,7 +50,7 @@ func NewTestContext(t testing.TB, buildVersion string, confString string) (conte
 	log.SetFlags(log2.LTestFlags)
 	ctx, g := NewContext(log, tele_api.NewStub())
 	g.BuildVersion = buildVersion
-	g.MustInit(ctx, state.MustReadConfig(log, fs, "test-inline"))
+	// g.MustInit(ctx, state.MustReadConfig_old(log, fs, "test-inline"))
 
 	mdbus, mdbMock := mdb.NewMockBus(t)
 	g.Hardware.Mdb.Bus = mdbus

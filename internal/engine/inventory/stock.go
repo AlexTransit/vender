@@ -4,93 +4,37 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"regexp"
-	"sort"
-	"strconv"
 
 	"github.com/AlexTransit/vender/internal/engine"
-	engine_config "github.com/AlexTransit/vender/internal/engine/config"
-	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
 )
 
-const tuneKeyFormat = "run/inventory-%s-tune"
+// const tuneKeyFormat = "run/inventory-%s-tune"
 
-type Stock struct { //nolint:maligned
-	Code uint32
-	Name string
-	// enabled   uint32 // atomic
-	enabled   bool
-	check     bool
-	TeleLow   bool
-	spendRate float32
-	min       float32
-	value     float32
-	tuneKey   string
-	level     []struct { // used fixed comma x.xx
-		lev int
-		val int
-	}
+type Stock struct {
+	Log            *log2.Log
+	ErrorSend      bool
+	Name           string `hcl:"name,label"`
+	Code           int    `hcl:"code"`
+	XXX_Ingredient string `hcl:"ingredient"`
+	RegisterAdd    string `hcl:"register_add,optional"`
+	Ingredient     *Ingredient
+	value          float32
 }
 
-func NewStock(c engine_config.Stock, e *engine.Engine) (*Stock, error) {
-	if c.Name == "" {
-		return nil, errors.Errorf("stock=(empty) is invalid")
-	}
-	if c.SpendRate == 0 {
-		c.SpendRate = 1
-	}
-	tk := fmt.Sprintf(tuneKeyFormat, c.Name)
-	if c.TuneKey != "" {
-		tk = fmt.Sprintf(tuneKeyFormat, c.TuneKey)
-	}
-	s := &Stock{
-		Name:      c.Name,
-		Code:      uint32(c.Code),
-		check:     c.Check,
-		enabled:   true,
-		spendRate: c.SpendRate,
-		min:       c.Min,
-		tuneKey:   tk,
-	}
-	s.fillLevels(&c)
-	doSpend1 := engine.Func0{
-		Name: fmt.Sprintf("stock.%s.spend1", s.Name),
-		F:    s.spend1,
-	}
-	doSpendArg := engine.FuncArg{
-		Name: fmt.Sprintf("stock.%s.spend(?)", s.Name),
-		F:    s.spendArg,
-	}
-	addName := fmt.Sprintf("add.%s(?)", s.Name)
-	if c.RegisterAdd != "" {
-		doAdd, err := e.ParseText(addName, c.RegisterAdd)
-		if err != nil {
-			return nil, errors.Annotatef(err, "stock=%s register_add", s.Name)
-		}
-		_, ok, err := engine.ArgApply(doAdd, 0)
-		switch {
-		case err == nil && !ok:
-			return nil, errors.Errorf("stock=%s register_add=%s no free argument", s.Name, c.RegisterAdd)
-
-		case (err == nil && ok) || engine.IsNotResolved(err): // success path
-			e.Register(addName, s.Wrap(doAdd))
-
-		case err != nil:
-			return nil, errors.Annotatef(err, "stock=%s register_add=%s", s.Name, c.RegisterAdd)
-		}
-	}
-	e.Register(doSpend1.Name, doSpend1)
-	e.Register(doSpendArg.Name, doSpendArg)
-	return s, nil
+func (s *Stock) String() string {
+	return fmt.Sprintf("inventory.%s #%d spend_rate=%f min=%d",
+		s.Name, s.Code, s.Ingredient.SpendRate, s.Ingredient.Min)
 }
 
-func (s *Stock) GetSpendRate() float32 { return s.spendRate }
+func (s *Stock) GetSpendRate() float32 { return s.Ingredient.SpendRate }
+
 func (s *Stock) SpendValue(value byte) {
-	if !s.enabled {
+	if s.Ingredient.Min == 0 {
 		return
 	}
-	s.value -= float32(value) / s.spendRate
+	s.value -= float32(value) / s.Ingredient.SpendRate
 }
 
 func (s *Stock) ShowLevel() string {
@@ -99,37 +43,37 @@ func (s *Stock) ShowLevel() string {
 	if valuePerDelay == 0 {
 		return "0"
 	}
-	ost := currenValue - s.level[i].val
-	valOst := float64(s.level[i].lev)/100 + math.Round(float64(ost/valuePerDelay))/100
+	ost := currenValue - s.Ingredient.levelValue[i].val
+	valOst := float64(s.Ingredient.levelValue[i].lev)/100 + math.Round(float64(ost/valuePerDelay))/100
 	return fmt.Sprintf("%.2f", valOst)
 }
 
 func (s *Stock) SetLevel(level int) {
 	valuePerDelay, i := s.valuePerDelay(level, true)
-	ost := level - s.level[i].lev
-	l1 := s.level[i].val
+	ost := level - s.Ingredient.levelValue[i].lev
+	l1 := s.Ingredient.levelValue[i].val
 	l2 := ost * valuePerDelay
 	s.value = float32((l1 + l2) / 100)
 }
 
 // returns the number per 0.01 division and the index of the smaller value
 func (s *Stock) valuePerDelay(value int, valueIsLevel bool) (valuePerDelay int, index int) {
-	countLevels := len(s.level) - 1
+	countLevels := len(s.Ingredient.levelValue) - 1
 	for index = countLevels; index >= 0; index-- {
 		var v int
 		if valueIsLevel {
-			v = s.level[index].lev
+			v = s.Ingredient.levelValue[index].lev
 		} else {
-			v = s.level[index].val
+			v = s.Ingredient.levelValue[index].val
 		}
 		if v < value {
 			switch {
 			case countLevels == index && index == 0: // levels not sets
 				return 0, 0
 			case countLevels == index && index > 0: // level > max rate
-				valuePerDelay = (s.level[index].val - s.level[index-1].val) / (s.level[index].lev - s.level[index-1].lev)
+				valuePerDelay = (s.Ingredient.levelValue[index].val - s.Ingredient.levelValue[index-1].val) / (s.Ingredient.levelValue[index].lev - s.Ingredient.levelValue[index-1].lev)
 			default: // level between
-				valuePerDelay = (s.level[index+1].val - s.level[index].val) / (s.level[index+1].lev - s.level[index].lev)
+				valuePerDelay = (s.Ingredient.levelValue[index+1].val - s.Ingredient.levelValue[index].val) / (s.Ingredient.levelValue[index+1].lev - s.Ingredient.levelValue[index].lev)
 			}
 			return valuePerDelay, index
 		}
@@ -137,51 +81,18 @@ func (s *Stock) valuePerDelay(value int, valueIsLevel bool) (valuePerDelay int, 
 	return 0, 0
 }
 
-func (s *Stock) fillLevels(c *engine_config.Stock) {
-	rm := `([0-9]*[.,]?[0-9]+)\(([0-9]*[.,]?[0-9]+)\)`
-	parts := regexp.MustCompile(rm).FindAllStringSubmatch(c.Level, 50)
-	s.level = make([]struct {
-		lev int
-		val int
-	}, len(parts)+1)
-
-	if len(parts) == 0 {
-		return
-	}
-
-	for i, v := range parts {
-		s.level[i+1].lev = stringToFixInt(v[1])
-		s.level[i+1].val = stringToFixInt(v[2])
-	}
-	sort.Slice(s.level, func(i, j int) bool {
-		return s.level[i].lev < s.level[j].lev
-	})
-}
-
-func stringToFixInt(s string) int {
-	if v, err := strconv.ParseFloat(s, 64); err == nil {
-		return int(v * 100)
-	}
-	return 0
-}
-
-func (s *Stock) Enabled() bool { return s.enabled }
-
 func (s *Stock) Value() float32 { return s.value }
 
-// func (s *Stock) Set(new float32)    { s.value.Store(new) }
-func (s *Stock) Set(v float32)      { s.value = v }
-func (s *Stock) Has(v float32) bool { return s.value-v >= s.min }
-func (s *Stock) String() string {
-	return fmt.Sprintf("source(name=%s value=%f)", s.Name, s.Value())
-}
+func (s *Stock) Set(v float32) { s.value = v }
+
+func (s *Stock) Has(v float32) bool { return s.value-v >= float32(s.Ingredient.Min) }
 
 func (s *Stock) Wrap(d engine.Doer) engine.Doer {
 	return &custom{stock: s, before: d}
 }
 
 func (s *Stock) TranslateSpend(arg engine.Arg) float32 {
-	return translate(int32(arg.(int16)), s.spendRate)
+	return translate(int32(arg.(int16)), s.Ingredient.SpendRate)
 }
 
 // signature match engine.Func0.F
@@ -197,7 +108,7 @@ func (s *Stock) spendArg(ctx context.Context, arg engine.Arg) error {
 }
 
 func (s *Stock) spendValue(v float32) {
-	if s.Enabled() {
+	if s.Ingredient.Min != 0 {
 		s.value -= v
 	}
 }
@@ -220,27 +131,24 @@ func (c *custom) Apply(arg engine.Arg) (engine.Doer, bool, error) {
 
 func (c *custom) Validate() error {
 	if err := c.after.Validate(); err != nil {
-		return errors.Annotatef(err, "stock=%s", c.stock.Name)
+		return errors.Annotatef(err, "stock=%s", c.stock.Ingredient.Name)
 	}
-	if !c.stock.Enabled() {
-		return nil
-	}
-	if !c.stock.check {
+	if c.stock.Ingredient.Min == 0 {
 		return nil
 	}
 	if c.stock.Has(c.spend) {
 		return nil
 	}
-	if !c.stock.TeleLow {
-		types.TeleError(c.stock.Name + " - low")
-		c.stock.TeleLow = true
+	if !c.stock.ErrorSend {
+		c.stock.Log.Errorf("low-%s", c.stock.Ingredient.Name)
+		c.stock.ErrorSend = true
 	}
-	return errors.Errorf("%s low", c.stock.Name)
+	return errors.Errorf("%s low", c.stock.Ingredient.Name)
 }
 
 func (c *custom) Do(ctx context.Context) error {
 	e := engine.GetGlobal(ctx)
-	if tunedCtx, tuneRate, ok := takeTuneRate(ctx, c.stock.tuneKey); ok {
+	if tunedCtx, tuneRate, ok := takeTuneRate(ctx, c.stock.Ingredient.TuneKey); ok {
 		tunedArg := engine.Arg(int16(math.Round(float64(c.arg.(int16)) * float64(tuneRate))))
 		d, _, err := c.apply(tunedArg)
 		// log.Printf("stock=%s before=%#v arg=%v tuneRate=%v tunedArg=%v d=%v err=%v", c.stock.String(), c.before, c.arg, tuneRate, tunedArg, d, err)
@@ -252,7 +160,7 @@ func (c *custom) Do(ctx context.Context) error {
 
 	// log.Printf("stock=%s value=%f arg=%v spending=%f", c.stock.Name, c.stock.Value(), c.arg, c.spend)
 	// TODO remove this redundant check when sure that Validate() is called in all proper places
-	if c.stock.check && !c.stock.Has(c.spend) {
+	if c.stock.Ingredient.Min != 0 && !c.stock.Has(c.spend) {
 		return errors.Errorf("stock=%s check fail", c.stock.Name)
 	}
 
@@ -311,3 +219,8 @@ func translate(arg int32, rate float32) float32 {
 	}
 	return result
 }
+
+// func (s *Stock) overwrite(v *[]inventory.Stock) {
+// 	for _, v := range v {
+// 	}
+// }

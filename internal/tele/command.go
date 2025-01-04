@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/AlexTransit/vender/currency"
+	config_global "github.com/AlexTransit/vender/internal/config"
+	menu_vmc "github.com/AlexTransit/vender/internal/menu"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
@@ -85,21 +87,21 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 	if rt-st > 180 {
 		// затычка по тайм ауту. если команда пришла с задержкой
 		errM := fmt.Sprintf("remote make error. big time difference between server and robot. RTime:%v STime:%v", time.Unix(rt, 0), time.Unix(st, 0))
-		t.log.Errorf(errM)
+		t.log.Error(errM)
 		om.Err = &tele_api.Err{Message: errM}
 		om.Order.OrderStatus = tele_api.OrderStatus_orderError
-		types.VMC.EvendKeyboardInput(true)
+		config_global.VMC.KeyboardReader(true)
 		return
 	}
 	switch m.MakeOrder.OrderStatus {
 	case tele_api.OrderStatus_doSelected: // make selected code. payment via QR, etc
 		if currentRobotState != tele_api.State_WaitingForExternalPayment || // robot state not wait
-			types.UI.FrontResult.PaymenId != m.MakeOrder.OwnerInt { // the payer and payer do not match
-			t.log.Errorf("make doSelected unposible. robo state:%s <> WaitingForExternalPayment or payerID:%d <> ownerID:%d", currentRobotState.String(), types.UI.FrontResult.PaymenId, m.MakeOrder.OwnerInt)
+			config_global.VMC.User.PaymenId != m.MakeOrder.OwnerInt { // the payer and payer do not match
+			t.log.Errorf("make doSelected unposible. robo state:%s <> WaitingForExternalPayment or payerID:%d <> ownerID:%d", currentRobotState.String(), config_global.VMC.User.PaymenId, m.MakeOrder.OwnerInt)
 			om.Order.OrderStatus = tele_api.OrderStatus_orderError
 			return
 		}
-		types.VMC.MonSys.Dirty = currency.Amount(m.MakeOrder.Amount)
+		config_global.VMC.User.DirtyMoney = currency.Amount(m.MakeOrder.Amount)
 	case tele_api.OrderStatus_doTransferred: // TODO execute external order. сделать внешний заказ
 		// check validity, price. проверить валидность, цену
 		if currentRobotState != tele_api.State_Nominal ||
@@ -108,22 +110,22 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 			om.Order.OrderStatus = tele_api.OrderStatus_robotIsBusy
 			return
 		}
-		i, found := types.UI.Menu[m.MakeOrder.MenuCode]
+		i, found := config_global.GetMenuItem(m.MakeOrder.MenuCode)
 		if !found {
 			t.log.Infof("remote cook error: code not found")
 			om.Order.OrderStatus = tele_api.OrderStatus_executionInaccessible
 			return
 		}
-		if err := i.D.Validate(); err != nil {
+		if err := i.Doer.Validate(); err != nil {
 			om.Order.OrderStatus = tele_api.OrderStatus_executionInaccessible
 			t.log.Infof("remote cook error: code not valid")
 			return
 		}
-		types.UI.FrontResult.Item = i
-		types.UI.FrontResult.Sugar = tuneCook(m.MakeOrder.GetSugar(), ui.DefaultSugar, ui.SugarMax())
-		types.UI.FrontResult.Cream = tuneCook(m.MakeOrder.GetCream(), ui.DefaultCream, ui.CreamMax())
-		om.Order.Amount = uint32(types.UI.FrontResult.Item.Price)
-		types.VMC.MonSys.Dirty = types.UI.FrontResult.Item.Price
+		config_global.VMC.User.SelectedItem = i
+		config_global.VMC.User.Sugar = tuneCook(m.MakeOrder.GetSugar(), config_global.VMC.Engine.Menu.DefaultSugar, config_global.VMC.Engine.Menu.DefaultSugarMax)
+		config_global.VMC.User.Cream = tuneCook(m.MakeOrder.GetCream(), config_global.VMC.Engine.Menu.DefaultCream, config_global.VMC.Engine.Menu.DefaultCreamMax)
+		om.Order.Amount = uint32(i.Price)
+		config_global.VMC.User.DirtyMoney = i.Price
 		sound.PlayMoneyIn()
 	default: // unknown status
 		t.log.Errorf("unknown order status(%v)", m.MakeOrder.OrderStatus)
@@ -132,7 +134,7 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 	}
 	go func() { // run cooking
 		remOr := tele_api.Order{
-			Amount:        uint32(types.VMC.MonSys.Dirty),
+			Amount:        uint32(config_global.VMC.User.DirtyMoney),
 			PaymentMethod: m.MakeOrder.PaymentMethod,
 			OwnerInt:      m.MakeOrder.OwnerInt,
 			OwnerType:     m.MakeOrder.OwnerType,
@@ -157,33 +159,33 @@ func (t *tele) messageShowQr(ctx context.Context, m *tele_api.ToRoboMessage) {
 			// FIXME AlexM proto add QR payer and orderid
 			// убрать услоивия когда все клиенты обносяться на верчию не менее 241207.0
 			if m.ShowQR.Amount != 0 {
-				types.UI.FrontResult.QRPayAmount = uint32(m.ShowQR.Amount)
+				config_global.VMC.User.QRPayAmount = uint32(m.ShowQR.Amount)
 			} else {
-				types.UI.FrontResult.QRPayAmount = uint32(m.ShowQR.DataInt)
+				config_global.VMC.User.QRPayAmount = uint32(m.ShowQR.DataInt)
 			}
 			if m.ShowQR.PayerId != 0 {
-				types.UI.FrontResult.PaymenId = m.ShowQR.PayerId
+				config_global.VMC.User.PaymenId = m.ShowQR.PayerId
 			} else {
 				var err error
-				types.UI.FrontResult.PaymenId, err = strconv.ParseInt(m.ShowQR.DataStr, 10, 64)
+				config_global.VMC.User.PaymenId, err = strconv.ParseInt(m.ShowQR.DataStr, 10, 64)
 				if err != nil {
 					t.Error(err)
 				}
 			}
 			g.Log.Infof("show paymeng QR for order:%s", m.ShowQR.OrderId)
 			g.ShowQR(m.ShowQR.QrText)
-			l1 := fmt.Sprintf(g.Config.UI.Front.MsgRemotePay+g.Config.UI.Front.MsgPrice, currency.Amount(types.UI.FrontResult.QRPayAmount).Format100I())
-			g.Hardware.HD44780.Display.SetLines(l1, types.VMC.HW.Display.L2)
+			l1 := fmt.Sprintf(g.Config.UI_config.Front.MsgRemotePay+g.Config.UI_config.Front.MsgPrice, currency.Amount(config_global.VMC.User.QRPayAmount).Format100I())
+			g.Hardware.HD44780.Display.SetLines(l1, config_global.VMC.User.TDL2)
 		}
 	case tele_api.ShowQR_receipt:
 		t := m.ShowQR.QrText
 		g.ShowQR(t)
 	case tele_api.ShowQR_error:
-		g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI.Front.PicQRPayError)
+		g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicQRPayError)
 	case tele_api.ShowQR_errorOverdraft:
-		g.Hardware.HD44780.Display.SetLines(g.Config.UI.Front.MsgMenuInsufficientCredit,
-			g.Config.UI.Front.MsgRemotePayReject)
-		g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI.Front.PicPayReject)
+		g.Hardware.HD44780.Display.SetLines(g.Config.UI_config.Front.MsgMenuInsufficientCreditL1,
+			g.Config.UI_config.Front.MsgRemotePayReject)
+		g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicPayReject)
 	}
 }
 
@@ -200,7 +202,8 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 		return t.cmdExec(ctx, cmd, task.Exec)
 
 	case *tele_api.Command_SetInventory:
-		return t.cmdSetInventory(ctx, task.SetInventory)
+		// return t.cmdSetInventory(ctx, task.SetInventory)
+		return nil
 
 	case *tele_api.Command_ValidateCode:
 		t.cmdValidateCode(cmd, task.ValidateCode.Code)
@@ -221,9 +224,9 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 }
 
 func (t *tele) cmdValidateCode(cmd *tele_api.Command, code string) {
-	mitem, ok := types.UI.Menu[code]
+	mitem, ok := config_global.GetMenuItem(code)
 	if ok {
-		if err := mitem.D.Validate(); err != nil {
+		if err := mitem.Doer.Validate(); err != nil {
 			t.CookReply(cmd, tele_api.CookReplay_cookNothing, uint32(mitem.Price))
 			return
 		}
@@ -239,8 +242,8 @@ type FromRoboMessage tele_api.FromRoboMessage
 
 func (t *tele) RemCook(ctx context.Context, orderMake *tele_api.Order) (err error) {
 	t.log.Infof("start remote cook order:%s ", orderMake.String())
-	err = ui.Cook(ctx)
-	if types.VMC.MonSys.Dirty == 0 {
+	err = menu_vmc.Cook(ctx)
+	if config_global.VMC.User.DirtyMoney == 0 {
 		orderMake.OrderStatus = tele_api.OrderStatus_complete
 	} else {
 		orderMake.OrderStatus = tele_api.OrderStatus_orderError
@@ -251,11 +254,12 @@ func (t *tele) RemCook(ctx context.Context, orderMake *tele_api.Order) (err erro
 	}
 	if err == nil {
 		rm.State = tele_api.State_Nominal
-		types.VMC.UiState = uint32(types.StateFrontEnd)
+		config_global.VMC.UIState(uint32(types.StateFrontEnd))
+		config_global.VMC.User.UiState = uint32(types.StateFrontEnd)
 	} else {
 		rm.State = tele_api.State_Broken
 		rm.Err = &tele_api.Err{Message: err.Error()}
-		types.VMC.UiState = uint32(types.StateBroken)
+		config_global.VMC.UIState(uint32(types.StateBroken))
 	}
 	t.log.Infof("order report:%s", rm.String())
 	t.RoboSend(&rm)
@@ -282,7 +286,7 @@ func tuneCook(b []byte, def uint8, max uint8) uint8 {
 func (t *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgExec) error {
 	if arg.Scenario[:1] == "_" { // If the command contains the "_" prefix, then you ignore the client lock flag
 		arg.Scenario = arg.Scenario[1:]
-	} else if types.VMC.Lock {
+	} else if config_global.VMC.User.Lock {
 		t.log.Infof("ignore income remove command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Scenario)
 		t.CommandReply(cmd, tele_api.CmdReplay_busy)
 		return errors.New("locked")
@@ -314,15 +318,15 @@ func (t *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	return err
 }
 
-func (t *tele) cmdSetInventory(ctx context.Context, arg *tele_api.Command_ArgSetInventory) error {
-	if arg == nil || arg.New == nil {
-		return errInvalidArg
-	}
+// func (t *tele) cmdSetInventory(ctx context.Context, arg *tele_api.Command_ArgSetInventory) error {
+// 	if arg == nil || arg.New == nil {
+// 		return errInvalidArg
+// 	}
 
-	g := state.GetGlobal(ctx)
-	_, err := g.Inventory.SetTele(arg.New)
-	return err
-}
+// 	g := state.GetGlobal(ctx)
+// 	_, err := g.Inventory.SetTele(arg.New)
+// 	return err
+// }
 
 func (t *tele) cmdShowQR(ctx context.Context, arg *tele_api.Command_ArgShowQR) error {
 	if arg == nil {

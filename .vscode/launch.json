@@ -30,7 +30,7 @@
             // "env": {"DEBUG_AS_ROOT": "true",    },
             "args": [
                 // "-config",
-                // "/home/vmc/config.hcl",
+                // "/home/vmc/config1.hcl",
                 "engine-cli"
             ],
         },

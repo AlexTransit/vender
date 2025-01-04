@@ -130,7 +130,7 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 	g.Engine.RegisterNewFunc(
 		"coin.status",
 		func(ctx context.Context) error {
-			ca.Log.Infof(ca.tubeStatus())
+			ca.Log.Info(ca.tubeStatus())
 			return nil
 		},
 	)
@@ -141,7 +141,7 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 		}})
 	err = ca.CoinReset()
 	if err == nil {
-		ca.Log.Infof(ca.tubeStatus())
+		ca.Log.Info(ca.tubeStatus())
 	}
 	return err
 }

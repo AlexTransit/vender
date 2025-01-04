@@ -8,29 +8,24 @@ import (
 	"github.com/AlexTransit/vender/hardware/input"
 	"github.com/AlexTransit/vender/hardware/text_display"
 	"github.com/AlexTransit/vender/helpers"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
-	ui_config "github.com/AlexTransit/vender/internal/ui/config"
 )
 
 type UI struct { //nolint:maligned
-	FrontMaxPrice currency.Amount
-	// FrontResult   UIMenuResult
-	Service uiService
-
-	config *ui_config.Config
-	g      *state.Global
-	ms     *money.MoneySystem
-	state  types.UiState
-	broken bool
-	// menu     Menu
-	display  *text_display.TextDisplay // FIXME
-	inputBuf []byte
-	eventch  chan types.Event
-	inputch  chan types.InputEvent
-	lock     uiLock
-
+	FrontMaxPrice     currency.Amount
+	Service           uiService
+	g                 *state.Global
+	ms                *money.MoneySystem
+	state             types.UiState
+	broken            bool
+	display           *text_display.TextDisplay // FIXME
+	inputBuf          []byte
+	eventch           chan types.Event
+	inputch           chan types.InputEvent
+	lock              uiLock
 	frontResetTimeout time.Duration
 
 	XXX_testHook func(types.UiState)
@@ -43,21 +38,18 @@ func (ui *UI) GetUiState() uint32 {
 }
 
 func (ui *UI) Init(ctx context.Context) error {
-	ui.g = state.GetGlobal(ctx)
-	ui.config = &ui.g.Config.UI
+	g := state.GetGlobal(ctx)
+	ui.g = g
 	ui.setState(types.StateBoot)
 
-	// ui.menu = make(Menu)
-	types.UI.Menu = make(map[string]types.MenuItemType)
-	FillMenu(ctx)
-	ui.g.Log.Debugf("menu len=%d", len(types.UI.Menu))
+	ui.g.Log.Debugf("menu len=%d", len(config_global.VMC.Engine.Menu.Items))
 
 	ui.display = ui.g.MustTextDisplay()
 	ui.eventch = make(chan types.Event)
 	ui.inputBuf = make([]byte, 0, 32)
 	ui.inputch = *ui.g.Hardware.Input.InputChain()
 
-	ui.frontResetTimeout = helpers.IntSecondDefault(ui.g.Config.UI.Front.ResetTimeoutSec, 0)
+	ui.frontResetTimeout = helpers.IntSecondDefault(ui.g.Config.UI_config.Front.ResetTimeoutSec, 0)
 	ui.g.LockCh = make(chan struct{}, 1)
 	ui.Service.Init(ctx)
 	ui.ms = money.GetGlobal(ctx)

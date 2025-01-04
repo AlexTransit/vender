@@ -25,7 +25,7 @@ type DeviceElevator struct { //nolint:maligned
 func (e *DeviceElevator) init(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	config := &g.Config.Hardware.Evend.Elevator
-	e.moveTimeout = helpers.IntSecondDefault(config.MoveTimeoutSec, 10*time.Second)
+	e.moveTimeout = helpers.IntSecondDefault(config.MoveTimeoutSec, time.Second)
 	e.Generic.Init(ctx, 0xd0, "elevator", proto1)
 
 	g.Engine.RegisterNewFunc(e.name+".reset", func(ctx context.Context) error { return e.reset() })

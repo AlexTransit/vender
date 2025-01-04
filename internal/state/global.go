@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
 	"github.com/AlexTransit/vender/internal/sound"
@@ -24,7 +24,7 @@ import (
 type Global struct {
 	Alive        *alive.Alive
 	BuildVersion string
-	Config       *Config
+	Config       *config_global.Config
 	Engine       *engine.Engine
 	Hardware     hardware // hardware.go
 	Inventory    *inventory.Inventory
@@ -53,16 +53,11 @@ func GetGlobal(ctx context.Context) *Global {
 	panic(fmt.Sprintf("context['%s'] expected type *Global actual=%#v", ContextKey, v))
 }
 
-func (g *Global) Init(ctx context.Context, cfg *Config) error {
+func (g *Global) Init(ctx context.Context, cfg *config_global.Config) (err error) {
 	g.Log.Infof("build version=%s", g.BuildVersion)
-	types.VMC.Version = g.BuildVersion
+	config_global.VMC.Version = g.BuildVersion
 
-	if g.Config.Persist.Root == "" {
-		g.Config.Persist.Root = "./vender-db"
-		g.Log.WarningF("config: persist.root=empty changed=%s", g.Config.Persist.Root)
-	}
-	g.Log.Debugf("config: persist.root=%s", g.Config.Persist.Root)
-	watchdog.Init(&g.Config.Watchdog, g.Log, cfg.UI.Front.ResetTimeoutSec)
+	watchdog.Init(&g.Config.Watchdog, g.Log, cfg.UI_config.Front.ResetTimeoutSec)
 
 	// Since tele is remote error reporting mechanism, it must be inited before anything else
 	// Tele.Init gets g.Log clone before SetErrorFunc, so Tele.Log.Error doesn't recurse on itself
@@ -70,7 +65,6 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 		g.Tele = tele_api.Noop{}
 		return errors.Annotate(err, "tele init")
 	}
-	types.TeleN = g.Tele
 	g.Log.SetErrorFunc(g.Tele.Error)
 
 	if g.BuildVersion == "unknown" {
@@ -86,22 +80,29 @@ func (g *Global) Init(ctx context.Context, cfg *Config) error {
 		return errors.NotValidf("config: money.scale < 0")
 	}
 	g.Config.Money.CreditMax *= g.Config.Money.Scale
-	g.Config.Money.ChangeOverCompensate *= g.Config.Money.Scale
 
-	const initTasks = 3
-	wg := sync.WaitGroup{}
-	wg.Add(initTasks)
-	errch := make(chan error, initTasks)
+	// const initTasks = 1
+	// wg := sync.WaitGroup{}
+	// wg.Add(initTasks)
+	// errch := make(chan error, initTasks)
 	g.initInput()
-	go helpers.WrapErrChan(&wg, errch, g.initDisplay)                                // AlexM хрень переделать
-	go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
-	go helpers.WrapErrChan(&wg, errch, g.initEngine)
-	// TODO init money system, load money state from storage
-	g.RegisterCommands(ctx)
-	wg.Wait()
-	close(errch)
+	g.Inventory = &g.Config.Inventory
+	// go helpers.WrapErrChan(&wg, errch, g.initDisplay) // AlexM хрень переделать
+	g.initDisplay()
+	g.prepareInventory()
+	// g.Inventory.InventoryLoad()
+	err = g.initEngine()
+	// go helpers.WrapErrChan(&wg, errch, g.initEngine)
+	// go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
+	if err := g.Inventory.Init(ctx, g.Engine); err != nil {
+		return err
+	}
 
-	return helpers.FoldErrChan(errch)
+	g.RegisterCommands(ctx)
+	// wg.Wait()
+	// close(errch)
+
+	return err
 }
 
 func (g *Global) ScheduleSync(ctx context.Context, fun types.TaskFunc) error {
@@ -149,20 +150,31 @@ func (g *Global) initEngine() error {
 			errs = append(errs, err)
 			continue
 		}
-		// g.Log.Debugf("config.engine.alias name=%s scenario=%s", x.Name, x.Scenario)
 		g.Engine.Register(x.Name, x.Doer)
 	}
 
 	for _, x := range g.Config.Engine.Menu.Items {
+		if x.Disabled {
+			delete(g.Config.Engine.Menu.Items, x.Code)
+			continue
+		}
 		var err error
-		x.Price = g.Config.ScaleI(x.XXX_Price)
+		if x.Price == 0 {
+			g.Log.Errorf("item:%s price=0", x.Code)
+		}
 		x.Doer, err = g.Engine.ParseText(x.Name, x.Scenario)
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		// g.Log.Debugf("config.engine.menu %s pxxx=%d ps=%d", x.String(), x.XXX_Price, x.Price)
-		g.Engine.Register("menu."+x.Code, x.Doer)
+		if x.CreamMax == 0 {
+			x.CreamMax = g.Config.Engine.Menu.DefaultCreamMax
+		}
+		if x.SugarMax == 0 {
+			x.SugarMax = g.Config.Engine.Menu.DefaultSugarMax
+		}
+		g.Config.Engine.Menu.Items[x.Code] = x
+		// g.Engine.Register("menu."+x.Code, x.Doer)
 	}
 
 	if pcfg := g.Config.Engine.Profile; pcfg.Regexp != "" {
@@ -183,27 +195,6 @@ func (g *Global) initEngine() error {
 
 func (g *Global) RegisterCommands(ctx context.Context) {
 	g.Engine.RegisterNewFunc(
-		"vmc.lock!",
-		func(ctx context.Context) error {
-			if !types.VMC.Lock {
-				VmcLock(ctx)
-			}
-			return nil
-		},
-	)
-
-	g.Engine.RegisterNewFunc(
-		"vmc.unlock!",
-		func(ctx context.Context) error {
-			if types.VMC.Lock {
-				VmcUnLock(ctx)
-				// g.LockCh <- struct{}{}
-			}
-			return nil
-		},
-	)
-
-	g.Engine.RegisterNewFunc(
 		"vmc.stop!",
 		func(ctx context.Context) error {
 			g.VmcStop(ctx)
@@ -220,18 +211,18 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 	)
 
 	g.Engine.RegisterNewFunc(
-		"envs.print",
+		"check.menu",
 		func(ctx context.Context) error {
-			err := errors.Errorf(types.ShowEnvs())
-			// AlexM надо бы сделать что бы слала как сообщение а не ошибку.
-			return err
+			g.CheckMenuExecution()
+			return nil
 		},
 	)
 
 	g.Engine.RegisterNewFunc(
-		"check.menu",
+		"write.config",
 		func(ctx context.Context) error {
-			return g.CheckMenuExecution(ctx)
+			config_global.WriteConfigToFile()
+			return nil
 		},
 	)
 
@@ -249,6 +240,15 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		sound.PlayFileNoWait(arg.(string))
 		return nil
 	})
+	g.Engine.RegisterNewFuncAgr("sound.volume(?)", func(ctx context.Context, arg engine.Arg) error {
+		sound.SetVolume(arg.(int16))
+		return nil
+	})
+	g.Engine.RegisterNewFunc("sound.volume.default", func(ctx context.Context) error {
+		sound.SetDefaultVolume()
+		return nil
+	},
+	)
 
 	g.Engine.RegisterNewFuncAgr("picture(?)", func(ctx context.Context, arg engine.Arg) error {
 		if g.Hardware.Display.Graphic != nil {

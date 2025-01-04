@@ -9,6 +9,9 @@ import (
 	"github.com/AlexTransit/vender/hardware/input"
 	"github.com/AlexTransit/vender/hardware/mdb/evend"
 	"github.com/AlexTransit/vender/helpers"
+	config_global "github.com/AlexTransit/vender/internal/config"
+	menu_vmc "github.com/AlexTransit/vender/internal/menu"
+	"github.com/AlexTransit/vender/internal/menu/menu_config"
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
@@ -35,6 +38,11 @@ func (ui *UI) onFrontStart() types.UiState {
 
 // check current temperature. retunt next state if temperature not correct
 func (ui *UI) checkTemperature() (correct bool, stateIfNotCorrect types.UiState) {
+	/* test
+	if true {
+		return true, 0
+	}
+	//*/
 	if ui.g.Config.Hardware.Evend.Valve.TemperatureHot != 0 {
 		curTemp, e := evend.EValve.GetTemperature()
 		if e != nil {
@@ -42,10 +50,10 @@ func (ui *UI) checkTemperature() (correct bool, stateIfNotCorrect types.UiState)
 			return false, types.StateBroken
 		}
 		if curTemp < int32(ui.g.Config.Hardware.Evend.Valve.TemperatureHot-10) {
-			line1 := fmt.Sprintf(ui.g.Config.UI.Front.MsgWaterTemp, curTemp)
+			line1 := fmt.Sprintf(ui.g.Config.UI_config.Front.MsgWaterTemp, curTemp)
 			evend.Cup.LightOff() // light off
-			if types.VMC.HW.Display.L1 != line1 {
-				ui.display.SetLines(line1, ui.g.Config.UI.Front.MsgWait)
+			if config_global.VMC.User.TDL1 != line1 {
+				ui.display.SetLines(line1, ui.g.Config.UI_config.Front.MsgWait)
 				rm := tele_api.FromRoboMessage{
 					State: tele_api.State_TemperatureProblem,
 					RoboHardware: &tele_api.RoboHardware{
@@ -65,7 +73,7 @@ func (ui *UI) checkTemperature() (correct bool, stateIfNotCorrect types.UiState)
 }
 
 func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
-	if types.VMC.NeedRestart { // after upgrade
+	if config_global.VMC.Engine.NeedRestart { // after upgrade
 		ui.g.VmcStopWOInitRequared(ctx)
 		return types.StateStop
 	}
@@ -87,7 +95,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 	}
 
 	var err error
-	ui.FrontMaxPrice, err = menuMaxPrice()
+	ui.FrontMaxPrice, err = menu_vmc.MenuMaxPrice()
 	if err != nil {
 		ui.g.Error(err)
 		return types.StateBroken
@@ -95,9 +103,9 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 	}
 	rm := tele_api.FromRoboMessage{State: tele_api.State_Nominal}
 	canselQrOrder(&rm)
-	types.UI.FrontResult = types.UIMenuResult{
-		Cream: DefaultCream,
-		Sugar: DefaultSugar,
+	config_global.VMC.User.UIMenuStruct = menu_config.UIMenuStruct{
+		Cream: config_global.VMC.Engine.Menu.DefaultCream,
+		Sugar: config_global.VMC.Engine.Menu.DefaultSugar,
 	}
 
 	if ui.g.Tele.GetState() != tele_api.State_Nominal {
@@ -159,29 +167,29 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 // return message for display
 func (ui *UI) sendRequestForQrPayment(rm *tele_api.FromRoboMessage) (message_for_display *string) {
 	if !ui.g.Tele.RoboConnected() {
-		ui.g.Hardware.Display.Graphic.CopyFile2FB(ui.g.Config.UI.Front.PicQRPayError)
-		return &ui.g.Config.UI.Front.MsgNoNetwork
+		ui.g.Hardware.Display.Graphic.CopyFile2FB(ui.g.Config.UI_config.Front.PicQRPayError)
+		return &ui.g.Config.UI_config.Front.MsgNoNetwork
 	}
-	types.VMC.UiState = uint32(types.StatePrepare)
+	config_global.VMC.UIState(uint32(types.StatePrepare))
 	rm.State = tele_api.State_WaitingForExternalPayment
 	rm.RoboTime = time.Now().Unix()
 	rm.Order = &tele_api.Order{
 		OrderStatus: tele_api.OrderStatus_waitingForPayment,
-		MenuCode:    types.UI.FrontResult.Item.Code,
-		Amount:      uint32(types.UI.FrontResult.Item.Price),
+		MenuCode:    config_global.VMC.User.SelectedItem.Code,
+		Amount:      uint32(config_global.VMC.User.SelectedItem.Price),
 	}
-	return &ui.g.Config.UI.Front.MsgRemotePayRequest
+	return &ui.g.Config.UI_config.Front.MsgRemotePayRequest
 }
 
 func canselQrOrder(rm *tele_api.FromRoboMessage) {
-	if types.UI.FrontResult.PaymenId > 0 {
+	if config_global.VMC.User.PaymenId > 0 {
 		rm.Order = &tele_api.Order{
-			Amount:      types.UI.FrontResult.QRPayAmount,
+			Amount:      config_global.VMC.User.QRPayAmount,
 			OrderStatus: tele_api.OrderStatus_cancel,
-			OwnerInt:    types.UI.FrontResult.PaymenId,
+			OwnerInt:    config_global.VMC.User.PaymenId,
 			OwnerType:   tele_api.OwnerType_qrCashLessUser,
 		}
-		types.UI.FrontResult.PaymenId = 0
+		config_global.VMC.User.PaymenId = 0
 	}
 }
 
@@ -193,31 +201,31 @@ func (ui *UI) onFrontTune(ctx context.Context) types.UiState {
 func (ui *UI) tuneScreen(e types.InputEvent) (l1, l2 string) {
 	switch e.Key {
 	case input.EvendKeyCreamLess:
-		if types.UI.FrontResult.Cream > 0 {
-			types.UI.FrontResult.Cream--
+		if config_global.VMC.User.Cream > 0 {
+			config_global.VMC.User.Cream--
 		}
 	case input.EvendKeyCreamMore:
-		if types.UI.FrontResult.Cream < MaxCream {
-			types.UI.FrontResult.Cream++
+		if config_global.VMC.User.Cream < config_global.CreamMax() {
+			config_global.VMC.User.Cream++
 		}
 	case input.EvendKeySugarLess:
-		if types.UI.FrontResult.Sugar > 0 {
-			types.UI.FrontResult.Sugar--
+		if config_global.VMC.User.Sugar > 0 {
+			config_global.VMC.User.Sugar--
 		}
 	case input.EvendKeySugarMore:
-		if types.UI.FrontResult.Sugar < MaxSugar {
-			types.UI.FrontResult.Sugar++
+		if config_global.VMC.User.Sugar < config_global.SugarMax() {
+			config_global.VMC.User.Sugar++
 		}
 	default:
 	}
 	var l2b [13]byte
 	switch e.Key {
 	case input.EvendKeyCreamLess, input.EvendKeyCreamMore:
-		l1 = fmt.Sprintf("%s  /%d", ui.g.Config.UI.Front.MsgCream, types.UI.FrontResult.Cream)
-		l2b = createScale(types.UI.FrontResult.Cream, MaxCream, DefaultCream)
+		l1 = fmt.Sprintf("%s  /%d", ui.g.Config.UI_config.Front.MsgCream, config_global.VMC.User.Cream)
+		l2b = createScale(config_global.VMC.User.Cream, config_global.CreamMax(), config_global.DefaultCream())
 	case input.EvendKeySugarLess, input.EvendKeySugarMore:
-		l1 = fmt.Sprintf("%s  /%d", ui.g.Config.UI.Front.MsgSugar, types.UI.FrontResult.Sugar)
-		l2b = createScale(types.UI.FrontResult.Sugar, MaxSugar, DefaultSugar)
+		l1 = fmt.Sprintf("%s  /%d", ui.g.Config.UI_config.Front.MsgSugar, config_global.VMC.User.Sugar)
+		l2b = createScale(config_global.VMC.User.Sugar, config_global.SugarMax(), config_global.DefaultSugar())
 	default:
 	}
 	l2 = string(l2b[:])
@@ -238,17 +246,17 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	ui.g.Tele.RoboSendState(tele_api.State_Process)
 	moneysys := money.GetGlobal(ctx)
 
-	selected := types.UI.FrontResult.Item.String()
+	selected := config_global.VMC.User.SelectedItem.String()
 
 	ui.g.Log.Debugf("ui-front selected=%s begin", selected)
-	if err := moneysys.WithdrawPrepare(ctx, types.UI.FrontResult.Item.Price); err != nil {
+	if err := moneysys.WithdrawPrepare(ctx, config_global.VMC.User.SelectedItem.Price); err != nil {
 		ui.g.Log.Errorf("ui-front CRITICAL error while return change")
 	}
 	watchdog.DevicesInitializationRequired()
-	err := Cook(ctx)
+	err := menu_vmc.Cook(ctx)
 	rm := tele_api.FromRoboMessage{
 		Order: &tele_api.Order{
-			Amount:        uint32(types.UI.FrontResult.Item.Price),
+			Amount:        uint32(config_global.VMC.User.SelectedItem.Price),
 			PaymentMethod: tele_api.PaymentMethod_Cash,
 		},
 	}
@@ -274,9 +282,16 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 }
 
 func OrderMenuAndTune(o *tele_api.Order) {
-	o.MenuCode = types.UI.FrontResult.Item.Code
-	o.Cream = types.TuneValueToByte(types.UI.FrontResult.Cream, DefaultCream)
-	o.Sugar = types.TuneValueToByte(types.UI.FrontResult.Sugar, DefaultSugar)
+	o.MenuCode = config_global.VMC.User.SelectedItem.Code
+	o.Cream = TuneValueToByte(config_global.VMC.User.Cream, config_global.VMC.Engine.Menu.DefaultCream)
+	o.Sugar = TuneValueToByte(config_global.VMC.User.Sugar, config_global.VMC.Engine.Menu.DefaultCream)
+}
+
+func TuneValueToByte(currentValue uint8, defaultValue uint8) []byte {
+	if currentValue == defaultValue {
+		return nil
+	}
+	return []byte{currentValue + 1}
 }
 
 func (ui *UI) onFrontTimeout(ctx context.Context) types.UiState {
@@ -289,7 +304,6 @@ func (ui *UI) onFrontTimeout(ctx context.Context) types.UiState {
 
 func (ui *UI) onFrontLock() types.UiState {
 	// ui.g.Hardware.Input.Enable(false)
-	// types.VMC.Lock = true
 	// ui.display.SetLines(ui.g.Config.UI.Front.MsgStateLocked, "")
 	timeout := ui.frontResetTimeout
 	e := ui.wait(timeout)
@@ -304,58 +318,39 @@ func (ui *UI) onFrontLock() types.UiState {
 	case types.EventBroken:
 		return types.StateBroken
 	case types.EventFrontLock:
-		if types.VMC.UiState == uint32(types.StateBroken) {
+		if config_global.VMC.UIState() == uint32(types.StateBroken) {
 			return types.StateBroken
 		}
-		types.VMC.Lock = false
+		config_global.VMC.User.Lock = false
 		return types.StateFrontEnd
 	}
 	return types.StateFrontEnd
 }
 
-// tightly coupled to len(alphabet)=4
-func formatScale(value, min, max uint8, alphabet []byte) []byte {
-	var vicon [6]byte
-	switch value {
-	case min:
-		vicon[0], vicon[1], vicon[2], vicon[3], vicon[4], vicon[5] = 0, 0, 0, 0, 0, 0
-	case max:
-		vicon[0], vicon[1], vicon[2], vicon[3], vicon[4], vicon[5] = 3, 3, 3, 3, 3, 3
-	default:
-		rng := uint16(max) - uint16(min)
-		part := uint8((float32(value-min) / float32(rng)) * 24)
-		// log.Printf("scale(%d,%d..%d) part=%d", value, min, max, part)
-		for i := 0; i < len(vicon); i++ {
-			if part >= 4 {
-				vicon[i] = 3
-				part -= 4
-			} else {
-				vicon[i] = part
-				break
-			}
-		}
-	}
-	for i := 0; i < len(vicon); i++ {
-		vicon[i] = alphabet[vicon[i]]
-	}
-	return vicon[:]
-}
-
-func ScaleTuneRate(value *uint8, max uint8, center uint8) float32 {
-	if *value > max {
-		*value = max
-	}
-	switch {
-	case *value == center: // most common path
-		return 1
-	case *value == 0:
-		return 0
-	}
-	if *value > 0 && *value < center {
-		return 1 - (0.25 * float32(center-*value))
-	}
-	if *value > center && *value <= max {
-		return 1 + (0.25 * float32(*value-center))
-	}
-	panic("code error")
-}
+// // tightly coupled to len(alphabet)=4
+// func formatScale(value, min, max uint8, alphabet []byte) []byte {
+// 	var vicon [6]byte
+// 	switch value {
+// 	case min:
+// 		vicon[0], vicon[1], vicon[2], vicon[3], vicon[4], vicon[5] = 0, 0, 0, 0, 0, 0
+// 	case max:
+// 		vicon[0], vicon[1], vicon[2], vicon[3], vicon[4], vicon[5] = 3, 3, 3, 3, 3, 3
+// 	default:
+// 		rng := uint16(max) - uint16(min)
+// 		part := uint8((float32(value-min) / float32(rng)) * 24)
+// 		// log.Printf("scale(%d,%d..%d) part=%d", value, min, max, part)
+// 		for i := 0; i < len(vicon); i++ {
+// 			if part >= 4 {
+// 				vicon[i] = 3
+// 				part -= 4
+// 			} else {
+// 				vicon[i] = part
+// 				break
+// 			}
+// 		}
+// 	}
+// 	for i := 0; i < len(vicon); i++ {
+// 		vicon[i] = alphabet[vicon[i]]
+// 	}
+// 	return vicon[:]
+// }

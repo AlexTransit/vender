@@ -6,12 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/log2"
 )
-
-const defaultEspressoTimeout = 30
 
 type DeviceEspresso struct {
 	Generic
@@ -21,7 +18,7 @@ type DeviceEspresso struct {
 
 func (d *DeviceEspresso) init(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
-	d.timeout = uint16(helpers.ConfigDefaultInt(g.Config.Hardware.Evend.Espresso.TimeoutSec, defaultEspressoTimeout)) * 5 // every 200 ms
+	d.timeout = uint16(g.Config.Hardware.Evend.Espresso.TimeoutSec)
 	d.Generic.Init(ctx, 0xe8, "espresso", proto2)
 	d.log = *g.Log
 	g.Engine.RegisterNewFunc(d.name+".waitDone", func(ctx context.Context) error { return d.Proto2PollWaitSuccess(d.timeout, true) })

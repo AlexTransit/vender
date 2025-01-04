@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
 )
@@ -16,20 +15,15 @@ const DefaultShakeSpeed uint8 = 100
 type DeviceMixer struct { //nolint:maligned
 	Generic
 
-	cPos         int8
-	nPos         int8
-	moveTimeout  time.Duration
-	shakeTimeout time.Duration
-	shakeSpeed   uint8
+	cPos       int8
+	nPos       int8
+	shakeSpeed uint8
 }
 
 func (m *DeviceMixer) init(ctx context.Context) error {
 	m.cPos = -1
 	m.shakeSpeed = DefaultShakeSpeed
 	g := state.GetGlobal(ctx)
-	config := &g.Config.Hardware.Evend.Mixer
-	m.moveTimeout = helpers.IntSecondDefault(config.MoveTimeoutSec, 10*time.Second)
-	m.shakeTimeout = helpers.IntMillisecondDefault(config.ShakeTimeoutMs, 300*time.Millisecond)
 	m.Generic.Init(ctx, 0xc8, "mixer", proto1)
 
 	g.Engine.Register(m.name+".shake(?)",

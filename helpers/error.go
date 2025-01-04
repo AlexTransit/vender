@@ -1,40 +1,31 @@
 package helpers
 
 import (
+	"errors"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 	"time"
-
-	"github.com/juju/errors"
 )
 
-func FoldErrors(errs []error) error {
-	// common fast path
-	if len(errs) == 0 {
-		return nil
-	}
+func FoldErrors(errs []error) (err error) {
+	// // common fast path
+	// if len(errs) == 0 {
+	// 	return nil
+	// }
 
-	ss := make([]string, 0, 1+len(errs))
+	// ss := make([]string, 0, 1+len(errs))
+	// for _, e := range errs {
+	// 	if e != nil {
+	// 		// ss = append(ss, e.Error())
+	// 		ss = append(ss, errors.ErrorStack(e))
+	// 		// ss = append(ss, errors.Details(e))
+	// 	}
+	// }
 	for _, e := range errs {
-		if e != nil {
-			// ss = append(ss, e.Error())
-			ss = append(ss, errors.ErrorStack(e))
-			// ss = append(ss, errors.Details(e))
-		}
+		errors.Join(err, e)
 	}
-	switch len(ss) {
-	case 0:
-		return nil
-	case 1:
-		return fmt.Errorf(ss[0])
-	default:
-		ss = append(ss, "")
-		copy(ss[1:], ss[0:])
-		ss[0] = "multiple errors:"
-		return fmt.Errorf(strings.Join(ss, "\n- "))
-	}
+	return err
 }
 
 func FoldErrChan(ch <-chan error) error {
@@ -56,8 +47,8 @@ func WrapErrChan(wg *sync.WaitGroup, ch chan<- error, fun func() error) {
 
 type LogDoItems map[time.Time]string
 
-func SaveAndShowDoError(li []string, err error) {
-	sf := "/home/vmc/vender-db/errors/" + li[0]
+func SaveAndShowDoError(li []string, err error, errorFolder string) {
+	sf := errorFolder + li[0]
 	var d string
 	for _, val := range li {
 		d = d + val + "\n"
@@ -68,5 +59,4 @@ func SaveAndShowDoError(li []string, err error) {
 	f, _ := os.Create(sf)
 	_, _ = f.WriteString(d)
 	f.Close()
-
 }

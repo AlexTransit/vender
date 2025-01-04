@@ -36,7 +36,10 @@ var Mod = subcmd.Mod{Name: "engine-cli", Main: Main}
 func Main(ctx context.Context, _ ...[]string) error {
 	g := state.GetGlobal(ctx)
 	sound.Init(&g.Config.Sound, g.Log, false)
-	g.MustInit(ctx, g.Config)
+	err := g.Init(ctx, g.Config)
+	if err != nil {
+		g.Fatal(err)
+	}
 	if err := g.Engine.ValidateExec(ctx, doMdbBusReset); err != nil {
 		return errors.Annotate(err, "mdb bus reset")
 	}
@@ -95,13 +98,13 @@ func newExecutor(ctx context.Context) func(string) {
 	return func(line string) {
 		d, err := parseLine(ctx, line)
 		if err != nil {
-			g.Log.Errorf(errors.ErrorStack(err))
+			g.Log.Error(err)
 			return
 		}
 		tbegin := time.Now()
 		err = g.Engine.ValidateExec(ctx, d)
 		if err != nil {
-			g.Log.Errorf(errors.ErrorStack(err))
+			g.Log.Error(err)
 		}
 		texec := time.Since(tbegin)
 		g.Log.Infof("duration=%v", texec)
@@ -134,7 +137,7 @@ func newTx(request mdb.Packet) engine.Doer {
 		response := new(mdb.Packet)
 		err = m.Tx(request, response)
 		if err != nil {
-			g.Log.Errorf(errors.ErrorStack(err))
+			g.Log.Error(err)
 		} else {
 			g.Log.Infof("< %s", response.Format())
 		}

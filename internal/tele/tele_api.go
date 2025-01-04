@@ -58,7 +58,7 @@ func (t *tele) Error(e error) {
 }
 
 func (t *tele) Log(s string) {
-	t.log.Infof(s)
+	t.log.Info(s)
 }
 
 func (t *tele) ErrorStr(s string) {
@@ -87,16 +87,6 @@ func (t *tele) Report(ctx context.Context, serviceTag bool) error {
 	t.Telemetry(tm)
 	return nil
 }
-
-// func (t *tele) State(s tele_api.State) {
-// 	if t.currentState != s {
-// 		t.currentState = s
-// 		m := tele_api.FromRoboMessage{
-// 			State:                s,
-// 		}
-// 		t.RoboSend(&m)
-// 	}
-// }
 
 func (t *tele) StatModify(fun func(s *tele_api.Stat)) {
 	if !t.config.Enabled {
