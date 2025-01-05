@@ -31,7 +31,7 @@ func (s *Stock) String() string {
 func (s *Stock) GetSpendRate() float32 { return s.Ingredient.SpendRate }
 
 func (s *Stock) SpendValue(value byte) {
-	if s.Ingredient.Min == 0 {
+	if s.Ingredient.SpendRate == 0 {
 		return
 	}
 	s.value -= float32(value) / s.Ingredient.SpendRate
@@ -133,7 +133,7 @@ func (c *custom) Validate() error {
 	if err := c.after.Validate(); err != nil {
 		return errors.Annotatef(err, "stock=%s", c.stock.Ingredient.Name)
 	}
-	if c.stock.Ingredient.Min == 0 {
+	if c.stock.Ingredient.SpendRate == 0 {
 		return nil
 	}
 	if c.stock.Has(c.spend) {
@@ -197,15 +197,16 @@ func (c *custom) apply(arg engine.Arg) (engine.Doer, bool, error) {
 }
 
 func takeTuneRate(ctx context.Context, key string) (context.Context, float32, bool) {
-	v := ctx.Value(key)
+	tk := CTXkey{string: key}
+	v := ctx.Value(tk)
 	if v == nil { // either no tuning or masked to avoid Do() recursion
 		return ctx, 0, false
 	}
 	if tuneRate, ok := v.(float32); ok { // tuning found for the first time
-		ctx = context.WithValue(ctx, key, nil)
+		ctx = context.WithValue(ctx, tk, nil)
 		return ctx, tuneRate, true
 	}
-	panic(fmt.Sprintf("code error takeTuneRate(key=%s) found invalid value=%#v", key, v))
+	panic(fmt.Sprintf("code error takeTuneRate(key=%s) found invalid value=%#v", tk, v))
 }
 
 func translate(arg int32, rate float32) float32 {
@@ -219,8 +220,3 @@ func translate(arg int32, rate float32) float32 {
 	}
 	return result
 }
-
-// func (s *Stock) overwrite(v *[]inventory.Stock) {
-// 	for _, v := range v {
-// 	}
-// }
