@@ -33,7 +33,7 @@ type DeviceValve struct { //nolint:maligned
 
 	tempHot       int32
 	tempHotTarget uint8
-	waterStock    inventory.Stock
+	waterStock    *inventory.Stock
 }
 
 var EValve DeviceValve
@@ -45,6 +45,7 @@ func (dv *DeviceValve) init(ctx context.Context) (err error) {
 	dv.proto2IgnoreMask = valvePollNotHot
 	dv.Generic.Init(ctx, 0xc0, "valve", proto2)
 	// dv.waterStock = g.Inventory.Stocks["water"]
+	dv.waterStock = g.Inventory.GetStockByingredientName("water")
 	g.Engine.RegisterNewFuncAgr("add.water_hot(?)", func(ctx context.Context, arg engine.Arg) error { return dv.waterRun(waterHot, uint8(arg.(int16))) })
 	g.Engine.RegisterNewFuncAgr("add.water_cold(?)", func(ctx context.Context, arg engine.Arg) error { return dv.waterRun(waterCold, uint8(arg.(int16))) })
 	g.Engine.RegisterNewFuncAgr("add.water_espresso(?)", func(ctx context.Context, arg engine.Arg) error { return dv.waterRun(waterEspresso, uint8(arg.(int16))) })

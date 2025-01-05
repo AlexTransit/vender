@@ -328,10 +328,8 @@ func (g *Global) initDevices() error {
 				errs = append(errs, errors.Errorf("duplicate device name=%s", d.Name))
 				continue
 			}
-
 			x.m[d.Name] = &devWrap{config: d}
 		}
-
 		err := helpers.FoldErrors(errs)
 		g.Error(err)
 		return err

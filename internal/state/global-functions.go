@@ -166,14 +166,10 @@ func (g *Global) ClientEnd(ctx context.Context) {
 
 // func (g *Global) Error(err error, args ...interface{}) {
 func (g *Global) Error(err error) {
-	// if err != nil {
-	// 	if len(args) != 0 {
-	// 		msg := args[0].(string)
-	// 		args = args[1:]
-	// 		err = errors.Annotatef(err, msg, args...)
-	// 	}
+	if err == nil {
+		return
+	}
 	g.Log.Error(err)
-	// }
 }
 
 // func (g *Global) Fatal(err error, args ...interface{}) {
