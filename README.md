@@ -1,5 +1,12 @@
 # What
 Vender is free open source VMC (Vending Machine Controller). (fork https://github.com/temoto/vender)
+This software has been working since 2019 (small network of coffee machines.)
+equipment used:
+VMC: eVend8 (bill validators: JCM300 and ICT7, Coin validators: CoinCo Global2 and Coges Aeterna)
+Main Board: OrangePi Lite, 
+additional display: 320x240 controller st7789v 
+additional sound card: noname USB sound card
+
 
 Status:
 - MDB adapter hardware module - works
@@ -33,7 +40,7 @@ VMC overall structure:
 
 # Build
 
-- Install latest Go from https://golang.org/dl/ (now worked on 1.21)
+- Install latest Go from https://golang.org/dl/ (now worked on 1.23)
 - Set target environment, default is `GOARCH=arm GOOS=linux`
 - Run `script/build`
 - Deploy file `build/vender` to your hardware
