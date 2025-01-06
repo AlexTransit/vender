@@ -197,7 +197,7 @@ func (c *custom) apply(arg engine.Arg) (engine.Doer, bool, error) {
 }
 
 func takeTuneRate(ctx context.Context, key string) (context.Context, float32, bool) {
-	tk := CTXkey{string: key}
+	tk := CTXkey(key)
 	v := ctx.Value(tk)
 	if v == nil { // either no tuning or masked to avoid Do() recursion
 		return ctx, 0, false

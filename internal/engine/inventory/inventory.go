@@ -44,7 +44,7 @@ type Ingredient struct {
 
 // структура для контекста
 // should not use built-in type string as key for value; define your own type to avoid collisions (SA1029)
-type CTXkey struct{ string }
+type CTXkey string
 
 func (inv *Inventory) GetIngredientByName(ingredientName string) *Ingredient {
 	for i, v := range inv.Ingredient {
@@ -187,7 +187,7 @@ func (inv *Inventory) Iter(fun func(s *Stock)) {
 func (inv *Inventory) WithTuning(ctx context.Context, ingredientName string, adj float32) (context.Context, error) {
 	if s := inv.GetStockByingredientName(ingredientName); s != nil {
 		if s.Ingredient.TuneKey != "" {
-			tk := CTXkey{string: s.Ingredient.TuneKey}
+			tk := CTXkey(s.Ingredient.TuneKey)
 			ctx = context.WithValue(ctx, tk, adj)
 		}
 	}
