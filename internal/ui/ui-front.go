@@ -15,6 +15,7 @@ import (
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
+	ui_config "github.com/AlexTransit/vender/internal/ui/config"
 	"github.com/AlexTransit/vender/internal/watchdog"
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
@@ -101,15 +102,13 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 		return types.StateBroken
 
 	}
-	rm := tele_api.FromRoboMessage{State: tele_api.State_Nominal}
-	canselQrOrder(&rm)
-	config_global.VMC.User.UIMenuStruct = menu_config.UIMenuStruct{
-		Cream: config_global.VMC.Engine.Menu.DefaultCream,
-		Sugar: config_global.VMC.Engine.Menu.DefaultSugar,
-	}
-
-	if ui.g.Tele.GetState() != tele_api.State_Nominal {
-		ui.g.Tele.RoboSend(&rm)
+	ui.g.Tele.RoboSendState(tele_api.State_Nominal)
+	config_global.VMC.User = ui_config.UIUser{
+		KeyboardReadEnable: true,
+		UIMenuStruct: menu_config.UIMenuStruct{
+			Cream: config_global.VMC.Engine.Menu.DefaultCream,
+			Sugar: config_global.VMC.Engine.Menu.DefaultSugar,
+		},
 	}
 	return types.StateFrontSelect
 }
@@ -134,11 +133,13 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 		}
 		e := ui.wait(timeout)
 		switch e.Kind {
-		case types.EventInput:
+		case types.EventAccept:
+			return types.StateFrontAccept
+		case types.EventInput: // from keyboard
 			if nextState := ui.parseKeyEvent(e, &l1, &l2, &tuneScreen); nextState != types.StateDoesNotChange {
 				return nextState
 			}
-		case types.EventMoneyPreCredit, types.EventMoneyCredit:
+		case types.EventMoneyPreCredit, types.EventMoneyCredit: // from validators
 			if nextState := ui.parseMoneyEvent(e.Kind); nextState != types.StateDoesNotChange {
 				return nextState
 			}
@@ -151,8 +152,8 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 			}
 		case types.EventService: // change state
 			return types.StateServiceBegin
-		case types.EventFrontLock: // change state
-			return types.StateFrontLock
+		// case types.EventFrontLock: // change state
+		// 	return types.StateFrontLock
 		case types.EventBroken: // change state
 			return types.StateBroken
 		case types.EventLock, types.EventStop: // change state
@@ -243,49 +244,54 @@ func createScale(currentValue uint8, maximumValue uint8, defaultValue uint8) (ba
 }
 
 func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
-	ui.g.Tele.RoboSendState(tele_api.State_Process)
+	// ui.g.Tele.RoboSendState(tele_api.State_Process)
+	ui.g.SendCooking()
 	moneysys := money.GetGlobal(ctx)
 
 	selected := config_global.VMC.User.SelectedItem.String()
 
-	ui.g.Log.Debugf("ui-front selected=%s begin", selected)
-	if err := moneysys.WithdrawPrepare(ctx, config_global.VMC.User.SelectedItem.Price); err != nil {
-		ui.g.Log.Errorf("ui-front CRITICAL error while return change")
+	// FIXME AlexM заглушка пока не переделал
+	if config_global.VMC.User.PaymentMethod == 0 {
+		ui.g.Log.Debugf("ui-front selected=%s begin", selected)
+		if err := moneysys.WithdrawPrepare(ctx, config_global.VMC.User.SelectedItem.Price); err != nil {
+			ui.g.Log.Errorf("ui-front CRITICAL error while return change")
+		}
+		config_global.VMC.User.PaymentMethod = tele_api.PaymentMethod_Cash
 	}
 	watchdog.DevicesInitializationRequired()
 	err := menu_vmc.Cook(ctx)
-	rm := tele_api.FromRoboMessage{
-		Order: &tele_api.Order{
-			Amount:        uint32(config_global.VMC.User.SelectedItem.Price),
-			PaymentMethod: tele_api.PaymentMethod_Cash,
-		},
-	}
-	OrderMenuAndTune(rm.Order)
-	defer ui.g.Tele.RoboSend(&rm)
-
 	if err == nil { // success path
-		rm.Order.OrderStatus = tele_api.OrderStatus_complete
-		rm.State = tele_api.State_Nominal
 		watchdog.SetDeviceInited()
+		rm := tele_api.FromRoboMessage{
+			State: tele_api.State_Nominal,
+			Order: &tele_api.Order{
+				MenuCode:      config_global.VMC.User.SelectedItem.Code,
+				Cream:         TuneValueToByte(config_global.VMC.User.Cream, config_global.VMC.Engine.Menu.DefaultCream),
+				Sugar:         TuneValueToByte(config_global.VMC.User.Sugar, config_global.VMC.Engine.Menu.DefaultCream),
+				Amount:        uint32(config_global.VMC.User.SelectedItem.Price),
+				OrderStatus:   tele_api.OrderStatus_complete,
+				PaymentMethod: config_global.VMC.User.PaymentMethod,
+				OwnerInt:      config_global.VMC.User.PaymenId,
+				OwnerType:     config_global.VMC.User.PaymentType,
+			},
+		}
+		ui.g.Tele.RoboSend(&rm)
 		return types.StateFrontEnd
 	}
-	moneysys.ReturnDirty()
-	rm.State = tele_api.State_Broken
-	rm.Err = &tele_api.Err{
-		Message: errors.Annotatef(err, "execute %s", selected).Error(),
-	}
-	if errs := ui.g.Engine.ExecList(ctx, "on_menu_error", ui.g.Config.Engine.OnMenuError); len(errs) != 0 {
-		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_menu_error"))
-	}
 
+	// ошибка при приготовлении
+	if config_global.VMC.User.PaymentMethod == tele_api.PaymentMethod_Cash {
+		moneysys.ReturnDirty()
+	}
+	ui.g.SendBroken("execute " + selected + err.Error())
 	return types.StateBroken
 }
 
-func OrderMenuAndTune(o *tele_api.Order) {
-	o.MenuCode = config_global.VMC.User.SelectedItem.Code
-	o.Cream = TuneValueToByte(config_global.VMC.User.Cream, config_global.VMC.Engine.Menu.DefaultCream)
-	o.Sugar = TuneValueToByte(config_global.VMC.User.Sugar, config_global.VMC.Engine.Menu.DefaultCream)
-}
+// func OrderMenuAndTune(o *tele_api.Order) {
+// 	o.MenuCode = config_global.VMC.User.SelectedItem.Code
+// 	o.Cream = TuneValueToByte(config_global.VMC.User.Cream, config_global.VMC.Engine.Menu.DefaultCream)
+// 	o.Sugar = TuneValueToByte(config_global.VMC.User.Sugar, config_global.VMC.Engine.Menu.DefaultCream)
+// }
 
 func TuneValueToByte(currentValue uint8, defaultValue uint8) []byte {
 	if currentValue == defaultValue {
@@ -317,12 +323,12 @@ func (ui *UI) onFrontLock() types.UiState {
 		return types.StateFrontTimeout
 	case types.EventBroken:
 		return types.StateBroken
-	case types.EventFrontLock:
-		if config_global.VMC.UIState() == uint32(types.StateBroken) {
-			return types.StateBroken
-		}
-		config_global.VMC.User.Lock = false
-		return types.StateFrontEnd
+		// case types.EventFrontLock:
+		// 	if config_global.VMC.UIState() == uint32(types.StateBroken) {
+		// 		return types.StateBroken
+		// 	}
+		// 	config_global.VMC.User.Lock = false
+		// 	return types.StateFrontEnd
 	}
 	return types.StateFrontEnd
 }

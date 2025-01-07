@@ -148,7 +148,7 @@ var VMC = Config{
 			MsgMenuCodeInvalid:          "Неправильный код",
 			MsgMenuInsufficientCreditL1: "Мало денег",
 			MsgMenuInsufficientCreditL2: "дали:%s нужно:%s",
-			MsgMenuNotAvailable:         "Не доступен. Выверите другой, или вернем деньги.",
+			MsgMenuNotAvailable:         "Не доступен. Выберите другой, или вернем деньги.",
 			MsgCream:                    "Сливки",
 			MsgSugar:                    "Caxap",
 			MsgCredit:                   "Кредит: ",

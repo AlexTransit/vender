@@ -30,9 +30,6 @@ type Global struct {
 	Inventory    *inventory.Inventory
 	Log          *log2.Log
 	Tele         tele_api.Teler
-	LockCh       chan struct{}
-	// TimerUIStop  chan struct{}
-	// TODO UI           types.UIer
 
 	XXX_money atomic.Value // *money.MoneySystem crutch to import cycle
 	XXX_uier  atomic.Value // UIer crutch to import/init cycle
@@ -97,7 +94,6 @@ func (g *Global) Init(ctx context.Context, cfg *config_global.Config) (err error
 	if err := g.Inventory.Init(ctx, g.Engine); err != nil {
 		return err
 	}
-
 	g.RegisterCommands(ctx)
 	// wg.Wait()
 	// close(errch)

@@ -202,6 +202,7 @@ watchdog {
 engine {
   on_boot          = ["text_boot sleep(2s)", "evend.cup.ensure", "evend.valve.set_temp_hot_config "]
   first_init       = ["text_test picture(/home/vmc/pic-broken) sound(start.mp3) init_devices "]
+  //deprecated
   on_menu_error    = [" money.abort "]
   on_service_begin = [" evend.valve.set_temp_hot(0) ", " evend.cup.light_off "]
   on_service_end   = [" evend.valve.set_temp_hot_config "]

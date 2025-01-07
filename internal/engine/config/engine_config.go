@@ -6,10 +6,11 @@ import (
 )
 
 type Config struct {
-	XXX_Aliases    []Alias `hcl:"alias,block"`
-	Aliases        map[string]Alias
-	OnBoot         []string                   `hcl:"on_boot,optional"`
-	FirstInit      []string                   `hcl:"first_init,optional"`
+	XXX_Aliases []Alias `hcl:"alias,block"`
+	Aliases     map[string]Alias
+	OnBoot      []string `hcl:"on_boot,optional"`
+	FirstInit   []string `hcl:"first_init,optional"`
+	// Deprecated:
 	OnMenuError    []string                   `hcl:"on_menu_error,optional"`
 	OnServiceBegin []string                   `hcl:"on_service_begin,optional"`
 	OnServiceEnd   []string                   `hcl:"on_service_end,optional"`

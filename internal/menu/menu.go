@@ -30,7 +30,6 @@ func MenuMaxPrice() (currency.Amount, error) {
 
 func Cook(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
-	state.VmcLock(ctx)
 
 	itemCtx := money.SetCurrentPrice(ctx, config_global.VMC.User.SelectedItem.Price)
 	if tuneCream := ScaleTuneRate(&config_global.VMC.User.Cream, config_global.CreamMax(), config_global.DefaultCream()); tuneCream != 1 {

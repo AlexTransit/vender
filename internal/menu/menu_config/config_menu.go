@@ -5,6 +5,7 @@ import (
 
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/internal/engine"
+	tele_api "github.com/AlexTransit/vender/tele"
 )
 
 type XXX_MenuStruct struct {
@@ -32,11 +33,13 @@ type MenuItem struct {
 }
 
 type UIMenuStruct struct {
-	SelectedItem MenuItem
-	Cream        uint8
-	Sugar        uint8
-	PaymenId     int64
-	QRPayAmount  uint32
+	SelectedItem  MenuItem
+	Cream         uint8
+	Sugar         uint8
+	PaymenId      int64
+	PaymentMethod tele_api.PaymentMethod
+	PaymentType   tele_api.OwnerType
+	QRPayAmount   uint32
 }
 
 func (m *MenuItem) String() string { return fmt.Sprintf("menu.%s %s", m.Code, m.Code) }
