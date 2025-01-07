@@ -33,8 +33,8 @@ type UI struct { //nolint:maligned
 
 var _ types.UIer = &UI{} // compile-time interface test
 
-func (ui *UI) EventAccept() {
-	acceptEvent := types.Event{Kind: types.EventAccept}
+func (ui *UI) CreateEvent(e types.EventKind) {
+	acceptEvent := types.Event{Kind: e}
 	ui.eventch <- acceptEvent
 }
 
@@ -55,7 +55,6 @@ func (ui *UI) Init(ctx context.Context) error {
 	ui.inputch = *ui.g.Hardware.Input.InputChain()
 
 	ui.frontResetTimeout = helpers.IntSecondDefault(ui.g.Config.UI_config.Front.ResetTimeoutSec, 0)
-	ui.g.LockCh = make(chan struct{}, 1)
 	ui.Service.Init(ctx)
 	ui.ms = money.GetGlobal(ctx)
 	ui.g.XXX_uier.Store(types.UIer(ui)) // FIXME import cycle traded for pointer cycle
@@ -83,9 +82,6 @@ again:
 			return types.Event{Kind: types.EventService}
 		}
 		return types.Event{Kind: types.EventInput, Input: e}
-
-	case <-ui.g.LockCh:
-		return types.Event{Kind: types.EventFrontLock}
 
 	case <-tmr.C:
 		return types.Event{Kind: types.EventTime}

@@ -30,7 +30,6 @@ type Global struct {
 	Inventory    *inventory.Inventory
 	Log          *log2.Log
 	Tele         tele_api.Teler
-	LockCh       chan struct{}
 
 	XXX_money atomic.Value // *money.MoneySystem crutch to import cycle
 	XXX_uier  atomic.Value // UIer crutch to import/init cycle

@@ -30,26 +30,6 @@ func (g *Global) CheckMenuExecution() {
 	g.Inventory.InventoryLoad()
 }
 
-func VmcLock(ctx context.Context) {
-	g := GetGlobal(ctx)
-	g.Log.Info("Vmc Locked")
-	config_global.VMC.User.Lock = true
-	config_global.VMC.User.KeyboardReadEnable = false
-	if config_global.VMC.User.UiState == uint32(types.StateFrontSelect) || config_global.VMC.User.UiState == uint32(types.StatePrepare) {
-		g.LockCh <- struct{}{}
-	}
-}
-
-func VmcUnLock(ctx context.Context) {
-	g := GetGlobal(ctx)
-	g.Log.Info("Vmc UnLocked")
-	config_global.VMC.User.Lock = false
-	config_global.VMC.KeyboardReader(true)
-	if config_global.VMC.User.UiState == uint32(types.StateFrontLock) {
-		g.LockCh <- struct{}{}
-	}
-}
-
 func (g *Global) UpgradeVender() {
 	go func() {
 		if err := g.RunBashSript(g.Config.UpgradeScript); err != nil {
@@ -75,10 +55,11 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 		g.Log.Infof("--- vmc timeout EXIT ---")
 		os.Exit(0)
 	}()
-	g.LockCh <- struct{}{}
-	_ = g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken)
-	g.Tele.Close()
+	// g.LockCh <- struct{}{}
+	g.UI().CreateEvent(types.EventBroken)
+	// _ = g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken)
 	time.Sleep(2 * time.Second)
+	g.Tele.Close()
 	g.Log.Infof("--- vmc stop ---")
 	g.Stop()
 	g.Alive.Done()
@@ -190,4 +171,44 @@ func (g *Global) initDisplay() {
 	if d == nil || err != nil {
 		g.Config.Hardware.Display.Framebuffer = ""
 	}
+}
+
+// send broken message
+func (g *Global) SendBroken(errorMessage ...string) {
+	rm := tele_api.FromRoboMessage{
+		State: tele_api.State_Broken,
+	}
+	if len(errorMessage[0]) != 0 {
+		rm.Err = &tele_api.Err{
+			Code:    0,
+			Message: errorMessage[0],
+		}
+	}
+	// if the order is not completed, the order is canceled
+	if g.Config.User.PaymenId != 0 {
+		rm.Order = g.OrderToMessage()
+		rm.Order.OrderStatus = tele_api.OrderStatus_orderError
+	}
+	g.Tele.RoboSend(&rm)
+}
+
+func (g *Global) SendCooking() {
+	rm := tele_api.FromRoboMessage{State: tele_api.State_Process}
+	if g.Config.User.PaymenId != 0 {
+		rm.Order = g.OrderToMessage()
+		rm.Order.OrderStatus = tele_api.OrderStatus_executionStart
+	}
+
+	g.Tele.RoboSend(&rm)
+}
+
+func (g *Global) OrderToMessage() *tele_api.Order {
+	o := &tele_api.Order{
+		MenuCode:      g.Config.User.SelectedItem.Code,
+		Amount:        uint32(g.Config.User.DirtyMoney),
+		PaymentMethod: g.Config.User.PaymentMethod,
+		OwnerInt:      g.Config.User.PaymenId,
+		OwnerType:     g.Config.User.PaymentType,
+	}
+	return o
 }

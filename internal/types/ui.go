@@ -6,7 +6,7 @@ type UIer interface {
 	Loop(context.Context)
 	// FrontSelectShowZero(context.Context)
 	GetUiState() uint32
-	EventAccept()
+	CreateEvent(EventKind)
 	Scheduler
 }
 

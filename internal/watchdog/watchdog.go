@@ -86,6 +86,8 @@ func DevicesInitializationRequired() {
 	os.RemoveAll(WD.config.Folder + "vmc")
 }
 
+// create broken file
+// if file exits then not started after reboot
 func SetBroken() {
 	f, err := os.Create(brokenFile)
 	if err != nil {
