@@ -134,11 +134,13 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 		}
 		e := ui.wait(timeout)
 		switch e.Kind {
-		case types.EventInput:
+		case types.EventAccept:
+			return types.StateFrontAccept
+		case types.EventInput: // from keyboard
 			if nextState := ui.parseKeyEvent(e, &l1, &l2, &tuneScreen); nextState != types.StateDoesNotChange {
 				return nextState
 			}
-		case types.EventMoneyPreCredit, types.EventMoneyCredit:
+		case types.EventMoneyPreCredit, types.EventMoneyCredit: // from validators
 			if nextState := ui.parseMoneyEvent(e.Kind); nextState != types.StateDoesNotChange {
 				return nextState
 			}
@@ -248,16 +250,27 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 
 	selected := config_global.VMC.User.SelectedItem.String()
 
-	ui.g.Log.Debugf("ui-front selected=%s begin", selected)
-	if err := moneysys.WithdrawPrepare(ctx, config_global.VMC.User.SelectedItem.Price); err != nil {
-		ui.g.Log.Errorf("ui-front CRITICAL error while return change")
+	// FIXME AlexM заглушка пока не переделал
+	if config_global.VMC.User.PaymentMethod == 0 {
+		ui.g.Log.Debugf("ui-front selected=%s begin", selected)
+		if err := moneysys.WithdrawPrepare(ctx, config_global.VMC.User.SelectedItem.Price); err != nil {
+			ui.g.Log.Errorf("ui-front CRITICAL error while return change")
+		}
+		config_global.VMC.User.PaymentMethod = tele_api.PaymentMethod_Cash
 	}
 	watchdog.DevicesInitializationRequired()
 	err := menu_vmc.Cook(ctx)
 	rm := tele_api.FromRoboMessage{
 		Order: &tele_api.Order{
-			Amount:        uint32(config_global.VMC.User.SelectedItem.Price),
-			PaymentMethod: tele_api.PaymentMethod_Cash,
+			MenuCode:        "",
+			Cream:           []byte{},
+			Sugar:           []byte{},
+			Amount:          uint32(config_global.VMC.User.SelectedItem.Price),
+			OrderStatus:     0,
+			PaymentMethod:   config_global.VMC.User.PaymentMethod,
+			OwnerInt:        config_global.VMC.User.PaymenId,
+			OwnerType:       config_global.VMC.User.PaymentType,
+			RedirectDueDate: 0,
 		},
 	}
 	OrderMenuAndTune(rm.Order)
@@ -269,7 +282,12 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 		watchdog.SetDeviceInited()
 		return types.StateFrontEnd
 	}
-	moneysys.ReturnDirty()
+	// ошибка при приготовлении
+	if config_global.VMC.User.PaymentMethod == tele_api.PaymentMethod_Cash {
+		moneysys.ReturnDirty()
+	} else {
+		rm.Order.OrderStatus = tele_api.OrderStatus_cancel
+	}
 	rm.State = tele_api.State_Broken
 	rm.Err = &tele_api.Err{
 		Message: errors.Annotatef(err, "execute %s", selected).Error(),

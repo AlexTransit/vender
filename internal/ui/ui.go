@@ -33,6 +33,11 @@ type UI struct { //nolint:maligned
 
 var _ types.UIer = &UI{} // compile-time interface test
 
+func (ui *UI) EventAccept() {
+	acceptEvent := types.Event{Kind: types.EventAccept}
+	ui.eventch <- acceptEvent
+}
+
 func (ui *UI) GetUiState() uint32 {
 	return 0
 }
