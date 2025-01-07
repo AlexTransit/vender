@@ -94,7 +94,6 @@ func (g *Global) Init(ctx context.Context, cfg *config_global.Config) (err error
 	if err := g.Inventory.Init(ctx, g.Engine); err != nil {
 		return err
 	}
-
 	g.RegisterCommands(ctx)
 	// wg.Wait()
 	// close(errch)
