@@ -149,7 +149,7 @@ func (t *tele) messageShowQr(ctx context.Context, m *tele_api.ToRoboMessage) {
 	case tele_api.ShowQR_order:
 		if t.currentState == tele_api.State_WaitingForExternalPayment {
 			// FIXME AlexM proto add QR payer and orderid
-			// убрать услоивия когда все клиенты обносяться на верчию не менее 241207.0
+			// убрать услоивия когда все клиенты обновяться на верчию не менее 241207.0
 			if m.ShowQR.Amount != 0 {
 				config_global.VMC.User.QRPayAmount = uint32(m.ShowQR.Amount)
 			} else {
