@@ -129,6 +129,11 @@ func (c *custom) Apply(arg engine.Arg) (engine.Doer, bool, error) {
 	return c.apply(arg)
 }
 
+func (c *custom) CheckDo() error {
+	fmt.Printf("\033[41m aa \033[0m\n")
+	return nil
+}
+
 func (c *custom) Validate() error {
 	if err := c.after.Validate(); err != nil {
 		return errors.Annotatef(err, "stock=%s", c.stock.Ingredient.Name)

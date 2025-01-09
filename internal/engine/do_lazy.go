@@ -51,6 +51,14 @@ func (l *Lazy) Validate() error {
 	return d.Validate()
 }
 
+func (l *Lazy) CheckDo() error {
+	d, _, err := l.Force()
+	if err != nil {
+		return err
+	}
+	return d.CheckDo()
+}
+
 func (l *Lazy) Do(ctx context.Context) error {
 	d, _, err := l.Force()
 	if err != nil {

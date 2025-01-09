@@ -40,6 +40,15 @@ func (seq *Seq) Validate() (err error) {
 	return err
 }
 
+func (seq *Seq) CheckDo() (err error) {
+	for _, d := range seq.items {
+		if e := d.CheckDo(); e != nil {
+			err = errors.Join(err, fmt.Errorf("seq=%s node=%s validate (%v)", seq.String(), d.String(), e))
+		}
+	}
+	return err
+}
+
 func (seq *Seq) Do(ctx context.Context) error {
 	e := GetGlobal(ctx)
 	var itemsList []string
