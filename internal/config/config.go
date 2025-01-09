@@ -146,6 +146,9 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 			if v.Min != 0 {
 				ing.Min = v.Min
 			}
+			if v.Cost != 0 {
+				ing.Cost = v.Cost
+			}
 			if v.TuneKey != "" {
 				ing.TuneKey = v.TuneKey
 			}

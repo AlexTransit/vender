@@ -38,7 +38,7 @@ type FuncArg struct {
 	Name string
 	F    func(context.Context, Arg) error
 	V    ValidateFunc
-	C    ChekFunc
+	C    CalculationFunc
 	arg  Arg
 	set  bool
 }
@@ -50,11 +50,11 @@ func (fa FuncArg) Validate() error {
 	return useValidator(fa.V)
 }
 
-func (fa FuncArg) CheckDo() error {
+func (fa FuncArg) Calculation() float32 {
 	if !fa.set {
-		return errors.Annotatef(ErrArgNotApplied, FmtErrContext, fa.Name)
+		return float32(0)
 	}
-	return useCheker(fa.C)
+	return useCalculation(fa.C)
 }
 
 func (fa FuncArg) Do(ctx context.Context) error {

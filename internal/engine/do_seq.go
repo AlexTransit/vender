@@ -40,13 +40,13 @@ func (seq *Seq) Validate() (err error) {
 	return err
 }
 
-func (seq *Seq) CheckDo() (err error) {
+func (seq *Seq) Calculation() (summ float32) {
 	for _, d := range seq.items {
-		if e := d.CheckDo(); e != nil {
-			err = errors.Join(err, fmt.Errorf("seq=%s node=%s validate (%v)", seq.String(), d.String(), e))
+		if v := d.Calculation(); v != 0 {
+			summ += v
 		}
 	}
-	return err
+	return summ
 }
 
 func (seq *Seq) Do(ctx context.Context) error {

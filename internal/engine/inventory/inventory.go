@@ -36,6 +36,7 @@ type Ingredient struct {
 	SpendRate  float32    `hcl:"spend_rate,optional"`
 	Level      string     `hcl:"level,optional"`
 	TuneKey    string     `hcl:"tuning_key,optional"`
+	Cost       float32    `hcl:"cost,optional"`
 	levelValue []struct { // used fixed comma x.xx
 		lev int
 		val int

@@ -129,9 +129,13 @@ func (c *custom) Apply(arg engine.Arg) (engine.Doer, bool, error) {
 	return c.apply(arg)
 }
 
-func (c *custom) CheckDo() error {
-	fmt.Printf("\033[41m aa \033[0m\n")
-	return nil
+func (c *custom) Calculation() float32 {
+	// cost := c.stock.Ingredient.Cost
+	// ar := int16(c.arg.(int16))
+	aa := float64(c.stock.Ingredient.Cost) / 1000 * float64(c.arg.(int16))
+	fmt.Printf("\033[41m %v \033[0m\n", aa)
+	// fmt.Printf("\033[41m %v %v \033[0m\n", cost, ar)
+	return float32(aa)
 }
 
 func (c *custom) Validate() error {

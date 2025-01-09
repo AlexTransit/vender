@@ -28,6 +28,11 @@ import (
 //		Sugar uint8
 //	}
 func (ui *UI) onFrontStart() types.UiState {
+	e := ui.g.Config.Engine.Menu.Items["0"].Doer.Validate()
+	fmt.Printf("\033[41m %v \033[0m\n", e)
+	a := ui.g.Config.Engine.Menu.Items["0"].Doer.Calculation()
+	fmt.Printf("\033[41m %v \033[0m\n", a)
+
 	watchdog.Refresh()
 	if ok, nextState := ui.checkTemperature(); !ok {
 		return nextState
