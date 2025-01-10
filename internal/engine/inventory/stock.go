@@ -85,7 +85,12 @@ func (s *Stock) Value() float32 { return s.value }
 
 func (s *Stock) Set(v float32) { s.value = v }
 
-func (s *Stock) Has(v float32) bool { return s.value-v >= float32(s.Ingredient.Min) }
+func (s *Stock) Has(v float32) bool {
+	if s.Ingredient.Min == 0 {
+		return true
+	}
+	return s.value-v >= float32(s.Ingredient.Min)
+}
 
 func (s *Stock) Wrap(d engine.Doer) engine.Doer {
 	return &custom{stock: s, before: d}
@@ -108,9 +113,7 @@ func (s *Stock) spendArg(ctx context.Context, arg engine.Arg) error {
 }
 
 func (s *Stock) spendValue(v float32) {
-	if s.Ingredient.Min != 0 {
-		s.value -= v
-	}
+	s.value -= v
 }
 
 type custom struct {

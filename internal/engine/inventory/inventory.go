@@ -93,10 +93,6 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine) (errs error) {
 			inv.log.Errorf("in stock:%s ingridient not present", s.Name)
 			continue
 		}
-		doSpend1 := engine.Func0{
-			Name: fmt.Sprintf("stock.%s.spend1", s.Ingredient.Name),
-			F:    s.spend1,
-		}
 		doSpendArg := engine.FuncArg{
 			Name: fmt.Sprintf("stock.%s.spend(?)", s.Ingredient.Name),
 			F:    s.spendArg,
@@ -120,7 +116,6 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine) (errs error) {
 			}
 
 		}
-		e.Register(doSpend1.Name, doSpend1)
 		e.Register(doSpendArg.Name, doSpendArg)
 	}
 	return errs
