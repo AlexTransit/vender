@@ -145,16 +145,17 @@ func (ui *UI) onServiceInventory() types.UiState {
 		return types.StateServiceMenu
 	}
 	s := ui.g.Inventory.Stocks[ui.Service.invIdx]
-	iname := fmt.Sprintf("%d %s", s.Code, s.Ingredient.Name)
 	if lv {
+		// l1 := fmt.Sprintf("%.0f %s\x00", s.Value(), iname)
 		ui.display.SetLines(
-			fmt.Sprintf("V:%.0f %s\x00", s.Value(), iname),
-			fmt.Sprintf("L:%s %s", s.ShowLevel(), string(ui.inputBuf)), // TODO configurable decimal point
+			fmt.Sprintf("%.0f %s", s.Value(), s.Ingredient.Name),
+			fmt.Sprintf("%d Lev:%s %s", s.Code, s.ShowLevel(), string(ui.inputBuf)), // TODO configurable decimal point
 		)
 	} else {
+		// l2 := fmt.Sprintf("%s %s", s.ShowLevel(), iname)
 		ui.display.SetLines(
-			fmt.Sprintf("L:%s %s", s.ShowLevel(), iname),
-			fmt.Sprintf("V:%.0f %s\x00", s.Value(), string(ui.inputBuf)), // TODO configurable decimal point
+			fmt.Sprintf("%s %s", s.ShowLevel(), s.Ingredient.Name),
+			fmt.Sprintf("%d Val:%.0f %s", s.Code, s.Value(), string(ui.inputBuf)), // TODO configurable decimal point
 		)
 	}
 	next, e := ui.serviceWaitInput()
@@ -194,13 +195,16 @@ func (ui *UI) onServiceInventory() types.UiState {
 
 		xt, err := strconv.ParseFloat(string(ui.inputBuf), 64)
 		x := int(xt * 100)
-		ui.inputBuf = ui.inputBuf[:0]
 		if err != nil {
 			ui.g.Log.WarningF("ui onServiceInventory input=accept inputBuf='%s'", string(ui.inputBuf))
 			ui.display.SetLine(2, "number-invalid") // FIXME extract message string
 			ui.serviceWaitInput()
 			return types.StateServiceInventory
 		}
+		if v := strings.Index(string(ui.inputBuf), "."); v >= 0 {
+			lv = true
+		}
+		ui.inputBuf = ui.inputBuf[:0]
 
 		if lv {
 			ui.g.Inventory.Stocks[ui.Service.invIdx].SetLevel(x)
