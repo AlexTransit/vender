@@ -40,7 +40,7 @@ func (seq *Seq) Validate() (err error) {
 	return err
 }
 
-func (seq *Seq) Calculation() (summ float32) {
+func (seq *Seq) Calculation() (summ float64) {
 	for _, d := range seq.items {
 		if v := d.Calculation(); v != 0 {
 			summ += v

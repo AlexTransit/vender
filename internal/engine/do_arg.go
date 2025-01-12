@@ -50,9 +50,9 @@ func (fa FuncArg) Validate() error {
 	return useValidator(fa.V)
 }
 
-func (fa FuncArg) Calculation() float32 {
+func (fa FuncArg) Calculation() float64 {
 	if !fa.set {
-		return float32(0)
+		return float64(0)
 	}
 	return useCalculation(fa.C)
 }

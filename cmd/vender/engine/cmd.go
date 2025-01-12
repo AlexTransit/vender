@@ -54,14 +54,6 @@ func Main(ctx context.Context, _ ...[]string) error {
 		g.Log.Debugf("- money commit")
 		return nil
 	}})
-	g.Engine.Register("stock.all.add(?)", engine.FuncArg{F: func(ctx context.Context, arg engine.Arg) error {
-		g.Inventory.Iter(func(stock *inventory.Stock) {
-			current := stock.Value()
-			g.Log.Debugf("- source=%s value=%f", stock.Name, current)
-			stock.Set(current + float32(arg.(int16)))
-		})
-		return nil
-	}})
 	g.Engine.Register("stock.dump", engine.Func0{F: func() error {
 		g.Inventory.Iter(func(stock *inventory.Stock) {
 			g.Log.Debugf("- stock %#v", stock)

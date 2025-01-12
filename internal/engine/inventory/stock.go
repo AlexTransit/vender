@@ -15,8 +15,8 @@ import (
 type Stock struct {
 	Log            *log2.Log
 	ErrorSend      bool
-	Name           string `hcl:"name,label"`
-	Code           int    `hcl:"code"`
+	Label          string `hcl:",label"`
+	Code           int    `hcl:"code,optional"`
 	XXX_Ingredient string `hcl:"ingredient"`
 	RegisterAdd    string `hcl:"register_add,optional"`
 	Ingredient     *Ingredient
@@ -25,7 +25,7 @@ type Stock struct {
 
 func (s *Stock) String() string {
 	return fmt.Sprintf("inventory.%s #%d spend_rate=%f min=%d",
-		s.Name, s.Code, s.Ingredient.SpendRate, s.Ingredient.Min)
+		s.Label, s.Code, s.Ingredient.SpendRate, s.Ingredient.Min)
 }
 
 func (s *Stock) GetSpendRate() float32 { return s.Ingredient.SpendRate }
@@ -100,12 +100,6 @@ func (s *Stock) TranslateSpend(arg engine.Arg) float32 {
 	return translate(int32(arg.(int16)), s.Ingredient.SpendRate)
 }
 
-// signature match engine.Func0.F
-func (s *Stock) spend1() error {
-	s.spendValue(s.TranslateSpend(1))
-	return nil
-}
-
 // signature match engine.FuncArg.F
 func (s *Stock) spendArg(ctx context.Context, arg engine.Arg) error {
 	s.spendValue(s.TranslateSpend(arg.(int16)))
@@ -132,13 +126,8 @@ func (c *custom) Apply(arg engine.Arg) (engine.Doer, bool, error) {
 	return c.apply(arg)
 }
 
-func (c *custom) Calculation() float32 {
-	// cost := c.stock.Ingredient.Cost
-	// ar := int16(c.arg.(int16))
-	aa := float64(c.stock.Ingredient.Cost) / 1000 * float64(c.arg.(int16))
-	fmt.Printf("\033[41m %v \033[0m\n", aa)
-	// fmt.Printf("\033[41m %v %v \033[0m\n", cost, ar)
-	return float32(aa)
+func (c *custom) Calculation() float64 {
+	return c.stock.Ingredient.Cost * float64(c.arg.(int16)) * float64(c.stock.Ingredient.SpendRate)
 }
 
 func (c *custom) Validate() error {
@@ -165,7 +154,7 @@ func (c *custom) Do(ctx context.Context) error {
 		d, _, err := c.apply(tunedArg)
 		// log.Printf("stock=%s before=%#v arg=%v tuneRate=%v tunedArg=%v d=%v err=%v", c.stock.String(), c.before, c.arg, tuneRate, tunedArg, d, err)
 		if err != nil {
-			return errors.Annotatef(err, "stock=%s tunedArg=%v", c.stock.Name, tunedArg)
+			return errors.Annotatef(err, "stock=%s tunedArg=%v", c.stock.Label, tunedArg)
 		}
 		return e.Exec(tunedCtx, d)
 	}
@@ -173,11 +162,11 @@ func (c *custom) Do(ctx context.Context) error {
 	// log.Printf("stock=%s value=%f arg=%v spending=%f", c.stock.Name, c.stock.Value(), c.arg, c.spend)
 	// TODO remove this redundant check when sure that Validate() is called in all proper places
 	if c.stock.Ingredient.Min != 0 && !c.stock.Has(c.spend) {
-		return errors.Errorf("stock=%s check fail", c.stock.Name)
+		return errors.Errorf("stock=%s check fail", c.stock.Label)
 	}
 
 	if err := c.after.Validate(); err != nil {
-		return errors.Annotatef(err, "stock=%s", c.stock.Name)
+		return errors.Annotatef(err, "stock=%s", c.stock.Label)
 	}
 	err := e.Exec(ctx, c.after)
 	if err != nil {
@@ -187,7 +176,7 @@ func (c *custom) Do(ctx context.Context) error {
 	return nil
 }
 
-func (c *custom) String() string { return fmt.Sprintf("stock.%s(%d)", c.stock.Name, c.arg) }
+func (c *custom) String() string { return fmt.Sprintf("stock.%s(%d)", c.stock.Label, c.arg) }
 
 func (c *custom) apply(arg engine.Arg) (engine.Doer, bool, error) {
 	after, applied, err := engine.ArgApply(c.before, arg)

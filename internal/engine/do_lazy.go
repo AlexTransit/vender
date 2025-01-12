@@ -51,10 +51,10 @@ func (l *Lazy) Validate() error {
 	return d.Validate()
 }
 
-func (l *Lazy) Calculation() float32 {
+func (l *Lazy) Calculation() float64 {
 	d, _, err := l.Force()
 	if err != nil {
-		return float32(0)
+		return float64(0)
 	}
 	return d.Calculation()
 }

@@ -97,7 +97,7 @@ var VMC = Config{
 		File:           "/home/vmc/vender-db/inventory/store.file",
 		Stocks:         []inventory.Stock{},
 		Ingredient:     []inventory.Ingredient{},
-		XXX_Stocks:     map[int]inventory.Stock{},
+		XXX_Stocks:     map[string]inventory.Stock{},
 		XXX_Ingredient: map[string]inventory.Ingredient{},
 	},
 	Money: MoneyStruct{Scale: 100, CreditMax: 100},
