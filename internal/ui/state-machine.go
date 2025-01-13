@@ -64,6 +64,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		if errs := ui.g.Engine.ExecList(ctx, "on_boot", onBootScript); len(errs) != 0 {
 			ui.g.Tele.Error(errors.Annotatef(helpers.FoldErrors(errs), "on_boot "))
 			ui.g.Log.Error(errs)
+			watchdog.SetBroken()
 			return types.StateBroken
 		}
 		watchdog.SetDeviceInited()
@@ -76,7 +77,6 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 	case types.StateBroken:
 		watchdog.Disable()
 		watchdog.DevicesInitializationRequired()
-		watchdog.SetBroken()
 		ui.g.Tele.RoboSendBroken()
 		ui.g.RunBashSript(ui.g.Config.ScriptIfBroken)
 		ui.g.Log.Infof("state=broken")

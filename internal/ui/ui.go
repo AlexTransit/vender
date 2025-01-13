@@ -39,7 +39,7 @@ func (ui *UI) CreateEvent(e types.EventKind) {
 }
 
 func (ui *UI) GetUiState() uint32 {
-	return 0
+	return uint32(ui.state)
 }
 
 func (ui *UI) Init(ctx context.Context) error {

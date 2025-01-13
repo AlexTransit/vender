@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 
+	config_global "github.com/AlexTransit/vender/internal/config"
 	watchdog_config "github.com/AlexTransit/vender/internal/watchdog/config"
 	"github.com/AlexTransit/vender/log2"
 	"github.com/coreos/go-systemd/daemon"
@@ -15,8 +16,6 @@ type wdStruct struct {
 	log    *log2.Log
 	wdt    string // watchdog tics
 }
-
-const brokenFile = "/home/vmc/broken"
 
 var WD wdStruct
 
@@ -89,7 +88,7 @@ func DevicesInitializationRequired() {
 // create broken file
 // if file exits then not started after reboot
 func SetBroken() {
-	f, err := os.Create(brokenFile)
+	f, err := os.Create(config_global.VMC.BrokenFile)
 	if err != nil {
 		WD.log.Error(errors.New("create broken file "), err)
 		return
@@ -98,10 +97,10 @@ func SetBroken() {
 	f.Close()
 }
 
-func UnsetBroken() { os.Remove(brokenFile) }
+func UnsetBroken() { os.Remove(config_global.VMC.BrokenFile) }
 
 func IsBroken() bool {
-	_, err := os.Stat(brokenFile)
+	_, err := os.Stat(config_global.VMC.BrokenFile)
 	return !os.IsNotExist(err)
 }
 

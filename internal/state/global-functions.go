@@ -41,7 +41,7 @@ func (g *Global) UpgradeVender() {
 }
 
 func (g *Global) VmcStop(ctx context.Context) {
-	if config_global.VMC.User.UiState != uint32(types.StateFrontSelect) {
+	if g.UI().GetUiState() != uint32(types.StateFrontSelect) {
 		watchdog.DevicesInitializationRequired()
 	}
 	g.VmcStopWOInitRequared(ctx)
