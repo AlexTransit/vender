@@ -33,7 +33,7 @@ func (ui *UI) onFrontStart() types.UiState {
 		return nextState
 	}
 	// FIXME alexm
-	sound.PlayFile("started.mp3")
+	sound.PlayFileNoWait("started.mp3")
 	return types.StateFrontBegin
 }
 
@@ -92,6 +92,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 	runtime.GC() // чистка мусора в памяти
 	if errs := ui.g.Engine.ExecList(ctx, "on_front_begin", ui.g.Config.Engine.OnFrontBegin); len(errs) != 0 {
 		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_front_begin"))
+		watchdog.SetBroken()
 		return types.StateBroken
 	}
 
@@ -99,6 +100,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 	ui.FrontMaxPrice, err = menu_vmc.MenuMaxPrice()
 	if err != nil {
 		ui.g.Error(err)
+		watchdog.SetBroken()
 		return types.StateBroken
 
 	}
@@ -284,6 +286,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 		moneysys.ReturnDirty()
 	}
 	ui.g.SendBroken("execute " + selected + err.Error())
+	watchdog.SetBroken()
 	return types.StateBroken
 }
 

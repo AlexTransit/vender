@@ -40,6 +40,15 @@ func (seq *Seq) Validate() (err error) {
 	return err
 }
 
+func (seq *Seq) Calculation() (summ float64) {
+	for _, d := range seq.items {
+		if v := d.Calculation(); v != 0 {
+			summ += v
+		}
+	}
+	return summ
+}
+
 func (seq *Seq) Do(ctx context.Context) error {
 	e := GetGlobal(ctx)
 	var itemsList []string

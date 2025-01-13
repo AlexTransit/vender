@@ -35,7 +35,7 @@ var Mod = subcmd.Mod{Name: "engine-cli", Main: Main}
 
 func Main(ctx context.Context, _ ...[]string) error {
 	g := state.GetGlobal(ctx)
-	sound.Init(&g.Config.Sound, g.Log, false)
+	sound.Init(&g.Config.Sound, g.Log, g.Alive, false)
 	err := g.Init(ctx, g.Config)
 	if err != nil {
 		g.Fatal(err)
@@ -52,14 +52,6 @@ func Main(ctx context.Context, _ ...[]string) error {
 	g.Engine.Register("mdb.bus_reset", doMdbBusReset)
 	g.Engine.Register("money.commit", engine.Func0{Name: "money.commit", F: func() error {
 		g.Log.Debugf("- money commit")
-		return nil
-	}})
-	g.Engine.Register("stock.all.add(?)", engine.FuncArg{F: func(ctx context.Context, arg engine.Arg) error {
-		g.Inventory.Iter(func(stock *inventory.Stock) {
-			current := stock.Value()
-			g.Log.Debugf("- source=%s value=%f", stock.Name, current)
-			stock.Set(current + float32(arg.(int16)))
-		})
 		return nil
 	}})
 	g.Engine.Register("stock.dump", engine.Func0{F: func() error {

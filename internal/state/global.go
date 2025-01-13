@@ -236,6 +236,12 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		sound.PlayFileNoWait(arg.(string))
 		return nil
 	})
+
+	g.Engine.RegisterNewFuncAgr("play(?)", func(ctx context.Context, arg engine.Arg) error {
+		sound.PlayFile(arg.(string))
+		return nil
+	})
+
 	g.Engine.RegisterNewFuncAgr("sound.volume(?)", func(ctx context.Context, arg engine.Arg) error {
 		sound.SetVolume(arg.(int16))
 		return nil

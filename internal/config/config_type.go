@@ -17,13 +17,13 @@ import (
 type Config struct {
 	Version        string
 	TeleN          tele_api.Teler
-	UpgradeScript  string `hcl:"upgrade_script,optional"`
-	ScriptIfBroken string `hcl:"script_if_broken,optional"`
-	ErrorFolder    string `hcl:"error_folder,optional"`
-
-	Inventory inventory.Inventory `hcl:"inventory,block"`
-	Money     MoneyStruct         `hcl:"money,block"`
-	Hardware  HardwareStruct      `hcl:"hardware,block"`
+	UpgradeScript  string              `hcl:"upgrade_script,optional"`
+	ScriptIfBroken string              `hcl:"script_if_broken,optional"`
+	ErrorFolder    string              `hcl:"error_folder,optional"`
+	BrokenFile     string              `hcl:"broken_file,optional"`
+	Inventory      inventory.Inventory `hcl:"inventory,block"`
+	Money          MoneyStruct         `hcl:"money,block"`
+	Hardware       HardwareStruct      `hcl:"hardware,block"`
 	// Persist        PersistStruct          `hcl:"persist,block"`
 	Tele      tele_config.Config     `hcl:"tele,block"`
 	UI_config ui_config.Config       `hcl:"ui,block"`
@@ -92,12 +92,11 @@ type MoneyStruct struct {
 
 // config wich presetted default values
 var VMC = Config{
-	// ErrorFolder: "/home/vmc/vender-db/errors/",
+	ErrorFolder: "/home/vmc/vender-db/errors/",
+	BrokenFile:  "/home/vmc/broken",
 	Inventory: inventory.Inventory{
 		File:           "/home/vmc/vender-db/inventory/store.file",
-		Stocks:         []inventory.Stock{},
-		Ingredient:     []inventory.Ingredient{},
-		XXX_Stocks:     map[int]inventory.Stock{},
+		XXX_Stocks:     map[string]inventory.Stock{},
 		XXX_Ingredient: map[string]inventory.Ingredient{},
 	},
 	Money: MoneyStruct{Scale: 100, CreditMax: 100},

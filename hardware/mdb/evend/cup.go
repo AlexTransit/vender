@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
 )
 
@@ -33,7 +34,10 @@ func (c *DeviceCup) init(ctx context.Context) error {
 	c.initLightSheduler(g.Config.UI_config.Front.LightShedule)
 	c.timeout = uint16(g.Config.Hardware.Evend.Cup.TimeoutSec) * 5
 	g.Engine.RegisterNewFunc(c.name+".ensure", func(ctx context.Context) error { return c.CommandWaitSuccess(c.timeout, 0x04) })
-	g.Engine.RegisterNewFunc(c.name+".dispense", func(ctx context.Context) error { return c.CommandWaitSuccess(c.timeout, 0x01) })
+	g.Engine.RegisterNewFuncAgr(c.name+".dispense(?)", func(ctx context.Context, arg engine.Arg) error {
+		_ = arg
+		return c.CommandWaitSuccess(c.timeout, 0x01)
+	})
 	g.Engine.RegisterNewFunc(c.name+".wait_complete", func(ctx context.Context) error { return c.WaitSuccess(c.timeout, true) })
 	g.Engine.RegisterNewFunc(c.name+".light_on", func(ctx context.Context) error { return c.LightOn() })
 	g.Engine.RegisterNewFunc(c.name+".light_off", func(ctx context.Context) error { return c.LightOff() })

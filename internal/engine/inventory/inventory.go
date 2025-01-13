@@ -1,5 +1,26 @@
 package inventory
 
+// инвентарь - писок сладов ( бункеров ) и ингридиентов
+// у ингридиента есть параметры:
+// name - название ингридиента ( иникальное значение)
+// min - минимальный остаток ( если остаток меньше минимума, то будет отказ в отгрузке.
+//       если минимум не указан =0 то осчтаток может быть отрицательным
+// level - уровень (плотность) ингридиента
+//         указыватеся как "x(y)"
+//         x - метка на бункере, y - вес
+//         пример: "0.5(200) 1(360) 2(680) 3.1(1020)"
+// tuning_key - название кнопки коррекции отгрузки. подробне в описании кнопки коррекции
+//    кнопка коррекции. имеет название и значение по умолчанию (обычно 4) можно указать максимальное значение.
+//    единица значения равна 25%.
+//    например: базовое = 4 и это 100% если указать 2 то это 50%. если 8 то это 200%
+// cost - закупочная цена. нужна дял расчета себестоимости
+
+// склад
+// label - метка склада.
+//         уникальная строка
+// code - опциональный чистовой код. используется для сортировки складов
+// ingredient - название ингридиента ( что в бункере) пока движок не переделан - это уникальное значение
+
 import (
 	"context"
 	"encoding/binary"
@@ -24,7 +45,7 @@ type Inventory struct {
 	File           string       `hcl:"stock_file,optional"`
 	Stocks         []Stock      `hcl:"stock,block"`
 	Ingredient     []Ingredient `hcl:"ingredient,block"`
-	XXX_Stocks     map[int]Stock
+	XXX_Stocks     map[string]Stock
 	XXX_Ingredient map[string]Ingredient
 }
 
@@ -36,6 +57,7 @@ type Ingredient struct {
 	SpendRate  float32    `hcl:"spend_rate,optional"`
 	Level      string     `hcl:"level,optional"`
 	TuneKey    string     `hcl:"tuning_key,optional"`
+	Cost       float64    `hcl:"cost,optional"`
 	levelValue []struct { // used fixed comma x.xx
 		lev int
 		val int
@@ -77,24 +99,15 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine) (errs error) {
 	}
 	// sort bunkers array by code.
 	sort.Slice(inv.Stocks, func(a, b int) bool {
-		xa := inv.Stocks[a]
-		xb := inv.Stocks[b]
-		if xa.Code != xb.Code {
-			return xa.Code < xb.Code
-		}
-		return xa.Name < xb.Name
+		return inv.Stocks[a].Code < inv.Stocks[b].Code
 	})
 	for i := range inv.Ingredient {
 		inv.Ingredient[i].fillLevels()
 	}
 	for i, s := range inv.Stocks {
 		if s.Ingredient == nil {
-			inv.log.Errorf("in stock:%s ingridient not present", s.Name)
+			inv.log.Errorf("in stock:%s ingridient not present", s.Label)
 			continue
-		}
-		doSpend1 := engine.Func0{
-			Name: fmt.Sprintf("stock.%s.spend1", s.Ingredient.Name),
-			F:    s.spend1,
 		}
 		doSpendArg := engine.FuncArg{
 			Name: fmt.Sprintf("stock.%s.spend(?)", s.Ingredient.Name),
@@ -119,7 +132,6 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine) (errs error) {
 			}
 
 		}
-		e.Register(doSpend1.Name, doSpend1)
 		e.Register(doSpendArg.Name, doSpendArg)
 	}
 	return errs
