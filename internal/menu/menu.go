@@ -8,6 +8,7 @@ import (
 	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
+	"github.com/AlexTransit/vender/internal/watchdog"
 )
 
 func MenuMaxPrice() (currency.Amount, error) {
@@ -30,7 +31,7 @@ func MenuMaxPrice() (currency.Amount, error) {
 
 func Cook(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
-
+	watchdog.Refresh()
 	itemCtx := money.SetCurrentPrice(ctx, config_global.VMC.User.SelectedItem.Price)
 	if tuneCream := ScaleTuneRate(&config_global.VMC.User.Cream, config_global.CreamMax(), config_global.DefaultCream()); tuneCream != 1 {
 		const name = "cream"
