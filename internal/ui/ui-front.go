@@ -33,7 +33,7 @@ func (ui *UI) onFrontStart() types.UiState {
 		return nextState
 	}
 	// FIXME alexm
-	sound.PlayFile("started.mp3")
+	sound.PlayFileNoWait("started.mp3")
 	return types.StateFrontBegin
 }
 

@@ -51,7 +51,7 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 	watchdog.Disable()
 	g.Log.Infof("--- event vmc stop ---")
 	go func() {
-		time.Sleep(3 * time.Second)
+		time.Sleep(10 * time.Second)
 		g.Log.Infof("--- vmc timeout EXIT ---")
 		os.Exit(0)
 	}()
@@ -62,7 +62,7 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 	g.Tele.Close()
 	g.Log.Infof("--- vmc stop ---")
 	g.Stop()
-	g.Alive.Done()
+	g.Alive.Wait()
 	os.Exit(0)
 }
 

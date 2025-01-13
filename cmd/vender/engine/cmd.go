@@ -35,7 +35,7 @@ var Mod = subcmd.Mod{Name: "engine-cli", Main: Main}
 
 func Main(ctx context.Context, _ ...[]string) error {
 	g := state.GetGlobal(ctx)
-	sound.Init(&g.Config.Sound, g.Log, false)
+	sound.Init(&g.Config.Sound, g.Log, g.Alive, false)
 	err := g.Init(ctx, g.Config)
 	if err != nil {
 		g.Fatal(err)
