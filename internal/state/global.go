@@ -54,7 +54,7 @@ func (g *Global) Init(ctx context.Context, cfg *config_global.Config) (err error
 	g.Log.Infof("build version=%s", g.BuildVersion)
 	config_global.VMC.Version = g.BuildVersion
 
-	watchdog.Init(&g.Config.Watchdog, g.Log, cfg.UI_config.Front.ResetTimeoutSec)
+	watchdog.Init(g.Config, g.Log, cfg.UI_config.Front.ResetTimeoutSec)
 
 	// Since tele is remote error reporting mechanism, it must be inited before anything else
 	// Tele.Init gets g.Log clone before SetErrorFunc, so Tele.Log.Error doesn't recurse on itself

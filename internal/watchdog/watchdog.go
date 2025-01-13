@@ -19,8 +19,9 @@ type wdStruct struct {
 
 var WD wdStruct
 
-func Init(conf *watchdog_config.Config, log *log2.Log, timeout int) {
-	WD.config = conf
+func Init(conf *config_global.Config, log *log2.Log, timeout int) {
+	WD.config = &conf.Watchdog
+	WD.wdt = strconv.Itoa(conf.UI_config.Front.ResetTimeoutSec * 3)
 	WD.log = log
 	if !WD.config.Disabled {
 		setTimerSec(timeout * 3)
