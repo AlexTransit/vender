@@ -55,14 +55,12 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 		g.Log.Infof("--- vmc timeout EXIT ---")
 		os.Exit(0)
 	}()
-	// g.LockCh <- struct{}{}
-	g.UI().CreateEvent(types.EventBroken)
-	// _ = g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken)
+	g.UI().CreateEvent(types.EventStop)
 	time.Sleep(2 * time.Second)
-	g.Tele.Close()
-	g.Log.Infof("--- vmc stop ---")
 	g.Stop()
+	g.Tele.Close()
 	g.Alive.Wait()
+	g.Log.Infof("--- vmc stop ---")
 	os.Exit(0)
 }
 
