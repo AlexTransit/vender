@@ -28,8 +28,7 @@ type TextDisplay struct { //nolint:maligned
 	width uint32
 	state State
 
-	line1 string
-	line2 string
+	line []string
 
 	tickd time.Duration
 	tick  uint32
@@ -62,6 +61,7 @@ func NewTextDisplay(opt *TextDisplayConfig) (*TextDisplay, error) {
 		alive: alive.NewAlive(),
 		tickd: opt.ScrollDelay,
 		width: uint32(opt.Width),
+		line:  []string{"", ""},
 	}
 
 	if opt.Codepage != "" {
@@ -74,13 +74,7 @@ func NewTextDisplay(opt *TextDisplayConfig) (*TextDisplay, error) {
 }
 
 func (td *TextDisplay) GetLine(line int) string {
-	switch line {
-	case 1:
-		return td.line1
-	case 2:
-		return td.line2
-	}
-	return ""
+	return td.line[line-1]
 }
 
 func (td *TextDisplay) SetCodepage(cp string) error {
@@ -152,27 +146,24 @@ func (td *TextDisplay) Message(s1, s2 string, wait func()) {
 // }
 
 func (td *TextDisplay) SetLine(line int, value string) {
+	if td.line[line-1] == value {
+		return
+	}
 	td.mu.Lock()
 	defer td.mu.Unlock()
 
+	td.line[line-1] = value
 	bs := td.Translate(value)
 	if bs == nil {
 		td.log.NoticeF("translate %s retutn nil", value)
 	}
+	td.log.NoticeF("Display.L%d=%s", line, value)
+	// FIXME Alexm убрать td.state в масив
 	switch line {
 	case 1:
 		td.state.L1 = bs
-		if td.line1 != value {
-			td.line1 = value
-			td.log.NoticeF("Display.L%d=%s", line, value)
-		}
 	case 2:
 		td.state.L2 = bs
-		if td.line2 != value {
-			td.line2 = value
-			td.log.NoticeF("Display.L%d=%s", line, value)
-		}
-
 	}
 	atomic.StoreUint32(&td.tick, 0)
 	td.flush()
