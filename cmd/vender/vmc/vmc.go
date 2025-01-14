@@ -41,7 +41,9 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGABRT)
 	go func() {
 		sig := <-sigs
-		g.Log.Infof("system signal - %v", sig)
+		m := fmt.Sprintf("system signal - %v", sig)
+		g.Log.Info(m)
+		g.SendBroken(m)
 		g.VmcStop(ctx)
 	}()
 	subcmd.SdNotify(daemon.SdNotifyReady)

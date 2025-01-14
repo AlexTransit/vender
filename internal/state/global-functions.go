@@ -176,7 +176,7 @@ func (g *Global) SendBroken(errorMessage ...string) {
 	rm := tele_api.FromRoboMessage{
 		State: tele_api.State_Broken,
 	}
-	if len(errorMessage[0]) != 0 {
+	if errorMessage != nil {
 		rm.Err = &tele_api.Err{
 			Code:    0,
 			Message: errorMessage[0],
