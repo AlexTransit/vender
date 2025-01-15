@@ -40,14 +40,15 @@ func (g *Global) UpgradeVender() {
 	}()
 }
 
-func (g *Global) VmcStop(ctx context.Context) {
+func (g *Global) VmcStop(ctx context.Context, errorMessage ...string) {
 	if g.UI().GetUiState() != uint32(types.StateFrontSelect) {
 		watchdog.DevicesInitializationRequired()
 	}
-	g.VmcStopWOInitRequared(ctx)
+	g.VmcStopWOInitRequared(ctx, errorMessage...)
 }
 
-func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
+func (g *Global) VmcStopWOInitRequared(ctx context.Context, errorMessage ...string) {
+	g.SendBroken(errorMessage...)
 	watchdog.Disable()
 	g.Log.Infof("--- event vmc stop ---")
 	go func() {
@@ -55,6 +56,7 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 		g.Log.Infof("--- vmc timeout EXIT ---")
 		os.Exit(0)
 	}()
+	g.Engine.ExecList(ctx, "on_shutdown", g.Config.Engine.OnShutdown)
 	g.UI().CreateEvent(types.EventStop)
 	time.Sleep(2 * time.Second)
 	g.Stop()
