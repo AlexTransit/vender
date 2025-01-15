@@ -75,7 +75,7 @@ func (ui *UI) checkTemperature() (correct bool, stateIfNotCorrect types.UiState)
 
 func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 	if config_global.VMC.Engine.NeedRestart { // after upgrade
-		ui.g.VmcStopWOInitRequared(ctx)
+		ui.g.VmcStopWOInitRequared(ctx, "triger restart")
 		return types.StateStop
 	}
 	if valid, nextState := ui.checkTemperature(); !valid {
@@ -159,7 +159,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 		case types.EventBroken: // change state
 			return types.StateBroken
 		case types.EventLock, types.EventStop: // change state
-			return types.StateFrontEnd
+			return types.StateLocked
 		default: // destroy program
 			panic(fmt.Sprintf("code error state=%v unhandled event=%v", ui.State(), e))
 		}

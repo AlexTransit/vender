@@ -43,8 +43,7 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 		sig := <-sigs
 		m := fmt.Sprintf("system signal - %v", sig)
 		g.Log.Info(m)
-		g.SendBroken(m)
-		g.VmcStop(ctx)
+		g.VmcStop(ctx, m)
 	}()
 	subcmd.SdNotify(daemon.SdNotifyReady)
 
@@ -148,7 +147,7 @@ func broken(ctx context.Context) {
 	g := state.GetGlobal(ctx)
 	g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
 	sound.Init(&g.Config.Sound, g.Log, g.Alive, false)
-	g.Tele.RoboSendBroken()
+	g.SendBroken()
 	g.Display()
 	display := g.MustTextDisplay()
 	// FIXME alexm

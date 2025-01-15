@@ -12,7 +12,6 @@ import (
 type Teler interface {
 	Init(context.Context, *log2.Log, tele_config.Config, string) error
 	Close()
-	// State(State)
 	Error(error)
 	ErrorStr(string)
 	Log(string)
@@ -22,7 +21,6 @@ type Teler interface {
 	CommandResponse(*Response)
 	RoboSend(*FromRoboMessage)
 	RoboSendState(s State)
-	RoboSendBroken()
 	RoboConnected() bool
 	GetState() State
 }
@@ -40,7 +38,6 @@ func (stub) Transaction(*Telemetry_Transaction)                                {
 func (stub) CommandResponse(*Response)                                         {}
 func (stub) RoboSend(*FromRoboMessage)                                         {}
 func (stub) RoboSendState(s State)                                             {}
-func (stub) RoboSendBroken()                                                   {}
 func (stub) RoboConnected() bool                                               { return false }
 func (stub) GetState() State                                                   { return 0 }
 

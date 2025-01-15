@@ -193,7 +193,7 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 	g.Engine.RegisterNewFunc(
 		"vmc.stop!",
 		func(ctx context.Context) error {
-			g.VmcStop(ctx)
+			g.VmcStop(ctx, "command vmc.stop!")
 			return nil
 		},
 	)
