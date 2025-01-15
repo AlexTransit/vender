@@ -158,8 +158,10 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 		// 	return types.StateFrontLock
 		case types.EventBroken: // change state
 			return types.StateBroken
-		case types.EventLock, types.EventStop: // change state
+		case types.EventLock:
 			return types.StateLocked
+		case types.EventStop: // change state
+			return types.StateStop
 		default: // destroy program
 			panic(fmt.Sprintf("code error state=%v unhandled event=%v", ui.State(), e))
 		}
