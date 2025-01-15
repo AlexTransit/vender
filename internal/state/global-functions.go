@@ -185,7 +185,13 @@ func (g *Global) SendBroken(errorMessage ...string) {
 	// if the order is not completed, the order is canceled
 	if g.Config.User.PaymenId != 0 {
 		rm.Order = g.OrderToMessage()
-		rm.Order.OrderStatus = tele_api.OrderStatus_orderError
+		if g.Config.User.DirtyMoney != 0 {
+			rm.Order.OrderStatus = tele_api.OrderStatus_orderError // return cashless money
+		} else {
+			// order full maked and not completed.
+			rm.Err.Message = fmt.Sprintf("set complete order in broken point. paymentId:%d dirty money=0 error(%s)", g.Config.User.PaymenId, rm.Err.Message)
+			rm.Order.OrderStatus = tele_api.OrderStatus_complete
+		}
 	}
 	g.Tele.RoboSend(&rm)
 }
