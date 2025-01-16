@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
 
 	config_global "github.com/AlexTransit/vender/internal/config"
@@ -77,7 +78,8 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 	case types.StateBroken:
 		watchdog.Disable()
 		watchdog.DevicesInitializationRequired()
-		ui.g.SendBroken()
+		ui.g.SendNotWork(tele.State_Broken)
+
 		ui.g.RunBashSript(ui.g.Config.ScriptIfBroken)
 		ui.g.Log.Infof("state=broken")
 		if !ui.broken {

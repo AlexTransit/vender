@@ -17,6 +17,7 @@ import (
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/ui"
 	"github.com/AlexTransit/vender/internal/watchdog"
+	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/juju/errors"
 )
@@ -147,7 +148,7 @@ func broken(ctx context.Context) {
 	g := state.GetGlobal(ctx)
 	g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
 	sound.Init(&g.Config.Sound, g.Log, g.Alive, false)
-	g.SendBroken()
+	g.SendNotWork(tele_api.State_Broken)
 	g.Display()
 	display := g.MustTextDisplay()
 	// FIXME alexm

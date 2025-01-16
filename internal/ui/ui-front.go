@@ -287,7 +287,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	if config_global.VMC.User.PaymentMethod == tele_api.PaymentMethod_Cash {
 		moneysys.ReturnDirty()
 	}
-	ui.g.SendBroken("execute " + selected + err.Error())
+	ui.g.SendNotWork(tele_api.State_Broken, "execute "+selected+err.Error())
 	watchdog.SetBroken()
 	return types.StateBroken
 }
