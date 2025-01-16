@@ -53,10 +53,10 @@ func Cook(ctx context.Context) error {
 	err := g.Engine.Exec(itemCtx, config_global.VMC.User.SelectedItem.Doer)
 	if err == nil {
 		if g.Tele.RoboConnected() {
-			config_global.VMC.User.ReportInv++
+			config_global.VMC.Inventory.ReportInv++
 			// AlexM autoreporter move to config
-			if config_global.VMC.User.ReportInv > 10 {
-				config_global.VMC.User.ReportInv = 0
+			if config_global.VMC.Inventory.ReportInv > 10 {
+				config_global.VMC.Inventory.ReportInv = 0
 				_ = g.Tele.Report(ctx, false)
 			}
 		}

@@ -120,10 +120,6 @@ func (t *tele) RoboSendState(s tele_api.State) {
 	t.marshalAndSendMessage(&rm)
 }
 
-func (t *tele) RoboSendBroken() {
-	t.RoboSendState(tele_api.State_Broken)
-}
-
 func (t *tele) marshalAndSendMessage(m proto.Message) {
 	payload, err := proto.Marshal(m)
 	if err != nil {

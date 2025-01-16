@@ -40,6 +40,7 @@ import (
 // потом из карты переноситья в рабочий масив
 
 type Inventory struct {
+	ReportInv      int
 	log            *log2.Log
 	mu             sync.RWMutex
 	File           string       `hcl:"stock_file,optional"`

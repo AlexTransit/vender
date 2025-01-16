@@ -59,7 +59,6 @@ type UIUser struct {
 	QrText             string
 	UiState            uint32
 	Lock               bool
-	ReportInv          int
 	DirtyMoney         currency.Amount
 	KeyboardReadEnable bool
 	menu_config.UIMenuStruct

@@ -48,7 +48,7 @@ func (g *Global) VmcStop(ctx context.Context, errorMessage ...string) {
 }
 
 func (g *Global) VmcStopWOInitRequared(ctx context.Context, errorMessage ...string) {
-	g.SendBroken(errorMessage...)
+	g.SendNotWork(tele_api.State_Shutdown, errorMessage...)
 	watchdog.Disable()
 	g.Log.Infof("--- event vmc stop ---")
 	go func() {
@@ -174,9 +174,9 @@ func (g *Global) initDisplay() {
 }
 
 // send broken message
-func (g *Global) SendBroken(errorMessage ...string) {
+func (g *Global) SendNotWork(s tele_api.State, errorMessage ...string) {
 	rm := tele_api.FromRoboMessage{
-		State: tele_api.State_Broken,
+		State: s,
 	}
 	if errorMessage != nil {
 		rm.Err = &tele_api.Err{
