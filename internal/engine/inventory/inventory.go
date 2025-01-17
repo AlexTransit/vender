@@ -85,7 +85,9 @@ func (inv *Inventory) GetStockByingredientName(name string) *Stock {
 			return &inv.Stocks[i]
 		}
 	}
-	return nil
+	inv.log.Errorf("ingedisent (%v) not found in config", name)
+	panic("ingredient not found")
+	// return nil
 }
 
 func (inv *Inventory) Init(ctx context.Context, e *engine.Engine) (errs error) {
