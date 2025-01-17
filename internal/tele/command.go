@@ -91,6 +91,7 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 			return
 		}
 		config_global.VMC.User.DirtyMoney = currency.Amount(m.MakeOrder.Amount)
+		config_global.VMC.User.SelectedItem.Price = config_global.VMC.User.DirtyMoney
 	case tele_api.OrderStatus_doTransferred: // TODO execute external order. сделать внешний заказ
 		// check validity, price. проверить валидность, цену
 		if currentRobotState != tele_api.State_Nominal ||
