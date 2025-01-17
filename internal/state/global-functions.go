@@ -9,7 +9,6 @@ import (
 	"time"
 
 	config_global "github.com/AlexTransit/vender/internal/config"
-	"github.com/AlexTransit/vender/internal/engine/inventory"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
@@ -64,24 +63,6 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context, errorMessage ...stri
 	g.Alive.Wait()
 	g.Log.Infof("--- vmc stop ---")
 	os.Exit(0)
-}
-
-func (g *Global) prepareInventory() {
-	// put overrided stock to stock
-	for _, v := range g.Config.Inventory.XXX_Ingredient {
-		g.Inventory.Ingredient = append(g.Inventory.Ingredient, v)
-	}
-	g.Config.Inventory.XXX_Ingredient = nil
-
-	for _, v := range g.Config.Inventory.XXX_Stocks {
-		s := inventory.Stock{}
-		s = v
-		s.Log = g.Log
-		s.Ingredient = g.Inventory.GetIngredientByName(v.XXX_Ingredient)
-		s.XXX_Ingredient = ""
-		g.Inventory.Stocks = append(g.Inventory.Stocks, s)
-	}
-	g.Config.Inventory.XXX_Stocks = nil
 }
 
 func (g *Global) RunBashSript(script string) (err error) {
