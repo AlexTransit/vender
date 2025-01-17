@@ -86,12 +86,12 @@ func (g *Global) Init(ctx context.Context, cfg *config_global.Config) (err error
 	g.Inventory = &g.Config.Inventory
 	// go helpers.WrapErrChan(&wg, errch, g.initDisplay) // AlexM хрень переделать
 	g.initDisplay()
-	g.prepareInventory()
+	// g.prepareInventory()
 	// g.Inventory.InventoryLoad()
 	err = g.initEngine()
 	// go helpers.WrapErrChan(&wg, errch, g.initEngine)
 	// go helpers.WrapErrChan(&wg, errch, func() error { return g.initInventory(ctx) }) // storage read
-	if err := g.Inventory.Init(ctx, g.Engine); err != nil {
+	if err := g.Inventory.Init(ctx, g.Engine, g.Log); err != nil {
 		return err
 	}
 	g.RegisterCommands(ctx)

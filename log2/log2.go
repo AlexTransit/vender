@@ -290,7 +290,7 @@ func (lg *Log) Errorf(format string, args ...interface{}) {
 		return
 	}
 	if errfun := lg.loadErrorFunc(); errfun != nil {
-		e := fmt.Errorf(fmt.Sprintf(format, args...))
+		e := fmt.Errorf(format, args...)
 		errfun(e)
 	}
 }
@@ -309,7 +309,7 @@ func (lg *Log) Fatal(args ...interface{}) {
 	if lg.fatalf != nil {
 		lg.fatalf(s)
 	} else {
-		lg.Logf(LOG_ERR, "fatal: "+s)
+		lg.Logf(LOG_ERR, "fatal: %s", s)
 		os.Exit(1)
 	}
 }

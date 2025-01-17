@@ -44,8 +44,15 @@ func (dv *DeviceValve) init(ctx context.Context) (err error) {
 	dv.proto2BusyMask = valvePollBusy
 	dv.proto2IgnoreMask = valvePollNotHot
 	dv.Generic.Init(ctx, 0xc0, "valve", proto2)
-	// dv.waterStock = g.Inventory.Stocks["water"]
-	dv.waterStock = g.Inventory.GetStockByingredientName("water")
+	// FIXME ALexM убрать управление складом из конечной модуля клапанов
+	waterStock, ok := g.Inventory.GetStockByingredientName("water")
+	if !ok {
+		dv.log.Error("water consumption is not taken into account")
+		waterStock = &inventory.Stock{
+			Ingredient: &inventory.Ingredient{},
+		}
+	}
+	dv.waterStock = waterStock
 	g.Engine.RegisterNewFuncAgr("add.water_hot(?)", func(ctx context.Context, arg engine.Arg) error { return dv.waterRun(waterHot, uint8(arg.(int16))) })
 	g.Engine.RegisterNewFuncAgr("add.water_cold(?)", func(ctx context.Context, arg engine.Arg) error { return dv.waterRun(waterCold, uint8(arg.(int16))) })
 	g.Engine.RegisterNewFuncAgr("add.water_espresso(?)", func(ctx context.Context, arg engine.Arg) error { return dv.waterRun(waterEspresso, uint8(arg.(int16))) })
@@ -80,6 +87,11 @@ const (
 	waterCold     = byte(0x02)
 	waterEspresso = byte(0x03)
 )
+
+func (dv *DeviceValve) SetStore() bool {
+	fmt.Printf("\033[41m %v \033[0m\n", dv)
+	return true
+}
 
 func waterTypeString(waterType byte) string {
 	switch waterType {

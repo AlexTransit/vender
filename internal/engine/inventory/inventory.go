@@ -69,33 +69,31 @@ type Ingredient struct {
 // should not use built-in type string as key for value; define your own type to avoid collisions (SA1029)
 type CTXkey string
 
-func (inv *Inventory) GetIngredientByName(ingredientName string) *Ingredient {
+func (inv *Inventory) GetIngredientByName(ingredientName string) (*Ingredient, bool) {
 	for i, v := range inv.Ingredient {
 		if v.Name == ingredientName {
-			return &inv.Ingredient[i] // sucsess patch
+			return &inv.Ingredient[i], true // sucsess patch
 		}
 	}
-	inv.log.Errorf("ingredient:%s not found in config", ingredientName)
-	return nil
+	inv.log.Errorf("ingedient (%v) not found in config", ingredientName)
+	return nil, false
 }
 
-func (inv *Inventory) GetStockByingredientName(name string) *Stock {
+func (inv *Inventory) GetStockByingredientName(name string) (*Stock, bool) {
 	for i, v := range inv.Stocks {
 		if v.Ingredient.Name == name {
-			return &inv.Stocks[i]
+			return &inv.Stocks[i], true
 		}
 	}
-	inv.log.Errorf("ingedisent (%v) not found in config", name)
-	panic("ingredient not found")
-	// return nil
+	inv.log.Errorf("ingedient (%v) not included in any stock", name)
+	return nil, false
 }
 
-func (inv *Inventory) Init(ctx context.Context, e *engine.Engine) (errs error) {
-	inv.log = log2.ContextValueLogger(ctx)
+func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, log *log2.Log) (errs error) {
+	inv.log = log
 	inv.mu.Lock()
 	defer inv.mu.Unlock()
-	// errs := make([]error, 0)
-	// sd := root + "/inventory"
+	inv.prepareInventory()
 	fp := filepath.Dir(inv.File)
 	if _, err := os.Stat(fp); os.IsNotExist(err) {
 		errs = os.MkdirAll(fp, os.ModePerm)
@@ -138,6 +136,26 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine) (errs error) {
 		e.Register(doSpendArg.Name, doSpendArg)
 	}
 	return errs
+}
+
+func (inv *Inventory) prepareInventory() {
+	// put overrided stock to stock
+	for _, v := range inv.XXX_Ingredient {
+		inv.Ingredient = append(inv.Ingredient, v)
+	}
+	inv.XXX_Ingredient = nil
+
+	for _, v := range inv.XXX_Stocks {
+		s := Stock{}
+		s = v
+		s.Log = inv.log
+		var ok bool
+		if s.Ingredient, ok = inv.GetIngredientByName(v.XXX_Ingredient); ok {
+			inv.Stocks = append(inv.Stocks, s)
+		}
+		s.XXX_Ingredient = ""
+	}
+	inv.XXX_Stocks = nil
 }
 
 // store file
@@ -200,7 +218,7 @@ func (inv *Inventory) Iter(fun func(s *Stock)) {
 }
 
 func (inv *Inventory) WithTuning(ctx context.Context, ingredientName string, adj float32) (context.Context, error) {
-	if s := inv.GetStockByingredientName(ingredientName); s != nil {
+	if s, ok := inv.GetStockByingredientName(ingredientName); ok {
 		if s.Ingredient.TuneKey != "" {
 			tk := CTXkey(s.Ingredient.TuneKey)
 			ctx = context.WithValue(ctx, tk, adj)
