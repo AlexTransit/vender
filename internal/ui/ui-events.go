@@ -41,7 +41,7 @@ func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *b
 		credit := ui.ms.GetCredit()
 		if credit > 0 {
 			// FIXME alexm
-			sound.PlayFile("trash.mp3")
+			sound.PlayFileNoWait("trash.mp3")
 			ui.display.SetLines("  :-(", fmt.Sprintf(" -%v", credit.Format100I()))
 			err := ui.ms.ReturnMoney()
 			ui.g.Error(errors.Trace(err))
