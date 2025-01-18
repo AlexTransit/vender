@@ -124,7 +124,7 @@ func (ms *MoneySystem) ReturnMoney() error {
 	ms.giftCredit = 0
 	if cash > 0 {
 		ms.Log.Infof("return money (%v)", cash)
-		return ms.coin.ReturnMoney(cash)
+		return ms.coin.Dispense(cash)
 	}
 	return nil
 }
