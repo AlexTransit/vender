@@ -168,7 +168,7 @@ func (t *tele) messageShowQr(ctx context.Context, m *tele_api.ToRoboMessage) {
 			g.Log.Infof("show paymeng QR for order:%s", m.ShowQR.OrderId)
 			g.ShowQR(m.ShowQR.QrText)
 			l1 := fmt.Sprintf(g.Config.UI_config.Front.MsgRemotePay+g.Config.UI_config.Front.MsgPrice, currency.Amount(config_global.VMC.User.QRPayAmount).Format100I())
-			g.Hardware.HD44780.Display.SetLines(l1, config_global.VMC.User.TDL2)
+			g.Hardware.HD44780.Display.SetLine(1, l1)
 		}
 	case tele_api.ShowQR_receipt:
 		t := m.ShowQR.QrText

@@ -11,7 +11,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"log/syslog"
 	"os"
@@ -67,7 +66,7 @@ type Log struct {
 
 func NewStderr(level Level) *Log { return NewWriter(os.Stderr, level) }
 func NewWriter(w io.Writer, level Level) *Log {
-	if w == ioutil.Discard {
+	if w == io.Discard {
 		return nil
 	}
 	var lg Log

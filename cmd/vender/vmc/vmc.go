@@ -74,7 +74,6 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 	if err := ui.Init(ctx); err != nil {
 		return errors.Annotate(err, "ui Init()")
 	}
-	g.CheckMenuExecution()
 	g.Log.Debugf("VMC init complete")
 
 	ui.Loop(ctx)
