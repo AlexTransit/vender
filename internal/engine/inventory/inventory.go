@@ -115,26 +115,27 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, log *log2.Log)
 			F:    s.spendArg,
 		}
 		addName := fmt.Sprintf("add.%s(?)", s.Ingredient.Name)
+		e.Register(doSpendArg.Name, doSpendArg)
 		if s.RegisterAdd != "" {
 			doAdd, err := e.ParseText(addName, s.RegisterAdd)
 			if err != nil {
-				return errors.Join(errs, fmt.Errorf("stock(%s) register_add(%s) parse error(%v)", s.Ingredient.Name, s.RegisterAdd, err))
+				errs = errors.Join(errs, fmt.Errorf("stock(%s) register_add(%s) parse error(%v)", s.Ingredient.Name, s.RegisterAdd, err))
+				continue
 			}
 			_, ok, err := engine.ArgApply(doAdd, 0)
 			switch {
 			case err == nil && !ok:
-				return errors.Join(errs, fmt.Errorf("stock=%s register_add=%s no free argument", s.Ingredient.Name, s.RegisterAdd))
+				errs = errors.Join(errs, fmt.Errorf("stock=%s register_add=%s no free argument", s.Ingredient.Name, s.RegisterAdd))
 
 			case (err == nil && ok) || engine.IsNotResolved(err): // success path
 				e.Register(addName, inv.Stocks[i].Wrap(doAdd))
 
 			case err != nil:
-				return errors.Join(err, fmt.Errorf("stock=%s register_add=%s error(%v)", s.Ingredient.Name, s.RegisterAdd, err))
+				errs = errors.Join(err, fmt.Errorf("stock=%s register_add=%s error(%v)", s.Ingredient.Name, s.RegisterAdd, err))
 			}
-
 		}
-		e.Register(doSpendArg.Name, doSpendArg)
 	}
+	inv.InventoryLoad()
 	return errs
 }
 
