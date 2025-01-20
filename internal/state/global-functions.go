@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"time"
 
+	"github.com/AlexTransit/vender/currency"
 	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
@@ -25,8 +26,17 @@ func (g *Global) CheckMenuExecution() {
 		if e := v.Doer.Validate(); e != nil {
 			g.Log.Errorf("scenario menu code:%s error (%v)", v.Code, e)
 		}
+		c := v.Doer.Calculation()
+		aa := int(math.Round(c * 100))
+		if v.Price <= currency.Amount(aa) {
+			g.Log.Errorf("!!!!best price code:%s price:%v cost:%v", v.Code, v.Price, aa)
+		}
+		g.Log.Infof("menu - code:%s price:%v cost:%v", v.Code, v.Price, aa)
 	}
 	g.Inventory.InventoryLoad()
+}
+
+func (g *Global) ListMenuPriceCost() {
 }
 
 func (g *Global) UpgradeVender() {
