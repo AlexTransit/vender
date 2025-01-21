@@ -177,7 +177,7 @@ func (bv *BillValidator) BillReset() (err error) {
 
 func (bv *BillValidator) setup() error {
 	const expectLength = 27
-	var billFactors [16]uint8
+	// var billFactors [16]uint8
 	if err := bv.Device.TxReadSetup(); err != nil {
 		return oerr.Trace(err)
 	}
@@ -204,7 +204,7 @@ func (bv *BillValidator) setup() error {
 			bv.Log.Errorf("CRITICAL bill SETUP type factors count=%d > expected=%d", len(bs[11:]), 16)
 			break
 		}
-		billFactors[i] = sf
+		// billFactors[i] = sf
 		bv.nominals[i] = currency.Nominal(sf) * scalingFinal
 	}
 	bv.Log.Debugf("Bill Type calc. nominals:  %3v", bv.nominals)
