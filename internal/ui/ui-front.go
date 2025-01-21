@@ -51,10 +51,10 @@ func (ui *UI) checkTemperature() (correct bool, stateIfNotCorrect types.UiState)
 			return false, types.StateBroken
 		}
 		if curTemp < int32(ui.g.Config.Hardware.Evend.Valve.TemperatureHot-10) {
-			line1 := fmt.Sprintf(ui.g.Config.UI_config.Front.MsgWaterTemp, curTemp)
+			line2 := fmt.Sprintf(ui.g.Config.UI_config.Front.MsgWaterTemp, curTemp)
 			evend.Cup.LightOff() // light off
-			if config_global.VMC.User.TDL1 != line1 {
-				ui.display.SetLines(line1, ui.g.Config.UI_config.Front.MsgWait)
+			if ui.g.Hardware.HD44780.Display.GetLine(2) != line2 {
+				ui.display.SetLines(ui.g.Config.UI_config.Front.MsgWait, line2)
 				rm := tele_api.FromRoboMessage{
 					State: tele_api.State_TemperatureProblem,
 					RoboHardware: &tele_api.RoboHardware{

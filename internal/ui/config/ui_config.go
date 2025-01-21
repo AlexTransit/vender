@@ -54,8 +54,6 @@ type TestsStruct struct {
 }
 
 type UIUser struct {
-	TDL1               string
-	TDL2               string
 	QrText             string
 	UiState            uint32
 	Lock               bool
