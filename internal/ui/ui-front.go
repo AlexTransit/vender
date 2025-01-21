@@ -138,7 +138,7 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 		case types.EventAccept:
 			return types.StateFrontAccept
 		case types.EventInput: // from keyboard
-			if nextState := ui.parseKeyEvent(e, &l1, &l2, &tuneScreen); nextState != types.StateDoesNotChange {
+			if nextState := ui.parseKeyEvent(e, &l1, &l2, &tuneScreen, alive); nextState != types.StateDoesNotChange {
 				return nextState
 			}
 		case types.EventMoneyPreCredit, types.EventMoneyCredit: // from validators

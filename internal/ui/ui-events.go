@@ -8,7 +8,7 @@ import (
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
 	tele_api "github.com/AlexTransit/vender/tele"
-	"github.com/juju/errors"
+	"github.com/temoto/alive/v2"
 )
 
 func (ui *UI) linesCreate(l1 *string, l2 *string, tuneScreen *bool) {
@@ -28,7 +28,7 @@ func (ui *UI) linesCreate(l1 *string, l2 *string, tuneScreen *bool) {
 	*tuneScreen = false
 }
 
-func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *bool) (nextState types.UiState) {
+func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *bool, alive *alive.Alive) (nextState types.UiState) {
 	sound.PlayKeyBeep()
 	rm := tele_api.FromRoboMessage{}
 	defer func() {
@@ -37,6 +37,7 @@ func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *b
 		}
 	}()
 	if input.IsMoneyAbort(&e.Input) {
+		alive.Stop()
 		ui.g.Log.Infof("money abort event.")
 		credit := ui.ms.GetCredit()
 		if credit > 0 {
@@ -44,7 +45,7 @@ func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *b
 			sound.PlayFileNoWait("trash.mp3")
 			ui.display.SetLines("  :-(", fmt.Sprintf(" -%v", credit.Format100I()))
 			err := ui.ms.ReturnMoney()
-			ui.g.Error(errors.Trace(err))
+			ui.g.Error(err)
 		}
 		return types.StateFrontEnd
 	}
