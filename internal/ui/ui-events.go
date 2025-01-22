@@ -68,7 +68,7 @@ func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *b
 	}
 	if currentState == tele_api.State_WaitingForExternalPayment { // ignore key press
 		ui.g.Log.Info("qr selected. ignore key")
-		*l1 = config_global.VMC.User.TDL1
+		*l1 = ui.g.Hardware.HD44780.Display.GetLine(1)
 		return types.StateDoesNotChange
 	}
 	if currentState != tele_api.State_Client {
