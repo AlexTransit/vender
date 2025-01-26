@@ -24,6 +24,7 @@ import (
 type Global struct {
 	Alive        *alive.Alive
 	BuildVersion string
+	GlobalError  string
 	Config       *config_global.Config
 	Engine       *engine.Engine
 	Hardware     hardware // hardware.go
@@ -48,6 +49,16 @@ func GetGlobal(ctx context.Context) *Global {
 		return g
 	}
 	panic(fmt.Sprintf("context['%s'] expected type *Global actual=%#v", ContextKey, v))
+}
+
+// returns and cleanses the g.globalError
+func (g *Global) GetGlobalErr() (err string) {
+	if g.GlobalError == "" {
+		return
+	}
+	err = g.GlobalError
+	g.GlobalError = ""
+	return
 }
 
 func (g *Global) Init(ctx context.Context, cfg *config_global.Config) (err error) {
@@ -193,7 +204,8 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 	g.Engine.RegisterNewFunc(
 		"vmc.stop!",
 		func(ctx context.Context) error {
-			g.VmcStop(ctx, "command vmc.stop!")
+			g.GlobalError = "command vmc.stop!"
+			g.VmcStop(ctx)
 			return nil
 		},
 	)

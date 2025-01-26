@@ -49,15 +49,15 @@ func (g *Global) UpgradeVender() {
 	}()
 }
 
-func (g *Global) VmcStop(ctx context.Context, errorMessage ...string) {
+func (g *Global) VmcStop(ctx context.Context) {
 	if g.UI().GetUiState() != uint32(types.StateFrontSelect) {
 		watchdog.DevicesInitializationRequired()
 	}
-	g.VmcStopWOInitRequared(ctx, errorMessage...)
+	g.VmcStopWOInitRequared(ctx)
 }
 
-func (g *Global) VmcStopWOInitRequared(ctx context.Context, errorMessage ...string) {
-	g.SendNotWork(tele_api.State_Shutdown, errorMessage...)
+func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
+	g.SendNotWork(tele_api.State_Shutdown)
 	watchdog.Disable()
 	g.Log.Infof("--- event vmc stop ---")
 	go func() {
@@ -165,14 +165,14 @@ func (g *Global) initDisplay() {
 }
 
 // send broken message
-func (g *Global) SendNotWork(s tele_api.State, errorMessage ...string) {
+func (g *Global) SendNotWork(s tele_api.State) {
 	rm := tele_api.FromRoboMessage{
 		State: s,
 	}
-	if errorMessage != nil {
+	if g.GlobalError != "" {
 		rm.Err = &tele_api.Err{
 			Code:    0,
-			Message: errorMessage[0],
+			Message: g.GetGlobalErr(),
 		}
 	}
 	// if the order is not completed, the order is canceled
