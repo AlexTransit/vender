@@ -176,7 +176,7 @@ func broken(ctx context.Context) {
 }
 
 func showHelpCMD() {
-	fmt.Println("\n vender cmd sound - play file from /audio directory (mono 24000Hz)")
+	fmt.Println("\nvender cmd sound - play file from /audio directory (mono 24000Hz)")
 	fmt.Println("vender cmd text line1_text line2_text (use _ instead space)")
 	fmt.Println("vender cmd broken - broken mode")
 	fmt.Println("vender cmd inited - not release cup after start")
