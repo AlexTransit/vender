@@ -110,8 +110,9 @@ func CmdMain(ctx context.Context, a ...[]string) error {
 		os.Exit(0)
 	case "broken":
 		broken(ctx)
-	case "do_not_init":
+	case "inited":
 		watchdog.SetDeviceInited()
+		watchdog.UnsetBroken()
 	case "exitcode":
 		if len(args) < 3 || args[2] != "success" {
 			g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
@@ -166,6 +167,6 @@ func showHelpCMD() {
 	fmt.Println("\n vender cmd sound - play file from /audio directory (mono 24000Hz)")
 	fmt.Println("vender cmd text line1_text line2_text (use _ instead space)")
 	fmt.Println("vender cmd broken - broken mode")
-	fmt.Println("vender cmd do_not_init - not release cup after start")
+	fmt.Println("vender cmd initedt - not release cup after start")
 	fmt.Println("vender cmd exitcode $EXIT_STATUS $SERVICE_RESULT - use systemd service exit code and exit result. if result not `success` the script_if_broken in the config will run")
 }
