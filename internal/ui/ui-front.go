@@ -8,7 +8,6 @@ import (
 
 	"github.com/AlexTransit/vender/hardware/input"
 	"github.com/AlexTransit/vender/hardware/mdb/evend"
-	"github.com/AlexTransit/vender/helpers"
 	config_global "github.com/AlexTransit/vender/internal/config"
 	menu_vmc "github.com/AlexTransit/vender/internal/menu"
 	"github.com/AlexTransit/vender/internal/menu/menu_config"
@@ -18,7 +17,6 @@ import (
 	ui_config "github.com/AlexTransit/vender/internal/ui/config"
 	"github.com/AlexTransit/vender/internal/watchdog"
 	tele_api "github.com/AlexTransit/vender/tele"
-	"github.com/juju/errors"
 	"github.com/temoto/alive/v2"
 )
 
@@ -74,8 +72,16 @@ func (ui *UI) checkTemperature() (correct bool, stateIfNotCorrect types.UiState)
 }
 
 func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
+	config_global.VMC.User = ui_config.UIUser{
+		KeyboardReadEnable: true,
+		UIMenuStruct: menu_config.UIMenuStruct{
+			Cream: config_global.VMC.Engine.Menu.DefaultCream,
+			Sugar: config_global.VMC.Engine.Menu.DefaultSugar,
+		},
+	}
 	if config_global.VMC.Engine.NeedRestart { // after upgrade
-		ui.g.VmcStopWOInitRequared(ctx, "triger restart")
+		ui.g.GlobalError = "triger restart"
+		ui.g.VmcStopWOInitRequared(ctx)
 		return types.StateStop
 	}
 	if valid, nextState := ui.checkTemperature(); !valid {
@@ -84,14 +90,14 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 	watchdog.Refresh()
 	credit := ui.ms.GetCredit() / 100
 	if credit != 0 {
-		ui.g.Error(errors.Errorf("money timeout lost (%v)", credit))
+		ui.g.Log.Errorf("money timeout lost (%v)", credit)
 	}
 	ui.ms.ResetMoney()
 
 	ui.g.ClientEnd(ctx)
 	runtime.GC() // чистка мусора в памяти
 	if errs := ui.g.Engine.ExecList(ctx, "on_front_begin", ui.g.Config.Engine.OnFrontBegin); len(errs) != 0 {
-		ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_front_begin"))
+		ui.g.Log.Errorf("on_front_begin (%v)", errs)
 		watchdog.SetBroken()
 		return types.StateBroken
 	}
@@ -105,13 +111,6 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 
 	}
 	ui.g.Tele.RoboSendState(tele_api.State_Nominal)
-	config_global.VMC.User = ui_config.UIUser{
-		KeyboardReadEnable: true,
-		UIMenuStruct: menu_config.UIMenuStruct{
-			Cream: config_global.VMC.Engine.Menu.DefaultCream,
-			Sugar: config_global.VMC.Engine.Menu.DefaultSugar,
-		},
-	}
 	return types.StateFrontSelect
 }
 
@@ -248,11 +247,9 @@ func createScale(currentValue uint8, maximumValue uint8, defaultValue uint8) (ba
 }
 
 func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
-	// ui.g.Tele.RoboSendState(tele_api.State_Process)
 	ui.g.SendCooking()
 	moneysys := money.GetGlobal(ctx)
-
-	selected := config_global.VMC.User.SelectedItem.String()
+	selected := config_global.VMC.User.SelectedItem.Code
 
 	// FIXME AlexM заглушка пока не переделал
 	if config_global.VMC.User.PaymentMethod == 0 {
@@ -287,16 +284,10 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	if config_global.VMC.User.PaymentMethod == tele_api.PaymentMethod_Cash {
 		moneysys.ReturnDirty()
 	}
-	ui.g.SendNotWork(tele_api.State_Broken, "execute "+selected+err.Error())
+	ui.g.GlobalError = fmt.Sprintf("execute code:%s %v", selected, err)
 	watchdog.SetBroken()
 	return types.StateBroken
 }
-
-// func OrderMenuAndTune(o *tele_api.Order) {
-// 	o.MenuCode = config_global.VMC.User.SelectedItem.Code
-// 	o.Cream = TuneValueToByte(config_global.VMC.User.Cream, config_global.VMC.Engine.Menu.DefaultCream)
-// 	o.Sugar = TuneValueToByte(config_global.VMC.User.Sugar, config_global.VMC.Engine.Menu.DefaultCream)
-// }
 
 func TuneValueToByte(currentValue uint8, defaultValue uint8) []byte {
 	if currentValue == defaultValue {
@@ -305,63 +296,20 @@ func TuneValueToByte(currentValue uint8, defaultValue uint8) []byte {
 	return []byte{currentValue + 1}
 }
 
-func (ui *UI) onFrontTimeout(ctx context.Context) types.UiState {
-	// ui.g.Log.Debugf("ui state=%s result=%#v", ui.State().String(), ui.FrontResult)
-	// moneysys := money.GetGlobal(ctx)
-	// moneysys.save
-	_ = ctx
+func (ui *UI) onFrontTimeout(_ context.Context) types.UiState {
 	return types.StateFrontEnd
 }
 
 func (ui *UI) onFrontLock() types.UiState {
-	// ui.g.Hardware.Input.Enable(false)
-	// ui.display.SetLines(ui.g.Config.UI.Front.MsgStateLocked, "")
 	timeout := ui.frontResetTimeout
 	e := ui.wait(timeout)
 	switch e.Kind {
 	case types.EventService:
 		return types.StateServiceBegin
 	case types.EventTime:
-		// if ui.State() == StateFrontTune { // XXX onFrontTune
-		// 	return StateFrontSelect // "return to previous mode"
-		// }
 		return types.StateFrontTimeout
 	case types.EventBroken:
 		return types.StateBroken
-		// case types.EventFrontLock:
-		// 	if config_global.VMC.UIState() == uint32(types.StateBroken) {
-		// 		return types.StateBroken
-		// 	}
-		// 	config_global.VMC.User.Lock = false
-		// 	return types.StateFrontEnd
 	}
 	return types.StateFrontEnd
 }
-
-// // tightly coupled to len(alphabet)=4
-// func formatScale(value, min, max uint8, alphabet []byte) []byte {
-// 	var vicon [6]byte
-// 	switch value {
-// 	case min:
-// 		vicon[0], vicon[1], vicon[2], vicon[3], vicon[4], vicon[5] = 0, 0, 0, 0, 0, 0
-// 	case max:
-// 		vicon[0], vicon[1], vicon[2], vicon[3], vicon[4], vicon[5] = 3, 3, 3, 3, 3, 3
-// 	default:
-// 		rng := uint16(max) - uint16(min)
-// 		part := uint8((float32(value-min) / float32(rng)) * 24)
-// 		// log.Printf("scale(%d,%d..%d) part=%d", value, min, max, part)
-// 		for i := 0; i < len(vicon); i++ {
-// 			if part >= 4 {
-// 				vicon[i] = 3
-// 				part -= 4
-// 			} else {
-// 				vicon[i] = part
-// 				break
-// 			}
-// 		}
-// 	}
-// 	for i := 0; i < len(vicon); i++ {
-// 		vicon[i] = alphabet[vicon[i]]
-// 	}
-// 	return vicon[:]
-// }

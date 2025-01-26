@@ -42,9 +42,9 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGABRT)
 	go func() {
 		sig := <-sigs
-		m := fmt.Sprintf("system signal - %v", sig)
-		g.Log.Info(m)
-		g.VmcStop(ctx, m)
+		g.GlobalError = fmt.Sprintf("system signal - %v", sig)
+		g.Log.Info(g.GlobalError)
+		g.VmcStop(ctx)
 	}()
 	subcmd.SdNotify(daemon.SdNotifyReady)
 
@@ -110,7 +110,7 @@ func CmdMain(ctx context.Context, a ...[]string) error {
 		os.Exit(0)
 	case "broken":
 		broken(ctx)
-	case "no_init":
+	case "do_not_init":
 		watchdog.SetDeviceInited()
 	case "exitcode":
 		if len(args) < 3 || args[2] != "success" {
@@ -166,6 +166,6 @@ func showHelpCMD() {
 	fmt.Println("\n vender cmd sound - play file from /audio directory (mono 24000Hz)")
 	fmt.Println("vender cmd text line1_text line2_text (use _ instead space)")
 	fmt.Println("vender cmd broken - broken mode")
-	fmt.Println("vender cmd no_init - not relecase cup after start")
+	fmt.Println("vender cmd do_not_init - not release cup after start")
 	fmt.Println("vender cmd exitcode $EXIT_STATUS $SERVICE_RESULT - use systemd service exit code and exit result. if result not `success` the script_if_broken in the config will run")
 }

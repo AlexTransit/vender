@@ -276,7 +276,8 @@ func (ui *UI) onServiceReboot(ctx context.Context) types.UiState {
 	switch {
 	case e.Key == '1':
 		ui.display.SetLines("reboot", "in progress") // FIXME extract message string
-		ui.g.VmcStop(ctx, "reboot from menu")
+		ui.g.GlobalError = "reboot from menu"
+		ui.g.VmcStop(ctx)
 		return types.StateStop
 	}
 	return types.StateServiceMenu
