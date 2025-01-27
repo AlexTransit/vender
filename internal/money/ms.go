@@ -236,13 +236,17 @@ func SetCurrentPrice(ctx context.Context, p currency.Amount) context.Context {
 	return ck
 }
 
-func (ms *MoneySystem) XXX_InjectCoin(n currency.Nominal) error {
-	ms.lk.Lock()
-	defer ms.lk.Unlock()
-	ms.Log.Debugf("XXX_InjectCoin n=%d", n)
-	ms.coinCredit.MustAdd(n, 1)
-	ms.dirty += currency.Amount(n)
-	return nil
+// func (ms *MoneySystem) XXX_InjectCoin(n currency.Nominal) error {
+// 	ms.lk.Lock()
+// 	defer ms.lk.Unlock()
+// 	ms.Log.Debugf("XXX_InjectCoin n=%d", n)
+// 	ms.coinCredit.MustAdd(n, 1)
+// 	ms.dirty += currency.Amount(n)
+// 	return nil
+// }
+
+func (ms *MoneySystem) GetCoinsCountInTube() *currency.NominalGroup {
+	return ms.coin.Tubes()
 }
 
 func (ms *MoneySystem) AddDirty(dirty currency.Amount) {
