@@ -17,6 +17,8 @@ import (
 	"github.com/temoto/alive/v2"
 )
 
+var CoinValidator *CoinAcceptor
+
 const (
 	TypeCount = 16
 )
@@ -78,22 +80,14 @@ type CoinAcceptor struct { //nolint:maligned
 	tub     []tube
 	tubes   currency.NominalGroup
 }
+
 type tube struct {
 	nominal  currency.Nominal
 	count    uint
 	tubeFull bool
 }
 
-func (ca *CoinAcceptor) tubeStatus() (status string) {
-	status = ca.dispenseStrategy.String()
-	sort.Slice(ca.tub[:], func(i, j int) bool {
-		return ca.tub[i].nominal < ca.tub[j].nominal
-	})
-	for _, v := range ca.tub {
-		status += fmt.Sprintf(" %s(%d)full-%v", v.nominal.Format100I(), v.count, v.tubeFull)
-	}
-	return status
-}
+const deviceName = "coin"
 
 type CoinCommand byte
 
@@ -101,8 +95,6 @@ const (
 	noCommand CoinCommand = iota
 	Stop
 )
-
-// var packetPayoutStatus = mdb.MustPacketFromHex("0f03", true)
 
 var (
 	ErrNoCredit      = errors.New("no Credit")
@@ -112,7 +104,9 @@ var (
 	ErrSlugs         = errors.New("slugs")
 )
 
-func (ca *CoinAcceptor) init(ctx context.Context) error {
+func InitDevice(ctx context.Context) error {
+	CoinValidator = new(CoinAcceptor)
+	ca := CoinValidator
 	g := state.GetGlobal(ctx)
 	mdbus, err := g.Mdb()
 	if err != nil {
@@ -144,6 +138,17 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 		ca.Log.Info(ca.tubeStatus())
 	}
 	return err
+}
+
+func (ca *CoinAcceptor) tubeStatus() (status string) {
+	status = ca.dispenseStrategy.String()
+	sort.Slice(ca.tub[:], func(i, j int) bool {
+		return ca.tub[i].nominal < ca.tub[j].nominal
+	})
+	for _, v := range ca.tub {
+		status += fmt.Sprintf(" %s(%d)full-%v", v.nominal.Format100I(), v.count, v.tubeFull)
+	}
+	return status
 }
 
 // test dispense. dispence all nominals
