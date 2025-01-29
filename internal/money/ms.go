@@ -138,7 +138,7 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 			time.Sleep(10 * time.Second)
 			alive.Stop()
 			alive.Wait()
-			ms.CoinValidator.TubeStatus()
+			ms.CoinValidator.ReadTubeStatus()
 			return nil
 		},
 	}
@@ -196,7 +196,7 @@ func (ms *MoneySystem) TeleChange(ctx context.Context) *tele_api.Telemetry_Money
 		// TODO support bill recycler Bills: make(map[uint32]uint32, bill.TypeCount),
 		Coins: make(map[uint32]uint32, coin.TypeCount),
 	}
-	if err := ms.CoinValidator.TubeStatus(); err != nil {
+	if err := ms.CoinValidator.ReadTubeStatus(); err != nil {
 		state.GetGlobal(ctx).Error(oerr.Annotate(err, "TeleChange"))
 	}
 	ms.CoinValidator.Tubes().ToMapUint32(pb.Coins)
