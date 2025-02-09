@@ -17,6 +17,8 @@ import (
 	"github.com/temoto/alive/v2"
 )
 
+var CoinValidator *CoinAcceptor
+
 const (
 	TypeCount = 16
 )
@@ -75,25 +77,17 @@ type CoinAcceptor struct { //nolint:maligned
 
 	// dynamic state useful for external code
 	tubesmu sync.Mutex
-	tub     []tube
+	Tub     []Tube
 	tubes   currency.NominalGroup
 }
-type tube struct {
-	nominal  currency.Nominal
-	count    uint
-	tubeFull bool
+
+type Tube struct {
+	Nominal  currency.Nominal
+	Count    uint
+	TubeFull bool
 }
 
-func (ca *CoinAcceptor) tubeStatus() (status string) {
-	status = ca.dispenseStrategy.String()
-	sort.Slice(ca.tub[:], func(i, j int) bool {
-		return ca.tub[i].nominal < ca.tub[j].nominal
-	})
-	for _, v := range ca.tub {
-		status += fmt.Sprintf(" %s(%d)full-%v", v.nominal.Format100I(), v.count, v.tubeFull)
-	}
-	return status
-}
+const deviceName = "coin"
 
 type CoinCommand byte
 
@@ -101,8 +95,6 @@ const (
 	noCommand CoinCommand = iota
 	Stop
 )
-
-// var packetPayoutStatus = mdb.MustPacketFromHex("0f03", true)
 
 var (
 	ErrNoCredit      = errors.New("no Credit")
@@ -112,7 +104,9 @@ var (
 	ErrSlugs         = errors.New("slugs")
 )
 
-func (ca *CoinAcceptor) init(ctx context.Context) error {
+func InitDevice(ctx context.Context) error {
+	CoinValidator = new(CoinAcceptor)
+	ca := CoinValidator
 	g := state.GetGlobal(ctx)
 	mdbus, err := g.Mdb()
 	if err != nil {
@@ -130,7 +124,7 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 	g.Engine.RegisterNewFunc(
 		"coin.status",
 		func(ctx context.Context) error {
-			ca.Log.Info(ca.tubeStatus())
+			ca.Log.Info(ca.TubeStatusString())
 			return nil
 		},
 	)
@@ -141,16 +135,37 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 		}})
 	err = ca.CoinReset()
 	if err == nil {
-		ca.Log.Info(ca.tubeStatus())
+		ca.Log.Infof("coin dispense strategy:%s tubes:%s", ca.dispenseStrategy.String(), ca.TubeStatusString())
 	}
 	return err
 }
 
+func (ca *CoinAcceptor) TubeStatusString() (coinCount []string) {
+	// status = ca.dispenseStrategy.String()
+	ca.ReadTubeStatus()
+	sort.Slice(ca.Tub[:], func(i, j int) bool {
+		return ca.Tub[i].Nominal < ca.Tub[j].Nominal
+	})
+	coinCount = make([]string, len(ca.Tub))
+	for i, v := range ca.Tub {
+		coinCount[i] = fmt.Sprintf("%s%s%d", v.Nominal.Format100I(), fullOrNo(v.TubeFull), v.Count)
+	}
+	return coinCount
+}
+
+func fullOrNo(tubefull bool) string {
+	if tubefull {
+		return "*"
+	} else {
+		return "-"
+	}
+}
+
 // test dispense. dispence all nominals
 func (ca *CoinAcceptor) TestingDispense() {
-	for _, n := range ca.tub {
+	for _, n := range ca.Tub {
 		// fmt.Printf("\033[41m %v %v \033[0m\n", i, n.nominal)
-		_, _ = ca.DispenceCoin(n.nominal)
+		_, _ = ca.DispenceCoin(n.Nominal)
 	}
 }
 
@@ -194,44 +209,44 @@ func (ca *CoinAcceptor) Dispense(amount currency.Amount) (err error) {
 }
 
 func (ca *CoinAcceptor) nominalMaximumNumberOfCoins(notMore currency.Amount) (n currency.Nominal, err error) {
-	sort.Slice(ca.tub[:], func(i, j int) bool {
-		return ca.tub[i].count > ca.tub[j].count
+	sort.Slice(ca.Tub[:], func(i, j int) bool {
+		return ca.Tub[i].Count > ca.Tub[j].Count
 	})
-	for _, v := range ca.tub {
-		if notMore >= currency.Amount(v.nominal) {
-			return v.nominal, nil
+	for _, v := range ca.Tub {
+		if notMore >= currency.Amount(v.Nominal) {
+			return v.Nominal, nil
 		}
 	}
 	return ca.maximumAvailableNominal(notMore)
 }
 
 func (ca *CoinAcceptor) nominalWithFilledTube(notMore currency.Amount) (n currency.Nominal, err error) {
-	for _, v := range ca.tub {
-		if notMore >= currency.Amount(v.nominal) && v.tubeFull {
-			return v.nominal, nil
+	for _, v := range ca.Tub {
+		if notMore >= currency.Amount(v.Nominal) && v.TubeFull {
+			return v.Nominal, nil
 		}
 	}
 	return ca.maximumAvailableNominal(notMore)
 }
 
 func (ca *CoinAcceptor) maximumAvailableNominal(notMore currency.Amount) (n currency.Nominal, err error) {
-	if len(ca.tub) <= 1 {
+	if len(ca.Tub) <= 1 {
 		return 0, fmt.Errorf("no money to dispense (%s)", notMore.Format100I())
 	}
-	sort.Slice(ca.tub[:], func(i, j int) bool {
-		return ca.tub[i].nominal > ca.tub[j].nominal
+	sort.Slice(ca.Tub[:], func(i, j int) bool {
+		return ca.Tub[i].Nominal > ca.Tub[j].Nominal
 	})
-	for _, v := range ca.tub {
-		if notMore >= currency.Amount(v.nominal) {
-			return v.nominal, nil
+	for _, v := range ca.Tub {
+		if notMore >= currency.Amount(v.Nominal) {
+			return v.Nominal, nil
 		}
 	}
-	n = ca.tub[len(ca.tub)-1].nominal // get maximum avalible
+	n = ca.Tub[len(ca.Tub)-1].Nominal // get maximum avalible
 	return n, fmt.Errorf("return bigged need:%s returned:%s", notMore.Format100I(), n.Format100I())
 }
 
 func (ca *CoinAcceptor) DispenceCoin(nominal currency.Nominal) (complete bool, err error) {
-	if err = ca.TubeStatus(); err != nil {
+	if err = ca.ReadTubeStatus(); err != nil {
 		return false, err
 	}
 	inTubeBefore := ca.tubes.InTube(nominal)
@@ -255,7 +270,7 @@ func (ca *CoinAcceptor) DispenceCoin(nominal currency.Nominal) (complete bool, e
 		err = errors.Join(err, errp)
 		if emptyResponse {
 			// stop poll
-			if ert := ca.TubeStatus(); err != nil {
+			if ert := ca.ReadTubeStatus(); err != nil {
 				err = errors.Join(err, ert)
 				return false, err
 			}
@@ -330,7 +345,7 @@ func (ca *CoinAcceptor) readSetupAndStatus() (err error) {
 	if !diagResult.OK() {
 		ca.TeleError(errors.New("coin reset error:" + diagResult.Error()))
 	}
-	if err = ca.TubeStatus(); err != nil {
+	if err = ca.ReadTubeStatus(); err != nil {
 		return err
 	}
 	return nil
@@ -512,7 +527,7 @@ func (ca *CoinAcceptor) CommandFeatureEnable(requested Features) error {
 	return nil
 }
 
-func (ca *CoinAcceptor) TubeStatus() error {
+func (ca *CoinAcceptor) ReadTubeStatus() error {
 	const tag = deviceName + ".tubestatus"
 	const expectLengthMin = 2
 	request := mdb.MustPacketFromHex("0a", true)
@@ -529,7 +544,7 @@ func (ca *CoinAcceptor) TubeStatus() error {
 	ca.tubesmu.Lock()
 	defer ca.tubesmu.Unlock()
 	ca.tubes.Clear()
-	ca.tub = make([]tube, 0)
+	ca.Tub = make([]Tube, 0)
 	ct := make(map[uint32]bool)
 	for coinType := uint8(0); coinType < TypeCount; coinType++ {
 		full := (fulls & (1 << coinType)) != 0
@@ -545,7 +560,7 @@ func (ca *CoinAcceptor) TubeStatus() error {
 		}
 	}
 	for k, v := range ct {
-		ca.tub = append(ca.tub, tube{currency.Nominal(k), ca.tubes.InTube(currency.Nominal(k)), v})
+		ca.Tub = append(ca.Tub, Tube{currency.Nominal(k), ca.tubes.InTube(currency.Nominal(k)), v})
 	}
 	ca.Device.Log.Debugf("%s tubes=%s", tag, ca.tubes.String())
 	return nil

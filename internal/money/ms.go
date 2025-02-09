@@ -34,11 +34,10 @@ type MoneySystem struct { //nolint:maligned
 	billCashbox  currency.NominalGroup
 	billCredit   currency.NominalGroup
 	billReinited bool
-	// enableBillChanger bool
 
-	coin        coin.Coiner
-	coinCashbox currency.NominalGroup
-	coinCredit  currency.NominalGroup
+	CoinValidator *coin.CoinAcceptor
+	coinCashbox   currency.NominalGroup
+	coinCredit    currency.NominalGroup
 
 	giftCredit currency.Amount
 }
@@ -49,7 +48,7 @@ func GetGlobal(ctx context.Context) *MoneySystem {
 
 func (ms *MoneySystem) Start(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
-
+	ms.CoinValidator = coin.CoinValidator
 	ms.lk.Lock()
 	defer ms.lk.Unlock()
 	ms.Log = g.Log
@@ -57,7 +56,7 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 	const devNameBill = "bill"
 	const devNameCoin = "coin"
 	ms.bill = bill.Stub{}
-	ms.coin = coin.Stub{}
+	// ms.coin = coin.Stub{}
 	errs := make([]error, 0, 2)
 	if dev, err := g.GetDevice(devNameBill); err == nil {
 		ms.bill = dev.(bill.Biller)
@@ -66,21 +65,14 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 	} else {
 		errs = append(errs, oerr.Annotatef(err, "device=%s", devNameBill))
 	}
-	if dev, err := g.GetDevice(devNameCoin); err == nil {
-		ms.coin = dev.(coin.Coiner)
-	} else if oerr.IsNotFound(err) {
-		ms.Log.Debugf("device=%s is not enabled in config", devNameCoin)
-	} else {
-		errs = append(errs, oerr.Annotatef(err, "device=%s", devNameCoin))
-	}
 	if e := helpers.FoldErrors(errs); e != nil {
 		return e
 	}
 
 	ms.billCashbox.SetValid(ms.bill.SupportedNominals())
 	ms.billCredit.SetValid(ms.bill.SupportedNominals())
-	ms.coinCashbox.SetValid(ms.coin.SupportedNominals())
-	ms.coinCredit.SetValid(ms.coin.SupportedNominals())
+	ms.coinCashbox.SetValid(ms.CoinValidator.SupportedNominals())
+	ms.coinCredit.SetValid(ms.CoinValidator.SupportedNominals())
 
 	g.Engine.RegisterNewFunc(
 		"money.cashbox_zero",
@@ -146,18 +138,18 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 			time.Sleep(10 * time.Second)
 			alive.Stop()
 			alive.Wait()
-			ms.coin.TubeStatus()
+			ms.CoinValidator.ReadTubeStatus()
 			return nil
 		},
 	}
 	g.Engine.Register(doAccept.Name, doAccept)
 
 	g.Engine.RegisterNewFuncAgr("money.dispense(?)", func(ctx context.Context, arg engine.Arg) error {
-		return ms.coin.Dispense(g.Config.ScaleU(uint32(arg.(int16))))
+		return ms.CoinValidator.Dispense(g.Config.ScaleU(uint32(arg.(int16))))
 	})
 
 	g.Engine.RegisterNewFuncAgr("money.return(?)", func(ctx context.Context, arg engine.Arg) error {
-		return ms.coin.ReturnMoney(g.Config.ScaleU(uint32(arg.(int16))))
+		return ms.CoinValidator.ReturnMoney(g.Config.ScaleU(uint32(arg.(int16))))
 	})
 
 	doSetGiftCredit := engine.FuncArg{
@@ -179,7 +171,7 @@ func (ms *MoneySystem) Stop(ctx context.Context) error {
 	errs := make([]error, 0, 8)
 	errs = append(errs, ms.ReturnMoney())
 	// errs = append(errs, g.Engine.Exec(ctx, ms.bill.AcceptMax(0)))
-	errs = append(errs, g.Engine.Exec(ctx, ms.coin.AcceptMax(0)))
+	errs = append(errs, g.Engine.Exec(ctx, ms.CoinValidator.AcceptMax(0)))
 	return oerr.Annotate(helpers.FoldErrors(errs), tag)
 }
 
@@ -204,10 +196,10 @@ func (ms *MoneySystem) TeleChange(ctx context.Context) *tele_api.Telemetry_Money
 		// TODO support bill recycler Bills: make(map[uint32]uint32, bill.TypeCount),
 		Coins: make(map[uint32]uint32, coin.TypeCount),
 	}
-	if err := ms.coin.TubeStatus(); err != nil {
+	if err := ms.CoinValidator.ReadTubeStatus(); err != nil {
 		state.GetGlobal(ctx).Error(oerr.Annotate(err, "TeleChange"))
 	}
-	ms.coin.Tubes().ToMapUint32(pb.Coins)
+	ms.CoinValidator.Tubes().ToMapUint32(pb.Coins)
 	// ms.Log.Debugf("TeleChange pb=%s", proto.CompactTextString(pb))
 	ms.Log.Debugf("TeleChange pb=%v", pb)
 	return pb
@@ -234,15 +226,6 @@ func GetCurrentPrice(ctx context.Context) currency.Amount {
 func SetCurrentPrice(ctx context.Context, p currency.Amount) context.Context {
 	ck := context.WithValue(ctx, currentPriceKey, p)
 	return ck
-}
-
-func (ms *MoneySystem) XXX_InjectCoin(n currency.Nominal) error {
-	ms.lk.Lock()
-	defer ms.lk.Unlock()
-	ms.Log.Debugf("XXX_InjectCoin n=%d", n)
-	ms.coinCredit.MustAdd(n, 1)
-	ms.dirty += currency.Amount(n)
-	return nil
 }
 
 func (ms *MoneySystem) AddDirty(dirty currency.Amount) {

@@ -19,7 +19,7 @@ func (ms *MoneySystem) SetAcceptMax(ctx context.Context, limit currency.Amount) 
 	g := state.GetGlobal(ctx)
 	errs := []error{
 		// g.Engine.Exec(ctx, ms.bill.AcceptMax(limit)),
-		g.Engine.Exec(ctx, ms.coin.AcceptMax(limit)),
+		g.Engine.Exec(ctx, ms.CoinValidator.AcceptMax(limit)),
 	}
 	err := helpers.FoldErrors(errs)
 	if err != nil {
@@ -83,7 +83,7 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 		mainAlive.Done()
 	}
 	// ----------------------coin ------------------------------------------------------------------
-	go ms.coin.CoinRun(mainAlive, func(e money.ValidatorEvent) {
+	go ms.CoinValidator.CoinRun(mainAlive, func(e money.ValidatorEvent) {
 		event := types.Event{}
 		switch e.Event {
 		case money.CoinRejectKey:
@@ -93,7 +93,7 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 			ms.coinCredit.Add(e.Nominal)
 			x := ms.GetCredit()
 			if x >= maxPrice {
-				ms.coin.DisableAccept()
+				ms.CoinValidator.DisableAccept()
 			}
 		default:
 			ms.Log.WarningF("coin event not parce (%v)", e)

@@ -212,32 +212,23 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 
 	g.Engine.RegisterNewFunc(
 		"vmc.upgrade!",
-		func(ctx context.Context) error {
-			g.UpgradeVender()
+		func(ctx context.Context) error { g.UpgradeVender(); return nil },
+	)
+
+	g.Engine.RegisterNewFunc("check.menu",
+		func(ctx context.Context) error { g.CheckMenuExecution(); return nil },
+	)
+
+	g.Engine.RegisterNewFunc("write.config",
+		func(ctx context.Context) error { config_global.WriteConfigToFile(); return nil },
+	)
+
+	g.Engine.RegisterNewFuncAgr("line1(?)",
+		func(ctx context.Context, arg engine.Arg) error {
+			g.MustTextDisplay().SetLine(1, arg.(string))
 			return nil
 		},
 	)
-
-	g.Engine.RegisterNewFunc(
-		"check.menu",
-		func(ctx context.Context) error {
-			g.CheckMenuExecution()
-			return nil
-		},
-	)
-
-	g.Engine.RegisterNewFunc(
-		"write.config",
-		func(ctx context.Context) error {
-			config_global.WriteConfigToFile()
-			return nil
-		},
-	)
-
-	g.Engine.RegisterNewFuncAgr("line1(?)", func(ctx context.Context, arg engine.Arg) error {
-		g.MustTextDisplay().SetLine(1, arg.(string))
-		return nil
-	})
 
 	g.Engine.RegisterNewFuncAgr("line2(?)", func(ctx context.Context, arg engine.Arg) error {
 		g.MustTextDisplay().SetLine(2, arg.(string))
@@ -254,15 +245,14 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		return nil
 	})
 
-	g.Engine.RegisterNewFuncAgr("sound.volume(?)", func(ctx context.Context, arg engine.Arg) error {
-		sound.SetVolume(arg.(int16))
+	g.Engine.RegisterNewFuncAgr("sound.volume(?)", func(ctx context.Context, arg engine.Arg) error { sound.SetVolume(arg.(int16)); return nil })
+
+	g.Engine.RegisterNewFunc("sound.volume.default", func(ctx context.Context) error { sound.SetDefaultVolume(); return nil })
+
+	g.Engine.RegisterNewFunc("set.broken!", func(ctx context.Context) error {
+		g.UI().CreateEvent(types.EventBroken)
 		return nil
 	})
-	g.Engine.RegisterNewFunc("sound.volume.default", func(ctx context.Context) error {
-		sound.SetDefaultVolume()
-		return nil
-	},
-	)
 
 	g.Engine.RegisterNewFuncAgr("picture(?)", func(ctx context.Context, arg engine.Arg) error {
 		if g.Hardware.Display.Graphic != nil {

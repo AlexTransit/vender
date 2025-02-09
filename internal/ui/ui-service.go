@@ -327,10 +327,9 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
 	}()
 	alive.Add(2)
 	ui.Service.askReport = true
-	ui.display.SetLines("money-load", "0")
 	go ui.ms.AcceptCredit(ctx, 500000, alive, ui.eventch)
 	for {
-		ui.display.SetLines("money-load", ui.ms.GetCredit().FormatCtx(ctx))
+		ui.display.SetLines(ui.ShowCountCoins())
 		switch e := ui.wait(ui.Service.resetTimeout); e.Kind {
 		case types.EventInput:
 			if e.Input.Source == "money" {
@@ -348,6 +347,17 @@ func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
 			// panic(fmt.Sprintf("code error onServiceMoneyLoad unhandled event=%v", e))
 		}
 	}
+}
+
+func (ui *UI) ShowCountCoins() (l1, l2 string) {
+	for _, v := range ui.ms.CoinValidator.TubeStatusString() {
+		if len(l1)+1+len(v) < 16 {
+			l1 += v + " "
+		} else {
+			l2 += v + " "
+		}
+	}
+	return
 }
 
 func (ui *UI) onServiceReport(ctx context.Context) types.UiState {
