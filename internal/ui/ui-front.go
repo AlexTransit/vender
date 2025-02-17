@@ -32,6 +32,7 @@ func (ui *UI) onFrontStart() types.UiState {
 	}
 	// FIXME alexm
 	sound.PlayFileNoWait("started.mp3")
+	ui.g.Tele.RoboSendState(tele_api.State_Nominal)
 	return types.StateFrontBegin
 }
 
@@ -72,6 +73,7 @@ func (ui *UI) checkTemperature() (correct bool, stateIfNotCorrect types.UiState)
 }
 
 func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
+	ui.g.TeleCancelOrder(tele_api.State_Nominal) // if order not complete, send cancel order and nominal state
 	config_global.VMC.User = ui_config.UIUser{
 		KeyboardReadEnable: true,
 		UIMenuStruct: menu_config.UIMenuStruct{
@@ -98,7 +100,6 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 	runtime.GC() // чистка мусора в памяти
 	if errs := ui.g.Engine.ExecList(ctx, "on_front_begin", ui.g.Config.Engine.OnFrontBegin); len(errs) != 0 {
 		ui.g.Log.Errorf("on_front_begin (%v)", errs)
-		watchdog.SetBroken()
 		return types.StateBroken
 	}
 
@@ -106,11 +107,9 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 	ui.FrontMaxPrice, err = menu_vmc.MenuMaxPrice()
 	if err != nil {
 		ui.g.Error(err)
-		watchdog.SetBroken()
 		return types.StateBroken
 
 	}
-	ui.g.Tele.RoboSendState(tele_api.State_Nominal)
 	return types.StateFrontSelect
 }
 
@@ -185,18 +184,6 @@ func (ui *UI) sendRequestForQrPayment(rm *tele_api.FromRoboMessage) (message_for
 	return &ui.g.Config.UI_config.Front.MsgRemotePayRequest
 }
 
-func canselQrOrder(rm *tele_api.FromRoboMessage) {
-	if config_global.VMC.User.PaymenId > 0 {
-		rm.Order = &tele_api.Order{
-			Amount:      config_global.VMC.User.QRPayAmount,
-			OrderStatus: tele_api.OrderStatus_cancel,
-			OwnerInt:    config_global.VMC.User.PaymenId,
-			OwnerType:   tele_api.OwnerType_qrCashLessUser,
-		}
-		config_global.VMC.User.PaymenId = 0
-	}
-}
-
 func (ui *UI) onFrontTune(ctx context.Context) types.UiState {
 	// XXX FIXME
 	return ui.onFrontSelect(ctx)
@@ -252,12 +239,11 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	selected := config_global.VMC.User.SelectedItem.Code
 
 	// FIXME AlexM заглушка пока не переделал
-	if config_global.VMC.User.PaymentMethod == 0 {
+	if config_global.VMC.User.PaymentMethod == tele_api.PaymentMethod_Cash {
 		ui.g.Log.Debugf("ui-front selected=%s begin", selected)
 		if err := moneysys.WithdrawPrepare(ctx, config_global.VMC.User.SelectedItem.Price); err != nil {
 			ui.g.Log.Errorf("ui-front CRITICAL error while return change")
 		}
-		config_global.VMC.User.PaymentMethod = tele_api.PaymentMethod_Cash
 	}
 	watchdog.DevicesInitializationRequired()
 	err := menu_vmc.Cook(ctx)
@@ -281,11 +267,10 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	}
 
 	// ошибка при приготовлении
+	ui.g.GlobalError = fmt.Sprintf("execute code:%s %v", selected, err)
 	if config_global.VMC.User.PaymentMethod == tele_api.PaymentMethod_Cash {
 		moneysys.ReturnDirty()
 	}
-	ui.g.GlobalError = fmt.Sprintf("execute code:%s %v", selected, err)
-	watchdog.SetBroken()
 	return types.StateBroken
 }
 

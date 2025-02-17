@@ -131,11 +131,11 @@ func (ui *UI) parseMoneyEvent(ek types.EventKind) types.UiState {
 	config_global.VMC.KeyboardReader(true)
 	currentState := ui.g.Tele.GetState()
 	if currentState == tele_api.State_WaitingForExternalPayment {
-		rm := tele_api.FromRoboMessage{State: tele_api.State_Client}
 		ui.g.ShowQR("QR disabled. ")
-		canselQrOrder(&rm)
-		ui.g.Tele.RoboSend(&rm)
+		ui.g.TeleCancelOrder(tele_api.State_Client)
+		ui.g.Config.User.PaymenId = 0
 	}
+	ui.g.Config.User.PaymentMethod = tele_api.PaymentMethod_Cash
 	credit := ui.ms.GetCredit()
 	price := config_global.VMC.User.SelectedItem.Price
 	if price != 0 && credit >= price && config_global.VMC.User.SelectedItem.Doer != nil {

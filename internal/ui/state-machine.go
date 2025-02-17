@@ -78,7 +78,8 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 	case types.StateBroken:
 		watchdog.Disable()
 		watchdog.DevicesInitializationRequired()
-		ui.g.SendNotWork(tele.State_Broken)
+		watchdog.SetBroken()
+		ui.g.TeleCancelOrder(tele.State_Broken)
 
 		ui.g.RunBashSript(ui.g.Config.ScriptIfBroken)
 		ui.g.Log.Infof("state=broken")

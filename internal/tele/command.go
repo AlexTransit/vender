@@ -85,12 +85,14 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 	switch m.MakeOrder.OrderStatus {
 	case tele_api.OrderStatus_doSelected: // make selected code. payment via QR, etc
 		if currentRobotState != tele_api.State_WaitingForExternalPayment || // robot state not wait
-			config_global.VMC.User.PaymenId != m.MakeOrder.OwnerInt { // the payer and payer do not match
-			t.log.Errorf("make doSelected unposible. robo state:%s <> WaitingForExternalPayment or payerID:%d <> ownerID:%d", currentRobotState.String(), config_global.VMC.User.PaymenId, m.MakeOrder.OwnerInt)
+			config_global.VMC.User.PaymenId != m.MakeOrder.OwnerInt ||
+			uint32(config_global.VMC.User.DirtyMoney) != m.MakeOrder.Amount { // the payer and payer do not match
+			t.log.Errorf("make doSelected unposible. robo state:%s <> WaitingForExternalPayment or payerID:%d <> ownerID:%d or qr amount:%d<>order amount^%d",
+				currentRobotState.String(), config_global.VMC.User.PaymenId, m.MakeOrder.OwnerInt, config_global.VMC.User.DirtyMoney, m.MakeOrder.Amount)
 			t.makeOrderImposible(tele_api.OrderStatus_orderError, m)
 			return
 		}
-		config_global.VMC.User.DirtyMoney = currency.Amount(m.MakeOrder.Amount)
+		// config_global.VMC.User.DirtyMoney = currency.Amount(m.MakeOrder.Amount)
 		config_global.VMC.User.SelectedItem.Price = config_global.VMC.User.DirtyMoney
 	case tele_api.OrderStatus_doTransferred: // TODO execute external order. сделать внешний заказ
 		// check validity, price. проверить валидность, цену
@@ -169,6 +171,9 @@ func (t *tele) messageShowQr(ctx context.Context, m *tele_api.ToRoboMessage) {
 			g.ShowQR(m.ShowQR.QrText)
 			l1 := fmt.Sprintf(g.Config.UI_config.Front.MsgRemotePay+g.Config.UI_config.Front.MsgPrice, currency.Amount(config_global.VMC.User.QRPayAmount).Format100I())
 			g.Hardware.HD44780.Display.SetLine(1, l1)
+			config_global.VMC.User.DirtyMoney = currency.Amount(config_global.VMC.User.QRPayAmount)
+			config_global.VMC.User.PaymentType = tele_api.OwnerType_qrCashLessUser
+			config_global.VMC.User.PaymentMethod = tele_api.PaymentMethod_Cashless
 		}
 	case tele_api.ShowQR_receipt:
 		t := m.ShowQR.QrText
@@ -230,33 +235,6 @@ func (t *tele) cmdValidateCode(cmd *tele_api.Command, code string) {
 func (t *tele) cmdReport(ctx context.Context) error {
 	return errors.Annotate(t.Report(ctx, false), "cmdReport")
 }
-
-// type FromRoboMessage tele_api.FromRoboMessage
-// func (t *tele) RemCook(ctx context.Context, orderMake *tele_api.Order) (err error) {
-// 	t.log.Infof("start remote cook order:%s ", orderMake.String())
-// 	err = menu_vmc.Cook(ctx)
-// 	if config_global.VMC.User.DirtyMoney == 0 {
-// 		orderMake.OrderStatus = tele_api.OrderStatus_complete
-// 	} else {
-// 		orderMake.OrderStatus = tele_api.OrderStatus_orderError
-// 	}
-// 	rm := tele_api.FromRoboMessage{
-// 		RoboTime: 0,
-// 		Order:    orderMake,
-// 	}
-// 	if err == nil {
-// 		rm.State = tele_api.State_Nominal
-// 		config_global.VMC.UIState(uint32(types.StateFrontEnd))
-// 		config_global.VMC.User.UiState = uint32(types.StateFrontEnd)
-// 	} else {
-// 		rm.State = tele_api.State_Broken
-// 		rm.Err = &tele_api.Err{Message: err.Error()}
-// 		config_global.VMC.UIState(uint32(types.StateBroken))
-// 	}
-// 	t.log.Infof("order report:%s", rm.String())
-// 	t.RoboSend(&rm)
-// 	return nil
-// }
 
 // tunecook(value uint8, maximum uint8, defined uint8) (convertedvalue uint8)
 // для робота занчения  от 0 (0=not change) до максимума. поэтому передаваемые значени = +1

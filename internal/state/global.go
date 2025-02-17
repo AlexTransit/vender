@@ -53,11 +53,10 @@ func GetGlobal(ctx context.Context) *Global {
 
 // returns and cleanses the g.globalError
 func (g *Global) GetGlobalErr() (err string) {
-	if g.GlobalError == "" {
-		return
-	}
 	err = g.GlobalError
-	g.GlobalError = ""
+	if g.GlobalError != "" {
+		g.GlobalError = ""
+	}
 	return
 }
 
