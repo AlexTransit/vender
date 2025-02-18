@@ -37,9 +37,9 @@ func Enable() {
 }
 
 func Disable() {
-	if WD.config.Disabled {
-		return
-	}
+	// if WD.config.Disabled {
+	// 	return
+	// }
 	WD.log.Info("disable watchdog")
 	// send disable watchdog for systemd
 	sendNotify(daemon.SdNotifyReloading)
