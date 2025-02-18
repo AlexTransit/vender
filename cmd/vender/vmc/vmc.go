@@ -8,7 +8,6 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/AlexTransit/vender/cmd/vender/subcmd"
 	"github.com/AlexTransit/vender/hardware"
@@ -173,11 +172,9 @@ func broken(ctx context.Context) {
 	// FIXME alexm
 	sound.PlayFile("broken.mp3")
 	srcServiceKey, _ := input.NewDevInputEventSource(g.Config.Hardware.Input.ServiceKey)
-	for {
-		event, _ := srcServiceKey.Read()
-		fmt.Printf("\033[41m %v \033[0m\n", event)
-		time.Sleep(time.Second)
-	}
+	srcServiceKey.Read() // wait press service key
+	watchdog.UnsetBroken()
+	os.Exit(0)
 }
 
 func showHelpCMD() {
