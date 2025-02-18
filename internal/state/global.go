@@ -53,11 +53,10 @@ func GetGlobal(ctx context.Context) *Global {
 
 // returns and cleanses the g.globalError
 func (g *Global) GetGlobalErr() (err string) {
-	if g.GlobalError == "" {
-		return
-	}
 	err = g.GlobalError
-	g.GlobalError = ""
+	if g.GlobalError != "" {
+		g.GlobalError = ""
+	}
 	return
 }
 
@@ -167,7 +166,7 @@ func (g *Global) initEngine() error {
 		}
 		var err error
 		if x.Price == 0 {
-			g.Log.Errorf("item:%s price=0", x.Code)
+			g.Log.WarningF("item:%s price=0", x.Code)
 		}
 		x.Doer, err = g.Engine.ParseText(x.Name, x.Scenario)
 		if err != nil {

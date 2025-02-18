@@ -161,7 +161,7 @@ func broken(ctx context.Context) {
 	g := state.GetGlobal(ctx)
 	g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
 	sound.Init(&g.Config.Sound, g.Log, g.Alive, false)
-	g.SendNotWork(tele_api.State_Broken)
+	g.TeleCancelOrder(tele_api.State_Broken)
 	g.Display()
 	display := g.MustTextDisplay()
 	// FIXME alexm

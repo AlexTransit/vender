@@ -57,8 +57,8 @@ func (g *Global) VmcStop(ctx context.Context) {
 }
 
 func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
-	g.SendNotWork(tele_api.State_Shutdown)
 	watchdog.Disable()
+	g.TeleCancelOrder(tele_api.State_Shutdown)
 	g.Log.Infof("--- event vmc stop ---")
 	go func() {
 		time.Sleep(10 * time.Second)
@@ -66,7 +66,7 @@ func (g *Global) VmcStopWOInitRequared(ctx context.Context) {
 		os.Exit(0)
 	}()
 	g.Engine.ExecList(ctx, "on_shutdown", g.Config.Engine.OnShutdown)
-	g.UI().CreateEvent(types.EventStop)
+	// g.UI().CreateEvent(types.EventStop)
 	time.Sleep(2 * time.Second)
 	g.Stop()
 	g.Tele.Close()
@@ -164,16 +164,10 @@ func (g *Global) initDisplay() {
 	}
 }
 
-// send broken message
-func (g *Global) SendNotWork(s tele_api.State) {
+// send state, error and cancel uncoplete order message
+func (g *Global) TeleCancelOrder(s tele_api.State) {
 	rm := tele_api.FromRoboMessage{
 		State: s,
-	}
-	if g.GlobalError != "" {
-		rm.Err = &tele_api.Err{
-			Code:    0,
-			Message: g.GetGlobalErr(),
-		}
 	}
 	// if the order is not completed, the order is canceled
 	if g.Config.User.PaymenId != 0 {
@@ -182,11 +176,21 @@ func (g *Global) SendNotWork(s tele_api.State) {
 			rm.Order.OrderStatus = tele_api.OrderStatus_orderError // return cashless money
 		} else {
 			// order full maked and not completed.
-			rm.Err.Message = fmt.Sprintf("set complete order in broken point. paymentId:%d dirty money=0 error(%s)", g.Config.User.PaymenId, rm.Err.Message)
 			rm.Order.OrderStatus = tele_api.OrderStatus_complete
+			g.GlobalError += fmt.Sprintf("set complete order in cancel order point. paymentId:%d dirty money=0", g.Config.User.PaymenId)
 		}
 	}
-	g.Tele.RoboSend(&rm)
+	if g.GlobalError != "" {
+		rm.Err = &tele_api.Err{
+			Code:    0,
+			Message: g.GetGlobalErr(),
+		}
+	}
+	if rm.Order != nil || rm.Err != nil {
+		g.Tele.RoboSend(&rm)
+	} else {
+		g.Tele.RoboSendState(s)
+	}
 }
 
 func (g *Global) SendCooking() {
