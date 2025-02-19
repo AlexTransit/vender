@@ -93,6 +93,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 			_ = moneysys.SetAcceptMax(ctx, 0)
 		}
 		ui.broken = true
+		ui.RefreshUserPresets()
 		for ui.g.Alive.IsRunning() {
 			e := ui.wait(time.Second)
 			// TODO receive tele command to reboot or change state

@@ -12,6 +12,7 @@ import (
 
 	"github.com/AlexTransit/vender/cmd/vender/subcmd"
 	"github.com/AlexTransit/vender/hardware"
+	"github.com/AlexTransit/vender/hardware/input"
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
@@ -159,6 +160,7 @@ func showText(ctx context.Context, s []string) {
 func broken(ctx context.Context) {
 	watchdog.SetBroken()
 	g := state.GetGlobal(ctx)
+	// watchdog.Disable()
 	g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
 	sound.Init(&g.Config.Sound, g.Log, g.Alive, false)
 	g.TeleCancelOrder(tele_api.State_Broken)
@@ -170,9 +172,18 @@ func broken(ctx context.Context) {
 	g.RunBashSript(g.Config.ScriptIfBroken)
 	// FIXME alexm
 	sound.PlayFile("broken.mp3")
-	for {
-		time.Sleep(time.Second)
-	}
+
+	go func() {
+		for {
+			daemon.SdNotify(false, daemon.SdNotifyWatchdog)
+			time.Sleep(time.Duration(g.Config.UI_config.Front.ResetTimeoutSec))
+		}
+	}()
+
+	srcServiceKey, _ := input.NewDevInputEventSource(g.Config.Hardware.Input.ServiceKey)
+	srcServiceKey.Read() // wait press service key
+	watchdog.UnsetBroken()
+	os.Exit(0)
 }
 
 func showHelpCMD() {

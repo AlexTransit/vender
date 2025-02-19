@@ -74,13 +74,7 @@ func (ui *UI) checkTemperature() (correct bool, stateIfNotCorrect types.UiState)
 
 func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 	ui.g.TeleCancelOrder(tele_api.State_Nominal) // if order not complete, send cancel order and nominal state
-	config_global.VMC.User = ui_config.UIUser{
-		KeyboardReadEnable: true,
-		UIMenuStruct: menu_config.UIMenuStruct{
-			Cream: config_global.VMC.Engine.Menu.DefaultCream,
-			Sugar: config_global.VMC.Engine.Menu.DefaultSugar,
-		},
-	}
+	ui.RefreshUserPresets()
 	if config_global.VMC.Engine.NeedRestart { // after upgrade
 		ui.g.GlobalError = "triger restart"
 		ui.g.VmcStopWOInitRequared(ctx)
@@ -111,6 +105,16 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 
 	}
 	return types.StateFrontSelect
+}
+
+func (ui *UI) RefreshUserPresets() {
+	config_global.VMC.User = ui_config.UIUser{
+		KeyboardReadEnable: true,
+		UIMenuStruct: menu_config.UIMenuStruct{
+			Cream: config_global.VMC.Engine.Menu.DefaultCream,
+			Sugar: config_global.VMC.Engine.Menu.DefaultSugar,
+		},
+	}
 }
 
 func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
@@ -263,6 +267,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 			},
 		}
 		ui.g.Tele.RoboSend(&rm)
+		ui.RefreshUserPresets()
 		return types.StateFrontEnd
 	}
 
