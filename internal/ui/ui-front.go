@@ -73,7 +73,7 @@ func (ui *UI) checkTemperature() (correct bool, stateIfNotCorrect types.UiState)
 }
 
 func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
-	ui.g.TeleCancelOrder(tele_api.State_Nominal) // if order not complete, send cancel order and nominal state
+	ui.g.TeleCancelQr(tele_api.State_Nominal) // if order not complete, send cancel order and nominal state
 	ui.RefreshUserPresets()
 	if config_global.VMC.Engine.NeedRestart { // after upgrade
 		ui.g.GlobalError = "triger restart"
