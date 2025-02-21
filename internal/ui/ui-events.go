@@ -132,7 +132,7 @@ func (ui *UI) parseMoneyEvent(ek types.EventKind) types.UiState {
 	currentState := ui.g.Tele.GetState()
 	if currentState == tele_api.State_WaitingForExternalPayment {
 		ui.g.ShowQR("QR disabled. ")
-		ui.g.TeleCancelOrder(tele_api.State_Client)
+		ui.g.TeleCancelQr(tele_api.State_Client)
 		ui.g.Config.User.PaymenId = 0
 	}
 	ui.g.Config.User.PaymentMethod = tele_api.PaymentMethod_Cash

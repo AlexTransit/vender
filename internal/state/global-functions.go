@@ -193,6 +193,17 @@ func (g *Global) TeleCancelOrder(s tele_api.State) {
 	}
 }
 
+func (g *Global) TeleCancelQr(s tele_api.State) {
+	rm := tele_api.FromRoboMessage{
+		State: s,
+	}
+	if g.Config.User.PaymenId != 0 {
+		rm.Order = g.OrderToMessage()
+		rm.Order.OrderStatus = tele_api.OrderStatus_cancel
+	}
+	g.Tele.RoboSend(&rm)
+}
+
 func (g *Global) SendCooking() {
 	rm := tele_api.FromRoboMessage{State: tele_api.State_Process}
 	if g.Config.User.PaymenId != 0 {
