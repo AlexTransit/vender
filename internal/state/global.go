@@ -222,6 +222,10 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		func(ctx context.Context) error { config_global.WriteConfigToFile(); return nil },
 	)
 
+	g.Engine.RegisterNewFunc("menu.cost",
+		func(ctx context.Context) error { g.ListMenuPriceCost(); return nil },
+	)
+
 	g.Engine.RegisterNewFuncAgr("line1(?)",
 		func(ctx context.Context, arg engine.Arg) error {
 			g.MustTextDisplay().SetLine(1, arg.(string))
