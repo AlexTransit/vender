@@ -539,13 +539,6 @@ func (bv *BillValidator) billStop(returnEvent func(money.ValidatorEvent)) {
 	bv.disableAccept()
 	if bv.EscrowBill > 0 {
 		bv.escrowReject()
-		for i := 0; i < 5*20; i++ {
-			_ = bv.pollF(returnEvent)
-			if bv.billstate == ready {
-				break
-			}
-			time.Sleep(200 * time.Millisecond)
-		}
 	}
 	bv.setState(WaitConfigure)
 }
