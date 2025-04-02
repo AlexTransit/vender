@@ -84,7 +84,7 @@ func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
 		return nextState
 	}
 	watchdog.Refresh()
-	credit := ui.ms.GetCredit() / 100
+	credit := (ui.ms.GetCredit() - ui.ms.BillEscrow()) / 100
 	if credit != 0 {
 		ui.g.Log.Errorf("money timeout lost (%v)", credit)
 	}
