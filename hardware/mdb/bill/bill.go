@@ -510,12 +510,12 @@ func (bv *BillValidator) BillRun(alive *alive.Alive, returnEvent func(money.Vali
 	for again {
 		select {
 		case <-stopRun:
-			bv.billStop()
+			bv.billStop(returnEvent)
 			again = false
 		case cmd = <-bv.billCmd:
 			switch cmd {
 			case Stop:
-				bv.billStop()
+				bv.billStop(returnEvent)
 				again = false
 			case Accept:
 				returnEvent(bv.escrowAccept())
@@ -535,12 +535,13 @@ func (bv *BillValidator) BillRun(alive *alive.Alive, returnEvent func(money.Vali
 	refreshTimer.Stop()
 }
 
-func (bv *BillValidator) billStop() {
+func (bv *BillValidator) billStop(returnEvent func(money.ValidatorEvent)) {
 	bv.disableAccept()
 	if bv.EscrowBill > 0 {
 		bv.escrowReject()
 		bv.EscrowBill = 0
 	}
+	bv.pollF(returnEvent)
 	bv.setState(WaitConfigure)
 }
 
