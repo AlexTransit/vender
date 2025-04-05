@@ -251,31 +251,30 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	}
 	watchdog.DevicesInitializationRequired()
 	err := menu_vmc.Cook(ctx)
+	rm := tele_api.FromRoboMessage{}
+	rm.Order = ui.g.OrderToMessage()
+	if ui.ms.GetDirty() == 0 { // order complete
+		rm.Order.OrderStatus = tele_api.OrderStatus_complete
+	} else {
+		rm.Order.OrderStatus = tele_api.OrderStatus_orderError
+	}
+	defer ui.g.Tele.RoboSend(&rm)
+
 	if err == nil { // success path
+		rm.State = tele_api.State_Nominal
+		rm.Order.Cream = TuneValueToByte(config_global.VMC.User.Cream, config_global.VMC.Engine.Menu.DefaultCream)
+		rm.Order.Sugar = TuneValueToByte(config_global.VMC.User.Sugar, config_global.VMC.Engine.Menu.DefaultCream)
 		watchdog.SetDeviceInited()
-		rm := tele_api.FromRoboMessage{
-			State: tele_api.State_Nominal,
-			Order: &tele_api.Order{
-				MenuCode:      config_global.VMC.User.SelectedItem.Code,
-				Cream:         TuneValueToByte(config_global.VMC.User.Cream, config_global.VMC.Engine.Menu.DefaultCream),
-				Sugar:         TuneValueToByte(config_global.VMC.User.Sugar, config_global.VMC.Engine.Menu.DefaultCream),
-				Amount:        uint32(config_global.VMC.User.SelectedItem.Price),
-				OrderStatus:   tele_api.OrderStatus_complete,
-				PaymentMethod: config_global.VMC.User.PaymentMethod,
-				OwnerInt:      config_global.VMC.User.PaymenId,
-				OwnerType:     config_global.VMC.User.PaymentType,
-			},
-		}
-		ui.g.Tele.RoboSend(&rm)
 		ui.RefreshUserPresets()
 		return types.StateFrontEnd
 	}
-
-	// ошибка при приготовлении
-	ui.g.GlobalError = fmt.Sprintf("execute code:%s %v", selected, err)
 	if config_global.VMC.User.PaymentMethod == tele_api.PaymentMethod_Cash {
 		moneysys.ReturnDirty()
 	}
+	rm.Err = &tele_api.Err{
+		Message: fmt.Sprintf("execute code:%s %v", selected, err),
+	}
+	rm.State = tele_api.State_Broken
 	return types.StateBroken
 }
 
