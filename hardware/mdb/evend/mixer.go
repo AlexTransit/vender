@@ -28,18 +28,18 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 
 	g.Engine.Register(m.name+".shake(?)",
 		engine.FuncArg{Name: m.name + ".shake", F: func(ctx context.Context, arg engine.Arg) (err error) {
-			for i := 1; i <= 2; i++ {
+			for i := 0; i < 5; i++ {
 				e := m.shake(uint8(arg.(int16)))
 				if e == nil {
-					if i > 1 {
-						m.dev.TeleError(fmt.Errorf("restart fix error (%v)", err))
+					if i > 0 {
+						m.dev.TeleError(fmt.Errorf("%d restart fix error (%v)", i, err))
 					}
 					return
 				}
 				err = errors.Join(err, e)
 				// FIXME тут можно добавть скрипт действий после ошибки
 				m.dev.Rst()
-				time.Sleep(5 * time.Second)
+				time.Sleep(3 * time.Second)
 			}
 			return err
 		}})
@@ -48,7 +48,7 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 	g.Engine.RegisterNewFuncAgr(m.name+".WaitSuccess(?)", func(ctx context.Context, arg engine.Arg) error { return m.WaitSuccess(uint16(arg.(int16)*5+5), true) })
 	g.Engine.RegisterNewFunc(m.name+".movingComplete", func(ctx context.Context) error { return m.mvComplete() })
 	g.Engine.Register(m.name+".move(?)", engine.FuncArg{Name: m.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
-		for i := 1; i <= 2; i++ {
+		for i := 1; i <= 3; i++ {
 			e := m.move(int8(arg.(int16)))
 			if e == nil {
 				if i > 1 {
@@ -60,7 +60,7 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 			m.cPos = -1
 			// FIXME тут можно добавть скрипт действий после ошибки
 			m.dev.Rst()
-			time.Sleep(5 * time.Second)
+			time.Sleep(3 * time.Second)
 		}
 		return err
 	}})

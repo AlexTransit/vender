@@ -16,5 +16,5 @@ type BillStruct struct {
 }
 
 type CoinStruct struct {
-	DispenseStrategy int `hcl:"dispense_strategy,optional"`
+	DispenseStrategy int `hcl:"dispense_strategy,optional"` // 0 = uniform dispensing, 1 = first ful tube, 2 = minimal coins
 }
