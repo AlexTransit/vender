@@ -16,6 +16,7 @@ package oto
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"time"
 	"unsafe"
@@ -78,6 +79,9 @@ type context struct {
 
 	cond *sync.Cond
 
+	toPause  bool
+	toResume bool
+
 	mux *mux.Mux
 	err atomicError
 }
@@ -88,6 +92,13 @@ type context struct {
 var theContext *context
 
 func newContext(sampleRate int, channelCount int, format mux.Format, bufferSizeInBytes int) (*context, chan struct{}, error) {
+	// defaultOneBufferSizeInBytes is the default buffer size in bytes.
+	//
+	// 12288 seems necessary at least on iPod touch (7th) and MacBook Pro 2020.
+	// With 48000[Hz] stereo, the maximum delay is (12288*4[buffers] / 4 / 2)[samples] / 48000 [Hz] = 100[ms].
+	// '4' is float32 size in bytes. '2' is a number of channels for stereo.
+	const defaultOneBufferSizeInBytes = 12288
+
 	var oneBufferSizeInBytes int
 	if bufferSizeInBytes != 0 {
 		oneBufferSizeInBytes = bufferSizeInBytes / bufferCount
@@ -111,7 +122,14 @@ func newContext(sampleRate int, channelCount int, format mux.Format, bufferSizeI
 	}
 
 	go func() {
-		defer close(ready)
+		runtime.LockOSThread()
+		defer runtime.UnlockOSThread()
+
+		defer func() {
+			if ready != nil {
+				close(ready)
+			}
+		}()
 
 		q, bs, err := newAudioQueue(sampleRate, channelCount, oneBufferSizeInBytes)
 		if err != nil {
@@ -139,7 +157,10 @@ func newContext(sampleRate int, channelCount int, format mux.Format, bufferSizeI
 			return
 		}
 
-		go c.loop()
+		close(ready)
+		ready = nil
+
+		c.loop()
 	}()
 
 	return c, ready, nil
@@ -149,7 +170,7 @@ func (c *context) wait() bool {
 	c.cond.L.Lock()
 	defer c.cond.L.Unlock()
 
-	for len(c.unqueuedBuffers) == 0 && c.err.Load() == nil {
+	for len(c.unqueuedBuffers) == 0 && c.err.Load() == nil && !c.toPause && !c.toResume {
 		c.cond.Wait()
 	}
 	return c.err.Load() == nil
@@ -173,6 +194,22 @@ func (c *context) appendBuffer(buf32 []float32) {
 		return
 	}
 
+	if c.toPause {
+		if err := c.pause(); err != nil {
+			c.err.TryStore(err)
+		}
+		c.toPause = false
+		return
+	}
+
+	if c.toResume {
+		if err := c.resume(); err != nil {
+			c.err.TryStore(err)
+		}
+		c.toResume = false
+		return
+	}
+
 	buf := c.unqueuedBuffers[0]
 	copy(c.unqueuedBuffers, c.unqueuedBuffers[1:])
 	c.unqueuedBuffers = c.unqueuedBuffers[:len(c.unqueuedBuffers)-1]
@@ -192,9 +229,9 @@ func (c *context) Suspend() error {
 	if err := c.err.Load(); err != nil {
 		return err.(error)
 	}
-	if osstatus := _AudioQueuePause(c.audioQueue); osstatus != noErr {
-		return fmt.Errorf("oto: AudioQueuePause failed: %d", osstatus)
-	}
+	c.toPause = true
+	c.toResume = false
+	c.cond.Signal()
 	return nil
 }
 
@@ -205,7 +242,20 @@ func (c *context) Resume() error {
 	if err := c.err.Load(); err != nil {
 		return err.(error)
 	}
+	c.toPause = false
+	c.toResume = true
+	c.cond.Signal()
+	return nil
+}
 
+func (c *context) pause() error {
+	if osstatus := _AudioQueuePause(c.audioQueue); osstatus != noErr {
+		return fmt.Errorf("oto: AudioQueuePause failed: %d", osstatus)
+	}
+	return nil
+}
+
+func (c *context) resume() error {
 	var retryCount int
 try:
 	if osstatus := _AudioQueueStart(c.audioQueue, nil); osstatus != noErr {

@@ -54,7 +54,7 @@ public:
      */
     explicit AudioStream(const AudioStreamBuilder &builder);
 
-    virtual ~AudioStream() = default;
+    virtual ~AudioStream();
 
     /**
      * Open a stream based on the current settings.
@@ -66,6 +66,29 @@ public:
      */
     virtual Result open() {
         return Result::OK; // Called by subclasses. Might do more in the future.
+    }
+
+    /**
+     * Free the audio resources associated with a stream created by AAudioStreamBuilder_openStream().
+     *
+     * AAudioStream_close() should be called at some point after calling this function.
+     *
+     * After this call, the stream will be in AAUDIO_STREAM_STATE_CLOSING
+     *
+     * This function is useful if you want to release the audio resources immediately, but still allow
+     * queries to the stream to occur from other threads. This often happens if you are monitoring
+     * stream progress from a UI thread.
+     *
+     * NOTE: This function is only fully implemented for MMAP streams, which are low latency streams
+     * supported by some devices. On other "Legacy" streams some audio resources will still be in use
+     * and some callbacks may still be in process after this call.
+     *
+     * Available in AAudio since API level 30. Returns Result::ErrorUnimplemented otherwise.
+     *
+     * * @return either Result::OK or an error.
+     */
+    virtual Result release() {
+        return Result::ErrorUnimplemented;
     }
 
     /**
@@ -171,6 +194,13 @@ public:
     *
     * This cannot be set higher than getBufferCapacity().
     *
+    * This should only be used with Output streams. It will
+    * be ignored for Input streams because they are generally kept as empty as possible.
+    *
+    * For OpenSL ES, this method only has an effect on output stream that do NOT
+    * use a callback. The blocking writes goes into a buffer in Oboe and the size of that
+    * buffer is controlled by this method.
+    *
     * @param requestedFrames requested number of frames that can be filled without blocking
     * @return the resulting buffer size in frames (obtained using value()) or an error (obtained
     * using error())
@@ -264,7 +294,7 @@ public:
      *
      * Note that due to issues in Android before R, we recommend NOT calling
      * this method from a data callback. See this tech note for more details.
-     * https://github.com/google/oboe/blob/main/docs/notes/rlsbuffer.md
+     * https://github.com/google/oboe/wiki/TechNote_ReleaseBuffer
      *
      * @return a ResultWithValue which has a result of Result::OK and a value containing the latency
      * in milliseconds, or a result of Result::Error*.
@@ -286,7 +316,7 @@ public:
      *
      * Note that due to issues in Android before R, we recommend NOT calling
      * this method from a data callback. See this tech note for more details.
-     * https://github.com/google/oboe/blob/main/docs/notes/rlsbuffer.md
+     * https://github.com/google/oboe/wiki/TechNote_ReleaseBuffer
      *
      * @deprecated since 1.0, use AudioStream::getTimestamp(clockid_t clockId) instead, which
      * returns ResultWithValue
@@ -313,7 +343,7 @@ public:
      *
      * Note that due to issues in Android before R, we recommend NOT calling
      * this method from a data callback. See this tech note for more details.
-     * https://github.com/google/oboe/blob/main/docs/notes/rlsbuffer.md
+     * https://github.com/google/oboe/wiki/TechNote_ReleaseBuffer
      *
      * See 
      * @param clockId the type of clock to use e.g. CLOCK_MONOTONIC
@@ -435,7 +465,12 @@ public:
      * This can be used with an EXCLUSIVE MMAP input stream to avoid reading data too close to
      * the DSP write position, which may cause glitches.
      *
-     * @param numFrames minimum frames available
+     * Starting with Oboe 1.7.1, the numFrames will be clipped internally against the
+     * BufferCapacity minus BurstSize. This is to prevent trying to wait for more frames
+     * than could possibly be available. In this case, the return value may be less than numFrames.
+     * Note that there may still be glitching if numFrames is too high.
+     *
+     * @param numFrames requested minimum frames available
      * @param timeoutNanoseconds
      * @return number of frames available, ErrorTimeout
      */
@@ -470,6 +505,43 @@ public:
      */
     void setDelayBeforeCloseMillis(int32_t delayBeforeCloseMillis) {
         mDelayBeforeCloseMillis = delayBeforeCloseMillis;
+    }
+
+    /**
+     * Enable or disable a device specific CPU performance hint.
+     * Runtime benchmarks such as the callback duration may be used to
+     * speed up the CPU and improve real-time performance.
+     *
+     * Note that this feature is device specific and may not be implemented.
+     * Also the benefits may vary by device.
+     *
+     * The flag will be checked in the Oboe data callback. If it transitions from false to true
+     * then the PerformanceHint feature will be started.
+     * This only needs to be called once.
+     *
+     * You may want to enable this if you have a dynamically changing workload
+     * and you notice that you are getting underruns and glitches when your workload increases.
+     * This might happen, for example, if you suddenly go from playing one note to
+     * ten notes on a synthesizer.
+     *
+     * Try the CPU Load test in OboeTester if you would like to experiment with this interactively.
+     *
+     * On some devices, this may be implemented using the "ADPF" library.
+     *
+     * @param enabled true if you would like a performance boost
+     */
+    void setPerformanceHintEnabled(bool enabled) {
+        mPerformanceHintEnabled = enabled;
+    }
+
+    /**
+     * This only tells you if the feature has been requested.
+     * It does not tell you if the PerformanceHint feature is implemented or active on the device.
+     *
+     * @return true if set using setPerformanceHintEnabled().
+     */
+    bool isPerformanceHintEnabled() {
+        return mPerformanceHintEnabled;
     }
 
 protected:
@@ -548,6 +620,22 @@ protected:
         }
     }
 
+    /**
+     * This may be called internally at the beginning of a callback.
+     */
+    virtual void beginPerformanceHintInCallback() {}
+
+    /**
+     * This may be called internally at the end of a callback.
+     * @param numFrames passed to the callback
+     */
+    virtual void endPerformanceHintInCallback(int32_t /*numFrames*/) {}
+
+    /**
+     * This will be called when the stream is closed just in case performance hints were enabled.
+     */
+    virtual void closePerformanceHint() {}
+
     /*
      * Set a weak_ptr to this stream from the shared_ptr so that we can
      * later use a shared_ptr in the error callback.
@@ -604,6 +692,8 @@ private:
 
     std::atomic<bool>    mDataCallbackEnabled{false};
     std::atomic<bool>    mErrorCallbackCalled{false};
+
+    std::atomic<bool>    mPerformanceHintEnabled{false}; // set only by app
 };
 
 /**
