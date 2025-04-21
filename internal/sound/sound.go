@@ -1,5 +1,9 @@
 package sound
 
+// used low level sound via github.com/hajimehoshi/ebiten/
+// need install a few packages
+//  apt install pkg-config libasound2-dev
+
 import (
 	"bytes"
 	"context"
