@@ -17,10 +17,6 @@ github.com/coreos/go-systemd/daemon
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/ebitengine/gomobile v0.0.0-20250329061421-6d0a8e981e4c
-## explicit; go 1.23.0
-# github.com/ebitengine/hideconsole v1.0.0
-## explicit; go 1.18
 # github.com/ebitengine/oto/v3 v3.3.3
 ## explicit; go 1.18
 github.com/ebitengine/oto/v3
@@ -76,8 +72,6 @@ github.com/hashicorp/hcl/v2/hclsimple
 github.com/hashicorp/hcl/v2/hclsyntax
 github.com/hashicorp/hcl/v2/hclwrite
 github.com/hashicorp/hcl/v2/json
-# github.com/jezek/xgb v1.1.1
-## explicit; go 1.11
 # github.com/juju/errors v1.0.0
 ## explicit; go 1.18
 github.com/juju/errors
