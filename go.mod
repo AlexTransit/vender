@@ -21,14 +21,14 @@ require (
 	github.com/temoto/gpio-cdev-go v1.1.0
 	github.com/temoto/inputevent-go v1.0.0
 	github.com/temoto/iodin v0.0.0-20190211111721-99c87617ba86
-	golang.org/x/net v0.32.0 // indirect
-	golang.org/x/sys v0.28.0
+	golang.org/x/net v0.37.0 // indirect
+	golang.org/x/sys v0.32.0
 	google.golang.org/protobuf v1.35.2
 	periph.io/x/periph v3.6.4+incompatible
 )
 
 require (
-	github.com/hajimehoshi/ebiten/v2 v2.6.3
+	github.com/hajimehoshi/ebiten/v2 v2.8.7
 	github.com/hashicorp/hcl/v2 v2.23.0
 )
 
@@ -36,8 +36,8 @@ require (
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/ebitengine/oto/v3 v3.1.0 // indirect
-	github.com/ebitengine/purego v0.5.1 // indirect
+	github.com/ebitengine/oto/v3 v3.3.3 // indirect
+	github.com/ebitengine/purego v0.8.2 // indirect
 	github.com/golang/protobuf v1.5.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
@@ -46,9 +46,9 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/zclconf/go-cty v1.15.1 // indirect
-	golang.org/x/mod v0.22.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
-	golang.org/x/tools v0.28.0 // indirect
+	golang.org/x/mod v0.24.0 // indirect
+	golang.org/x/sync v0.13.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/tools v0.31.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )

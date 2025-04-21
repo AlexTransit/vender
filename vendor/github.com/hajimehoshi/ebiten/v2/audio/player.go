@@ -59,7 +59,6 @@ func newPlayerFactory(sampleRate int) *playerFactory {
 	if driverForTesting != nil {
 		f.context = driverForTesting
 	}
-	// TODO: Consider the hooks.
 	return f
 }
 
@@ -67,20 +66,40 @@ type playerImpl struct {
 	context        *Context
 	player         player
 	src            io.Reader
+	seekable       bool
+	srcIdent       any
 	stream         *timeStream
 	factory        *playerFactory
 	initBufferSize int
-	m              sync.Mutex
+	bytesPerSample int
+
+	// adjustedPosition is the player's more accurate position.
+	// The underlying buffer might not be changed even if the player is playing.
+	// adjustedPosition is adjusted by the time duration during the player position doesn't change while its playing.
+	adjustedPosition time.Duration
+
+	// lastSamples is the last value of the number of samples.
+	// When lastSamples is a negative number, this value is not initialized yet.
+	lastSamples int64
+
+	// stopwatch is a stopwatch to measure the time duration during the player position doesn't change while its playing.
+	stopwatch stopwatch
+
+	m sync.Mutex
 }
 
-func (f *playerFactory) newPlayer(context *Context, src io.Reader) (*playerImpl, error) {
+func (f *playerFactory) newPlayer(context *Context, src io.Reader, seekable bool, srcIdent any, bitDepthInBytes int) (*playerImpl, error) {
 	f.m.Lock()
 	defer f.m.Unlock()
 
 	p := &playerImpl{
-		src:     src,
-		context: context,
-		factory: f,
+		src:            src,
+		seekable:       seekable,
+		srcIdent:       srcIdent,
+		context:        context,
+		factory:        f,
+		lastSamples:    -1,
+		bytesPerSample: bitDepthInBytes * channelCount,
 	}
 	runtime.SetFinalizer(p, (*playerImpl).Close)
 	return p, nil
@@ -93,7 +112,7 @@ func (f *playerFactory) suspend() error {
 	if f.context == nil {
 		return nil
 	}
-	return f.context.Suspend()
+	return addErrorInfo(f.context.Suspend())
 }
 
 func (f *playerFactory) resume() error {
@@ -103,7 +122,7 @@ func (f *playerFactory) resume() error {
 	if f.context == nil {
 		return nil
 	}
-	return f.context.Resume()
+	return addErrorInfo(f.context.Resume())
 }
 
 func (f *playerFactory) error() error {
@@ -113,7 +132,7 @@ func (f *playerFactory) error() error {
 	if f.context == nil {
 		return nil
 	}
-	return f.context.Err()
+	return addErrorInfo(f.context.Err())
 }
 
 func (f *playerFactory) initContextIfNeeded() (<-chan struct{}, error) {
@@ -150,7 +169,7 @@ func (p *playerImpl) ensurePlayer() error {
 	}
 
 	if p.stream == nil {
-		s, err := newTimeStream(p.src, p.factory.sampleRate)
+		s, err := newTimeStream(p.src, p.seekable, p.factory.sampleRate, p.bytesPerSample/channelCount)
 		if err != nil {
 			return err
 		}
@@ -178,7 +197,8 @@ func (p *playerImpl) Play() {
 		return
 	}
 	p.player.Play()
-	p.context.addPlayer(p)
+	p.context.addPlayingPlayer(p)
+	p.stopwatch.start()
 }
 
 func (p *playerImpl) Pause() {
@@ -193,13 +213,17 @@ func (p *playerImpl) Pause() {
 	}
 
 	p.player.Pause()
-	p.context.removePlayer(p)
+	p.context.removePlayingPlayer(p)
+	p.stopwatch.stop()
 }
 
 func (p *playerImpl) IsPlaying() bool {
 	p.m.Lock()
 	defer p.m.Unlock()
+	return p.isPlaying()
+}
 
+func (p *playerImpl) isPlaying() bool {
 	if p.player == nil {
 		return false
 	}
@@ -238,7 +262,8 @@ func (p *playerImpl) Close() error {
 			p.player = nil
 		}()
 		p.player.Pause()
-		return p.player.Close()
+		p.stopwatch.stop()
+		return addErrorInfo(p.player.Close())
 	}
 	return nil
 }
@@ -246,13 +271,7 @@ func (p *playerImpl) Close() error {
 func (p *playerImpl) Position() time.Duration {
 	p.m.Lock()
 	defer p.m.Unlock()
-	if err := p.ensurePlayer(); err != nil {
-		p.context.setError(err)
-		return 0
-	}
-
-	samples := (p.stream.Current() - int64(p.player.BufferedSize())) / bytesPerSampleInt16
-	return time.Duration(samples) * time.Second / time.Duration(p.factory.sampleRate)
+	return p.adjustedPosition
 }
 
 func (p *playerImpl) Rewind() error {
@@ -263,13 +282,25 @@ func (p *playerImpl) SetPosition(offset time.Duration) error {
 	p.m.Lock()
 	defer p.m.Unlock()
 
+	if offset == 0 && p.player == nil {
+		p.adjustedPosition = 0
+		return nil
+	}
+
 	if err := p.ensurePlayer(); err != nil {
 		return err
 	}
 
 	pos := p.stream.timeDurationToPos(offset)
 	if _, err := p.player.Seek(pos, io.SeekStart); err != nil {
-		return err
+		return addErrorInfo(err)
+	}
+	p.lastSamples = -1
+	// Just after setting a position, the buffer size should be 0 as no data is sent.
+	p.adjustedPosition = p.stream.positionInTimeDuration()
+	p.stopwatch.reset()
+	if p.isPlaying() {
+		p.stopwatch.start()
 	}
 	return nil
 }
@@ -281,15 +312,15 @@ func (p *playerImpl) Err() error {
 	if p.player == nil {
 		return nil
 	}
-	return p.player.Err()
+	return addErrorInfo(p.player.Err())
 }
 
 func (p *playerImpl) SetBufferSize(bufferSize time.Duration) {
 	p.m.Lock()
 	defer p.m.Unlock()
 
-	bufferSizeInBytes := int(bufferSize * bytesPerSampleInt16 * time.Duration(p.factory.sampleRate) / time.Second)
-	bufferSizeInBytes = bufferSizeInBytes / bytesPerSampleInt16 * bytesPerSampleInt16
+	bufferSizeInBytes := int(bufferSize * time.Duration(p.bytesPerSample) * time.Duration(p.factory.sampleRate) / time.Second)
+	bufferSizeInBytes = bufferSizeInBytes / p.bytesPerSample * p.bytesPerSample
 	if p.player == nil {
 		p.initBufferSize = bufferSizeInBytes
 		return
@@ -297,28 +328,86 @@ func (p *playerImpl) SetBufferSize(bufferSize time.Duration) {
 	p.player.SetBufferSize(bufferSizeInBytes)
 }
 
-func (p *playerImpl) source() io.Reader {
-	return p.src
+func (p *playerImpl) sourceIdent() any {
+	return p.srcIdent
+}
+
+func (p *playerImpl) onContextSuspended() {
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	if p.player == nil {
+		return
+	}
+	p.stopwatch.stop()
+}
+
+func (p *playerImpl) onContextResumed() {
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	if p.player == nil {
+		return
+	}
+	if p.isPlaying() {
+		p.stopwatch.start()
+	}
+}
+
+func (p *playerImpl) updatePosition() {
+	p.m.Lock()
+	defer p.m.Unlock()
+
+	if p.player == nil {
+		p.adjustedPosition = 0
+		return
+	}
+	if !p.context.IsReady() {
+		p.adjustedPosition = 0
+		return
+	}
+
+	samples := (p.stream.position() - int64(p.player.BufferedSize())) / int64(p.bytesPerSample)
+
+	var adjustingTime time.Duration
+	if p.lastSamples >= 0 && p.lastSamples == samples {
+		// If the number of samples is not changed from the last tick,
+		// the underlying buffer is not updated yet. Adjust the position by the time (#2901).
+		adjustingTime = p.stopwatch.current()
+	} else {
+		p.lastSamples = samples
+		p.stopwatch.reset()
+		if p.isPlaying() {
+			p.stopwatch.start()
+		}
+	}
+
+	// Update the adjusted position every tick. This is necessary to keep the position accurate.
+	p.adjustedPosition = time.Duration(samples)*time.Second/time.Duration(p.factory.sampleRate) + adjustingTime
 }
 
 type timeStream struct {
-	r          io.Reader
-	sampleRate int
-	pos        int64
+	r              io.Reader
+	seekable       bool
+	sampleRate     int
+	pos            int64
+	bytesPerSample int
 
 	// m is a mutex for this stream.
 	// All the exported functions are protected by this mutex as Read can be read from a different goroutine than Seek.
 	m sync.Mutex
 }
 
-func newTimeStream(r io.Reader, sampleRate int) (*timeStream, error) {
+func newTimeStream(r io.Reader, seekable bool, sampleRate int, bitDepthInBytes int) (*timeStream, error) {
 	s := &timeStream{
-		r:          r,
-		sampleRate: sampleRate,
+		r:              r,
+		seekable:       seekable,
+		sampleRate:     sampleRate,
+		bytesPerSample: bitDepthInBytes * channelCount,
 	}
-	if seeker, ok := s.r.(io.Seeker); ok {
+	if seekable {
 		// Get the current position of the source.
-		pos, err := seeker.Seek(0, io.SeekCurrent)
+		pos, err := s.r.(io.Seeker).Seek(0, io.SeekCurrent)
 		if err != nil {
 			return nil, err
 		}
@@ -340,12 +429,11 @@ func (s *timeStream) Seek(offset int64, whence int) (int64, error) {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	seeker, ok := s.r.(io.Seeker)
-	if !ok {
+	if !s.seekable {
 		// TODO: Should this return an error?
 		panic("audio: the source must be io.Seeker when seeking but not")
 	}
-	pos, err := seeker.Seek(offset, whence)
+	pos, err := s.r.(io.Seeker).Seek(offset, whence)
 	if err != nil {
 		return pos, err
 	}
@@ -358,18 +446,25 @@ func (s *timeStream) timeDurationToPos(offset time.Duration) int64 {
 	s.m.Lock()
 	defer s.m.Unlock()
 
-	o := int64(offset) * bytesPerSampleInt16 * int64(s.sampleRate) / int64(time.Second)
+	o := int64(offset) * int64(s.bytesPerSample) * int64(s.sampleRate) / int64(time.Second)
 
 	// Align the byte position with the samples.
-	o -= o % bytesPerSampleInt16
-	o += s.pos % bytesPerSampleInt16
+	o -= o % int64(s.bytesPerSample)
+	o += s.pos % int64(s.bytesPerSample)
 
 	return o
 }
 
-func (s *timeStream) Current() int64 {
+func (s *timeStream) position() int64 {
 	s.m.Lock()
 	defer s.m.Unlock()
 
 	return s.pos
+}
+
+func (s *timeStream) positionInTimeDuration() time.Duration {
+	s.m.Lock()
+	defer s.m.Unlock()
+
+	return time.Duration(s.pos) * time.Second / (time.Duration(s.sampleRate * s.bytesPerSample))
 }

@@ -12,7 +12,7 @@ import (
 	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
-	"github.com/AlexTransit/vender/internal/sound"
+
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
 	"github.com/AlexTransit/vender/log2"
@@ -237,20 +237,6 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		g.MustTextDisplay().SetLine(2, arg.(string))
 		return nil
 	})
-
-	g.Engine.RegisterNewFuncAgr("sound(?)", func(ctx context.Context, arg engine.Arg) error {
-		sound.PlayFileNoWait(arg.(string))
-		return nil
-	})
-
-	g.Engine.RegisterNewFuncAgr("play(?)", func(ctx context.Context, arg engine.Arg) error {
-		sound.PlayFile(arg.(string))
-		return nil
-	})
-
-	g.Engine.RegisterNewFuncAgr("sound.volume(?)", func(ctx context.Context, arg engine.Arg) error { sound.SetVolume(arg.(int16)); return nil })
-
-	g.Engine.RegisterNewFunc("sound.volume.default", func(ctx context.Context) error { sound.SetDefaultVolume(); return nil })
 
 	g.Engine.RegisterNewFunc("set.broken!", func(ctx context.Context) error {
 		g.UI().CreateEvent(types.EventBroken)

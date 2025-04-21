@@ -23,8 +23,6 @@ import (
 	"github.com/ebitengine/purego/objc"
 )
 
-const defaultOneBufferSizeInBytes = 2048
-
 // setNotificationHandler sets a handler for sleep/wake notifications.
 func setNotificationHandler() error {
 	appkit, err := purego.Dlopen("/System/Library/Frameworks/AppKit.framework/Versions/Current/AppKit", purego.RTLD_GLOBAL)

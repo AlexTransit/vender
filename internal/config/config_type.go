@@ -172,6 +172,8 @@ var VMC = Config{
 		Folder:        "/home/vmc/vender-db/audio/",
 		KeyBeep:       "bb.mp3",
 		MoneyIn:       "moneyIn.mp3",
+		Disabled:      false,
+		TTS_exec:      []string{"/home/vmc/vender-db/audio/tts/piper", "--model", "/home/vmc/vender-db/audio/tts/ruslan/voice.onnx", "--config", "/home/vmc/vender-db/audio/tts/ruslan/voice.json"},
 	},
 	Watchdog: watchdog_config.Config{Folder: "/run/user/1000/"},
 	Engine: engine_config.Config{
