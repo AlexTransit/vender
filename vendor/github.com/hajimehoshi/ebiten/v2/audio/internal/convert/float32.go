@@ -1,4 +1,4 @@
-// Copyright 2019 The Ebiten Authors
+// Copyright 2024 The Ebitengine Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,74 +15,81 @@
 package convert
 
 import (
+	"fmt"
 	"io"
+	"math"
 )
 
-type Float32Reader interface {
-	Read([]float32) (int, error)
+func NewFloat32BytesReaderFromInt16BytesReader(r io.Reader) io.Reader {
+	return &float32BytesReader{r: r}
 }
 
-func NewReaderFromFloat32Reader(r Float32Reader) io.Reader {
-	return &f32Reader{r: r}
+func NewFloat32BytesReadSeekerFromInt16BytesReadSeeker(r io.ReadSeeker) io.ReadSeeker {
+	return &float32BytesReader{r: r}
 }
 
-type f32Reader struct {
-	r         Float32Reader
-	eof       bool
-	hasRemain bool
-	remain    byte
-	fbuf      []float32
+type float32BytesReader struct {
+	r      io.Reader
+	eof    bool
+	i16Buf []byte
 }
 
-func max(a, b int) int {
-	if a < b {
-		return b
-	}
-	return a
-}
-
-func (f *f32Reader) Read(buf []byte) (int, error) {
-	if f.eof {
+func (r *float32BytesReader) Read(buf []byte) (int, error) {
+	if r.eof && len(r.i16Buf) == 0 {
 		return 0, io.EOF
 	}
-	if len(buf) == 0 {
-		return 0, nil
-	}
-	if f.hasRemain {
-		buf[0] = f.remain
-		f.hasRemain = false
-		return 1, nil
+
+	if i16LenToFill := len(buf) / 4 * 2; len(r.i16Buf) < i16LenToFill && !r.eof {
+		origLen := len(r.i16Buf)
+		if cap(r.i16Buf) < i16LenToFill {
+			r.i16Buf = append(r.i16Buf, make([]byte, i16LenToFill-origLen)...)
+		}
+
+		// Read int16 bytes.
+		n, err := r.r.Read(r.i16Buf[origLen:i16LenToFill])
+		if err != nil && err != io.EOF {
+			return 0, err
+		}
+		if err == io.EOF {
+			r.eof = true
+		}
+		r.i16Buf = r.i16Buf[:origLen+n]
 	}
 
-	l := max(len(buf)/2, 1)
-	if cap(f.fbuf) < l {
-		f.fbuf = make([]float32, l)
+	// Convert int16 bytes to float32 bytes and fill buf.
+	samplesToFill := min(len(r.i16Buf)/2, len(buf)/4)
+	for i := 0; i < samplesToFill; i++ {
+		vi16l := r.i16Buf[2*i]
+		vi16h := r.i16Buf[2*i+1]
+		v := float32(int16(vi16l)|int16(vi16h)<<8) / (1 << 15)
+		vf32 := math.Float32bits(v)
+		buf[4*i] = byte(vf32)
+		buf[4*i+1] = byte(vf32 >> 8)
+		buf[4*i+2] = byte(vf32 >> 16)
+		buf[4*i+3] = byte(vf32 >> 24)
 	}
 
-	n, err := f.r.Read(f.fbuf[:l])
-	if err != nil && err != io.EOF {
+	// Copy the remaining part for the next read.
+	copy(r.i16Buf, r.i16Buf[samplesToFill*2:])
+	r.i16Buf = r.i16Buf[:len(r.i16Buf)-samplesToFill*2]
+
+	n := samplesToFill * 4
+	if r.eof {
+		return n, io.EOF
+	}
+	return n, nil
+}
+
+func (r *float32BytesReader) Seek(offset int64, whence int) (int64, error) {
+	s, ok := r.r.(io.Seeker)
+	if !ok {
+		return 0, fmt.Errorf("float32: the source must be io.Seeker when seeking but not")
+	}
+	r.i16Buf = r.i16Buf[:0]
+	r.eof = false
+	n, err := s.Seek(offset/4*2, whence)
+	if err != nil {
 		return 0, err
 	}
-	if err == io.EOF {
-		f.eof = true
-	}
-
-	b := buf
-	if len(buf) == 1 && n > 0 {
-		b = make([]byte, 2)
-	}
-	for i := 0; i < n; i++ {
-		f := f.fbuf[i]
-		s := int16(f * (1<<15 - 1))
-		b[2*i] = byte(s)
-		b[2*i+1] = byte(s >> 8)
-	}
-
-	if len(buf) == 1 && len(b) == 2 {
-		buf[0] = b[0]
-		f.remain = b[1]
-		f.hasRemain = true
-		return 1, err
-	}
-	return n * 2, err
+	return n / 2 * 4, nil
 }

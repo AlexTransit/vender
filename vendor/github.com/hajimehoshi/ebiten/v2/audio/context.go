@@ -24,26 +24,18 @@ func newContext(sampleRate int) (context, chan struct{}, error) {
 	ctx, ready, err := oto.NewContext(&oto.NewContextOptions{
 		SampleRate:   sampleRate,
 		ChannelCount: channelCount,
-		Format:       oto.FormatSignedInt16LE,
+		Format:       oto.FormatFloat32LE,
 	})
-	err = addErrorInfoForContextCreation(err)
+	err = addErrorInfo(err)
 	return &contextProxy{ctx}, ready, err
-}
-
-// otoContext is an interface for *oto.Context.
-type otoContext interface {
-	NewPlayer(io.Reader) *oto.Player
-	Suspend() error
-	Resume() error
-	Err() error
 }
 
 // contextProxy is a proxy between otoContext and context.
 type contextProxy struct {
-	otoContext
+	*oto.Context
 }
 
 // NewPlayer implements context.
 func (c *contextProxy) NewPlayer(r io.Reader) player {
-	return c.otoContext.NewPlayer(r)
+	return c.Context.NewPlayer(r)
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/AlexTransit/vender/currency"
 	config_global "github.com/AlexTransit/vender/internal/config"
+	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
@@ -85,8 +86,8 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 	switch m.MakeOrder.OrderStatus {
 	case tele_api.OrderStatus_doSelected: // make selected code. payment via QR, etc
 		if currentRobotState != tele_api.State_WaitingForExternalPayment || // robot state not wait
-			config_global.VMC.User.PaymenId != m.MakeOrder.OwnerInt ||
-			uint32(config_global.VMC.User.DirtyMoney) != m.MakeOrder.Amount { // the payer and payer do not match
+			config_global.VMC.User.PaymenId != m.MakeOrder.OwnerInt || // the payer and payer do not match
+			uint32(config_global.VMC.User.DirtyMoney) != m.MakeOrder.Amount { //
 			t.log.Errorf("make doSelected unposible. robo state:%s <> WaitingForExternalPayment or payerID:%d <> ownerID:%d or qr amount:%d<>order amount^%d",
 				currentRobotState.String(), config_global.VMC.User.PaymenId, m.MakeOrder.OwnerInt, config_global.VMC.User.DirtyMoney, m.MakeOrder.Amount)
 			t.makeOrderImposible(tele_api.OrderStatus_orderError, m)
@@ -125,6 +126,9 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 	config_global.VMC.User.PaymenId = m.MakeOrder.OwnerInt
 	config_global.VMC.User.PaymentMethod = m.MakeOrder.PaymentMethod
 	config_global.VMC.User.PaymentType = m.MakeOrder.OwnerType
+	ms := money.GetGlobal(ctx)
+	ms.SetDirty(config_global.VMC.User.DirtyMoney)
+
 	// run cooking
 	g := state.GetGlobal(ctx)
 	g.UI().CreateEvent(types.EventAccept)

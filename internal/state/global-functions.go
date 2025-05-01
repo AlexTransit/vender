@@ -10,7 +10,6 @@ import (
 
 	"github.com/AlexTransit/vender/currency"
 	config_global "github.com/AlexTransit/vender/internal/config"
-	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
 	tele_api "github.com/AlexTransit/vender/tele"
@@ -154,8 +153,7 @@ func (g *Global) Error(err error) {
 func (g *Global) Fatal(err error) {
 	if err != nil {
 		// FIXME alexm
-		sound.PlayFile("broken.mp3")
-		// g.Error(err, args...)
+		g.Engine.Exec(context.Background(), g.Engine.Resolve("sound(cat.mp3)"))
 		g.Error(err)
 		g.StopWait(5 * time.Second)
 		g.Log.Fatal(err)

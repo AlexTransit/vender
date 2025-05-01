@@ -33,7 +33,7 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 	if watchdog.IsBroken() {
 		broken(ctx)
 	}
-	sound.Init(&g.Config.Sound, g.Log, g.Alive, true)
+	sound.Init(ctx, true)
 	err := g.Init(ctx, g.Config)
 	if err != nil {
 		g.Fatal(err)
@@ -103,7 +103,7 @@ func CmdMain(ctx context.Context, a ...[]string) error {
 	case "help":
 		showHelpCMD()
 	case "sound":
-		sound.Init(&g.Config.Sound, g.Log, g.Alive, false)
+		sound.Init(ctx, false)
 		sound.PlayFile(args[1])
 		os.Exit(0)
 	case "text":
@@ -162,7 +162,7 @@ func broken(ctx context.Context) {
 	g := state.GetGlobal(ctx)
 	// watchdog.Disable()
 	g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
-	sound.Init(&g.Config.Sound, g.Log, g.Alive, false)
+	sound.Init(ctx, false)
 	g.TeleCancelOrder(tele_api.State_Broken)
 	g.Display()
 	display := g.MustTextDisplay()

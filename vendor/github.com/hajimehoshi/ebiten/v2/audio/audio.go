@@ -14,15 +14,14 @@
 
 // Package audio provides audio players.
 //
-// The stream format must be 16-bit little endian and 2 channels. The format is as follows:
+// The stream format must be 16-bit little endian or 32-bit float little endian, and 2 channels. The format is as follows:
 //
 //	[data]      = [sample 1] [sample 2] [sample 3] ...
 //	[sample *]  = [channel 1] ...
 //	[channel *] = [byte 1] [byte 2] ...
 //
-// An audio context (audio.Context object) has a sample rate you can specify and all streams you want to play must have the same
-// sample rate. However, decoders in e.g. audio/mp3 package adjust sample rate automatically,
-// and you don't have to care about it as long as you use those decoders.
+// An audio context (audio.Context object) has a sample rate you can specify
+// and all streams you want to play must have the same sample rate.
 //
 // An audio context can generate 'players' (audio.Player objects),
 // and you can play sound by calling Play function of players.
@@ -37,18 +36,19 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"reflect"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/hajimehoshi/ebiten/v2/audio/internal/convert"
-	"github.com/hajimehoshi/ebiten/v2/internal/hooks"
+	"github.com/hajimehoshi/ebiten/v2/internal/hook"
 )
 
 const (
-	channelCount         = 2
-	bitDepthInBytesInt16 = 2
-	bytesPerSampleInt16  = bitDepthInBytesInt16 * channelCount
+	channelCount           = 2
+	bitDepthInBytesInt16   = 2
+	bitDepthInBytesFloat32 = 4
 )
 
 // A Context represents a current state of audio.
@@ -60,17 +60,11 @@ const (
 type Context struct {
 	playerFactory *playerFactory
 
-	// inited represents whether the audio device is initialized and available or not.
-	// On Android, audio loop cannot be started unless JVM is accessible. After updating one frame, JVM should exist.
-	inited     chan struct{}
-	initedOnce sync.Once
-
 	sampleRate int
 	err        error
 	ready      bool
-	readyOnce  sync.Once
 
-	players map[*playerImpl]struct{}
+	playingPlayers map[*playerImpl]struct{}
 
 	m         sync.Mutex
 	semaphore chan struct{}
@@ -97,11 +91,10 @@ func NewContext(sampleRate int) *Context {
 	}
 
 	c := &Context{
-		sampleRate:    sampleRate,
-		playerFactory: newPlayerFactory(sampleRate),
-		players:       map[*playerImpl]struct{}{},
-		inited:        make(chan struct{}),
-		semaphore:     make(chan struct{}, 1),
+		sampleRate:     sampleRate,
+		playerFactory:  newPlayerFactory(sampleRate),
+		playingPlayers: map[*playerImpl]struct{}{},
+		semaphore:      make(chan struct{}, 1),
 	}
 	theContext = c
 
@@ -111,6 +104,9 @@ func NewContext(sampleRate int) *Context {
 		if err := c.playerFactory.suspend(); err != nil {
 			return err
 		}
+		if err := c.onSuspend(); err != nil {
+			return err
+		}
 		return nil
 	})
 	h.OnResumeAudio(func() error {
@@ -118,14 +114,13 @@ func NewContext(sampleRate int) *Context {
 		if err := c.playerFactory.resume(); err != nil {
 			return err
 		}
+		if err := c.onResume(); err != nil {
+			return err
+		}
 		return nil
 	})
 
 	h.AppendHookOnBeforeUpdate(func() error {
-		c.initedOnce.Do(func() {
-			close(c.inited)
-		})
-
 		var err error
 		theContextLock.Lock()
 		if theContext != nil {
@@ -136,7 +131,20 @@ func NewContext(sampleRate int) *Context {
 			return err
 		}
 
-		if err := c.gcPlayers(); err != nil {
+		// Initialize the context here in the case when there is no player and
+		// the program waits for IsReady() to be true (#969, #970, #2715).
+		ready, err := c.playerFactory.initContextIfNeeded()
+		if err != nil {
+			return err
+		}
+		if ready != nil {
+			go func() {
+				<-ready
+				c.setReady()
+			}()
+		}
+
+		if err := c.updatePlayers(); err != nil {
 			return err
 		}
 		return nil
@@ -175,35 +183,81 @@ func (c *Context) setReady() {
 	c.m.Unlock()
 }
 
-func (c *Context) addPlayer(p *playerImpl) {
+func (c *Context) addPlayingPlayer(p *playerImpl) {
 	c.m.Lock()
 	defer c.m.Unlock()
-	c.players[p] = struct{}{}
+	c.playingPlayers[p] = struct{}{}
+
+	if !reflect.ValueOf(p.sourceIdent()).Comparable() {
+		return
+	}
 
 	// Check the source duplication
-	srcs := map[io.Reader]struct{}{}
-	for p := range c.players {
-		if _, ok := srcs[p.source()]; ok {
-			c.err = errors.New("audio: a same source is used by multiple Player")
+	srcs := map[any]struct{}{}
+	for p := range c.playingPlayers {
+		if _, ok := srcs[p.sourceIdent()]; ok {
+			c.err = errors.New("audio: the same source must not be used by multiple Player objects")
 			return
 		}
-		srcs[p.source()] = struct{}{}
+		srcs[p.sourceIdent()] = struct{}{}
 	}
 }
 
-func (c *Context) removePlayer(p *playerImpl) {
+func (c *Context) removePlayingPlayer(p *playerImpl) {
 	c.m.Lock()
-	delete(c.players, p)
+	delete(c.playingPlayers, p)
 	c.m.Unlock()
 }
 
-func (c *Context) gcPlayers() error {
+func (c *Context) onSuspend() error {
 	// A Context must not call playerImpl's functions with a lock, or this causes a deadlock (#2737).
 	// Copy the playerImpls and iterate them without a lock.
 	var players []*playerImpl
 	c.m.Lock()
-	players = make([]*playerImpl, 0, len(c.players))
-	for p := range c.players {
+	players = make([]*playerImpl, 0, len(c.playingPlayers))
+	for p := range c.playingPlayers {
+		players = append(players, p)
+	}
+	c.m.Unlock()
+
+	for _, p := range players {
+		if err := p.Err(); err != nil {
+			return err
+		}
+		p.onContextSuspended()
+	}
+
+	return nil
+}
+
+func (c *Context) onResume() error {
+	// A Context must not call playerImpl's functions with a lock, or this causes a deadlock (#2737).
+	// Copy the playerImpls and iterate them without a lock.
+	var players []*playerImpl
+	c.m.Lock()
+	players = make([]*playerImpl, 0, len(c.playingPlayers))
+	for p := range c.playingPlayers {
+		players = append(players, p)
+	}
+	c.m.Unlock()
+
+	for _, p := range players {
+		if err := p.Err(); err != nil {
+			return err
+		}
+		p.onContextResumed()
+	}
+
+	return nil
+}
+
+func (c *Context) updatePlayers() error {
+	// A Context must not call playerImpl's functions with a lock, or this causes a deadlock (#2737).
+	// Copy the playerImpls and iterate them without a lock.
+	var players []*playerImpl
+	c.m.Lock()
+	players = make([]*playerImpl, 0, len(c.playingPlayers))
+	for p := range c.playingPlayers {
 		players = append(players, p)
 	}
 	c.m.Unlock()
@@ -218,6 +272,7 @@ func (c *Context) gcPlayers() error {
 		if err := p.Err(); err != nil {
 			return err
 		}
+		p.updatePosition()
 		if !p.IsPlaying() {
 			playersToRemove = append(playersToRemove, p)
 		}
@@ -225,7 +280,7 @@ func (c *Context) gcPlayers() error {
 
 	c.m.Lock()
 	for _, p := range playersToRemove {
-		delete(c.players, p)
+		delete(c.playingPlayers, p)
 	}
 	c.m.Unlock()
 
@@ -238,45 +293,12 @@ func (c *Context) gcPlayers() error {
 func (c *Context) IsReady() bool {
 	c.m.Lock()
 	defer c.m.Unlock()
-
-	if c.ready {
-		return true
-	}
-	if len(c.players) != 0 {
-		return false
-	}
-
-	c.readyOnce.Do(func() {
-		// Create another goroutine since (*Player).Play can lock the context's mutex.
-		// TODO: Is this needed for reader players?
-		go func() {
-			// The audio context is never ready unless there is a player. This is
-			// problematic when a user tries to play audio after the context is ready.
-			// Play a dummy player to avoid the blocking (#969).
-			// Use a long enough buffer so that writing doesn't finish immediately (#970).
-			p := NewPlayerFromBytes(c, make([]byte, 16384))
-			p.Play()
-		}()
-	})
-
-	return false
+	return c.ready
 }
 
 // SampleRate returns the sample rate.
 func (c *Context) SampleRate() int {
 	return c.sampleRate
-}
-
-func (c *Context) acquireSemaphore() {
-	c.semaphore <- struct{}{}
-}
-
-func (c *Context) releaseSemaphore() {
-	<-c.semaphore
-}
-
-func (c *Context) waitUntilInited() {
-	<-c.inited
 }
 
 // Player is an audio player which has one stream.
@@ -305,8 +327,48 @@ type Player struct {
 //
 // A Player doesn't close src even if src implements io.Closer.
 // Closing the source is src owner's responsibility.
+//
+// For new code, NewPlayerF32 is preferrable to NewPlayer, since Ebitengine will treat only 32bit float audio internally in the future.
+//
+// A Player for 16bit integer must be used with 16bit integer version of audio APIs, like vorbis.DecodeWithoutResampling or audio.NewInfiniteLoop, not or vorbis.DecodeF32 or audio.NewInfiniteLoopF32.
 func (c *Context) NewPlayer(src io.Reader) (*Player, error) {
-	pi, err := c.playerFactory.newPlayer(c, src)
+	_, seekable := src.(io.Seeker)
+	f32Src := convert.NewFloat32BytesReaderFromInt16BytesReader(src)
+	pi, err := c.playerFactory.newPlayer(c, f32Src, seekable, src, bitDepthInBytesFloat32)
+	if err != nil {
+		return nil, err
+	}
+
+	p := &Player{pi}
+
+	runtime.SetFinalizer(p, (*Player).finalize)
+
+	return p, nil
+}
+
+// NewPlayerF32 creates a new player with the given stream.
+//
+// src's format must be linear PCM (32bit float, little endian, 2 channel stereo)
+// without a header (e.g. RIFF header).
+// The sample rate must be same as that of the audio context.
+//
+// The player is seekable when src is io.Seeker.
+// Attempt to seek the player that is not io.Seeker causes panic.
+//
+// Note that the given src can't be shared with other Player objects.
+//
+// NewPlayerF32 tries to call Seek of src to get the current position.
+// NewPlayerF32 returns error when the Seek returns error.
+//
+// A Player doesn't close src even if src implements io.Closer.
+// Closing the source is src owner's responsibility.
+//
+// For new code, NewPlayerF32 is preferrable to NewPlayer, since Ebitengine will treat only 32bit float audio internally in the future.
+//
+// A Player for 32bit float must be used with 32bit float version of audio APIs, like vorbis.DecodeF32 or audio.NewInfiniteLoopF32, not vorbis.DecodeWithoutResampling or audio.NewInfiniteLoop.
+func (c *Context) NewPlayerF32(src io.Reader) (*Player, error) {
+	_, seekable := src.(io.Seeker)
+	pi, err := c.playerFactory.newPlayer(c, src, seekable, src, bitDepthInBytesFloat32)
 	if err != nil {
 		return nil, err
 	}
@@ -336,6 +398,21 @@ func (c *Context) NewPlayerFromBytes(src []byte) *Player {
 	if err != nil {
 		// Errors should never happen.
 		panic(fmt.Sprintf("audio: %v at NewPlayerFromBytes", err))
+	}
+	return p
+}
+
+// NewPlayerF32FromBytes creates a new player with the given bytes.
+//
+// As opposed to NewPlayerF32, you don't have to care if src is already used by another player or not.
+// src can be shared by multiple players.
+//
+// The format of src should be same as noted at NewPlayerF32.
+func (c *Context) NewPlayerF32FromBytes(src []byte) *Player {
+	p, err := c.NewPlayerF32(bytes.NewReader(src))
+	if err != nil {
+		// Errors should never happen.
+		panic(fmt.Sprintf("audio: %v at NewPlayerFromBytesF32", err))
 	}
 	return p
 }
@@ -438,36 +515,36 @@ func (p *Player) SetBufferSize(bufferSize time.Duration) {
 	p.p.SetBufferSize(bufferSize)
 }
 
-type hook interface {
+type hooker interface {
 	OnSuspendAudio(f func() error)
 	OnResumeAudio(f func() error)
 	AppendHookOnBeforeUpdate(f func() error)
 }
 
-var hookForTesting hook
+var hookerForTesting hooker
 
-func getHook() hook {
-	if hookForTesting != nil {
-		return hookForTesting
+func getHook() hooker {
+	if hookerForTesting != nil {
+		return hookerForTesting
 	}
-	return &hookImpl{}
+	return &hookerImpl{}
 }
 
-type hookImpl struct{}
+type hookerImpl struct{}
 
-func (h *hookImpl) OnSuspendAudio(f func() error) {
-	hooks.OnSuspendAudio(f)
+func (h *hookerImpl) OnSuspendAudio(f func() error) {
+	hook.OnSuspendAudio(f)
 }
 
-func (h *hookImpl) OnResumeAudio(f func() error) {
-	hooks.OnResumeAudio(f)
+func (h *hookerImpl) OnResumeAudio(f func() error) {
+	hook.OnResumeAudio(f)
 }
 
-func (h *hookImpl) AppendHookOnBeforeUpdate(f func() error) {
-	hooks.AppendHookOnBeforeUpdate(f)
+func (h *hookerImpl) AppendHookOnBeforeUpdate(f func() error) {
+	hook.AppendHookOnBeforeUpdate(f)
 }
 
-// Resample converts the sample rate of the given stream.
+// Resample converts the sample rate of the given singed 16bit integer, little-endian, 2 channels (stereo) stream.
 // size is the length of the source stream in bytes.
 // from is the original sample rate.
 // to is the target sample rate.
@@ -477,5 +554,18 @@ func Resample(source io.ReadSeeker, size int64, from, to int) io.ReadSeeker {
 	if from == to {
 		return source
 	}
-	return convert.NewResampling(source, size, from, to)
+	return convert.NewResampling(source, size, from, to, bitDepthInBytesInt16)
+}
+
+// ResampleF32 converts the sample rate of the given 32bit float, little-endian, 2 channels (stereo) stream.
+// size is the length of the source stream in bytes.
+// from is the original sample rate.
+// to is the target sample rate.
+//
+// If the original sample rate equals to the new one, Resample returns source as it is.
+func ResampleF32(source io.ReadSeeker, size int64, from, to int) io.ReadSeeker {
+	if from == to {
+		return source
+	}
+	return convert.NewResampling(source, size, from, to, bitDepthInBytesFloat32)
 }

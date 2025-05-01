@@ -1,19 +1,31 @@
 package sound
 
+// used low level sound via github.com/hajimehoshi/ebiten/
+// need install a few packages
+//  apt install pkg-config libasound2-dev
+
 import (
+	"bytes"
+	"context"
 	"errors"
 	"io"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"syscall"
 	"time"
 
+	"github.com/AlexTransit/vender/internal/engine"
 	sound_config "github.com/AlexTransit/vender/internal/sound/config"
+	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/log2"
 	"github.com/hajimehoshi/ebiten/v2/audio"
 	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
 	"github.com/temoto/alive/v2"
 )
 
-const sampleRate = 24000
+const sampleRate = 11025
 
 type Sound struct {
 	config        *sound_config.Config
@@ -29,18 +41,43 @@ type soundStream struct {
 	Stream []byte
 }
 
-var s Sound
+var (
+	s           Sound
+	stdout      io.Writer
+	sysProcAttr *syscall.SysProcAttr
+)
 
-func Init(conf *sound_config.Config, log *log2.Log, alive *alive.Alive, startingVMC bool) {
-	s.config = conf
-	s.alive = alive
-	if conf.Disabled {
+func Init(ctx context.Context, startingVMC bool) {
+	g := state.GetGlobal(ctx)
+	s.config = &g.Config.Sound
+	s.config.TTS_exec = append(s.config.TTS_exec, "--output_raw")
+	s.alive = g.Alive
+	g.Engine.RegisterNewFuncAgr("sound(?)", func(ctx context.Context, arg engine.Arg) error {
+		PlayFileNoWait(arg.(string))
+		return nil
+	})
+
+	g.Engine.RegisterNewFuncAgr("play(?)", func(ctx context.Context, arg engine.Arg) error {
+		PlayFile(arg.(string))
+		return nil
+	})
+	g.Engine.RegisterNewFuncAgr("speech(?)", func(ctx context.Context, arg engine.Arg) error {
+		TextSpeech(arg.(string))
+		return nil
+	})
+
+	g.Engine.RegisterNewFuncAgr("sound.volume(?)", func(ctx context.Context, arg engine.Arg) error { SetVolume(arg.(int16)); return nil })
+
+	g.Engine.RegisterNewFunc("sound.volume.default", func(ctx context.Context) error { SetDefaultVolume(); return nil })
+
+	if s.config.Disabled {
 		return
 	}
-	s.log = log
+	s.log = g.Log
 	SetDefaultVolume()
 	audioContext := audio.NewContext(sampleRate)
 	s.audioContext = audioContext
+	// g.Engine.Exec(ctx, g.Engine.Resolve("sound(cat.mp3)"))
 	if startingVMC {
 		go func() {
 			// PlayVmcStarting()
@@ -60,6 +97,26 @@ func SetVolume(v int16) {
 // value is fixed point. 10 = 100%
 func SetDefaultVolume() {
 	s.currentVolume = float64(s.config.DefaultVolume) / 10
+}
+
+func TextSpeech(tts string) {
+	stdout = bytes.NewBuffer(nil)
+	stdin := strings.NewReader(tts)
+	stderr := bytes.NewBuffer(nil)
+	cmd := exec.Command(s.config.TTS_exec[0], s.config.TTS_exec[1:]...)
+	// cmd.Dir = "/home/vmc/00"
+	cmd.Dir = filepath.Dir(s.config.TTS_exec[0])
+	cmd.Stdin = stdin
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	cmd.SysProcAttr = sysProcAttr
+	if err := cmd.Run(); err != nil {
+		s.log.Errf("speech(%s) error:%v", tts, err)
+		return
+	}
+	p := s.audioContext.NewPlayerFromBytes(stdout.(*bytes.Buffer).Bytes())
+	p.SetVolume(s.currentVolume)
+	p.Play()
 }
 
 func PlayFile(file string) error {
@@ -100,7 +157,8 @@ func playMP3controlled(file string) (err error) {
 	if err != nil {
 		return
 	}
-	str, err := mp3.DecodeWithoutResampling(f)
+	// str, err := mp3.DecodeWithoutResampling(f)
+	str, err := mp3.DecodeWithSampleRate(sampleRate, f)
 	if err != nil {
 		return
 	}
