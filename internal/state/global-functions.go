@@ -9,10 +9,13 @@ import (
 	"time"
 
 	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/hardware/input"
+	"github.com/AlexTransit/vender/helpers"
 	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/types"
 	"github.com/AlexTransit/vender/internal/watchdog"
 	tele_api "github.com/AlexTransit/vender/tele"
+	"github.com/juju/errors"
 )
 
 func (g *Global) CheckMenuExecution() {
@@ -55,7 +58,8 @@ func (g *Global) UpgradeVender() {
 }
 
 func (g *Global) VmcStop(ctx context.Context) {
-	if g.UI().GetUiState() != uint32(types.StateFrontSelect) {
+	a := g.XXX_uier.Load()
+	if a == nil || g.UI().GetUiState() != uint32(types.StateFrontSelect) {
 		watchdog.DevicesInitializationRequired()
 	}
 	g.VmcStopWOInitRequared(ctx)
@@ -229,4 +233,38 @@ func (g *Global) OrderToMessage() *tele_api.Order {
 		OwnerType:     g.Config.User.PaymentType,
 	}
 	return o
+}
+
+func (g *Global) Broken(ctx context.Context) {
+	watchdog.SetBroken()
+	g.TeleCancelOrder(tele_api.State_Broken)
+	g.Display()
+	display := g.MustTextDisplay()
+	// FIXME alexm
+	display.SetLine(1, "ABTOMAT")
+	display.SetLine(2, "HE ABTOMAT :(")
+	g.RunBashSript(g.Config.ScriptIfBroken)
+	if errs := g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken); len(errs) != 0 {
+		g.Log.Error(errors.ErrorStack(errors.Annotate(helpers.FoldErrors(errs), "on_broken")))
+	}
+	// 	moneysys := money.GetGlobal(ctx)
+	// 	_ = moneysys.SetAcceptMax(ctx, 0)
+	// }
+
+	// FIXME alexm
+	// g.Engine.Exec(ctx, g.Engine.Resolve("sound(broken.mp3)"))
+	// sound.PlayFile("broken.mp3")
+	// g.Snd.PlayFile("broken.mp3")
+
+	go func() {
+		for {
+			watchdog.Refresh()
+			time.Sleep(time.Duration(g.Config.UI_config.Front.ResetTimeoutSec / 2))
+		}
+	}()
+
+	srcServiceKey, _ := input.NewDevInputEventSource(g.Config.Hardware.Input.ServiceKey)
+	srcServiceKey.Read() // wait press service key
+	watchdog.UnsetBroken()
+	os.Exit(0)
 }
