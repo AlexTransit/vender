@@ -30,7 +30,8 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 	sound.Init(ctx, true)
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGABRT)
-	go func() {
+
+	go func() { // working term signal
 		sig := <-sigs
 		g.GlobalError = fmt.Sprintf("system signal - %v", sig)
 		g.Log.Info(g.GlobalError)
@@ -38,13 +39,9 @@ func VmcMain(ctx context.Context, args ...[]string) error {
 	}()
 	subcmd.SdNotify(daemon.SdNotifyReady)
 	err := g.Init(ctx, g.Config)
-	if watchdog.IsBroken() {
-		g.Broken(ctx)
-	}
 	if err != nil {
 		g.Fatal(err)
 	}
-	// working term signal
 
 	display := g.MustTextDisplay()
 	display.SetLine(1, "boot "+g.BuildVersion)
@@ -106,23 +103,23 @@ func CmdMain(ctx context.Context, a ...[]string) error {
 	case "text":
 		showText(ctx, a[0][2:])
 		os.Exit(0)
-	case "broken":
-		g.Broken(ctx)
+	// case "broken":
+	// 	g.Broken(ctx)
 	case "inited":
 		initedDevice(ctx, false)
 	case "needinit":
 		initedDevice(ctx, true)
-	case "exitcode":
-		if len(args) < 3 || args[2] != "success" {
-			g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
-			g.Tele.ErrorStr(fmt.Sprintf("exit code %v", args))
-			g.RunBashSript(g.Config.ScriptIfBroken)
-		}
-		if args[1] == "0" {
-			g.Log.Info("exit code 0")
-			os.Exit(0)
-		}
-		g.Broken(ctx)
+	// case "exitcode":
+	// 	if len(args) < 3 || args[2] != "success" {
+	// 		g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
+	// 		g.Tele.ErrorStr(fmt.Sprintf("exit code %v", args))
+	// 		g.RunBashSript(g.Config.ScriptIfBroken)
+	// 	}
+	// 	if args[1] == "0" {
+	// 		g.Log.Info("exit code 0")
+	// 		os.Exit(0)
+	// 	}
+	// 	g.Broken(ctx)
 	default:
 		return nil
 	}

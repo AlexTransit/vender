@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
+	"github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
 
 	config_global "github.com/AlexTransit/vender/internal/config"
@@ -76,28 +77,29 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 	case types.StateBroken:
 		moneysys := money.GetGlobal(ctx)
 		_ = moneysys.SetAcceptMax(ctx, 0)
-		ui.g.Broken(ctx)
+		// ui.g.Broken(ctx)
 		// watchdog.Disable()
-		// watchdog.DevicesInitializationRequired()
-		// watchdog.SetBroken()
-		// ui.g.Tele.RoboSendState(tele.State_Broken)
-		// ui.g.RunBashSript(ui.g.Config.ScriptIfBroken)
-		// ui.g.Log.Infof("state=broken")
-		// if !ui.broken {
-		// 	// ui.g.Tele.RoboSendState(tele_api.State_Broken)
-		// 	if errs := ui.g.Engine.ExecList(ctx, "on_broken", ui.g.Config.Engine.OnBroken); len(errs) != 0 {
-		// 		// TODO maybe ErrorStack should be removed
-		// 		ui.g.Log.Error(errors.ErrorStack(errors.Annotate(helpers.FoldErrors(errs), "on_broken")))
-		// 	}
-		// ui.broken = true
-		// ui.RefreshUserPresets()
-		// for ui.g.Alive.IsRunning() {
-		// 	e := ui.wait(time.Second)
-		// 	// TODO receive tele command to reboot or change state
-		// 	if e.Kind == types.EventService {
-		// 		return types.StateServiceBegin
-		// 	}
-		// }
+		watchdog.DevicesInitializationRequired()
+		watchdog.SetBroken()
+		ui.g.Tele.RoboSendState(tele.State_Broken)
+		ui.g.RunBashSript(ui.g.Config.ScriptIfBroken)
+		ui.g.Log.Infof("state=broken")
+		if !ui.broken {
+			// ui.g.Tele.RoboSendState(tele_api.State_Broken)
+			if errs := ui.g.Engine.ExecList(ctx, "on_broken", ui.g.Config.Engine.OnBroken); len(errs) != 0 {
+				// TODO maybe ErrorStack should be removed
+				ui.g.Log.Error(errors.ErrorStack(errors.Annotate(helpers.FoldErrors(errs), "on_broken")))
+			}
+		}
+		ui.broken = true
+		ui.RefreshUserPresets()
+		for ui.g.Alive.IsRunning() {
+			e := ui.wait(time.Second)
+			// TODO receive tele command to reboot or change state
+			if e.Kind == types.EventService {
+				return types.StateStop
+			}
+		}
 		return types.StateDefault
 
 	case types.StateLocked:
