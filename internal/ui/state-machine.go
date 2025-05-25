@@ -75,7 +75,10 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		return ui.onFrontStart()
 
 	case types.StateBroken:
-		watchdog.Disable()
+		moneysys := money.GetGlobal(ctx)
+		_ = moneysys.SetAcceptMax(ctx, 0)
+		// ui.g.Broken(ctx)
+		// watchdog.Disable()
 		watchdog.DevicesInitializationRequired()
 		watchdog.SetBroken()
 		ui.g.Tele.RoboSendState(tele.State_Broken)
@@ -87,16 +90,17 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 				// TODO maybe ErrorStack should be removed
 				ui.g.Log.Error(errors.ErrorStack(errors.Annotate(helpers.FoldErrors(errs), "on_broken")))
 			}
-			moneysys := money.GetGlobal(ctx)
-			_ = moneysys.SetAcceptMax(ctx, 0)
 		}
 		ui.broken = true
 		ui.RefreshUserPresets()
 		for ui.g.Alive.IsRunning() {
-			e := ui.wait(time.Second)
+			// e := ui.wait(5* time.Second)
+			e := ui.wait(ui.frontResetTimeout)
+			watchdog.Refresh()
 			// TODO receive tele command to reboot or change state
 			if e.Kind == types.EventService {
-				return types.StateServiceBegin
+				watchdog.UnsetBroken()
+				return types.StateStop
 			}
 		}
 		return types.StateDefault

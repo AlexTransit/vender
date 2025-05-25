@@ -12,9 +12,9 @@ import (
 	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
+	"github.com/AlexTransit/vender/internal/watchdog"
 
 	"github.com/AlexTransit/vender/internal/types"
-	"github.com/AlexTransit/vender/internal/watchdog"
 	"github.com/AlexTransit/vender/log2"
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"

@@ -90,7 +90,7 @@
         "padstack": "warning",
         "pth_inside_courtyard": "ignore",
         "shorting_items": "error",
-        "silk_edge_clearance": "warning",
+        "silk_edge_clearance": "ignore",
         "silk_over_copper": "warning",
         "silk_overlap": "warning",
         "skew_out_of_range": "error",
@@ -216,7 +216,11 @@
     "equivalence_files": []
   },
   "erc": {
-    "erc_exclusions": [],
+    "erc_exclusions": [
+      "lib_symbol_issues|2387600|685800|bfeb27df-7362-4b2b-9a58-f815c21a9600|00000000-0000-0000-0000-000000000000|||",
+      "power_pin_not_driven|2603500|228600|6a7adedc-8952-4563-a8a9-ef251ad8211c|00000000-0000-0000-0000-000000000000|/781f7e44-9570-4d77-bc79-b1e2c572a583|/781f7e44-9570-4d77-bc79-b1e2c572a583|",
+      "power_pin_not_driven|622300|431800|55bc4225-34ce-4c84-b54e-18806484d7b0|00000000-0000-0000-0000-000000000000|/781f7e44-9570-4d77-bc79-b1e2c572a583|/781f7e44-9570-4d77-bc79-b1e2c572a583|"
+    ],
     "meta": {
       "version": 0
     },

@@ -8,17 +8,14 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
-	"time"
 
 	"github.com/AlexTransit/vender/cmd/vender/subcmd"
 	"github.com/AlexTransit/vender/hardware"
-	"github.com/AlexTransit/vender/hardware/input"
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/ui"
 	"github.com/AlexTransit/vender/internal/watchdog"
-	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/coreos/go-systemd/daemon"
 	"github.com/juju/errors"
 )
@@ -30,24 +27,21 @@ var (
 
 func VmcMain(ctx context.Context, args ...[]string) error {
 	g := state.GetGlobal(ctx)
-	if watchdog.IsBroken() {
-		broken(ctx)
-	}
 	sound.Init(ctx, true)
-	err := g.Init(ctx, g.Config)
-	if err != nil {
-		g.Fatal(err)
-	}
-	// working term signal
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM, syscall.SIGABRT)
-	go func() {
+
+	go func() { // working term signal
 		sig := <-sigs
 		g.GlobalError = fmt.Sprintf("system signal - %v", sig)
 		g.Log.Info(g.GlobalError)
 		g.VmcStop(ctx)
 	}()
 	subcmd.SdNotify(daemon.SdNotifyReady)
+	err := g.Init(ctx, g.Config)
+	if err != nil {
+		g.Fatal(err)
+	}
 
 	display := g.MustTextDisplay()
 	display.SetLine(1, "boot "+g.BuildVersion)
@@ -109,23 +103,23 @@ func CmdMain(ctx context.Context, a ...[]string) error {
 	case "text":
 		showText(ctx, a[0][2:])
 		os.Exit(0)
-	case "broken":
-		broken(ctx)
+	// case "broken":
+	// 	g.Broken(ctx)
 	case "inited":
 		initedDevice(ctx, false)
 	case "needinit":
 		initedDevice(ctx, true)
-	case "exitcode":
-		if len(args) < 3 || args[2] != "success" {
-			g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
-			g.Tele.ErrorStr(fmt.Sprintf("exit code %v", args))
-			g.RunBashSript(g.Config.ScriptIfBroken)
-		}
-		if args[1] == "0" {
-			g.Log.Info("exit code 0")
-			os.Exit(0)
-		}
-		broken(ctx)
+	// case "exitcode":
+	// 	if len(args) < 3 || args[2] != "success" {
+	// 		g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
+	// 		g.Tele.ErrorStr(fmt.Sprintf("exit code %v", args))
+	// 		g.RunBashSript(g.Config.ScriptIfBroken)
+	// 	}
+	// 	if args[1] == "0" {
+	// 		g.Log.Info("exit code 0")
+	// 		os.Exit(0)
+	// 	}
+	// 	g.Broken(ctx)
 	default:
 		return nil
 	}
@@ -155,35 +149,6 @@ func showText(ctx context.Context, s []string) {
 	g := state.GetGlobal(ctx)
 	display := g.MustTextDisplay()
 	display.SetLines(l1, l2)
-}
-
-func broken(ctx context.Context) {
-	watchdog.SetBroken()
-	g := state.GetGlobal(ctx)
-	// watchdog.Disable()
-	g.Tele.Init(ctx, g.Log, g.Config.Tele, g.BuildVersion)
-	sound.Init(ctx, false)
-	g.TeleCancelOrder(tele_api.State_Broken)
-	g.Display()
-	display := g.MustTextDisplay()
-	// FIXME alexm
-	display.SetLine(1, "ABTOMAT")
-	display.SetLine(2, "HE ABTOMAT :(")
-	g.RunBashSript(g.Config.ScriptIfBroken)
-	// FIXME alexm
-	sound.PlayFile("broken.mp3")
-
-	go func() {
-		for {
-			daemon.SdNotify(false, daemon.SdNotifyWatchdog)
-			time.Sleep(time.Duration(g.Config.UI_config.Front.ResetTimeoutSec))
-		}
-	}()
-
-	srcServiceKey, _ := input.NewDevInputEventSource(g.Config.Hardware.Input.ServiceKey)
-	srcServiceKey.Read() // wait press service key
-	watchdog.UnsetBroken()
-	os.Exit(0)
 }
 
 func showHelpCMD() {

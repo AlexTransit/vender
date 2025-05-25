@@ -12,6 +12,7 @@ import (
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
+	"github.com/AlexTransit/vender/internal/watchdog"
 )
 
 type UI struct { //nolint:maligned
@@ -45,7 +46,12 @@ func (ui *UI) GetUiState() uint32 {
 func (ui *UI) Init(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	ui.g = g
+
 	ui.setState(types.StateBoot)
+
+	if watchdog.IsBroken() {
+		ui.setState(types.StateBroken)
+	}
 
 	ui.g.Log.Debugf("menu len=%d", len(config_global.VMC.Engine.Menu.Items))
 
