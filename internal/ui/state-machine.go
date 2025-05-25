@@ -97,6 +97,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 			e := ui.wait(time.Second)
 			// TODO receive tele command to reboot or change state
 			if e.Kind == types.EventService {
+				watchdog.UnsetBroken()
 				return types.StateStop
 			}
 		}
