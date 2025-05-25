@@ -94,7 +94,9 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		ui.broken = true
 		ui.RefreshUserPresets()
 		for ui.g.Alive.IsRunning() {
-			e := ui.wait(time.Second)
+			// e := ui.wait(5* time.Second)
+			e := ui.wait(ui.frontResetTimeout)
+			watchdog.Refresh()
 			// TODO receive tele command to reboot or change state
 			if e.Kind == types.EventService {
 				watchdog.UnsetBroken()
