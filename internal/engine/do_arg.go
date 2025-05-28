@@ -36,10 +36,10 @@ type (
 
 type FuncArg struct {
 	Name string
+	arg  Arg
 	F    func(context.Context, Arg) error
 	V    ValidateFunc
 	C    CalculationFunc
-	arg  Arg
 	set  bool
 }
 

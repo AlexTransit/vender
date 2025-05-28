@@ -57,8 +57,8 @@ func (s Sleep) Do(ctx context.Context) error { time.Sleep(s.Duration); return ni
 func (s Sleep) String() string               { return fmt.Sprintf("Sleep(%v)", s.Duration) }
 
 type RepeatN struct {
-	N uint
 	D Doer
+	N uint
 }
 
 func (r RepeatN) Validate() error      { return r.D.Validate() }
@@ -106,8 +106,8 @@ func (f Fail) String() string               { return f.E.Error() }
 
 type RestartError struct {
 	Doer
-	Check func(error) bool
 	Reset Doer
+	Check func(error) bool
 }
 
 func (re *RestartError) Validate() error      { return re.Doer.Validate() }

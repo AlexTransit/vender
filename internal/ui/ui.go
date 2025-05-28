@@ -16,20 +16,19 @@ import (
 )
 
 type UI struct { //nolint:maligned
-	FrontMaxPrice     currency.Amount
 	Service           uiService
-	g                 *state.Global
-	ms                *money.MoneySystem
-	state             types.UiState
 	broken            bool
-	display           *text_display.TextDisplay // FIXME
 	inputBuf          []byte
+	display           *text_display.TextDisplay // FIXME
+	ms                *money.MoneySystem
+	g                 *state.Global
 	eventch           chan types.Event
 	inputch           chan types.InputEvent
-	lock              uiLock
 	frontResetTimeout time.Duration
-
-	XXX_testHook func(types.UiState)
+	XXX_testHook      func(types.UiState)
+	lock              uiLock
+	state             types.UiState
+	FrontMaxPrice     currency.Amount
 }
 
 var _ types.UIer = &UI{} // compile-time interface test

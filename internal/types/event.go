@@ -24,8 +24,8 @@ const (
 
 type Event struct {
 	Input  InputEvent
-	Amount currency.Amount
 	Kind   EventKind
+	Amount currency.Amount
 }
 
 // func (e *Event) String() string {

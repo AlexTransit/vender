@@ -15,9 +15,9 @@ const seqBuffer uint = 8
 // Error in one action aborts whole group.
 // Build graph with NewSeq().Append()
 type Seq struct {
-	name  string
 	_b    [seqBuffer]Doer
 	items []Doer
+	name  string
 }
 
 func NewSeq(name string) *Seq {

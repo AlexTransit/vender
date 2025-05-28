@@ -13,14 +13,14 @@ import (
 // const tuneKeyFormat = "run/inventory-%s-tune"
 
 type Stock struct {
-	Log            *log2.Log
-	ErrorSend      bool
 	Label          string `hcl:",label"`
-	Code           int    `hcl:"code,optional"`
 	XXX_Ingredient string `hcl:"ingredient"`
 	RegisterAdd    string `hcl:"register_add,optional"`
+	Log            *log2.Log
+	Code           int `hcl:"code,optional"`
 	Ingredient     *Ingredient
 	value          float32
+	ErrorSend      bool
 }
 
 func (s *Stock) String() string {
@@ -111,10 +111,10 @@ func (s *Stock) spendValue(v float32) {
 }
 
 type custom struct {
-	stock  *Stock
 	before engine.Doer
 	after  engine.Doer
 	arg    engine.Arg
+	stock  *Stock
 	spend  float32
 }
 
