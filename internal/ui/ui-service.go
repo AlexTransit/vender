@@ -44,13 +44,13 @@ var /*const*/ serviceMenu = []string{
 var /*const*/ serviceMenuMax = uint8(len(serviceMenu) - 1)
 
 type uiService struct { //nolint:maligned
+	testList     []engine.Doer
 	resetTimeout time.Duration
 	askReport    bool
 	menuIdx      uint8
 	invIdx       uint8
 	// invList   []*inventory.Stock
-	testIdx  uint8
-	testList []engine.Doer
+	testIdx uint8
 }
 
 func (ui *uiService) Init(ctx context.Context) {

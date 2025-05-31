@@ -6,9 +6,9 @@ import (
 )
 
 type Config struct { //nolint:maligned
-	LogDebug bool          `hcl:"log_debug,optional"`
 	Front    FrontStruct   `hcl:"front,block"`
 	Service  ServiceStruct `hcl:"service,block"`
+	LogDebug bool          `hcl:"log_debug,optional"`
 }
 
 type FrontStruct struct {
@@ -35,16 +35,17 @@ type FrontStruct struct {
 
 	MsgNoNetwork string `hcl:"msg_no_network"`
 
-	ResetTimeoutSec int    `hcl:"reset_sec"`
-	PicQRPayError   string `hcl:"pic_QR_pay_error"`
-	PicPayReject    string `hcl:"pic_pay_reject"`
+	PicQRPayError string `hcl:"pic_QR_pay_error"`
+	PicPayReject  string `hcl:"pic_pay_reject"`
 
 	LightShedule string `hcl:"light_sheduler"`
+
+	ResetTimeoutSec int `hcl:"reset_sec"`
 }
 
 type ServiceStruct struct {
-	ResetTimeoutSec int           `hcl:"reset_sec"`
 	XXX_Tests       []TestsStruct `hcl:"test,block"`
+	ResetTimeoutSec int           `hcl:"reset_sec"`
 	Tests           map[string]TestsStruct
 }
 
@@ -54,10 +55,10 @@ type TestsStruct struct {
 }
 
 type UIUser struct {
-	QrText             string
-	UiState            uint32
-	Lock               bool
-	DirtyMoney         currency.Amount
-	KeyboardReadEnable bool
+	QrText string
 	menu_config.UIMenuStruct
+	Lock               bool
+	KeyboardReadEnable bool
+	UiState            uint32
+	DirtyMoney         currency.Amount
 }

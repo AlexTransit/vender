@@ -13,8 +13,8 @@ import (
 
 type DeviceEspresso struct {
 	Generic
-	log     log2.Log
 	timeout uint16
+	log     log2.Log
 }
 
 func (d *DeviceEspresso) init(ctx context.Context) error {

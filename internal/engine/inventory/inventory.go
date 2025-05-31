@@ -40,29 +40,29 @@ import (
 // потом из карты переноситья в рабочий масив
 
 type Inventory struct {
-	ReportInv      int
-	log            *log2.Log
-	mu             sync.RWMutex
-	File           string       `hcl:"stock_file,optional"`
 	Stocks         []Stock      `hcl:"stock,block"`
 	Ingredient     []Ingredient `hcl:"ingredient,block"`
+	File           string       `hcl:"stock_file,optional"`
+	ReportInv      int
+	log            *log2.Log
 	XXX_Stocks     map[string]Stock
 	XXX_Ingredient map[string]Ingredient
+	mu             sync.RWMutex
 }
 
 // if the minimum ingredient is not specified (equal to zero), then the consumption check is disabled
 // если минимум ингридиента не указан (равен нулю), тогда проверка расхода выключена
 type Ingredient struct {
-	Name       string     `hcl:"name,label"`
-	Min        int        `hcl:"min,optional"`
-	SpendRate  float32    `hcl:"spend_rate,optional"`
-	Level      string     `hcl:"level,optional"`
-	TuneKey    string     `hcl:"tuning_key,optional"`
-	Cost       float64    `hcl:"cost,optional"`
 	levelValue []struct { // used fixed comma x.xx
 		lev int
 		val int
 	}
+	Name      string  `hcl:"name,label"`
+	Level     string  `hcl:"level,optional"`
+	TuneKey   string  `hcl:"tuning_key,optional"`
+	Min       int     `hcl:"min,optional"`
+	Cost      float64 `hcl:"cost,optional"`
+	SpendRate float32 `hcl:"spend_rate,optional"`
 }
 
 // структура для контекста

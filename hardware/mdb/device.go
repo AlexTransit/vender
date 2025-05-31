@@ -27,34 +27,37 @@ const (
 )
 
 type Device struct { //nolint:maligned
-	state   uint32 // atomic
-	errCode int32  // atomic
+	PacketSetup Packet
+	Address     uint8
 
-	bus   *Bus
-	cmdLk sync.Mutex // TODO explore if chan approach is better
+	lastReset     *atomic_clock.Clock // last RESET attempt, 0 only at init, monotonic
+	bus           *Bus
+	SetupResponse Packet
 
 	LastOk      *atomic_clock.Clock // last successful tx(), 0 at init, monotonic
 	LastOff     *atomic_clock.Clock // last change from online to offline (MDB timeout), 0=online
-	lastReset   *atomic_clock.Clock // last RESET attempt, 0 only at init, monotonic
-	Log         *log2.Log
-	Address     uint8
-	name        string
-	ByteOrder   binary.ByteOrder
 	PacketReset Packet
-	PacketSetup Packet
-	PacketPoll  Packet
-	Action      string
-	DoReset     engine.Doer
-	DoInit      engine.Doer // likely Seq starting with DoReset
+
+	Log           *log2.Log
+	IdleThreshold time.Duration
+	name          string
+
+	state   uint32 // atomic
+	errCode int32  // atomic
+
+	cmdLk sync.Mutex // TODO explore if chan approach is better
+
+	ByteOrder  binary.ByteOrder
+	PacketPoll Packet
+	Action     string
+	DoReset    engine.Doer
+	DoInit     engine.Doer // likely Seq starting with DoReset
 
 	DelayAfterReset  time.Duration
 	DelayBeforeReset time.Duration
 	DelayIdle        time.Duration
 	DelayNext        time.Duration
 	DelayOffline     time.Duration
-	IdleThreshold    time.Duration
-
-	SetupResponse Packet
 }
 
 func (dev *Device) Init(bus *Bus, addr uint8, name string, byteOrder binary.ByteOrder) {

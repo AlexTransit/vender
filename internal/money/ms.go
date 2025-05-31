@@ -26,20 +26,17 @@ import (
 )
 
 type MoneySystem struct { //nolint:maligned
-	Log   *log2.Log
-	lk    sync.RWMutex
-	dirty currency.Amount // uncommited
-
-	bill         bill.Biller
-	billCashbox  currency.NominalGroup
-	billCredit   currency.NominalGroup
-	billReinited bool
-
+	bill          bill.Biller
+	Log           *log2.Log
+	billCashbox   currency.NominalGroup
+	billCredit    currency.NominalGroup
 	CoinValidator *coin.CoinAcceptor
 	coinCashbox   currency.NominalGroup
 	coinCredit    currency.NominalGroup
-
-	giftCredit currency.Amount
+	lk            sync.RWMutex
+	dirty         currency.Amount // uncommited
+	giftCredit    currency.Amount
+	billReinited  bool
 }
 
 func GetGlobal(ctx context.Context) *MoneySystem {

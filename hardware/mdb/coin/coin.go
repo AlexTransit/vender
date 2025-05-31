@@ -82,8 +82,8 @@ type CoinAcceptor struct { //nolint:maligned
 }
 
 type Tube struct {
-	Nominal  currency.Nominal
 	Count    uint
+	Nominal  currency.Nominal
 	TubeFull bool
 }
 
@@ -210,6 +210,9 @@ func (ca *CoinAcceptor) Dispense(amount currency.Amount) (err error) {
 
 func (ca *CoinAcceptor) nominalMaximumNumberOfCoins(notMore currency.Amount) (n currency.Nominal, err error) {
 	sort.Slice(ca.Tub[:], func(i, j int) bool {
+		if ca.Tub[i].Count == ca.Tub[j].Count {
+			return ca.Tub[i].Nominal > ca.Tub[j].Nominal
+		}
 		return ca.Tub[i].Count > ca.Tub[j].Count
 	})
 	for _, v := range ca.Tub {
@@ -560,7 +563,13 @@ func (ca *CoinAcceptor) ReadTubeStatus() error {
 		}
 	}
 	for k, v := range ct {
-		ca.Tub = append(ca.Tub, Tube{currency.Nominal(k), ca.tubes.InTube(currency.Nominal(k)), v})
+		ca.Tub = append(ca.Tub,
+			Tube{
+				Count:    ca.tubes.InTube(currency.Nominal(k)),
+				Nominal:  currency.Nominal(k),
+				TubeFull: v,
+			},
+		)
 	}
 	ca.Device.Log.Debugf("%s tubes=%s", tag, ca.tubes.String())
 	return nil

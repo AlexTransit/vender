@@ -20,19 +20,17 @@ const MaxWidth = 40
 var spaceBytes = bytes.Repeat([]byte{' '}, MaxWidth)
 
 type TextDisplay struct { //nolint:maligned
-	log   *log2.Log
-	alive *alive.Alive
-	mu    sync.Mutex
+	state State
+	line  []string
 	dev   Devicer
 	tr    atomic.Value
-	width uint32
-	state State
-
-	line []string
-
+	log   *log2.Log
+	alive *alive.Alive
 	tickd time.Duration
-	tick  uint32
 	upd   chan<- State
+	mu    sync.Mutex
+	width uint32
+	tick  uint32
 }
 
 type TextDisplayConfig struct {

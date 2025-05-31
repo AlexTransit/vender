@@ -22,12 +22,12 @@ const (
 
 type DeviceConveyor struct { //nolint:maligned
 	Generic
+	speed    int8
+	position int16
 
 	DoSetSpeed engine.FuncArg
-	maxTimeout time.Duration
 	timeout    uint16
-	speed      int8
-	position   int16
+	maxTimeout time.Duration
 }
 
 func (c *DeviceConveyor) init(ctx context.Context) error {

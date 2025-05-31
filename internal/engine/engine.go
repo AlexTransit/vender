@@ -21,9 +21,6 @@ func NewErrNotResolved(action string) ErrNotResolved {
 func (e ErrNotResolved) Error() string { return e.msg }
 
 type Engine struct {
-	Log     *log2.Log
-	lk      sync.RWMutex
-	actions map[string]Doer
 	profile struct {
 		// optimistic field access guard; fastpath=0 -> profiling disabled, don't touch mutex
 		fastpath uint32
@@ -34,6 +31,9 @@ type Engine struct {
 		min time.Duration
 		fun ProfileFunc
 	}
+	Log     *log2.Log
+	actions map[string]Doer
+	lk      sync.RWMutex
 }
 
 func NewEngine(log *log2.Log) *Engine {
