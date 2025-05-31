@@ -209,6 +209,17 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		},
 	)
 
+	g.Engine.Register(
+		"not.valid",
+		engine.Func{
+			// Name: "aa",
+			F: func(ctx context.Context) error {
+				return nil
+			},
+			V: func() error { return errors.New("disabled") },
+		},
+	)
+
 	g.Engine.RegisterNewFunc(
 		"vmc.upgrade!",
 		func(ctx context.Context) error { g.UpgradeVender(); return nil },
