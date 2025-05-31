@@ -210,6 +210,9 @@ func (ca *CoinAcceptor) Dispense(amount currency.Amount) (err error) {
 
 func (ca *CoinAcceptor) nominalMaximumNumberOfCoins(notMore currency.Amount) (n currency.Nominal, err error) {
 	sort.Slice(ca.Tub[:], func(i, j int) bool {
+		if ca.Tub[i].Count == ca.Tub[j].Count {
+			return ca.Tub[i].Nominal > ca.Tub[j].Nominal
+		}
 		return ca.Tub[i].Count > ca.Tub[j].Count
 	})
 	for _, v := range ca.Tub {
