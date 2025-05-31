@@ -36,11 +36,11 @@ func (g *Global) CheckMenuExecution() {
 }
 
 func (g *Global) ListMenuPriceCost() {
-	g.Log.Infof("code;price;cost")
+	g.Log.Infof("code;price;cost;name;scenario")
 	for _, v := range g.Config.Engine.Menu.Items {
 		c := v.Doer.Calculation()
 		cost := currency.Amount(int(math.Round(c * 100)))
-		g.Log.Infof("%s;%v;%v", v.Code, v.Price.Format100I(), cost.Format100I())
+		g.Log.Infof("%s;%v;%v;%v;%v", v.Code, v.Price.Format100I(), cost.Format100I(), v.Name, v.Scenario)
 	}
 }
 

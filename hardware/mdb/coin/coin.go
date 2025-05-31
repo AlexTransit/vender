@@ -560,7 +560,13 @@ func (ca *CoinAcceptor) ReadTubeStatus() error {
 		}
 	}
 	for k, v := range ct {
-		ca.Tub = append(ca.Tub, Tube{currency.Nominal(k), ca.tubes.InTube(currency.Nominal(k)), v})
+		ca.Tub = append(ca.Tub,
+			Tube{
+				Count:    ca.tubes.InTube(currency.Nominal(k)),
+				Nominal:  currency.Nominal(k),
+				TubeFull: v,
+			},
+		)
 	}
 	ca.Device.Log.Debugf("%s tubes=%s", tag, ca.tubes.String())
 	return nil
