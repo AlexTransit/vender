@@ -28,13 +28,13 @@ import (
 const sampleRate = 11025
 
 type Sound struct {
-	keyBeep       soundStream
-	moneyIn       soundStream
 	config        *sound_config.Config
 	alive         *alive.Alive
 	log           *log2.Log
 	audioContext  *audio.Context
 	audioPlayer   *audio.Player
+	keyBeep       soundStream
+	moneyIn       soundStream
 	currentVolume float64
 }
 type soundStream struct {

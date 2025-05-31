@@ -14,9 +14,9 @@ import (
 type DeviceElevator struct { //nolint:maligned
 	Generic
 
+	moveTimeout time.Duration
 	cPos        int8
 	nPos        uint8
-	moveTimeout time.Duration
 }
 
 // текущая проша подьемника, требует определенных действий. надо обязательно "проехать" с нуля на 100
