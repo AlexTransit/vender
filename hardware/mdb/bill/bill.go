@@ -20,29 +20,29 @@ import (
 )
 
 type BillValidator struct { //nolint:maligned
+	reseted bool
 	mdb.Device
-	manafacturer      string
-	teleError         func(error)
-	billCmd           chan BillCommand
-	nominals          [16]currency.Nominal // final values, includes all scaling factors
-	pollmu            sync.Mutex           // isolate active/idle polling
-	stackerCount      uint32
-	EscrowBill        currency.Nominal // assume only one bill may be in escrow position
-	supportedFeatures uint32
-	configScaling     uint16
-	escrowSupported   bool
-	featureLevel      uint8
-	stackerFull       bool
-	billstate         BllStateType
-	reseted           bool
+	pollmu        sync.Mutex // isolate active/idle polling
+	configScaling uint16
 
 	// DoEscrowAccept engine.Func
 	// DoEscrowReject engine.Func
 	// DoStacker      engine.Func
+	billstate BllStateType
+	billCmd   chan BillCommand
 
 	// parsed from SETUP
+	featureLevel      uint8
+	supportedFeatures uint32
+	escrowSupported   bool
+	nominals          [16]currency.Nominal // final values, includes all scaling factors
+	manafacturer      string
 
 	// dynamic state useful for external code
+	EscrowBill   currency.Nominal // assume only one bill may be in escrow position
+	stackerFull  bool
+	stackerCount uint32
+	teleError    func(error)
 }
 
 type BllStateType byte

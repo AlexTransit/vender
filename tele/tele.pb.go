@@ -569,20 +569,19 @@ func (x *Inventory) GetStocks() []*Inventory_StockItem {
 }
 
 type Telemetry struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
-	Stat         *Telemetry_Stat        `protobuf:"bytes,7,opt,name=stat,proto3" json:"stat,omitempty"`
+
+	VmId         int32                  `protobuf:"varint,1,opt,name=vm_id,json=vmId,proto3" json:"vm_id,omitempty"`
 	Time         int64                  `protobuf:"varint,2,opt,name=time,proto3" json:"time,omitempty"`
 	Error        *Telemetry_Error       `protobuf:"bytes,3,opt,name=error,proto3" json:"error,omitempty"`
 	Inventory    *Inventory             `protobuf:"bytes,4,opt,name=inventory,proto3" json:"inventory,omitempty"`
 	MoneyCashbox *Telemetry_Money       `protobuf:"bytes,5,opt,name=money_cashbox,json=moneyCashbox,proto3" json:"money_cashbox,omitempty"`
 	Transaction  *Telemetry_Transaction `protobuf:"bytes,6,opt,name=transaction,proto3" json:"transaction,omitempty"`
-
-	state         protoimpl.MessageState
+	Stat         *Telemetry_Stat        `protobuf:"bytes,7,opt,name=stat,proto3" json:"stat,omitempty"`
 	MoneySave    *Telemetry_Money       `protobuf:"bytes,8,opt,name=money_save,json=moneySave,proto3" json:"money_save,omitempty"`
 	MoneyChange  *Telemetry_Money       `protobuf:"bytes,9,opt,name=money_change,json=moneyChange,proto3" json:"money_change,omitempty"`
-	sizeCache     protoimpl.SizeCache
-
-	VmId         int32                  `protobuf:"varint,1,opt,name=vm_id,json=vmId,proto3" json:"vm_id,omitempty"`
 	AtService    bool                   `protobuf:"varint,16,opt,name=at_service,json=atService,proto3" json:"at_service,omitempty"` //  string build_version = 17;
 }
 
@@ -687,11 +686,11 @@ func (x *Telemetry) GetAtService() bool {
 }
 
 type Command struct {
-	unknownFields protoimpl.UnknownFields
-	Task isCommand_Task `protobuf_oneof:"task"`
 	state         protoimpl.MessageState
-	Executer int64 `protobuf:"varint,5,opt,name=executer,proto3" json:"executer,omitempty"`
 	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Executer int64 `protobuf:"varint,5,opt,name=executer,proto3" json:"executer,omitempty"`
 	Lock     bool  `protobuf:"varint,6,opt,name=lock,proto3" json:"lock,omitempty"`
 	// Types that are assignable to Task:
 	//
@@ -704,6 +703,7 @@ type Command struct {
 	//	*Command_Show_QR
 	//	*Command_ValidateCode
 	//	*Command_Cook
+	Task isCommand_Task `protobuf_oneof:"task"`
 }
 
 func (x *Command) Reset() {
@@ -879,18 +879,18 @@ func (*Command_ValidateCode) isCommand_Task() {}
 func (*Command_Cook) isCommand_Task() {}
 
 type Response struct {
-	unknownFields protoimpl.UnknownFields
-	Error          string     `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
-	Data           string     `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
-	INTERNALTopic  string     `protobuf:"bytes,2048,opt,name=INTERNAL_topic,json=INTERNALTopic,proto3" json:"INTERNAL_topic,omitempty"` // convenience
 	state         protoimpl.MessageState
-	Executer       int64      `protobuf:"varint,4,opt,name=executer,proto3" json:"executer,omitempty"`
 	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
 
 	// uint32 command_id = 1;
+	Error          string     `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	Data           string     `protobuf:"bytes,3,opt,name=data,proto3" json:"data,omitempty"`
+	Executer       int64      `protobuf:"varint,4,opt,name=executer,proto3" json:"executer,omitempty"`
 	CmdReplay      CmdReplay  `protobuf:"varint,5,opt,name=cmd_replay,json=cmdReplay,proto3,enum=CmdReplay" json:"cmd_replay,omitempty"`
 	CookReplay     CookReplay `protobuf:"varint,6,opt,name=cook_replay,json=cookReplay,proto3,enum=CookReplay" json:"cook_replay,omitempty"`
 	ValidateReplay uint32     `protobuf:"varint,7,opt,name=validateReplay,proto3" json:"validateReplay,omitempty"`
+	INTERNALTopic  string     `protobuf:"bytes,2048,opt,name=INTERNAL_topic,json=INTERNALTopic,proto3" json:"INTERNAL_topic,omitempty"` // convenience
 }
 
 func (x *Response) Reset() {
@@ -973,16 +973,16 @@ func (x *Response) GetINTERNALTopic() string {
 }
 
 type FromRoboMessage struct {
-	unknownFields protoimpl.UnknownFields
 	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	State        State         `protobuf:"varint,1,opt,name=state,proto3,enum=State" json:"state,omitempty"`
 	RoboTime     int64         `protobuf:"varint,2,opt,name=roboTime,proto3" json:"roboTime,omitempty"`
 	Order        *Order        `protobuf:"bytes,3,opt,name=Order,proto3" json:"Order,omitempty"`
 	Err          *Err          `protobuf:"bytes,4,opt,name=err,proto3" json:"err,omitempty"`
 	RoboHardware *RoboHardware `protobuf:"bytes,5,opt,name=RoboHardware,proto3" json:"RoboHardware,omitempty"`
 	Stock        *Stock        `protobuf:"bytes,6,opt,name=Stock,proto3" json:"Stock,omitempty"`
-	sizeCache     protoimpl.SizeCache
-
-	State        State         `protobuf:"varint,1,opt,name=state,proto3,enum=State" json:"state,omitempty"`
 }
 
 func (x *FromRoboMessage) Reset() {
@@ -1103,12 +1103,12 @@ func (x *Stock) GetStocks() []*Stock_StockItem {
 }
 
 type Err struct {
-	unknownFields protoimpl.UnknownFields
-	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
 
 	Code    uint32 `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 }
 
 func (x *Err) Reset() {
@@ -1156,16 +1156,16 @@ func (x *Err) GetMessage() string {
 }
 
 type ShowQR struct {
-	unknownFields protoimpl.UnknownFields
-	QrText  string        `protobuf:"bytes,2,opt,name=qrText,proto3" json:"qrText,omitempty"`
-	DataStr string        `protobuf:"bytes,3,opt,name=dataStr,proto3" json:"dataStr,omitempty"`
-	OrderId string        `protobuf:"bytes,6,opt,name=orderId,proto3" json:"orderId,omitempty"`
 	state         protoimpl.MessageState
-	PayerId int64         `protobuf:"varint,5,opt,name=payerId,proto3" json:"payerId,omitempty"`
 	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
 
 	QrType  ShowQR_QRType `protobuf:"varint,1,opt,name=qrType,proto3,enum=ShowQR_QRType" json:"qrType,omitempty"`
+	QrText  string        `protobuf:"bytes,2,opt,name=qrText,proto3" json:"qrText,omitempty"`
+	DataStr string        `protobuf:"bytes,3,opt,name=dataStr,proto3" json:"dataStr,omitempty"`
 	DataInt int32         `protobuf:"varint,4,opt,name=dataInt,proto3" json:"dataInt,omitempty"`
+	PayerId int64         `protobuf:"varint,5,opt,name=payerId,proto3" json:"payerId,omitempty"`
+	OrderId string        `protobuf:"bytes,6,opt,name=orderId,proto3" json:"orderId,omitempty"`
 	Amount  int32         `protobuf:"varint,7,opt,name=amount,proto3" json:"amount,omitempty"`
 }
 
@@ -1249,14 +1249,15 @@ func (x *ShowQR) GetAmount() int32 {
 }
 
 type ToRoboMessage struct {
-	unknownFields protoimpl.UnknownFields
-	Command    string      `protobuf:"bytes,5,opt,name=command,proto3" json:"command,omitempty"`
 	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Cmd        MessageType `protobuf:"varint,1,opt,name=cmd,proto3,enum=MessageType" json:"cmd,omitempty"`
 	ServerTime int64       `protobuf:"varint,2,opt,name=serverTime,proto3" json:"serverTime,omitempty"`
 	MakeOrder  *Order      `protobuf:"bytes,3,opt,name=makeOrder,proto3" json:"makeOrder,omitempty"`
 	ShowQR     *ShowQR     `protobuf:"bytes,4,opt,name=showQR,proto3" json:"showQR,omitempty"`
-	sizeCache     protoimpl.SizeCache
-	Cmd        MessageType `protobuf:"varint,1,opt,name=cmd,proto3,enum=MessageType" json:"cmd,omitempty"`
+	Command    string      `protobuf:"bytes,5,opt,name=command,proto3" json:"command,omitempty"`
 }
 
 func (x *ToRoboMessage) Reset() {
@@ -1325,11 +1326,11 @@ func (x *ToRoboMessage) GetCommand() string {
 }
 
 type RoboHardware struct {
-	unknownFields protoimpl.UnknownFields
-	SwVersion   string `protobuf:"bytes,1,opt,name=SwVersion,proto3" json:"SwVersion,omitempty"`
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
 
+	SwVersion   string `protobuf:"bytes,1,opt,name=SwVersion,proto3" json:"SwVersion,omitempty"`
 	Temperature int32  `protobuf:"varint,3,opt,name=temperature,proto3" json:"temperature,omitempty"`
 }
 
@@ -1378,19 +1379,20 @@ func (x *RoboHardware) GetTemperature() int32 {
 }
 
 type Order struct {
-	Sugar           []byte        `protobuf:"bytes,3,opt,name=sugar,proto3" json:"sugar,omitempty"`    // default = 0
-	unknownFields protoimpl.UnknownFields
-	Cream           []byte        `protobuf:"bytes,2,opt,name=cream,proto3" json:"cream,omitempty"`    // default = 0
-	OwnerStr        string        `protobuf:"bytes,9,opt,name=ownerStr,proto3" json:"ownerStr,omitempty"`  //
-	MenuCode        string        `protobuf:"bytes,1,opt,name=menuCode,proto3" json:"menuCode,omitempty"`
-	OwnerInt        int64         `protobuf:"varint,8,opt,name=ownerInt,proto3" json:"ownerInt,omitempty"` // id клиента
 	state         protoimpl.MessageState
-	RedirectDueDate int64         `protobuf:"varint,11,opt,name=redirectDueDate,proto3" json:"redirectDueDate,omitempty"`
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	MenuCode        string        `protobuf:"bytes,1,opt,name=menuCode,proto3" json:"menuCode,omitempty"`
+	Cream           []byte        `protobuf:"bytes,2,opt,name=cream,proto3" json:"cream,omitempty"`    // default = 0
+	Sugar           []byte        `protobuf:"bytes,3,opt,name=sugar,proto3" json:"sugar,omitempty"`    // default = 0
 	Amount          uint32        `protobuf:"varint,4,opt,name=amount,proto3" json:"amount,omitempty"` // цена в копейках
 	OrderStatus     OrderStatus   `protobuf:"varint,6,opt,name=orderStatus,proto3,enum=OrderStatus" json:"orderStatus,omitempty"`
 	PaymentMethod   PaymentMethod `protobuf:"varint,7,opt,name=paymentMethod,proto3,enum=PaymentMethod" json:"paymentMethod,omitempty"`
-	sizeCache     protoimpl.SizeCache
+	OwnerInt        int64         `protobuf:"varint,8,opt,name=ownerInt,proto3" json:"ownerInt,omitempty"` // id клиента
+	OwnerStr        string        `protobuf:"bytes,9,opt,name=ownerStr,proto3" json:"ownerStr,omitempty"`  //
 	OwnerType       OwnerType     `protobuf:"varint,10,opt,name=ownerType,proto3,enum=OwnerType" json:"ownerType,omitempty"`
+	RedirectDueDate int64         `protobuf:"varint,11,opt,name=redirectDueDate,proto3" json:"redirectDueDate,omitempty"`
 }
 
 func (x *Order) Reset() {
@@ -1571,12 +1573,12 @@ func (x *Inventory_StockItem) GetValuef() float32 {
 }
 
 type Telemetry_Error struct {
-	unknownFields protoimpl.UnknownFields
-	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
 
 	Code    uint32 `protobuf:"varint,1,opt,name=code,proto3" json:"code,omitempty"`
+	Message string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	Count   uint32 `protobuf:"varint,3,opt,name=count,proto3" json:"count,omitempty"`
 }
 
@@ -1802,13 +1804,13 @@ func (x *Telemetry_Transaction) GetExecuter() int64 {
 }
 
 type Telemetry_Stat struct {
-	unknownFields protoimpl.UnknownFields
 	state         protoimpl.MessageState
-	BillRejected map[uint32]uint32 `protobuf:"bytes,16,rep,name=bill_rejected,json=billRejected,proto3" json:"bill_rejected,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
-	CoinRejected map[uint32]uint32 `protobuf:"bytes,17,rep,name=coin_rejected,json=coinRejected,proto3" json:"coin_rejected,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
 	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
 
 	Activity     uint32            `protobuf:"varint,1,opt,name=activity,proto3" json:"activity,omitempty"`
+	BillRejected map[uint32]uint32 `protobuf:"bytes,16,rep,name=bill_rejected,json=billRejected,proto3" json:"bill_rejected,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+	CoinRejected map[uint32]uint32 `protobuf:"bytes,17,rep,name=coin_rejected,json=coinRejected,proto3" json:"coin_rejected,omitempty" protobuf_key:"varint,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
 	CoinSlug     uint32            `protobuf:"varint,18,opt,name=coin_slug,json=coinSlug,proto3" json:"coin_slug,omitempty"`
 }
 

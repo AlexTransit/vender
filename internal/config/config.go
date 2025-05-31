@@ -42,9 +42,9 @@ func (c *Config) ScaleU(u uint32) currency.Amount          { return currency.Amo
 func (c *Config) ScaleA(a currency.Amount) currency.Amount { return a * currency.Amount(c.Money.Scale) }
 
 type configLoadStruct struct {
+	log      *log2.Log
 	includes []string
 	bodies   []hcl.Body
-	log      *log2.Log
 }
 
 var includeFile = &hcl.BodySchema{

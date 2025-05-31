@@ -24,9 +24,9 @@ type Forcer interface{ Force() (Doer, bool, error) }
 
 type Lazy struct {
 	Name  string
-	cache Doer
-	r     func(string) (Doer, error)
 	mu    sync.Mutex
+	r     func(string) (Doer, error)
+	cache Doer
 }
 
 func (l *Lazy) Force() (d Doer, forced bool, err error) {

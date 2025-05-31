@@ -15,23 +15,23 @@ import (
 )
 
 type Config struct {
-	Hardware       HardwareStruct       `hcl:"hardware,block"`
-	UI_config      ui_config.Config     `hcl:"ui,block"`
-	Engine         engine_config.Config `hcl:"engine,block"`
-	User           ui_config.UIUser
-	Tele           tele_config.Config     `hcl:"tele,block"`
-	Inventory      inventory.Inventory    `hcl:"inventory,block"`
-	Sound          sound_config.Config    `hcl:"sound,block"`
-	Watchdog       watchdog_config.Config `hcl:"watchdog,block"`
-	BrokenFile     string                 `hcl:"broken_file,optional"`
-	Money          MoneyStruct            `hcl:"money,block"`
 	Version        string
-	ScriptIfBroken string `hcl:"script_if_broken,optional"`
-	UpgradeScript  string `hcl:"upgrade_script,optional"`
-	ErrorFolder    string `hcl:"error_folder,optional"`
 	TeleN          tele_api.Teler
+	UpgradeScript  string              `hcl:"upgrade_script,optional"`
+	ScriptIfBroken string              `hcl:"script_if_broken,optional"`
+	ErrorFolder    string              `hcl:"error_folder,optional"`
+	BrokenFile     string              `hcl:"broken_file,optional"`
+	Inventory      inventory.Inventory `hcl:"inventory,block"`
+	Money          MoneyStruct         `hcl:"money,block"`
+	Hardware       HardwareStruct      `hcl:"hardware,block"`
 	// Persist        PersistStruct          `hcl:"persist,block"`
+	Tele      tele_config.Config     `hcl:"tele,block"`
+	UI_config ui_config.Config       `hcl:"ui,block"`
+	Sound     sound_config.Config    `hcl:"sound,block"`
+	Watchdog  watchdog_config.Config `hcl:"watchdog,block"`
+	Engine    engine_config.Config   `hcl:"engine,block"`
 	// Remains   hcl.Body               `hcl:",remain"`
+	User ui_config.UIUser
 }
 
 type DeviceConfig struct {
@@ -41,15 +41,15 @@ type DeviceConfig struct {
 }
 
 type HardwareStruct struct {
-	HD44780      HD44780Struct       `hcl:"hd44780,block"`
-	Mega         MegaStruct          `hcl:"mega,block"`
-	Mdb          mdb_config.Config   `hcl:"mdb,block"`
-	Evend        evend_config.Config `hcl:"evend,block"`
-	XXX_Devices  []DeviceConfig      `hcl:"device,block"`
-	Input        InputStruct         `hcl:"input,block"`
-	Display      DisplayStruct       `hcl:"display,block"`
-	IodinPath    string              `hcl:"iodin_path,optional"`
 	EvendDevices map[string]DeviceConfig
+	XXX_Devices  []DeviceConfig      `hcl:"device,block"`
+	Evend        evend_config.Config `hcl:"evend,block"`
+	Display      DisplayStruct       `hcl:"display,block"`
+	HD44780      HD44780Struct       `hcl:"hd44780,block"`
+	IodinPath    string              `hcl:"iodin_path,optional"`
+	Input        InputStruct         `hcl:"input,block"`
+	Mdb          mdb_config.Config   `hcl:"mdb,block"`
+	Mega         MegaStruct          `hcl:"mega,block"`
 }
 
 type DisplayStruct struct {
@@ -57,20 +57,20 @@ type DisplayStruct struct {
 }
 
 type HD44780Struct struct {
-	Pinmap        hd44780.PinMap `hcl:"pinmap,block"`
+	Enable        bool           `hcl:"enable"`
 	Codepage      string         `hcl:"codepage"`
 	PinChip       string         `hcl:"pin_chip"`
-	Width         int            `hcl:"width"`
-	ScrollDelay   int            `hcl:"scroll_delay"`
-	Enable        bool           `hcl:"enable"`
+	Pinmap        hd44780.PinMap `hcl:"pinmap,block"`
 	Page1         bool           `hcl:"page1"`
+	Width         int            `hcl:"width"`
 	ControlBlink  bool           `hcl:"blink"`
 	ControlCursor bool           `hcl:"cursor"`
+	ScrollDelay   int            `hcl:"scroll_delay"`
 }
 
 type InputStruct struct {
-	ServiceKey    string              `hcl:"service_key,optional"`
 	EvendKeyboard EvendKeyboardStruct `hcl:"evend_keyboard,block"`
+	ServiceKey    string              `hcl:"service_key,optional"`
 }
 
 type EvendKeyboardStruct struct {
@@ -78,11 +78,11 @@ type EvendKeyboardStruct struct {
 }
 
 type MegaStruct struct {
+	LogDebug bool   `hcl:"log_debug,optional"`
 	Spi      string `hcl:"spi,optional"`
 	SpiSpeed string `hcl:"spi_speed,optional"`
 	PinChip  string `hcl:"pin_chip,optional"`
 	Pin      string `hcl:"pin,optional"`
-	LogDebug bool   `hcl:"log_debug,optional"`
 }
 
 type MoneyStruct struct {

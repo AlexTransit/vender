@@ -82,8 +82,8 @@ type CoinAcceptor struct { //nolint:maligned
 }
 
 type Tube struct {
-	Count    uint
 	Nominal  currency.Nominal
+	Count    uint
 	TubeFull bool
 }
 
