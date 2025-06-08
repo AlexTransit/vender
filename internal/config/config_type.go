@@ -86,8 +86,10 @@ type MegaStruct struct {
 }
 
 type MoneyStruct struct {
-	Scale     int `hcl:"scale"`
-	CreditMax int `hcl:"credit_max"`
+	Scale       int `hcl:"scale"`
+	CreditMax   int `hcl:"credit_max"`
+	MinimalBill int `hcl:"minimal_bill"`
+	MaximumBill int `hcl:"maximum_bill"`
 }
 
 // config wich presetted default values
@@ -99,7 +101,12 @@ var VMC = Config{
 		XXX_Stocks:     map[string]inventory.Stock{},
 		XXX_Ingredient: map[string]inventory.Ingredient{},
 	},
-	Money: MoneyStruct{Scale: 100, CreditMax: 100},
+	Money: MoneyStruct{
+		Scale:       100,
+		CreditMax:   100,
+		MinimalBill: 10,
+		MaximumBill: 100,
+	},
 	Hardware: HardwareStruct{
 		EvendDevices: map[string]DeviceConfig{},
 		Evend: evend_config.Config{
@@ -186,6 +193,11 @@ var VMC = Config{
 			Items:           map[string]menu_config.MenuItem{},
 		},
 	},
+	Version:        "",
+	TeleN:          nil,
+	UpgradeScript:  "",
+	ScriptIfBroken: "",
+	User:           ui_config.UIUser{},
 }
 
 func DefaultSugar() uint8 {
