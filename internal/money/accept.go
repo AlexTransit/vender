@@ -39,16 +39,19 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 			event := types.Event{}
 			switch e.Event {
 			case money.InEscrow:
-				event.Kind = types.EventMoneyPreCredit
-				if e.Nominal <= currency.Nominal(g.Config.Money.CreditMax) {
-					ms.billCredit.Add(e.Nominal)
-					if ms.GetCredit() < maxPrice {
-						ms.bill.SendCommand(bill.Accept)
-					}
-				} else {
-					ms.Log.Infof("reject big money (%v)", e.Nominal.Format100I())
+				if (g.Config.Money.MinimalBill != 0 && g.Config.Money.MinimalBill > int(e.Nominal)) ||
+					(g.Config.Money.MaximumBill != 0 && g.Config.Money.MaximumBill < int(e.Nominal)) {
+					// say not posible
+					// go sound.TextSpeech("купюру " + e.Nominal.Format100I() + " рублей не принимаем")
+					// g.MustTextDisplay().SetLines("купюру "+e.Nominal.Format100I(), "не принимаем")
+					ms.Log.Infof("reject money. min(%d) > (%s) > max(%d)", g.Config.Money.MinimalBill, e.Nominal.Format100I(), g.Config.Money.MaximumBill)
 					ms.bill.SendCommand(bill.Reject)
 					return
+				}
+				event.Kind = types.EventMoneyPreCredit
+				ms.billCredit.Add(e.Nominal)
+				if ms.GetCredit() < maxPrice {
+					ms.bill.SendCommand(bill.Accept)
 				}
 			case money.OutEscrow:
 				event.Kind = types.EventMoneyPreCredit
