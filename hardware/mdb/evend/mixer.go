@@ -43,6 +43,7 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 			}
 			return err
 		}})
+	g.Engine.RegisterNewFunc(m.name+".reset", func(ctx context.Context) error { return m.reset() })
 	g.Engine.RegisterNewFuncAgr(m.name+".moveNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return m.moveNoWait(int8(arg.(int16))) })
 	g.Engine.RegisterNewFuncAgr(m.name+".shakeNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return m.shakeNoWait(uint8(arg.(int16))) })
 	g.Engine.RegisterNewFuncAgr(m.name+".WaitSuccess(?)", func(ctx context.Context, arg engine.Arg) error { return m.WaitSuccess(uint16(arg.(int16)*5+5), true) })
@@ -57,9 +58,7 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 				return
 			}
 			err = errors.Join(err, e)
-			m.cPos = -1
-			// FIXME тут можно добавть скрипт действий после ошибки
-			m.dev.Rst()
+			m.reset()
 			time.Sleep(3 * time.Second)
 		}
 		return err
@@ -80,6 +79,11 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 	return err
 }
 
+func (m *DeviceMixer) reset() error {
+	m.cPos = -1
+	return m.dev.Rst()
+}
+
 func (m *DeviceMixer) move(position int8) (err error) {
 	m.dev.Action = fmt.Sprintf("mixer move %d=>%d", m.cPos, position)
 	if err = m.moveNoWait(position); err != nil {
@@ -89,7 +93,7 @@ func (m *DeviceMixer) move(position int8) (err error) {
 }
 
 func (m *DeviceMixer) mvComplete() (err error) {
-	err = m.WaitSuccess(100, true) // FIXME timeout to config
+	err = m.WaitSuccess(10, true) // FIXME timeout to config
 	if err == nil {
 		m.cPos = m.nPos
 		m.dev.Action = ""
