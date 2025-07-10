@@ -5,7 +5,7 @@ go 1.24
 require (
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
-	github.com/eclipse/paho.mqtt.golang v1.4.3
+	github.com/eclipse/paho.mqtt.golang v1.5.0
 	github.com/juju/errors v1.0.0
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20
@@ -21,8 +21,8 @@ require (
 	github.com/temoto/gpio-cdev-go v1.1.0
 	github.com/temoto/inputevent-go v1.0.0
 	github.com/temoto/iodin v0.0.0-20190211111721-99c87617ba86
-	golang.org/x/net v0.37.0 // indirect
-	golang.org/x/sys v0.32.0
+	golang.org/x/net v0.41.0 // indirect
+	golang.org/x/sys v0.33.0
 	google.golang.org/protobuf v1.35.2
 	periph.io/x/periph v3.6.4+incompatible
 )
@@ -40,15 +40,15 @@ require (
 	github.com/ebitengine/purego v0.8.2 // indirect
 	github.com/golang/protobuf v1.5.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
-	github.com/gorilla/websocket v1.5.1 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/zclconf/go-cty v1.15.1 // indirect
-	golang.org/x/mod v0.24.0 // indirect
-	golang.org/x/sync v0.13.0 // indirect
-	golang.org/x/text v0.23.0 // indirect
-	golang.org/x/tools v0.31.0 // indirect
+	golang.org/x/mod v0.25.0 // indirect
+	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/text v0.26.0 // indirect
+	golang.org/x/tools v0.33.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
