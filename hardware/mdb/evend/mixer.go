@@ -93,7 +93,7 @@ func (m *DeviceMixer) move(position int8) (err error) {
 }
 
 func (m *DeviceMixer) mvComplete() (err error) {
-	err = m.WaitSuccess(10, true) // FIXME timeout to config
+	err = m.WaitSuccess(100, true) // FIXME timeout to config
 	if err == nil {
 		m.cPos = m.nPos
 		m.dev.Action = ""
