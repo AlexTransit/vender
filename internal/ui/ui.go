@@ -16,17 +16,19 @@ import (
 )
 
 type UI struct { //nolint:maligned
-	FrontMaxPrice     currency.Amount
-	Service           uiService
-	g                 *state.Global
-	ms                *money.MoneySystem
-	state             types.UiState
-	broken            bool
-	display           *text_display.TextDisplay // FIXME
-	inputBuf          []byte
-	eventch           chan types.Event
-	inputch           chan types.InputEvent
-	lock              uiLock
+	FrontMaxPrice currency.Amount
+	Service       uiService
+	g             *state.Global
+	ms            *money.MoneySystem
+	state         types.UiState
+	broken        bool
+	display       *text_display.TextDisplay // FIXME
+	inputBuf      []byte
+	eventch       chan types.Event
+	inputch       chan types.InputEvent
+	lock          uiLock
+	waitSM        bool
+	// lock              bool
 	frontResetTimeout time.Duration
 
 	XXX_testHook func(types.UiState)
@@ -37,6 +39,10 @@ var _ types.UIer = &UI{} // compile-time interface test
 func (ui *UI) CreateEvent(e types.EventKind) {
 	acceptEvent := types.Event{Kind: e}
 	ui.eventch <- acceptEvent
+}
+
+func (ui *UI) PauseStateMashine(v bool) {
+	ui.waitSM = v
 }
 
 func (ui *UI) GetUiState() uint32 {

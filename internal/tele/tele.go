@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	defaultStateInterval  = 5 * time.Minute
 	DefaultNetworkTimeout = 30 * time.Second
 )
 

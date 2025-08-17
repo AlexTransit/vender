@@ -7,6 +7,7 @@ type UIer interface {
 	// FrontSelectShowZero(context.Context)
 	GetUiState() uint32
 	CreateEvent(EventKind)
+	PauseStateMashine(v bool)
 	Scheduler
 }
 
