@@ -54,7 +54,7 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 	t.log.Infof("incoming message:%s", m.String())
 	switch m.Cmd {
 	case tele_api.MessageType_makeOrder:
-		t.mesageMakeOrger(ctx, &m)
+		go t.mesageMakeOrger(ctx, &m)
 	case tele_api.MessageType_reportState:
 		t.RoboSend(&tele_api.FromRoboMessage{
 			State: t.currentState,
@@ -69,68 +69,69 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 }
 
 func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
-	if m.MakeOrder == nil {
-		return
-	}
-
+	g := state.GetGlobal(ctx)
+	g.UI().PauseStateMashine(true)
+	defer g.UI().PauseStateMashine(false)
 	currentRobotState := t.GetState()
-	rt := time.Now().Unix()
-	st := m.ServerTime
-	if rt-st > 180 {
-		// затычка по тайм ауту. если команда пришла с задержкой
-		errM := fmt.Sprintf("remote make error. big time difference between server and robot. RTime:%v STime:%v", time.Unix(rt, 0), time.Unix(st, 0))
-		t.log.Error(errM)
-		t.makeOrderImposible(tele_api.OrderStatus_orderError, m)
+	switch currentRobotState {
+	case tele_api.State_Nominal, tele_api.State_WaitingForExternalPayment:
+		rt := time.Now().Unix()
+		st := m.ServerTime
+		if rt-st > 180 {
+			// затычка по тайм ауту. если команда пришла с задержкой
+			errM := fmt.Sprintf("remote make error. big time difference between server and robot. RTime:%v STime:%v", time.Unix(rt, 0), time.Unix(st, 0))
+			t.log.Error(errM)
+			t.makeOrderImposible(tele_api.OrderStatus_orderError, m)
+			return
+		}
+	default: // state not valid
 		return
 	}
+	u := config_global.VMC.User
 	switch m.MakeOrder.OrderStatus {
 	case tele_api.OrderStatus_doSelected: // make selected code. payment via QR, etc
-		if currentRobotState != tele_api.State_WaitingForExternalPayment || // robot state not wait
-			config_global.VMC.User.PaymenId != m.MakeOrder.OwnerInt || // the payer and payer do not match
+		if config_global.VMC.User.PaymenId != m.MakeOrder.OwnerInt || // the payer and payer do not match
 			uint32(config_global.VMC.User.DirtyMoney) != m.MakeOrder.Amount { //
 			t.log.Errorf("make doSelected unposible. robo state:%s <> WaitingForExternalPayment or payerID:%d <> ownerID:%d or qr amount:%d<>order amount^%d",
 				currentRobotState.String(), config_global.VMC.User.PaymenId, m.MakeOrder.OwnerInt, config_global.VMC.User.DirtyMoney, m.MakeOrder.Amount)
 			t.makeOrderImposible(tele_api.OrderStatus_orderError, m)
 			return
 		}
-		// config_global.VMC.User.DirtyMoney = currency.Amount(m.MakeOrder.Amount)
-		config_global.VMC.User.SelectedItem.Price = config_global.VMC.User.DirtyMoney
+		// config_global.VMC.User.SelectedItem.Price = config_global.VMC.User.DirtyMoney
+		u.SelectedItem.Price = config_global.VMC.User.DirtyMoney
 	case tele_api.OrderStatus_doTransferred: // TODO execute external order. сделать внешний заказ
-		// check validity, price. проверить валидность, цену
-		if currentRobotState != tele_api.State_Nominal ||
-			m.MakeOrder.PaymentMethod != tele_api.PaymentMethod_Balance {
+		if m.MakeOrder.PaymentMethod != tele_api.PaymentMethod_Balance {
 			t.log.Errorf("make doTransferred unposible.robo state:%s <> Nominal or PaymentMethod %s <> Balance", currentRobotState.String(), tele_api.PaymentMethod_Balance.String())
 			t.makeOrderImposible(tele_api.OrderStatus_robotIsBusy, m)
 			return
 		}
-		i, found := config_global.GetMenuItem(m.MakeOrder.MenuCode)
-		if !found {
-			t.log.Infof("remote cook error: code not found")
-			t.makeOrderImposible(tele_api.OrderStatus_executionInaccessible, m)
-			return
-		}
-		if err := i.Doer.Validate(); err != nil {
-			t.makeOrderImposible(tele_api.OrderStatus_executionInaccessible, m)
-			t.log.Infof("remote cook error: code not valid")
-			return
-		}
-		config_global.VMC.User.SelectedItem = i
-		config_global.VMC.User.Sugar = tuneCook(m.MakeOrder.GetSugar(), config_global.VMC.Engine.Menu.DefaultSugar, config_global.VMC.Engine.Menu.DefaultSugarMax)
-		config_global.VMC.User.Cream = tuneCook(m.MakeOrder.GetCream(), config_global.VMC.Engine.Menu.DefaultCream, config_global.VMC.Engine.Menu.DefaultCreamMax)
-		config_global.VMC.User.DirtyMoney = i.Price
-		sound.PlayMoneyIn()
 	default: // unknown status
 		t.log.Errorf("unknown order status(%v)", m.MakeOrder.OrderStatus)
 		return
 	}
-	config_global.VMC.User.PaymenId = m.MakeOrder.OwnerInt
-	config_global.VMC.User.PaymentMethod = m.MakeOrder.PaymentMethod
-	config_global.VMC.User.PaymentType = m.MakeOrder.OwnerType
+	var found bool
+	u.SelectedItem, found = config_global.GetMenuItem(m.MakeOrder.MenuCode)
+	if !found {
+		t.log.Infof("remote cook error: code not found")
+		t.makeOrderImposible(tele_api.OrderStatus_executionInaccessible, m)
+		return
+	}
+	if err := u.SelectedItem.Doer.Validate(); err != nil {
+		t.makeOrderImposible(tele_api.OrderStatus_executionInaccessible, m)
+		t.log.Infof("remote cook error: code not valid")
+		return
+	}
+	sound.PlayMoneyIn()
+	u.Sugar = tuneCook(m.MakeOrder.GetSugar(), config_global.VMC.Engine.Menu.DefaultSugar, config_global.VMC.Engine.Menu.DefaultSugarMax)
+	u.Cream = tuneCook(m.MakeOrder.GetCream(), config_global.VMC.Engine.Menu.DefaultCream, config_global.VMC.Engine.Menu.DefaultCreamMax)
+	u.DirtyMoney = u.SelectedItem.Price
+	u.PaymenId = m.MakeOrder.OwnerInt
+	u.PaymentMethod = m.MakeOrder.PaymentMethod
+	u.PaymentType = m.MakeOrder.OwnerType
 	ms := money.GetGlobal(ctx)
 	ms.SetDirty(config_global.VMC.User.DirtyMoney)
-
+	config_global.VMC.User = u
 	// run cooking
-	g := state.GetGlobal(ctx)
 	g.UI().CreateEvent(types.EventAccept)
 }
 

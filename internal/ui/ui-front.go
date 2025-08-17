@@ -152,6 +152,9 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 			if tuneScreen {
 				ui.linesCreate(&l1, &l2, &tuneScreen) // disable tune screem
 			} else {
+				if ui.waitSM {
+					return types.StateFrontSelect
+				}
 				return types.StateFrontTimeout
 			}
 		case types.EventService: // change state
