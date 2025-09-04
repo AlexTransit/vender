@@ -28,6 +28,7 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 
 	g.Engine.Register(m.name+".shake(?)",
 		engine.FuncArg{Name: m.name + ".shake", F: func(ctx context.Context, arg engine.Arg) (err error) {
+			m.dev.Action = fmt.Sprintf("mixer shake(%d)", arg)
 			for i := 0; i < 5; i++ {
 				e := m.shake(uint8(arg.(int16)))
 				if e == nil {
