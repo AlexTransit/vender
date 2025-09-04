@@ -74,6 +74,7 @@ func runWitchControl(b BunkerDevice, spinTime byte, hopperNumber byte) (err erro
 }
 
 func (h *DeviceHopper) run(spinTime byte, _tmp byte) error {
+	h.dev.Action = fmt.Sprintf("hopper %s run(%v)", h.name, spinTime)
 	timeout := uint16(spinTime) + 5
 	h.log.Infof("%s start (%d)", h.name, spinTime)
 	defer h.log.Infof("%s stop", h.name)
@@ -81,6 +82,7 @@ func (h *DeviceHopper) run(spinTime byte, _tmp byte) error {
 }
 
 func (mh *DeviceMultiHopper) run(spinTime byte, hopperNumber byte) error {
+	mh.dev.Action = fmt.Sprintf("multihopper%v run(%v)", hopperNumber, spinTime)
 	timeout := uint16(spinTime) + 5
 	mh.log.Infof("%s%d start (%d)", mh.name, hopperNumber, spinTime)
 	defer mh.log.Infof("%s%d stop", mh.name, hopperNumber)
