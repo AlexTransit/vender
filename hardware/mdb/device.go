@@ -347,7 +347,7 @@ func (dev *Device) tx(request Packet, response *Packet, opt TxOpt) error {
 	st := dev.State()
 	switch st {
 	case DeviceInvalid:
-		return errors.Annotatef(ErrStateInvalid, dev.name)
+		return errors.Annotatef(ErrStateInvalid, "%s", dev.name)
 
 	case DeviceInited: // success path
 		if !opt.NoReset {

@@ -26,13 +26,13 @@ const (
 )
 
 const (
-	resetAddress     = 0x00
-	infoAddress      = 0x01
-	commandAddress   = 0x02
-	statusAddress    = 0x03
-	readDataAddress  = 0x04
-	configAddress    = 0x05
-	upgradeFwAddress = 0x06
+	// resetAddress     = 0x00
+	// infoAddress      = 0x01
+	commandAddress = 0x02
+	// statusAddress    = 0x03
+	// readDataAddress  = 0x04
+	configAddress = 0x05
+	// upgradeFwAddress = 0x06
 )
 
 const (

@@ -244,6 +244,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	ui.g.SendCooking()
 	moneysys := money.GetGlobal(ctx)
 	selected := config_global.VMC.User.SelectedItem.Code
+	ui.g.Log.Infof("ui-front accepted code:%v cream:%v sugar:%v", selected, config_global.VMC.User.Cream, config_global.VMC.User.Sugar)
 
 	// FIXME AlexM заглушка пока не переделал
 	if config_global.VMC.User.PaymentMethod == tele_api.PaymentMethod_Cash {
