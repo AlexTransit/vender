@@ -32,7 +32,6 @@ type TextDisplay struct { //nolint:maligned
 }
 
 type TextDisplayConfig struct {
-	Codepage    string
 	ScrollDelay time.Duration
 	Width       uint32
 }

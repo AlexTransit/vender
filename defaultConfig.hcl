@@ -82,7 +82,6 @@ hardware {
 
   hd44780 {
     enable   = true
-    codepage = "windows-1251"
     pin_chip = "/dev/gpiochip1"
 
     pinmap {
@@ -95,7 +94,6 @@ hardware {
       d7 = "21"
     }
 
-    page1        = true
     width        = 16
     blink        = false
     cursor       = false
