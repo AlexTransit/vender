@@ -90,10 +90,6 @@ github.com/mattn/go-tty
 # github.com/mitchellh/go-wordwrap v1.0.1
 ## explicit; go 1.14
 github.com/mitchellh/go-wordwrap
-# github.com/paulrosania/go-charset v0.0.0-20190326053356-55c9d7a5834c
-## explicit
-github.com/paulrosania/go-charset/charset
-github.com/paulrosania/go-charset/data
 # github.com/pkg/term v1.2.0-beta.2
 ## explicit; go 1.14
 github.com/pkg/term/termios

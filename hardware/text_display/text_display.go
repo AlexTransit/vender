@@ -3,15 +3,11 @@ package text_display
 import (
 	"bytes"
 	"fmt"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/AlexTransit/vender/log2"
-	"github.com/juju/errors"
-	"github.com/paulrosania/go-charset/charset"
-	_ "github.com/paulrosania/go-charset/data"
 	"github.com/temoto/alive/v2"
 )
 
@@ -24,7 +20,7 @@ type TextDisplay struct { //nolint:maligned
 	alive *alive.Alive
 	mu    sync.Mutex
 	dev   Devicer
-	tr    atomic.Value
+	// tr    atomic.Value
 	width uint32
 	state State
 
@@ -36,7 +32,6 @@ type TextDisplay struct { //nolint:maligned
 }
 
 type TextDisplayConfig struct {
-	Codepage    string
 	ScrollDelay time.Duration
 	Width       uint32
 }
@@ -64,29 +59,11 @@ func NewTextDisplay(opt *TextDisplayConfig) (*TextDisplay, error) {
 		line:  []string{"", ""},
 	}
 
-	if opt.Codepage != "" {
-		if err := td.SetCodepage(opt.Codepage); err != nil {
-			return nil, errors.Trace(err)
-		}
-	}
-
 	return td, nil
 }
 
 func (td *TextDisplay) GetLine(line int) string {
 	return td.line[line-1]
-}
-
-func (td *TextDisplay) SetCodepage(cp string) error {
-	td.mu.Lock()
-	defer td.mu.Unlock()
-
-	tr, err := charset.TranslatorTo(cp)
-	if err != nil {
-		return err
-	}
-	td.tr.Store(tr)
-	return nil
 }
 
 func (td *TextDisplay) SetDevice(dev Devicer) {
@@ -109,27 +86,6 @@ func (td *TextDisplay) Clear() {
 
 	td.state.Clear()
 	td.flush()
-}
-
-func (td *TextDisplay) Message(s1, s2 string, wait func()) {
-	next := State{
-		L1: td.Translate(s1),
-		L2: td.Translate(s2),
-	}
-
-	td.mu.Lock()
-	prev := td.state
-	td.state = next
-	// atomic.StoreUint32(&td.tick, 0)
-	td.flush()
-	td.mu.Unlock()
-
-	wait()
-
-	td.mu.Lock()
-	td.state = prev
-	td.flush()
-	td.mu.Unlock()
 }
 
 // func (td *TextDisplay) SetLinesBytes(b1, b2 []byte) {
@@ -245,17 +201,16 @@ func (td *TextDisplay) Translate(s string) []byte {
 		pad = false
 		s = s[:len(s)-1]
 	}
-	s = strings.Replace(s, "_", " ", -1)
-	result := []byte(s)
-	tr, ok := td.tr.Load().(charset.Translator)
-
-	if ok && tr != nil {
-		_, tb, err := tr.Translate(result, true)
-		if err != nil {
-			panic(err)
+	result := make([]byte, len([]rune(s)))
+	i := 0
+	for _, v := range s {
+		ch, ok := lcdCharMap[v]
+		if !ok {
+			td.log.Errf("the character %c is missing from the symbol map", v)
+			ch = lcdCharMap['?']
 		}
-		// translator reuses single internal buffer, make a copy
-		result = append([]byte(nil), tb...)
+		result[i] = ch
+		i++
 	}
 
 	if pad {
