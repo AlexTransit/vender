@@ -58,10 +58,8 @@ type DisplayStruct struct {
 
 type HD44780Struct struct {
 	Enable        bool           `hcl:"enable"`
-	Codepage      string         `hcl:"codepage"`
 	PinChip       string         `hcl:"pin_chip"`
 	Pinmap        hd44780.PinMap `hcl:"pinmap,block"`
-	Page1         bool           `hcl:"page1"`
 	Width         int            `hcl:"width"`
 	ControlBlink  bool           `hcl:"blink"`
 	ControlCursor bool           `hcl:"cursor"`
@@ -118,10 +116,8 @@ var VMC = Config{
 		Display: DisplayStruct{Framebuffer: "/dev/fb0"},
 		HD44780: HD44780Struct{
 			Enable:        true,
-			Codepage:      "windows-1251",
 			PinChip:       "/dev/gpiochip0",
 			Pinmap:        hd44780.PinMap{RS: "13", RW: "14", E: "110", D4: "68", D5: "71", D6: "2", D7: "21"},
-			Page1:         true,
 			Width:         16,
 			ControlBlink:  false,
 			ControlCursor: false,

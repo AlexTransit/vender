@@ -48,7 +48,7 @@ type PinMap struct {
 	D7 string `hcl:"d7"`
 }
 
-func (lcd *LCD) Init(chipName string, pinmap PinMap, page1 bool) error {
+func (lcd *LCD) Init(chipName string, pinmap PinMap) error {
 	var err error
 	lcd.pinChip, err = gpio.Open(chipName, "lcd")
 	if err != nil {
@@ -76,7 +76,7 @@ func (lcd *LCD) Init(chipName string, pinmap PinMap, page1 bool) error {
 	lcd.pin_d6 = lcd.pins.SetFunc(nD6)
 	lcd.pin_d7 = lcd.pins.SetFunc(nD7)
 
-	lcd.init4(page1)
+	lcd.init4()
 	return nil
 }
 
@@ -112,14 +112,14 @@ func (lcd *LCD) send4(rs, d4, d5, d6, d7 byte) {
 	lcd.blinkE()
 }
 
-func (lcd *LCD) init4(page1 bool) {
+func (lcd *LCD) init4() {
 	time.Sleep(20 * time.Millisecond)
 
 	// special sequence
 	lcd.Command(0x33)
 	lcd.Command(0x32)
 
-	lcd.SetFunction(false, page1)
+	lcd.SetFunction(false)
 	lcd.SetControl(0) // off
 	lcd.SetControl(ControlOn)
 	lcd.Clear()
@@ -192,13 +192,10 @@ func (lcd *LCD) SetControl(new Control) Control {
 	return old
 }
 
-func (lcd *LCD) SetFunction(bits8, page1 bool) {
+func (lcd *LCD) SetFunction(bits8 bool) {
 	var cmd Command = 0x28
 	if bits8 {
 		cmd |= 0x10
-	}
-	if page1 {
-		cmd |= 0x02
 	}
 	lcd.Command(cmd)
 }

@@ -187,7 +187,7 @@ func (g *Global) TextDisplay() (*text_display.TextDisplay, error) {
 		}
 
 		devWrap := new(hd44780.LCD)
-		if err := devWrap.Init(devConfig.PinChip, devConfig.Pinmap, devConfig.Page1); err != nil {
+		if err := devWrap.Init(devConfig.PinChip, devConfig.Pinmap); err != nil {
 			err = errors.Annotatef(err, "hd44780.Init config=%#v", devConfig)
 			return err
 		}
@@ -203,7 +203,6 @@ func (g *Global) TextDisplay() (*text_display.TextDisplay, error) {
 
 		displayConfig := &text_display.TextDisplayConfig{
 			Width:       uint32(devConfig.Width),
-			Codepage:    devConfig.Codepage,
 			ScrollDelay: time.Duration(devConfig.ScrollDelay) * time.Millisecond,
 		}
 		disp, err := text_display.NewTextDisplay(displayConfig)

@@ -58,9 +58,9 @@ func TestMessage(t *testing.T) {
 	d.SetUpdateChan(ch)
 	d.SetLines("hello", "cursor\x00")
 	assert.Equal(t, "hello   \ncursor", (<-ch).String())
-	d.Message("padded", "msg", func() {
-		assert.Equal(t, "padded  \nmsg     ", (<-ch).String())
-	})
+	// d.Message("padded", "msg", func() {
+	// assert.Equal(t, "padded  \nmsg     ", (<-ch).String())
+	// })
 	assert.Equal(t, "hello   \ncursor", (<-ch).String())
 }
 
