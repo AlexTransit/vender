@@ -1,6 +1,6 @@
 module github.com/AlexTransit/vender
 
-go 1.24
+go 1.24.0
 
 require (
 	github.com/c-bata/go-prompt v0.2.6
@@ -20,14 +20,14 @@ require (
 	github.com/temoto/gpio-cdev-go v1.1.0
 	github.com/temoto/inputevent-go v1.0.0
 	github.com/temoto/iodin v0.0.0-20190211111721-99c87617ba86
-	golang.org/x/net v0.41.0 // indirect
-	golang.org/x/sys v0.33.0
+	golang.org/x/net v0.44.0 // indirect
+	golang.org/x/sys v0.38.0
 	google.golang.org/protobuf v1.35.2
 	periph.io/x/periph v3.6.4+incompatible
 )
 
 require (
-	github.com/hajimehoshi/ebiten/v2 v2.8.7
+	github.com/hajimehoshi/ebiten/v2 v2.9.4
 	github.com/hashicorp/hcl/v2 v2.23.0
 )
 
@@ -35,19 +35,19 @@ require (
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/apparentlymart/go-textseg/v15 v15.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/ebitengine/oto/v3 v3.3.3 // indirect
-	github.com/ebitengine/purego v0.8.2 // indirect
+	github.com/ebitengine/oto/v3 v3.4.0 // indirect
+	github.com/ebitengine/purego v0.9.1 // indirect
 	github.com/golang/protobuf v1.5.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hajimehoshi/go-mp3 v0.3.4 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/rivo/uniseg v0.4.4 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/zclconf/go-cty v1.15.1 // indirect
-	golang.org/x/mod v0.25.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/text v0.26.0 // indirect
-	golang.org/x/tools v0.33.0 // indirect
+	golang.org/x/mod v0.28.0 // indirect
+	golang.org/x/sync v0.18.0 // indirect
+	golang.org/x/text v0.29.0 // indirect
+	golang.org/x/tools v0.37.0 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )

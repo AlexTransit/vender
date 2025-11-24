@@ -15,6 +15,8 @@
 package oto
 
 import (
+	"fmt"
+
 	"github.com/ebitengine/oto/v3/internal/mux"
 )
 
@@ -63,7 +65,10 @@ func (p *Player) BufferedSize() int {
 
 // Err returns an error if this player has an error.
 func (p *Player) Err() error {
-	return p.player.Err()
+	if err := p.player.Err(); err != nil {
+		return fmt.Errorf("oto: audio error: %w", err)
+	}
+	return nil
 }
 
 // SetBufferSize sets the buffer size.
@@ -80,6 +85,11 @@ func (p *Player) Seek(offset int64, whence int) (int64, error) {
 }
 
 // Close implements io.Closer.
+//
+// Close does nothing and always returns nil.
+//
+// Deprecated: as of v3.4. you don't have to call Close.
 func (p *Player) Close() error {
-	return p.player.Close()
+	// (*mux.Player).Close() is called by the finalizer. Let's rely on it.
+	return nil
 }
