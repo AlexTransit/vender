@@ -15,9 +15,11 @@
 package audio
 
 import (
+	"errors"
+	"fmt"
 	"io"
-	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -33,7 +35,8 @@ type player interface {
 	Err() error
 	SetBufferSize(bufferSize int)
 	io.Seeker
-	io.Closer
+
+	// As of Oto v3.4.0-alpha.7, Close does nothing.
 }
 
 type context interface {
@@ -73,10 +76,10 @@ type playerImpl struct {
 	initBufferSize int
 	bytesPerSample int
 
-	// adjustedPosition is the player's more accurate position.
+	// adjustedPosition is the player's more accurate position as time.Duration.
 	// The underlying buffer might not be changed even if the player is playing.
 	// adjustedPosition is adjusted by the time duration during the player position doesn't change while its playing.
-	adjustedPosition time.Duration
+	adjustedPosition int64
 
 	// lastSamples is the last value of the number of samples.
 	// When lastSamples is a negative number, this value is not initialized yet.
@@ -84,6 +87,8 @@ type playerImpl struct {
 
 	// stopwatch is a stopwatch to measure the time duration during the player position doesn't change while its playing.
 	stopwatch stopwatch
+
+	closed bool
 
 	m sync.Mutex
 }
@@ -101,7 +106,7 @@ func (f *playerFactory) newPlayer(context *Context, src io.Reader, seekable bool
 		lastSamples:    -1,
 		bytesPerSample: bitDepthInBytes * channelCount,
 	}
-	runtime.SetFinalizer(p, (*playerImpl).Close)
+	// AddCleanup is not set for p. The caller of newPlayer should set a finalizer for p's wrapper.
 	return p, nil
 }
 
@@ -189,6 +194,11 @@ func (p *playerImpl) Play() {
 	p.m.Lock()
 	defer p.m.Unlock()
 
+	if p.closed {
+		p.context.setError(fmt.Errorf("audio: Play for a closed player"))
+		return
+	}
+
 	if err := p.ensurePlayer(); err != nil {
 		p.context.setError(err)
 		return
@@ -205,6 +215,11 @@ func (p *playerImpl) Pause() {
 	p.m.Lock()
 	defer p.m.Unlock()
 
+	if p.closed {
+		p.context.setError(fmt.Errorf("audio: Pause for a closed player"))
+		return
+	}
+
 	if p.player == nil {
 		return
 	}
@@ -220,6 +235,10 @@ func (p *playerImpl) Pause() {
 func (p *playerImpl) IsPlaying() bool {
 	p.m.Lock()
 	defer p.m.Unlock()
+
+	if p.closed {
+		return false
+	}
 	return p.isPlaying()
 }
 
@@ -255,7 +274,11 @@ func (p *playerImpl) SetVolume(volume float64) {
 func (p *playerImpl) Close() error {
 	p.m.Lock()
 	defer p.m.Unlock()
-	runtime.SetFinalizer(p, nil)
+
+	if p.closed {
+		return fmt.Errorf("audio: player is already closed")
+	}
+	p.closed = true
 
 	if p.player != nil {
 		defer func() {
@@ -263,7 +286,6 @@ func (p *playerImpl) Close() error {
 		}()
 		p.player.Pause()
 		p.stopwatch.stop()
-		return addErrorInfo(p.player.Close())
 	}
 	return nil
 }
@@ -271,7 +293,11 @@ func (p *playerImpl) Close() error {
 func (p *playerImpl) Position() time.Duration {
 	p.m.Lock()
 	defer p.m.Unlock()
-	return p.adjustedPosition
+
+	if p.closed {
+		return 0
+	}
+	return time.Duration(p.adjustedPosition)
 }
 
 func (p *playerImpl) Rewind() error {
@@ -281,6 +307,10 @@ func (p *playerImpl) Rewind() error {
 func (p *playerImpl) SetPosition(offset time.Duration) error {
 	p.m.Lock()
 	defer p.m.Unlock()
+
+	if p.closed {
+		return fmt.Errorf("audio: player is already closed")
+	}
 
 	if offset == 0 && p.player == nil {
 		p.adjustedPosition = 0
@@ -297,7 +327,7 @@ func (p *playerImpl) SetPosition(offset time.Duration) error {
 	}
 	p.lastSamples = -1
 	// Just after setting a position, the buffer size should be 0 as no data is sent.
-	p.adjustedPosition = p.stream.positionInTimeDuration()
+	p.adjustedPosition = int64(p.stream.positionInTimeDuration())
 	p.stopwatch.reset()
 	if p.isPlaying() {
 		p.stopwatch.start()
@@ -318,6 +348,11 @@ func (p *playerImpl) Err() error {
 func (p *playerImpl) SetBufferSize(bufferSize time.Duration) {
 	p.m.Lock()
 	defer p.m.Unlock()
+
+	if p.closed {
+		p.context.setError(fmt.Errorf("audio: SetBufferSize for a closed player"))
+		return
+	}
 
 	bufferSizeInBytes := int(bufferSize * time.Duration(p.bytesPerSample) * time.Duration(p.factory.sampleRate) / time.Second)
 	bufferSizeInBytes = bufferSizeInBytes / p.bytesPerSample * p.bytesPerSample
@@ -383,14 +418,14 @@ func (p *playerImpl) updatePosition() {
 	}
 
 	// Update the adjusted position every tick. This is necessary to keep the position accurate.
-	p.adjustedPosition = time.Duration(samples)*time.Second/time.Duration(p.factory.sampleRate) + adjustingTime
+	p.adjustedPosition = int64(time.Duration(samples)*time.Second/time.Duration(p.factory.sampleRate) + adjustingTime)
 }
 
 type timeStream struct {
 	r              io.Reader
 	seekable       bool
 	sampleRate     int
-	pos            int64
+	pos            atomic.Int64
 	bytesPerSample int
 
 	// m is a mutex for this stream.
@@ -409,9 +444,14 @@ func newTimeStream(r io.Reader, seekable bool, sampleRate int, bitDepthInBytes i
 		// Get the current position of the source.
 		pos, err := s.r.(io.Seeker).Seek(0, io.SeekCurrent)
 		if err != nil {
-			return nil, err
+			if !errors.Is(err, errors.ErrUnsupported) {
+				return nil, err
+			}
+			// Ignore the error, as the undelrying source might not support Seek (#3192).
+			// This happens when vorbis.Decode* is used, as vorbis.Stream is io.Seeker whichever the underlying source is.
+			pos = 0
 		}
-		s.pos = pos
+		s.pos.Store(pos)
 	}
 	return s, nil
 }
@@ -421,7 +461,7 @@ func (s *timeStream) Read(buf []byte) (int, error) {
 	defer s.m.Unlock()
 
 	n, err := s.r.Read(buf)
-	s.pos += int64(n)
+	s.pos.Add(int64(n))
 	return n, err
 }
 
@@ -438,33 +478,24 @@ func (s *timeStream) Seek(offset int64, whence int) (int64, error) {
 		return pos, err
 	}
 
-	s.pos = pos
+	s.pos.Store(pos)
 	return pos, nil
 }
 
 func (s *timeStream) timeDurationToPos(offset time.Duration) int64 {
-	s.m.Lock()
-	defer s.m.Unlock()
-
 	o := int64(offset) * int64(s.bytesPerSample) * int64(s.sampleRate) / int64(time.Second)
 
 	// Align the byte position with the samples.
 	o -= o % int64(s.bytesPerSample)
-	o += s.pos % int64(s.bytesPerSample)
+	o += s.pos.Load() % int64(s.bytesPerSample)
 
 	return o
 }
 
 func (s *timeStream) position() int64 {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	return s.pos
+	return s.pos.Load()
 }
 
 func (s *timeStream) positionInTimeDuration() time.Duration {
-	s.m.Lock()
-	defer s.m.Unlock()
-
-	return time.Duration(s.pos) * time.Second / (time.Duration(s.sampleRate * s.bytesPerSample))
+	return time.Duration(s.pos.Load()) * time.Second / (time.Duration(s.sampleRate * s.bytesPerSample))
 }

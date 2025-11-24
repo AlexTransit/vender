@@ -1,4 +1,4 @@
-// Copyright 2021 The Oto Authors
+// Copyright 2025 The Oto Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build darwin && ios
+//go:build playstation5
 
-package oto
+// The actual implementaiton will be provided by github.com/hajimehoshi/uwagaki.
 
-func setNotificationHandler() error {
-	// AVAudioSessionInterruptionNotification is not reliable on iOS. Rely on
-	// applicationWillResignActive and applicationDidBecomeActive instead. See
-	// https://stackoverflow.com/questions/24404463/ios-siri-not-available-does-not-return-avaudiosessioninterruptionoptionshouldre
-	return nil
-}
+#include <cstddef>
+
+typedef void (*oto_OnReadCallbackType)(float *buf, size_t length);
+
+extern "C" void oto_OpenAudio(int sample_rate, int channel_num,
+                              oto_OnReadCallbackType on_read_callback,
+                              int buffer_size_in_bytes) {}
