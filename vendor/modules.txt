@@ -17,10 +17,6 @@ github.com/coreos/go-systemd/daemon
 # github.com/davecgh/go-spew v1.1.1
 ## explicit
 github.com/davecgh/go-spew/spew
-# github.com/ebitengine/gomobile v0.0.0-20250923094054-ea854a63cce1
-## explicit; go 1.24.0
-# github.com/ebitengine/hideconsole v1.0.0
-## explicit; go 1.18
 # github.com/ebitengine/oto/v3 v3.4.0
 ## explicit; go 1.24.0
 github.com/ebitengine/oto/v3
@@ -32,8 +28,8 @@ github.com/ebitengine/purego
 github.com/ebitengine/purego/internal/cgo
 github.com/ebitengine/purego/internal/fakecgo
 github.com/ebitengine/purego/internal/strings
-# github.com/eclipse/paho.mqtt.golang v1.5.0
-## explicit; go 1.20
+# github.com/eclipse/paho.mqtt.golang v1.5.1
+## explicit; go 1.24.0
 github.com/eclipse/paho.mqtt.golang
 github.com/eclipse/paho.mqtt.golang/packets
 # github.com/golang/protobuf v1.5.0
@@ -75,8 +71,6 @@ github.com/hashicorp/hcl/v2/hclsimple
 github.com/hashicorp/hcl/v2/hclsyntax
 github.com/hashicorp/hcl/v2/hclwrite
 github.com/hashicorp/hcl/v2/json
-# github.com/jezek/xgb v1.2.0
-## explicit; go 1.11
 # github.com/juju/errors v1.0.0
 ## explicit; go 1.18
 github.com/juju/errors
