@@ -122,7 +122,7 @@ func TextSpeech(tts string) {
 func PlayFile(file string) error {
 	s.alive.Add(1)
 	PlayFileNoWait(file)
-	waitingEndPlay()
+	waitingEndPlay(s.audioPlayer)
 	s.alive.Done()
 	return nil
 }
@@ -145,6 +145,7 @@ func Stop() {
 	}
 }
 
+// play file. stopping if played other
 func playMP3controlled(file string) (err error) {
 	if s.config == nil || s.config.Disabled {
 		return nil
@@ -169,16 +170,20 @@ func playMP3controlled(file string) (err error) {
 	}
 	go func() {
 		s.audioPlayer.Play()
-		waitingEndPlay()
+		waitingEndPlay(s.audioPlayer)
 		f.Close()
 	}()
 	s.log.Infof("play %s", file)
 	return nil
 }
 
-func waitingEndPlay() {
+func waitingEndPlay(player *audio.Player) {
 	for {
-		if s.audioPlayer == nil || !s.audioPlayer.IsPlaying() {
+		if player == nil {
+			return
+		}
+		if !player.IsPlaying() {
+			player.Close()
 			return
 		}
 		time.Sleep(100 * time.Millisecond)
@@ -207,12 +212,11 @@ func loadSteram(file string) ([]byte, error) {
 	return soundStream, err
 }
 
-func playStream(ss *soundStream) *audio.Player {
+func playStream(ss *soundStream) {
 	if s.config.Disabled {
-		return nil
+		return
 	}
 	p := s.audioContext.NewPlayerFromBytes(ss.Stream)
 	p.SetVolume(s.currentVolume)
 	p.Play()
-	return p
 }
