@@ -24,5 +24,13 @@
     //     "editorOverviewRuler.modifiedForeground": "#0000",
     //     "editorOverviewRuler.deletedForeground": "#0000"
     // }
+    "editor.formatOnSave": true, // Включает форматирование при сохранении
+    "editor.codeActionsOnSave": {
+        "source.organizeImports": "always" // Удаляет неиспользуемые и добавляет нужные импорты
+    },
+    "go.lintOnSave": "package", // Запускает проверку при сохранении пакета
+    "go.lintTool": "golangci-lint", // Использует самый мощный линтер (нужно установить его отдельно)
+    "go.formatTool": "goimports", // Инструмент для форматирования
+    "go.useLanguageServer": true, // Использование gopls для быстрой работы
     "scm.alwaysShowRepositories": true,
 }
