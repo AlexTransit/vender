@@ -21,8 +21,8 @@ build64:
 
 build:
 	@echo "===> Building for ARM32 (Target: 512MB RAM)..."
-	@# GOMAXPROCS=2 ускорит сборку на 1GB RAM, не уронив систему
 	@# -ldflags="-s -w" критически важен для экономии RAM при запуске на 512MB
-	export GOMAXPROCS=1 && \
-	$(TARGET_ENV) $(GOBUILD) "-ldflags=-X 'main.BuildVersion=$(VERSION)'" -o $(BINARY_NAME) -trimpath ./cmd/vender
+	GOMAXPROCS=2 $(TARGET_ENV) $(GOBUILD) -trimpath \
+	-ldflags="-s -w -X 'main.BuildVersion=$(VERSION)'" \
+	-o $(BINARY_NAME) ./cmd/vender
 	@echo "===> Done. Binary: $(BINARY_NAME), Size: $$(du -h $(BINARY_NAME) | cut -f1)"
