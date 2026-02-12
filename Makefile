@@ -3,7 +3,7 @@ GOBUILD=$(GOCMD) build
 GOVULN=govulncheck
 BINARY_NAME=./build/vender
 TARGET_ENV=CGO_ENABLED=1 CC=arm-linux-gnueabihf-gcc GOOS=linux GOARCH=arm GOARM=7
-VERSION=$$(git describe --always --dirty --tags)
+VERSION=$(shell git describe --always --dirty --tags)
 
 .PHONY: audit build64 build
 audit:
@@ -17,12 +17,12 @@ audit:
 	@$(GOVULN) ./... && echo "===> [OK] No vulnerabilities found."
 build64:
 	@echo "===> Building for Native (ARM64)..."
-	CGO_ENABLED=1 $(GOBUILD) "-ldflags=-X 'main.BuildVersion=$$(git describe --always --dirty --tags)'" -o $(BINARY_NAME) ./cmd/vender
+	CGO_ENABLED=1 $(GOBUILD) "-ldflags=-X 'main.BuildVersion=$(VERSION)'" -o $(BINARY_NAME) ./cmd/vender
 
 build:
 	@echo "===> Building for ARM32 (Target: 512MB RAM)..."
 	@# GOMAXPROCS=2 ускорит сборку на 1GB RAM, не уронив систему
 	@# -ldflags="-s -w" критически важен для экономии RAM при запуске на 512MB
 	export GOMAXPROCS=1 && \
-	$(TARGET_ENV) $(GOBUILD) "-ldflags=-X 'main.BuildVersion=v0.251124.0-1-g3e8f4a2-dirty'" -o $(BINARY_NAME) -trimpath ./cmd/vender
+	$(TARGET_ENV) $(GOBUILD) "-ldflags=-X 'main.BuildVersion=$(VERSION)'" -o $(BINARY_NAME) -trimpath ./cmd/vender
 	@echo "===> Done. Binary: $(BINARY_NAME), Size: $$(du -h $(BINARY_NAME) | cut -f1)"
