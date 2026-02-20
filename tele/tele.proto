@@ -171,6 +171,7 @@ enum OwnerType {
   noOwnerType = 0;
   telegramUser = 1;
   qrCashLessUser = 2;
+  webUser = 3;
 }
 
 enum OrderStatus {
