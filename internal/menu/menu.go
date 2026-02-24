@@ -49,7 +49,11 @@ func Cook(ctx context.Context) error {
 			g.Log.Errorf("ui-front tuning stock=%s err=%v", name, err)
 		}
 	}
-
+	if config_global.VMC.User.SelectedItem.Doer == nil {
+		err := fmt.Errorf("doer nill")
+		g.Tele.Error(err)
+		return err
+	}
 	err := g.Engine.Exec(itemCtx, config_global.VMC.User.SelectedItem.Doer)
 	if err == nil {
 		if g.Tele.RoboConnected() {
