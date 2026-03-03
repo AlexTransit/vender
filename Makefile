@@ -4,8 +4,17 @@ GOVULN=govulncheck
 BINARY_NAME=./build/vender
 TARGET_ENV=CGO_ENABLED=1 CC=arm-linux-gnueabihf-gcc GOOS=linux GOARCH=arm GOARM=7
 VERSION=$(shell git describe --always --dirty --tags)
+UNAME_M := $(shell uname -m)
 
-.PHONY: audit build64 build
+ifeq ($(filter aarch64 arm64,$(UNAME_M)),)
+    DEFAULT_TARGET := build
+else
+    DEFAULT_TARGET := build64
+endif
+
+.PHONY: all
+all: $(DEFAULT_TARGET)
+# .PHONY: audit build64 build
 audit:
 	@echo "===> Scanning for vulnerabilities..."
 	@# Проверяем, установлен ли govulncheck, если нет — устанавливаем
