@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -31,6 +32,8 @@ type Sound struct {
 	config        *sound_config.Config
 	alive         *alive.Alive
 	log           *log2.Log
+	playerMu      sync.Mutex
+	volumeMu      sync.RWMutex
 	audioContext  *audio.Context
 	audioPlayer   *audio.Player
 	keyBeep       soundStream
@@ -43,17 +46,15 @@ type soundStream struct {
 
 var (
 	s           Sound
-	stdout      io.Writer
 	sysProcAttr *syscall.SysProcAttr
 )
 
 func Init(ctx context.Context, startingVMC bool) {
 	g := state.GetGlobal(ctx)
 	s.config = &g.Config.Sound
-	s.config.TTS_exec = append(s.config.TTS_exec, "--output_raw")
 	s.alive = g.Alive
 	g.Engine.RegisterNewFuncAgr("sound(?)", func(ctx context.Context, arg engine.Arg) error {
-		PlayFileNoWait(arg.(string))
+		_ = PlayFileNoWait(arg.(string))
 		return nil
 	})
 
@@ -90,22 +91,50 @@ func Init(ctx context.Context, startingVMC bool) {
 func PlayKeyBeep() { playStream(&s.keyBeep) }
 func PlayMoneyIn() { playStream(&s.moneyIn) }
 func SetVolume(v int16) {
-	s.currentVolume = float64(v) / 10
+	s.volumeMu.Lock()
+	s.currentVolume = float64(v) / 100
+	s.volumeMu.Unlock()
 }
 
 // set volume from config
 // value is fixed point. 10 = 100%
 func SetDefaultVolume() {
-	s.currentVolume = float64(s.config.DefaultVolume) / 10
+	if s.config == nil {
+		return
+	}
+	s.volumeMu.Lock()
+	s.currentVolume = float64(s.config.DefaultVolume) / 100
+	s.volumeMu.Unlock()
+}
+
+func getCurrentVolume() float64 {
+	s.volumeMu.RLock()
+	v := s.currentVolume
+	s.volumeMu.RUnlock()
+	return v
 }
 
 func TextSpeech(tts string) {
-	stdout = bytes.NewBuffer(nil)
+	if s.config == nil || s.audioContext == nil || len(s.config.TTSExec) == 0 || s.config.TTSExec[0] == "" {
+		return
+	}
+	stdout := bytes.NewBuffer(nil)
 	stdin := strings.NewReader(tts)
 	stderr := bytes.NewBuffer(nil)
-	cmd := exec.Command(s.config.TTS_exec[0], s.config.TTS_exec[1:]...)
+	ttsArgs := append([]string{}, s.config.TTSExec[1:]...)
+	hasOutputRaw := false
+	for _, arg := range ttsArgs {
+		if arg == "--output_raw" {
+			hasOutputRaw = true
+			break
+		}
+	}
+	if !hasOutputRaw {
+		ttsArgs = append(ttsArgs, "--output_raw")
+	}
+	cmd := exec.Command(s.config.TTSExec[0], ttsArgs...)
 	// cmd.Dir = "/home/vmc/00"
-	cmd.Dir = filepath.Dir(s.config.TTS_exec[0])
+	cmd.Dir = filepath.Dir(s.config.TTSExec[0])
 	cmd.Stdin = stdin
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr
@@ -114,17 +143,20 @@ func TextSpeech(tts string) {
 		s.log.Errf("speech(%s) error:%v", tts, err)
 		return
 	}
-	p := s.audioContext.NewPlayerFromBytes(stdout.(*bytes.Buffer).Bytes())
-	p.SetVolume(s.currentVolume)
+	p := s.audioContext.NewPlayerFromBytes(stdout.Bytes())
+	p.SetVolume(getCurrentVolume())
 	p.Play()
 }
 
-func PlayFile(file string) error {
+func PlayFile(file string) {
 	s.alive.Add(1)
-	PlayFileNoWait(file)
-	waitingEndPlay(s.audioPlayer)
+	if err := PlayFileNoWait(file); err == nil {
+		s.playerMu.Lock()
+		player := s.audioPlayer
+		s.playerMu.Unlock()
+		waitingEndPlay(player)
+	}
 	s.alive.Done()
-	return nil
 }
 
 func PlayFileNoWait(file string) error {
@@ -136,18 +168,25 @@ func PlayFileNoWait(file string) error {
 }
 
 func Stop() {
+	s.playerMu.Lock()
+	defer s.playerMu.Unlock()
+	stopLocked()
+}
+
+func stopLocked() {
 	if s.audioPlayer == nil {
 		return
 	}
 	if s.audioPlayer.IsPlaying() {
 		s.audioPlayer.Pause()
-		s.audioPlayer.Close()
 	}
+	s.audioPlayer.Close()
+	s.audioPlayer = nil
 }
 
 // play file. stopping if played other
 func playMP3controlled(file string) (err error) {
-	if s.config == nil || s.config.Disabled {
+	if s.config == nil || s.config.Disabled || s.audioContext == nil {
 		return nil
 	}
 	if file == "" {
@@ -161,16 +200,22 @@ func playMP3controlled(file string) (err error) {
 	// str, err := mp3.DecodeWithoutResampling(f)
 	str, err := mp3.DecodeWithSampleRate(sampleRate, f)
 	if err != nil {
+		f.Close()
 		return
 	}
-	s.audioPlayer, err = s.audioContext.NewPlayer(str)
-	s.audioPlayer.SetVolume(s.currentVolume)
+	player, err := s.audioContext.NewPlayer(str)
 	if err != nil {
+		f.Close()
 		return
 	}
+	player.SetVolume(getCurrentVolume())
+	s.playerMu.Lock()
+	stopLocked()
+	s.audioPlayer = player
+	s.playerMu.Unlock()
 	go func() {
-		s.audioPlayer.Play()
-		waitingEndPlay(s.audioPlayer)
+		player.Play()
+		waitingEndPlay(player)
 		f.Close()
 	}()
 	s.log.Infof("play %s", file)
@@ -192,13 +237,13 @@ func waitingEndPlay(player *audio.Player) {
 
 func (ss *soundStream) prepare(name string, file string) {
 	var err error
-	ss.Stream, err = loadSteram(file)
+	ss.Stream, err = loadStream(file)
 	if err != nil {
 		s.log.Errorf("load sound %s (%+v)", name, err)
 	}
 }
 
-func loadSteram(file string) ([]byte, error) {
+func loadStream(file string) ([]byte, error) {
 	f, err := os.Open(s.config.Folder + file)
 	if err != nil {
 		return nil, err
@@ -213,10 +258,10 @@ func loadSteram(file string) ([]byte, error) {
 }
 
 func playStream(ss *soundStream) {
-	if s.config.Disabled {
+	if s.config == nil || s.config.Disabled || s.audioContext == nil || ss == nil || len(ss.Stream) == 0 {
 		return
 	}
 	p := s.audioContext.NewPlayerFromBytes(ss.Stream)
-	p.SetVolume(s.currentVolume)
+	p.SetVolume(getCurrentVolume())
 	p.Play()
 }

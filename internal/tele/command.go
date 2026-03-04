@@ -257,7 +257,7 @@ func tuneCook(b []byte, def uint8, max uint8) uint8 {
 }
 
 func (t *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgExec) error {
-	if arg.Scenario[:1] == "_" { // If the command contains the "_" prefix, then you ignore the client lock flag
+	if arg != nil && arg.Scenario[:1] == "_" { // If the command contains the "_" prefix, then you ignore the client lock flag
 		arg.Scenario = arg.Scenario[1:]
 	} else if config_global.VMC.User.Lock {
 		t.log.Infof("ignore income remove command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Scenario)

@@ -7,5 +7,5 @@ type Config struct {
 	Folder        string   `hcl:"folder,optional"`
 	KeyBeep       string   `hcl:"keyBeep,optional"`
 	MoneyIn       string   `hcl:"moneyIn,optional"`
-	TTS_exec      []string `hcl:"tts_exec,optional"`
+	TTSExec       []string `hcl:"tts_exec,optional"`
 }
