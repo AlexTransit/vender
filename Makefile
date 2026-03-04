@@ -6,10 +6,10 @@ TARGET_ENV=CGO_ENABLED=1 CC=arm-linux-gnueabihf-gcc GOOS=linux GOARCH=arm GOARM=
 VERSION=$(shell git describe --always --dirty --tags)
 UNAME_M := $(shell uname -m)
 
-ifeq ($(filter aarch64 arm64,$(UNAME_M)),)
-    DEFAULT_TARGET := build
-else
+ifneq ($(filter aarch64 arm64 x86_64,$(UNAME_M)),)
     DEFAULT_TARGET := build64
+else
+    DEFAULT_TARGET := build
 endif
 
 .PHONY: all
