@@ -33,4 +33,12 @@
     "go.formatTool": "goimports", // Инструмент для форматирования
     "go.useLanguageServer": true, // Использование gopls для быстрой работы
     "scm.alwaysShowRepositories": true,
+    "gitflow.options.finishRelease": [
+        "fetch",
+        "push",
+        "forceDelete",
+        "pushProduction",
+        "pushDevelop",
+        "pushTag"
+    ],
 }
