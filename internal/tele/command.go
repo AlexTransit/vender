@@ -116,6 +116,11 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 			t.log.Infof("remote cook error: code not valid")
 			return
 		}
+		if m.MakeOrder.Amount < uint32(config_global.VMC.User.SelectedItem.Price) { // стоимость заказа не меньше баланса
+			t.makeOrderImposible(tele_api.OrderStatus_overdraft, m)
+			t.log.Infof("remote cook error: money overdraft")
+			return
+		}
 		config_global.VMC.User.Sugar = tuneCook(m.MakeOrder.GetSugar(), config_global.VMC.Engine.Menu.DefaultSugar, config_global.VMC.Engine.Menu.DefaultSugarMax)
 		config_global.VMC.User.Cream = tuneCook(m.MakeOrder.GetCream(), config_global.VMC.Engine.Menu.DefaultCream, config_global.VMC.Engine.Menu.DefaultCreamMax)
 	default: // unknown status
@@ -182,11 +187,11 @@ func (t *tele) messageShowQr(ctx context.Context, m *tele_api.ToRoboMessage) {
 		t := m.ShowQR.QrText
 		g.ShowQR(t)
 	case tele_api.ShowQR_error:
-		g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicQRPayError)
+		_ = g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicQRPayError)
 	case tele_api.ShowQR_errorOverdraft:
 		g.Hardware.HD44780.Display.SetLines(g.Config.UI_config.Front.MsgMenuInsufficientCreditL1,
 			g.Config.UI_config.Front.MsgRemotePayReject)
-		g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicPayReject)
+		_ = g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicPayReject)
 	}
 }
 
