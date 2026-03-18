@@ -12,7 +12,8 @@ else
     DEFAULT_TARGET := build
 endif
 
-.PHONY: all
+.PHONY: all audit build64 build
+
 all: $(DEFAULT_TARGET)
 # .PHONY: audit build64 build
 audit:
@@ -30,8 +31,10 @@ build64:
 
 build:
 	@echo "===> Building for ARM32 (Target: 512MB RAM)..."
+	@mkdir -p ./go-tmp
 	@# -ldflags="-s -w" критически важен для экономии RAM при запуске на 512MB
-	GOMAXPROCS=2 $(TARGET_ENV) $(GOBUILD) -trimpath \
+	GOMAXPROCS=2 GOTMPDIR=$(shell pwd)/go-tmp $(TARGET_ENV) $(GOBUILD) -trimpath \
 	-ldflags="-s -w -X 'main.BuildVersion=$(VERSION)'" \
 	-o $(BINARY_NAME) ./cmd/vender
+	@rm -rf ./go-tmp
 	@echo "===> Done. Binary: $(BINARY_NAME), Size: $$(du -h $(BINARY_NAME) | cut -f1)"

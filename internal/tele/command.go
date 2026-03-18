@@ -116,7 +116,7 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 			t.log.Infof("remote cook error: code not valid")
 			return
 		}
-		if currency.Amount(m.MakeOrder.Amount) > config_global.VMC.User.SelectedItem.Price { // стоимость заказа не меньше баланса
+		if m.MakeOrder.Amount < uint32(config_global.VMC.User.SelectedItem.Price) { // стоимость заказа не меньше баланса
 			t.makeOrderImposible(tele_api.OrderStatus_overdraft, m)
 			t.log.Infof("remote cook error: money overdraft")
 			return
