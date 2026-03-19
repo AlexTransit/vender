@@ -232,8 +232,8 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 func (t *tele) cmdValidateCode(cmd *tele_api.Command, code string) {
 	mitem, ok := config_global.GetMenuItem(code)
 	if ok {
-		if err := mitem.Doer.Validate(); err != nil {
-			t.CookReply(cmd, tele_api.CookReplay_cookNothing, uint32(mitem.Price))
+		if err := mitem.Doer.Validate(); err == nil {
+			t.CookReply(cmd, tele_api.CookReplay_waitPay, uint32(mitem.Price))
 			return
 		}
 	}
