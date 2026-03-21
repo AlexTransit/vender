@@ -74,6 +74,11 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 		return
 	}
 	g := state.GetGlobal(ctx)
+	if g.XXX_uier.Load() == nil || g.XXX_money.Load() == nil {
+		t.log.Error("remote make error: vmc is not ready")
+		t.makeOrderImposible(tele_api.OrderStatus_robotIsBusy, m)
+		return
+	}
 	g.UI().PauseStateMashine(true)
 	defer g.UI().PauseStateMashine(false)
 	currentRobotState := t.GetState()
@@ -151,12 +156,14 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 func (t *tele) makeOrderImposible(oStatus tele_api.OrderStatus, m *tele_api.ToRoboMessage) {
 	rm := tele_api.FromRoboMessage{
 		State: t.currentState,
-		Order: &tele_api.Order{
+	}
+	if m != nil && m.MakeOrder != nil {
+		rm.Order = &tele_api.Order{
 			OrderStatus:   oStatus,
 			PaymentMethod: 0,
 			OwnerInt:      m.MakeOrder.OwnerInt,
 			OwnerType:     m.MakeOrder.OwnerType,
-		},
+		}
 	}
 	t.RoboSend(&rm)
 }
@@ -227,6 +234,9 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 		return nil
 
 	case *tele_api.Command_ValidateCode:
+		if task.ValidateCode == nil {
+			return errInvalidArg
+		}
 		t.cmdValidateCode(cmd, task.ValidateCode.Code)
 		return nil
 
@@ -235,6 +245,9 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 		return nil
 
 	case *tele_api.Command_Show_QR:
+		if task.Show_QR == nil {
+			return errInvalidArg
+		}
 		return t.cmdShowQR(ctx, task.Show_QR)
 
 	default:
