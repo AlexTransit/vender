@@ -80,18 +80,17 @@ func (ms *MoneySystem) WithdrawPrepare(ctx context.Context, amount currency.Amou
 	// ms.Log.Debugf("%s. return short change=%s", tag, change.FormatCtx(ctx))
 	ms.billCredit.Clear()
 	ms.coinCredit.Clear()
+	ms.setDirtyLocked(amount)
 	ms.lk.Unlock()
 	go func() {
 		if ms.CoinValidator == nil {
 			ms.Log.WarningF("%s CRITICAL change err=%v", tag, ErrCoinAcceptorOffline)
-			ms.SetDirty(amount)
 			return
 		}
 		if err := ms.CoinValidator.Dispense(change); err != nil {
 			err = oerr.Annotate(err, tag)
 			ms.Log.Errorf("%s CRITICAL change err=%v", tag, err)
 		}
-		ms.SetDirty(amount)
 	}()
 	return nil
 }
