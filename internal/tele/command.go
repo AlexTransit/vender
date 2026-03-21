@@ -280,7 +280,10 @@ func (t *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_api
 	if arg == nil {
 		return errInvalidArg
 	}
-	if arg != nil && arg.Scenario != "" && arg.Scenario[:1] == "_" { // If the command contains the "_" prefix, then you ignore the client lock flag
+	if arg.Scenario == "" {
+		return errInvalidArg
+	}
+	if arg.Scenario[:1] == "_" { // If the command contains the "_" prefix, then you ignore the client lock flag
 		arg.Scenario = arg.Scenario[1:]
 	} else if config_global.VMC.User.Lock {
 		t.log.Infof("ignore income remove command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Scenario)
