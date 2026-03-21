@@ -138,7 +138,7 @@ func (dv *DeviceValve) GetTemperature() (int32, error) {
 
 func (dv *DeviceValve) readTemp() error {
 	r, err := dv.ReadData(0x11)
-	if err != nil {
+	if err != nil || len(r) == 0 {
 		dv.tempHot = -1
 		return err
 	}

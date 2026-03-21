@@ -481,6 +481,10 @@ func (bv *BillValidator) escrowOutEvent(err error, nominal currency.Nominal) mon
 // прием банкнот ( если не принимал ранее).
 // останавливаем по времени.
 func (bv *BillValidator) BillRun(alive *alive.Alive, returnEvent func(money.ValidatorEvent)) {
+	if alive == nil {
+		returnEvent(money.ValidatorEvent{Err: errors.New("bill run with nil alive")})
+		return
+	}
 	bv.pollmu.Lock()
 	var stopRun <-chan struct{}
 	if alive != nil {

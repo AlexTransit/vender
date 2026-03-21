@@ -90,7 +90,8 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 	switch m.MakeOrder.OrderStatus {
 	case tele_api.OrderStatus_doSelected: // make selected code. payment via QR, etc
 		if config_global.VMC.User.PaymenId != m.MakeOrder.OwnerInt || // the payer and payer do not match
-			uint32(config_global.VMC.User.DirtyMoney) != m.MakeOrder.Amount { //
+			uint32(config_global.VMC.User.DirtyMoney) != m.MakeOrder.Amount ||
+			config_global.VMC.User.SelectedItem.Doer == nil { //
 			t.log.Errorf("make doSelected unposible. robo state:%s <> WaitingForExternalPayment or payerID:%d <> ownerID:%d or qr amount:%d<>order amount^%d",
 				currentRobotState.String(), config_global.VMC.User.PaymenId, m.MakeOrder.OwnerInt, config_global.VMC.User.DirtyMoney, m.MakeOrder.Amount)
 			t.makeOrderImposible(tele_api.OrderStatus_orderError, m)
@@ -266,7 +267,7 @@ func tuneCook(b []byte, def uint8, max uint8) uint8 {
 }
 
 func (t *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgExec) error {
-	if arg != nil && arg.Scenario[:1] == "_" { // If the command contains the "_" prefix, then you ignore the client lock flag
+	if arg != nil && arg.Scenario != "" && arg.Scenario[:1] == "_" { // If the command contains the "_" prefix, then you ignore the client lock flag
 		arg.Scenario = arg.Scenario[1:]
 	} else if config_global.VMC.User.Lock {
 		t.log.Infof("ignore income remove command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Scenario)

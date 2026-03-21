@@ -139,5 +139,5 @@ func minInt(i1, i2 int) int {
 
 func toRGBA(c color.Color) color.RGBA {
 	r, g, b, a := c.RGBA()
-	return color.RGBA{uint8(r), uint8(g), uint8(b), uint8(a)}
+	return color.RGBA{uint8(r >> 8), uint8(g >> 8), uint8(b >> 8), uint8(a >> 8)}
 }
