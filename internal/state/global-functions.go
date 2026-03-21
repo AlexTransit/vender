@@ -226,7 +226,7 @@ func (g *Global) SendCooking() {
 func (g *Global) OrderToMessage() *tele_api.Order {
 	o := &tele_api.Order{
 		MenuCode:      g.Config.User.SelectedItem.Code,
-		Amount:        uint32(config_global.VMC.User.SelectedItem.Price),
+		Amount:        uint32(g.Config.User.SelectedItem.Price),
 		PaymentMethod: g.Config.User.PaymentMethod,
 		OwnerInt:      g.Config.User.PaymenId,
 		OwnerType:     g.Config.User.PaymentType,
