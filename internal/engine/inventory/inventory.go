@@ -171,10 +171,9 @@ func (inv *Inventory) InventoryLoad() {
 	defer f.Close()
 
 	stat, err := f.Stat()
-	fl := int(stat.Size())
 	numInventory := len(inv.Stocks)
-	if err != nil || fl != numInventory*4 {
-		inv.log.Errorf("load inventory file stat. len(%d) error(%v)", fl, err)
+	if err != nil || int(stat.Size()) != numInventory*4 {
+		inv.log.Errorf("load inventory file stat. len(%d) error(%v)", int(stat.Size()), err)
 		return
 	}
 
@@ -185,7 +184,8 @@ func (inv *Inventory) InventoryLoad() {
 		return
 	}
 	for i, cl := range inv.Stocks {
-		inv.Stocks[i].Set(float32(td[cl.Code-1]))
+		inventoryValue := td[cl.Code-1]
+		inv.Stocks[i].Set(float32(inventoryValue))
 	}
 }
 
