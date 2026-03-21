@@ -17,11 +17,7 @@ type Amount uint32
 const MaxAmount = Amount(math.MaxUint32)
 
 func (a Amount) Format100I() string { return fmt.Sprint(float32(a) / 100) }
-func (a Amount) AddPersent(persent float64) Amount {
-	vf := float64(a) * persent
-	vi := int32(math.Round(vf))
-	return Amount(vi)
-}
+
 func (a Amount) FormatCtx(ctx context.Context) string {
 	// XXX FIXME
 	return a.Format100I()
@@ -74,6 +70,7 @@ func (ng *NominalGroup) Add(n Nominal) error {
 	ng.values[n]++
 	return nil
 }
+
 func (ng *NominalGroup) Sub(n Nominal) error {
 	if _, ok := ng.values[n]; !ok {
 		return oerr.Annotatef(ErrNominalInvalid, "Add(n=%s)", Amount(n).Format100I())
@@ -81,6 +78,7 @@ func (ng *NominalGroup) Sub(n Nominal) error {
 	ng.values[n]--
 	return nil
 }
+
 func (ng *NominalGroup) AddMany(n Nominal, count uint) error {
 	if _, ok := ng.values[n]; !ok {
 		return oerr.Annotatef(ErrNominalInvalid, "Add(n=%s, c=%d)", Amount(n).Format100I(), count)
@@ -116,6 +114,7 @@ func (ng *NominalGroup) Get(n Nominal) (uint, error) {
 		return stored, nil
 	}
 }
+
 func (ng *NominalGroup) InTube(n Nominal) uint {
 	if stored, ok := ng.values[n]; !ok {
 		return 0
@@ -154,6 +153,7 @@ func (ng *NominalGroup) Diff(other *NominalGroup) Amount {
 	}
 	return result
 }
+
 func (ng *NominalGroup) SubOther(other *NominalGroup) {
 	for nominal := range ng.values {
 		ng.values[nominal] -= other.values[nominal]
@@ -244,6 +244,7 @@ type ExpendGenericOrder struct {
 func (ego *ExpendGenericOrder) Reset(from *NominalGroup) {
 	ego.order = from.order(ego.SortElemFunc)
 }
+
 func (ego *ExpendGenericOrder) ExpendOne(from *NominalGroup, max Amount) (Nominal, error) {
 	return expendOneOrdered(from, ego.order, max)
 }
@@ -252,6 +253,7 @@ func (ego *ExpendGenericOrder) Validate() bool { return true }
 func NewExpendLeastCount() ExpendStrategy {
 	return &ExpendGenericOrder{SortElemFunc: ngOrderSortElemNominal}
 }
+
 func NewExpendMostAvailable() ExpendStrategy {
 	return &ExpendGenericOrder{SortElemFunc: ngOrderSortElemCount}
 }
@@ -264,9 +266,11 @@ type ExpendStatistical struct {
 func (es *ExpendStatistical) Reset(from *NominalGroup) {
 	es.order = es.Stat.order(ngOrderSortElemCount)
 }
+
 func (es *ExpendStatistical) ExpendOne(from *NominalGroup, max Amount) (Nominal, error) {
 	return expendOneOrdered(from, es.order, max)
 }
+
 func (es *ExpendStatistical) Validate() bool {
 	return es.Stat.Total() > 0
 }
@@ -283,12 +287,14 @@ func (ec *ExpendCombine) Reset(from *NominalGroup) {
 	ec.S1.Reset(from)
 	ec.S2.Reset(from)
 }
+
 func (ec *ExpendCombine) ExpendOne(from *NominalGroup, max Amount) (Nominal, error) {
 	if ec.rnd.Float32() < ec.Ratio {
 		return ec.S1.ExpendOne(from, max)
 	}
 	return ec.S2.ExpendOne(from, max)
 }
+
 func (ec *ExpendCombine) Validate() bool {
 	return ec.S1 != nil && ec.S2 != nil && ec.S1.Validate() && ec.S2.Validate()
 }
