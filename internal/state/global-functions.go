@@ -86,11 +86,11 @@ func (g *Global) RunBashSript(script string) (err error) {
 		return nil
 	}
 	cmd := exec.Command("/usr/bin/bash", "-c", script)
-	stdout, e := cmd.Output()
+	output, e := cmd.CombinedOutput()
 	if e == nil {
 		return nil
 	}
-	return fmt.Errorf("script(%s) stdout(%s) error(%s)", script, stdout, cmd.Stderr)
+	return fmt.Errorf("script(%s) output(%s) error(%v)", script, output, e)
 }
 
 func (g *Global) ShowQR(t string) {

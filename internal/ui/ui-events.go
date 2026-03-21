@@ -14,7 +14,7 @@ import (
 func (ui *UI) linesCreate(l1 *string, l2 *string, tuneScreen *bool) {
 	c := ui.ms.GetCredit()
 	if c == 0 {
-		currentLine := ui.g.Hardware.HD44780.Display.GetLine(1)
+		currentLine := ui.display.GetLine(1)
 		*l1 = currentLine
 	} else {
 		*l1 = ui.g.Config.UI_config.Front.MsgCredit + c.Format100I()
@@ -68,7 +68,7 @@ func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *b
 	}
 	if currentState == tele_api.State_WaitingForExternalPayment { // ignore key press
 		ui.g.Log.Info("qr selected. ignore key")
-		*l1 = ui.g.Hardware.HD44780.Display.GetLine(1)
+		*l1 = ui.display.GetLine(1)
 		return types.StateDoesNotChange
 	}
 	if currentState != tele_api.State_Client {

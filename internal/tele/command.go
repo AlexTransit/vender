@@ -178,7 +178,7 @@ func (t *tele) messageShowQr(ctx context.Context, m *tele_api.ToRoboMessage) {
 			g.Log.Infof("show paymeng QR for order:%s", m.ShowQR.OrderId)
 			g.ShowQR(m.ShowQR.QrText)
 			l1 := fmt.Sprintf(g.Config.UI_config.Front.MsgRemotePay+g.Config.UI_config.Front.MsgPrice, currency.Amount(config_global.VMC.User.QRPayAmount).Format100I())
-			g.Hardware.HD44780.Display.SetLine(1, l1)
+			g.MustTextDisplay().SetLine(1, l1)
 			config_global.VMC.User.DirtyMoney = currency.Amount(config_global.VMC.User.QRPayAmount)
 			config_global.VMC.User.PaymentType = tele_api.OwnerType_qrCashLessUser
 			config_global.VMC.User.PaymentMethod = tele_api.PaymentMethod_Cashless
@@ -189,7 +189,7 @@ func (t *tele) messageShowQr(ctx context.Context, m *tele_api.ToRoboMessage) {
 	case tele_api.ShowQR_error:
 		_ = g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicQRPayError)
 	case tele_api.ShowQR_errorOverdraft:
-		g.Hardware.HD44780.Display.SetLines(g.Config.UI_config.Front.MsgMenuInsufficientCreditL1,
+		g.MustTextDisplay().SetLines(g.Config.UI_config.Front.MsgMenuInsufficientCreditL1,
 			g.Config.UI_config.Front.MsgRemotePayReject)
 		_ = g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicPayReject)
 	}
