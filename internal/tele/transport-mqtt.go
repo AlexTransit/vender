@@ -167,7 +167,7 @@ func (tm *transportMqtt) messageHandler(c mqtt.Client, msg mqtt.Message) {
 		count++
 		if count > 10 {
 			tm.log.Errf("long parse preview message")
-			break
+			return
 		}
 	}
 	tm.parseMessage.Store(true)

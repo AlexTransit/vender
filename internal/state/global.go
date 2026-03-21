@@ -136,14 +136,15 @@ func (g *Global) ScheduleSync(ctx context.Context, fun types.TaskFunc) error {
 }
 
 func (g *Global) UI() types.UIer {
-	for {
+	for i := 1; i <= 3; i++ {
 		x := g.XXX_uier.Load()
 		if x != nil {
 			return x.(types.UIer)
 		}
-		g.Log.Errorf("CRITICAL g.uier is not set")
+		g.Log.Errorf("CRITICAL g.uier is not set (attempt %d/3)", i)
 		time.Sleep(5 * time.Second)
 	}
+	panic("UI is not initialized after 3 attempts")
 }
 
 func (g *Global) initEngine() error {
@@ -159,9 +160,9 @@ func (g *Global) initEngine() error {
 		g.Engine.Register(x.Name, x.Doer)
 	}
 
-	for _, x := range g.Config.Engine.Menu.Items {
+	for code, x := range g.Config.Engine.Menu.Items {
 		if x.Disabled {
-			delete(g.Config.Engine.Menu.Items, x.Code)
+			delete(g.Config.Engine.Menu.Items, code)
 			continue
 		}
 		var err error

@@ -89,8 +89,7 @@ func (ms *MoneySystem) WithdrawPrepare(ctx context.Context, amount currency.Amou
 		}
 		if err := ms.CoinValidator.Dispense(change); err != nil {
 			err = oerr.Annotate(err, tag)
-			ms.Log.WarningF("%s CRITICAL change err=%v", tag, err)
-			// state.GetGlobal(ctx).Tele.Error(err)
+			ms.Log.Errorf("%s CRITICAL change err=%v", tag, err)
 		}
 		ms.SetDirty(amount)
 	}()
