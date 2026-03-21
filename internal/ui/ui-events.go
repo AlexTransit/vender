@@ -133,9 +133,9 @@ func (ui *UI) parseMoneyEvent(ek types.EventKind) types.UiState {
 	if currentState == tele_api.State_WaitingForExternalPayment {
 		ui.g.ShowQR("QR disabled. ")
 		ui.g.TeleCancelQr(tele_api.State_Client)
-		ui.g.Config.User.PaymenId = 0
+		config_global.VMC.User.PaymenId = 0
 	}
-	ui.g.Config.User.PaymentMethod = tele_api.PaymentMethod_Cash
+	config_global.VMC.User.PaymentMethod = tele_api.PaymentMethod_Cash
 	credit := ui.ms.GetCredit()
 	price := config_global.VMC.User.SelectedItem.Price
 	if price != 0 && credit >= price && config_global.VMC.User.SelectedItem.Doer != nil {

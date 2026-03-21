@@ -187,11 +187,15 @@ func (t *tele) messageShowQr(ctx context.Context, m *tele_api.ToRoboMessage) {
 		t := m.ShowQR.QrText
 		g.ShowQR(t)
 	case tele_api.ShowQR_error:
-		_ = g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicQRPayError)
+		if g.Hardware.Display.Graphic != nil {
+			_ = g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicQRPayError)
+		}
 	case tele_api.ShowQR_errorOverdraft:
 		g.MustTextDisplay().SetLines(g.Config.UI_config.Front.MsgMenuInsufficientCreditL1,
 			g.Config.UI_config.Front.MsgRemotePayReject)
-		_ = g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicPayReject)
+		if g.Hardware.Display.Graphic != nil {
+			_ = g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicPayReject)
+		}
 	}
 }
 

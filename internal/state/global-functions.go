@@ -177,14 +177,14 @@ func (g *Global) TeleCancelOrder(s tele_api.State) {
 		State: s,
 	}
 	// if the order is not completed, the order is canceled
-	if g.Config.User.PaymenId != 0 {
+	if config_global.VMC.User.PaymenId != 0 {
 		rm.Order = g.OrderToMessage()
-		if g.Config.User.DirtyMoney != 0 {
+		if config_global.VMC.User.DirtyMoney != 0 {
 			rm.Order.OrderStatus = tele_api.OrderStatus_orderError // return cashless money
 		} else {
 			// order full maked and not completed.
 			rm.Order.OrderStatus = tele_api.OrderStatus_complete
-			g.GlobalError += fmt.Sprintf("set complete order in cancel order point. paymentId:%d dirty money=0", g.Config.User.PaymenId)
+			g.GlobalError += fmt.Sprintf("set complete order in cancel order point. paymentId:%d dirty money=0", config_global.VMC.User.PaymenId)
 		}
 	}
 	if g.GlobalError != "" {
@@ -204,7 +204,7 @@ func (g *Global) TeleCancelQr(s tele_api.State) {
 	rm := tele_api.FromRoboMessage{
 		State: s,
 	}
-	if g.Config.User.PaymenId != 0 {
+	if config_global.VMC.User.PaymenId != 0 {
 		rm.Order = g.OrderToMessage()
 		rm.Order.OrderStatus = tele_api.OrderStatus_cancel
 		g.Tele.RoboSend(&rm)
@@ -215,7 +215,7 @@ func (g *Global) TeleCancelQr(s tele_api.State) {
 
 func (g *Global) SendCooking() {
 	rm := tele_api.FromRoboMessage{State: tele_api.State_Process}
-	if g.Config.User.PaymenId != 0 {
+	if config_global.VMC.User.PaymenId != 0 {
 		rm.Order = g.OrderToMessage()
 		rm.Order.OrderStatus = tele_api.OrderStatus_executionStart
 	}
@@ -225,11 +225,11 @@ func (g *Global) SendCooking() {
 
 func (g *Global) OrderToMessage() *tele_api.Order {
 	o := &tele_api.Order{
-		MenuCode:      g.Config.User.SelectedItem.Code,
-		Amount:        uint32(g.Config.User.SelectedItem.Price),
-		PaymentMethod: g.Config.User.PaymentMethod,
-		OwnerInt:      g.Config.User.PaymenId,
-		OwnerType:     g.Config.User.PaymentType,
+		MenuCode:      config_global.VMC.User.SelectedItem.Code,
+		Amount:        uint32(config_global.VMC.User.SelectedItem.Price),
+		PaymentMethod: config_global.VMC.User.PaymentMethod,
+		OwnerInt:      config_global.VMC.User.PaymenId,
+		OwnerType:     config_global.VMC.User.PaymentType,
 	}
 	return o
 }

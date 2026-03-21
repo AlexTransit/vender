@@ -177,7 +177,9 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 // return message for display
 func (ui *UI) sendRequestForQrPayment(rm *tele_api.FromRoboMessage) (message_for_display *string) {
 	if !ui.g.Tele.RoboConnected() {
-		ui.g.Hardware.Display.Graphic.CopyFile2FB(ui.g.Config.UI_config.Front.PicQRPayError)
+		if ui.g.Hardware.Display.Graphic != nil {
+			ui.g.Hardware.Display.Graphic.CopyFile2FB(ui.g.Config.UI_config.Front.PicQRPayError)
+		}
 		return &ui.g.Config.UI_config.Front.MsgNoNetwork
 	}
 	config_global.VMC.UIState(uint32(types.StatePrepare))
