@@ -102,7 +102,11 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 		event := types.Event{}
 		switch e.Event {
 		case money.CoinRejectKey:
-			g.Hardware.Input.Emit(types.InputEvent{Source: input.MoneySourceTag, Key: input.MoneyKeyAbort})
+			if g.Hardware.Input != nil {
+				g.Hardware.Input.Emit(types.InputEvent{Source: input.MoneySourceTag, Key: input.MoneyKeyAbort})
+			} else {
+				ms.Log.Warning("ignore money abort event: input dispatch is not initialized")
+			}
 		case money.CoinCredit:
 			event.Kind = types.EventMoneyCredit
 			ms.lk.Lock()
