@@ -67,7 +67,7 @@ func (ui *UI) Init(ctx context.Context) error {
 	if ui.g.Hardware.Input == nil {
 		ui.g.Hardware.Input = &input.Dispatch{Log: ui.g.Log, Bus: make(chan types.InputEvent)}
 	}
-	ui.inputch = *ui.g.Hardware.Input.InputChain()
+	ui.inputch = ui.g.Hardware.Input.InputChain()
 
 	ui.frontResetTimeout = helpers.IntSecondDefault(ui.g.Config.UI_config.Front.ResetTimeoutSec, 0)
 	ui.Service.Init(ctx)

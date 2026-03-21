@@ -22,14 +22,11 @@ type Dispatch struct {
 	Bus chan types.InputEvent
 }
 
-func (d *Dispatch) InputChain() *chan types.InputEvent {
+func (d *Dispatch) InputChain() chan types.InputEvent {
 	if d == nil {
-		d = &Dispatch{
-			Bus: make(chan types.InputEvent),
-		}
+		return nil
 	}
-	ch := d.Bus
-	return &ch
+	return d.Bus
 }
 
 func (d *Dispatch) ReadEvendKeyboard(s Source) {
