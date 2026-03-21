@@ -129,7 +129,7 @@ func (ui *UI) onServiceMenu() types.UiState {
 
 	case e.IsDigit():
 		x := byte(e.Key) - byte('0')
-		if x > 0 && x <= serviceMenuMax {
+		if x > 0 && int(x) <= len(serviceMenu) {
 			ui.Service.menuIdx = x - 1
 		}
 	}

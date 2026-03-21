@@ -40,7 +40,7 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 			switch e.Event {
 			case money.InEscrow:
 				if (g.Config.Money.MinimalBill != 0 && e.Nominal < currency.Nominal(g.Config.Money.MinimalBill)) ||
-					(g.Config.Money.MaximumBill != 0 && e.Nominal < currency.Nominal(g.Config.Money.MaximumBill)) {
+					(g.Config.Money.MaximumBill != 0 && e.Nominal > currency.Nominal(g.Config.Money.MaximumBill)) {
 					// say not posible
 					// go sound.TextSpeech("купюру " + e.Nominal.Format100I() + " рублей не принимаем")
 					// g.MustTextDisplay().SetLines("купюру "+e.Nominal.Format100I(), "не принимаем")

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"sync/atomic"
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
@@ -13,9 +14,11 @@ import (
 )
 
 type transportMqtt struct {
-	enabled               bool
-	connected             bool
-	parseMessage          bool
+	enabled               atomic.Bool
+	connected             atomic.Bool
+	parseMessage          atomic.Bool
+	restartLoopRunning    atomic.Bool
+	closech               chan struct{}
 	config                *tele_config.Config
 	log                   *log2.Log
 	onCommand             func([]byte) bool
@@ -37,8 +40,9 @@ func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tel
 		return nil
 	}
 	tm.config = &teleConfig
-	tm.enabled = true
+	tm.enabled.Store(true)
 	tm.log = log
+	tm.closech = make(chan struct{})
 	// AlexM FIXME add loglevel to config
 	mqtt.ERROR = log
 	mqtt.CRITICAL = log
@@ -96,15 +100,21 @@ func (tm *transportMqtt) Init(ctx context.Context, log *log2.Log, teleConfig tel
 	if sConnToken.Error() != nil {
 		tm.log.Errorf("token.Error\n")
 	}
-	go tm.restartNetwork()
+	tm.startRestartNetworkLoop()
 	return nil
 }
 
-func (tm *transportMqtt) RoboConnected() bool { return tm.connected }
+func (tm *transportMqtt) RoboConnected() bool { return tm.connected.Load() }
 
 func (tm *transportMqtt) CloseTele() {
 	if tm.m == nil {
 		return
+	}
+	tm.enabled.Store(false)
+	select {
+	case <-tm.closech:
+	default:
+		close(tm.closech)
 	}
 	tm.log.Infof("mqtt unsubscribe")
 	if token := tm.m.Unsubscribe(tm.topicCommand); token.Wait() && token.Error() != nil {
@@ -113,14 +123,14 @@ func (tm *transportMqtt) CloseTele() {
 }
 
 func (tm *transportMqtt) publish2Telemetry(topic string, qos byte, retained bool, payload interface{}) {
-	if !tm.enabled {
+	if !tm.enabled.Load() {
 		return
 	}
 	tm.m.Publish(topic, qos, retained, payload)
 }
 
 func (tm *transportMqtt) SendState(payload []byte) bool {
-	if !tm.enabled {
+	if !tm.enabled.Load() {
 		return false
 	}
 	tm.log.Infof("transport sendstate payload=%x", payload)
@@ -129,14 +139,14 @@ func (tm *transportMqtt) SendState(payload []byte) bool {
 }
 
 func (tm *transportMqtt) SendTelemetry(payload []byte) bool {
-	if tm.enabled {
+	if tm.enabled.Load() {
 		tm.publish2Telemetry(tm.topicTelemetry, 1, false, payload)
 	}
 	return true
 }
 
 func (tm *transportMqtt) SendCommandResponse(topicSuffix string, payload []byte) bool {
-	if tm.enabled {
+	if tm.enabled.Load() {
 		topic := fmt.Sprintf("%s/%s", tm.topicPrefix, topicSuffix)
 		tm.log.Infof("mqtt publish command response to topic=%s", topic)
 		tm.publish2Telemetry(topic, 1, false, payload)
@@ -151,7 +161,7 @@ func (tm *transportMqtt) SendFromRobot(payload []byte) {
 
 func (tm *transportMqtt) messageHandler(c mqtt.Client, msg mqtt.Message) {
 	count := 0
-	for tm.parseMessage {
+	for tm.parseMessage.Load() {
 		tm.log.Info("wait executiong prewiew message")
 		time.Sleep(200 * time.Millisecond)
 		count++
@@ -160,7 +170,7 @@ func (tm *transportMqtt) messageHandler(c mqtt.Client, msg mqtt.Message) {
 			break
 		}
 	}
-	tm.parseMessage = true
+	tm.parseMessage.Store(true)
 	payload := msg.Payload()
 	// ALexM rewrite  onCommand = old
 	tm.log.Debugf("mqtt income message (%x)", payload)
@@ -169,19 +179,19 @@ func (tm *transportMqtt) messageHandler(c mqtt.Client, msg mqtt.Message) {
 	} else {
 		tm.onCommand(payload)
 	}
-	tm.parseMessage = false
+	tm.parseMessage.Store(false)
 }
 
 func (tm *transportMqtt) connectLostHandler(c mqtt.Client, err error) {
 	tm.log.Infof("mqtt disconnect")
-	if tm.enabled {
-		tm.connected = false
-		go tm.restartNetwork()
+	if tm.enabled.Load() {
+		tm.connected.Store(false)
+		tm.startRestartNetworkLoop()
 	}
 }
 
 func (tm *transportMqtt) onConnectHandler(c mqtt.Client) {
-	if !tm.enabled {
+	if !tm.enabled.Load() {
 		return
 	}
 	tm.log.Infof("mqtt connect")
@@ -195,22 +205,32 @@ func (tm *transportMqtt) onConnectHandler(c mqtt.Client) {
 	if token := c.Subscribe(tm.topicRoboIn, 1, nil); token.Wait() && token.Error() != nil {
 		tm.log.Infof("mqtt subscribe error")
 	}
-	tm.connected = true
+	tm.connected.Store(true)
 }
 
 func (tm *transportMqtt) restartNetwork() {
+	defer tm.restartLoopRunning.Store(false)
 	if tm.config.NetworkRestartScript == "" {
 		return
 	}
-	tmr := time.NewTimer(tm.networkRestartTimeout)
-	defer tmr.Stop()
-	for {
-		<-tmr.C
-		if tm.connected {
+	ticker := time.NewTicker(tm.networkRestartTimeout)
+	defer ticker.Stop()
+	for tm.enabled.Load() {
+		select {
+		case <-tm.closech:
 			return
+		case <-ticker.C:
 		}
-		tmr.Reset(tm.networkRestartTimeout)
+		if tm.connected.Load() {
+			continue
+		}
 		tm.runNetworkRestartScript()
+	}
+}
+
+func (tm *transportMqtt) startRestartNetworkLoop() {
+	if tm.restartLoopRunning.CompareAndSwap(false, true) {
+		go tm.restartNetwork()
 	}
 }
 
