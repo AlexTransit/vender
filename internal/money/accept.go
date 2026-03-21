@@ -49,20 +49,27 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 					return
 				}
 				event.Kind = types.EventMoneyPreCredit
+				ms.lk.Lock()
 				ms.billCredit.Add(e.Nominal)
-				if ms.GetCredit() < maxPrice {
+				credit := ms.billCredit.Total() + ms.coinCredit.Total()
+				ms.lk.Unlock()
+				if credit < maxPrice {
 					ms.bill.SendCommand(bill.Accept)
 				}
 			case money.OutEscrow:
 				event.Kind = types.EventMoneyPreCredit
+				ms.lk.Lock()
 				if ms.billCredit.Total() > 0 {
 					ms.billCredit.Sub(e.Nominal)
 				}
+				ms.lk.Unlock()
 			case money.Stacked:
 				event.Kind = types.EventMoneyCredit
 				if !ms.bill.BillStacked() {
 					ms.Log.Error("bill not stacked. substruct bill credit")
+					ms.lk.Lock()
 					ms.billCredit.Sub(e.Nominal)
+					ms.lk.Unlock()
 				}
 			default:
 				return
@@ -93,8 +100,10 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 			g.Hardware.Input.Emit(types.InputEvent{Source: input.MoneySourceTag, Key: input.MoneyKeyAbort})
 		case money.CoinCredit:
 			event.Kind = types.EventMoneyCredit
+			ms.lk.Lock()
 			ms.coinCredit.Add(e.Nominal)
-			x := ms.GetCredit()
+			x := ms.billCredit.Total() + ms.coinCredit.Total()
+			ms.lk.Unlock()
 			if x >= maxPrice {
 				ms.CoinValidator.DisableAccept()
 			}

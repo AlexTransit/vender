@@ -24,9 +24,11 @@ var (
 func (ms *MoneySystem) TestingDispense() { ms.CoinValidator.TestingDispense() }
 
 func (ms *MoneySystem) WaitEscrowAccept(amount currency.Amount) (wait bool) {
+	ms.lk.RLock()
 	bc := ms.billCredit.Total()
 	cc := ms.coinCredit.Total()
 	ec := ms.bill.EscrowAmount()
+	ms.lk.RUnlock()
 	if amount > bc-ec+cc {
 		ms.Log.Infof("bill credit:%v coin credit:%v, escrow bill:%v. send command accept escrow", bc.Format100I(), cc.Format100I(), ec.Format100I())
 		ms.BillEscrowToStacker()
