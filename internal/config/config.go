@@ -4,6 +4,9 @@ import (
 	"os"
 
 	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/hardware/hd44780"
+	mdb_config "github.com/AlexTransit/vender/hardware/mdb/config"
+	evend_config "github.com/AlexTransit/vender/hardware/mdb/evend/config"
 	engine_config "github.com/AlexTransit/vender/internal/engine/config"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
 	menu_config "github.com/AlexTransit/vender/internal/menu/menu_config"
@@ -12,9 +15,6 @@ import (
 	watchdog_config "github.com/AlexTransit/vender/internal/watchdog/config"
 	"github.com/AlexTransit/vender/log2"
 	tele_config "github.com/AlexTransit/vender/tele/config"
-	"github.com/AlexTransit/vender/hardware/hd44780"
-	mdb_config "github.com/AlexTransit/vender/hardware/mdb/config"
-	evend_config "github.com/AlexTransit/vender/hardware/mdb/evend/config"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
@@ -198,11 +198,11 @@ func (u *Config) KeyboardReader(v ...bool) bool {
 	return u.User.KeyboardReadEnable
 }
 
-func (u *Config) UIState(v ...uint32) uint32 {
-	if len(v) > 0 {
-	}
-	return u.User.UiState
-}
+// func (u *Config) UIState(v ...uint32) uint32 {
+// 	if len(v) > 0 {
+// 	}
+// 	return u.User.UiState
+// }
 
 func NewConfig() *Config {
 	return newDefaultConfig()

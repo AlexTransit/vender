@@ -182,7 +182,8 @@ func (ui *UI) sendRequestForQrPayment(rm *tele_api.FromRoboMessage) (message_for
 		}
 		return &ui.g.Config.UI_config.Front.MsgNoNetwork
 	}
-	config_global.VMC.UIState(uint32(types.StatePrepare))
+	config_global.VMC.User.UiState = uint32(types.StatePrepare)
+	// config_global.VMC.UIState(uint32(types.StatePrepare))
 	rm.State = tele_api.State_WaitingForExternalPayment
 	rm.RoboTime = time.Now().Unix()
 	rm.Order = &tele_api.Order{
