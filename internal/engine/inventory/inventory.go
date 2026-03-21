@@ -190,7 +190,7 @@ func (inv *Inventory) InventoryLoad() {
 }
 
 func (inv *Inventory) InventorySave() error {
-	file, err := os.OpenFile(inv.File, os.O_WRONLY|os.O_SYNC|os.O_CREATE, 0o644)
+	file, err := os.OpenFile(inv.File, os.O_WRONLY|os.O_SYNC|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		inv.log.Errorf("save inventory fail. error open file(%v)", err)
 		return err
