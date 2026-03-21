@@ -140,10 +140,10 @@ func initedDevice(ctx context.Context, need bool) {
 
 func showText(ctx context.Context, s []string) {
 	var l1, l2 string
-	if cap(s) >= 1 {
+	if len(s) >= 1 {
 		l1 = s[0]
 	}
-	if cap(s) >= 2 {
+	if len(s) >= 2 {
 		l2 = s[1]
 	}
 	g := state.GetGlobal(ctx)

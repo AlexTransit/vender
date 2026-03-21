@@ -1,44 +1,54 @@
 {
-    "go.alternateTools": {
-        "dlv": "${workspaceFolder}/.vscode/dlv-override.sh"
-    },
-    // "[go]": {"editor.formatOnSave": true },
-    "[go]": {
-        "editor.insertSpaces": true,
-        "editor.formatOnSave": true,
-        "editor.defaultFormatter": "golang.go"
-    },
-    "gopls": {
-        "formatting.gofumpt": true
-    },
-    "[json]": {
-        "editor.formatOnSave": false
-    },
-    // "workbench.colorCustomizations": {
-    //     // Gutter indicators (left)
-    //     "editorGutter.modifiedBackground": "#0000",
-    //     "editorGutter.addedBackground": "#0000",
-    //     "editorGutter.deletedBackground": "#0000",
-    //     // Scrollbar indicators (right)
-    //     "editorOverviewRuler.addedForeground": "#0000",
-    //     "editorOverviewRuler.modifiedForeground": "#0000",
-    //     "editorOverviewRuler.deletedForeground": "#0000"
-    // }
-    "editor.formatOnSave": true, // Включает форматирование при сохранении
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "golang.go",
     "editor.codeActionsOnSave": {
-        "source.organizeImports": "always" // Удаляет неиспользуемые и добавляет нужные импорты
+        "source.organizeImports": "always",
     },
-    "go.lintOnSave": "package", // Запускает проверку при сохранении пакета
-    "go.lintTool": "golangci-lint", // Использует самый мощный линтер (нужно установить его отдельно)
-    "go.formatTool": "goimports", // Инструмент для форматирования
-    "go.useLanguageServer": true, // Использование gopls для быстрой работы
-    "scm.alwaysShowRepositories": true,
-    "gitflow.options.finishRelease": [
-        "fetch",
-        "push",
-        "forceDelete",
-        "pushProduction",
-        "pushDevelop",
-        "pushTag"
-    ],
+    "[html]": {
+        "editor.defaultFormatter": "vscode.html-language-features"
+    }
 }
+// {
+//     "go.alternateTools": {
+//         "dlv": "${workspaceFolder}/.vscode/dlv-override.sh"
+//     },
+//     // "[go]": {"editor.formatOnSave": true },
+//     "[go]": {
+//         "editor.insertSpaces": true,
+//         "editor.formatOnSave": true,
+//         "editor.defaultFormatter": "golang.go"
+//     },
+//     "gopls": {
+//         "formatting.gofumpt": true
+//     },
+//     "[json]": {
+//         "editor.formatOnSave": false
+//     },
+//     // "workbench.colorCustomizations": {
+//     //     // Gutter indicators (left)
+//     //     "editorGutter.modifiedBackground": "#0000",
+//     //     "editorGutter.addedBackground": "#0000",
+//     //     "editorGutter.deletedBackground": "#0000",
+//     //     // Scrollbar indicators (right)
+//     //     "editorOverviewRuler.addedForeground": "#0000",
+//     //     "editorOverviewRuler.modifiedForeground": "#0000",
+//     //     "editorOverviewRuler.deletedForeground": "#0000"
+//     // }
+//     "editor.formatOnSave": true, // Включает форматирование при сохранении
+//     "editor.codeActionsOnSave": {
+//         "source.organizeImports": "always" // Удаляет неиспользуемые и добавляет нужные импорты
+//     },
+//     "go.lintOnSave": "package", // Запускает проверку при сохранении пакета
+//     "go.lintTool": "golangci-lint", // Использует самый мощный линтер (нужно установить его отдельно)
+//     "go.formatTool": "goimports", // Инструмент для форматирования
+//     "go.useLanguageServer": true, // Использование gopls для быстрой работы
+//     "scm.alwaysShowRepositories": true,
+//     "gitflow.options.finishRelease": [
+//         "fetch",
+//         "push",
+//         "forceDelete",
+//         "pushProduction",
+//         "pushDevelop",
+//         "pushTag"
+//     ],
+// }
