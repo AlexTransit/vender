@@ -134,6 +134,10 @@ func (ui *UI) parseMoneyEvent(ek types.EventKind) types.UiState {
 		ui.g.ShowQR("QR disabled. ")
 		ui.g.TeleCancelQr(tele_api.State_Client)
 		config_global.VMC.User.PaymenId = 0
+		config_global.VMC.User.PaymentType = 0
+		config_global.VMC.User.QRPayAmount = 0
+		config_global.VMC.User.QrText = ""
+		config_global.VMC.User.DirtyMoney = 0
 	}
 	config_global.VMC.User.PaymentMethod = tele_api.PaymentMethod_Cash
 	credit := ui.ms.GetCredit()
