@@ -269,7 +269,7 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 	if err == nil { // success path
 		rm.State = tele_api.State_Nominal
 		rm.Order.Cream = TuneValueToByte(config_global.VMC.User.Cream, config_global.VMC.Engine.Menu.DefaultCream)
-		rm.Order.Sugar = TuneValueToByte(config_global.VMC.User.Sugar, config_global.VMC.Engine.Menu.DefaultCream)
+		rm.Order.Sugar = TuneValueToByte(config_global.VMC.User.Sugar, config_global.VMC.Engine.Menu.DefaultSugar)
 		watchdog.SetDeviceInited()
 		ui.RefreshUserPresets()
 		return types.StateFrontEnd

@@ -15,8 +15,8 @@ type DeviceElevator struct { //nolint:maligned
 	Generic
 
 	moveTimeout time.Duration
-	cPos        int8
-	nPos        uint8
+	currentPos  int8
+	newPos      uint8
 }
 
 // текущая проша подьемника, требует определенных действий. надо обязательно "проехать" с нуля на 100
@@ -37,10 +37,11 @@ func (e *DeviceElevator) init(ctx context.Context) error {
 	g.Engine.RegisterNewFuncAgr(e.name+".moveNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return e.moveNoWait(uint8(arg.(int16))) })
 	g.Engine.RegisterNewFunc(e.name+".moveComplete", func(ctx context.Context) error { return e.mvComplete() })
 	g.Engine.Register(e.name+".move(?)", engine.FuncArg{Name: e.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
-		if arg == e.cPos {
+		movePosition := int8(arg.(int16))
+		if movePosition == e.currentPos {
 			return nil
 		}
-		previewPosition := e.cPos
+		previewPosition := e.currentPos
 		for i := 1; i <= 2; i++ {
 			er := e.move(uint8(arg.(int16)))
 			if er == nil {
@@ -52,7 +53,7 @@ func (e *DeviceElevator) init(ctx context.Context) error {
 			err = errors.Join(err, er)
 			// FIXME тут можно добавть скрипт действий после ошибки
 			if e.dev.ErrorCode() == 36 { // reverse high load
-				if !((previewPosition == 100 && arg == 0) || (previewPosition == 0 && arg == 100)) {
+				if !((previewPosition == 100 && movePosition == 0) || (previewPosition == 0 && movePosition == 100)) {
 					e.reset()
 					break
 				}
@@ -66,7 +67,7 @@ func (e *DeviceElevator) init(ctx context.Context) error {
 	g.Engine.RegisterNewFunc(
 		"elevator.status",
 		func(ctx context.Context) error {
-			g.Log.Infof("%s.position:%d", e.name, e.cPos)
+			g.Log.Infof("%s.position:%d", e.name, e.currentPos)
 			return nil
 		},
 	)
@@ -74,19 +75,19 @@ func (e *DeviceElevator) init(ctx context.Context) error {
 }
 
 func (e *DeviceElevator) reset() error {
-	e.cPos = -1
+	e.currentPos = -1
 	return e.dev.Rst()
 }
 
 func (e *DeviceElevator) moveNoWait(position uint8) (err error) {
-	e.cPos = -1
-	e.nPos = position
+	e.currentPos = -1
+	e.newPos = position
 	// return m.Command([]byte{0x03, byte(position), 0x64})
 	return e.Command(0x03, byte(position), 0x64)
 }
 
 func (e *DeviceElevator) move(position uint8) (err error) {
-	e.dev.Action = fmt.Sprintf("%s move %d=>%d", e.name, e.cPos, position)
+	e.dev.Action = fmt.Sprintf("%s move %d=>%d", e.name, e.currentPos, position)
 	if err = e.moveNoWait(position); err != nil {
 		// e.errorCode =
 		return fmt.Errorf("send command(%v) error(%v)", e.dev.Action, err)
@@ -97,7 +98,7 @@ func (e *DeviceElevator) move(position uint8) (err error) {
 func (e *DeviceElevator) mvComplete() (err error) {
 	err = e.WaitSuccess(100, true) // FIXME timeout to config
 	if err == nil {
-		e.cPos = int8(e.nPos)
+		e.currentPos = int8(e.newPos)
 		e.dev.Action = ""
 	}
 	return err

@@ -57,15 +57,11 @@ func (d *Dispatch) ReadEvendKeyboard(s Source) {
 			fmt.Printf(" key event (%v)", event)
 		}
 
-		if len(d.Bus) == 0 {
-			if event.Source == DevInputEventTag || config_global.VMC.User.KeyboardReadEnable {
-				d.Log.Infof("key press (%s) ", kn)
-				d.Bus <- event
-			} else {
-				d.Log.Infof("ignore key. input disabled. (%s) ", kn)
-			}
+		if event.Source == DevInputEventTag || config_global.VMC.User.KeyboardReadEnable {
+			d.Log.Infof("key press (%s) ", kn)
+			d.Bus <- event
 		} else {
-			d.Log.Infof("ignore key. previous button not handled. (%s) ", kn)
+			d.Log.Infof("ignore key. input disabled. (%s) ", kn)
 		}
 	}
 }

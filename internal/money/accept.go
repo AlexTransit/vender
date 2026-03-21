@@ -119,7 +119,9 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 		default:
 			ms.Log.WarningF("coin event not parce (%v)", e)
 		}
-		go func() { out <- event }()
+		if event.Kind != 0 {
+			go func() { out <- event }()
+		}
 		// out <- event
 	})
 	return nil
