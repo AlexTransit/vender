@@ -144,6 +144,23 @@ func (ui *UI) onServiceInventory() types.UiState {
 		return types.StateServiceMenu
 	}
 	s := ui.g.Inventory.Stocks[ui.Service.invIdx]
+	if s.Ingredient == nil {
+		ui.display.SetLines("inv invalid", fmt.Sprintf("%d %s", s.Code, s.Label))
+		next, e := ui.serviceWaitInput()
+		if next != types.StateDefault {
+			return next
+		}
+		invIdxMax := uint8(len(ui.g.Inventory.Stocks))
+		switch {
+		case e.Key == input.EvendKeyCreamLess:
+			ui.Service.invIdx = addWrap(ui.Service.invIdx, invIdxMax, -1)
+		case e.Key == input.EvendKeyCreamMore:
+			ui.Service.invIdx = addWrap(ui.Service.invIdx, invIdxMax, +1)
+		case input.IsReject(&e):
+			return types.StateServiceMenu
+		}
+		return types.StateServiceInventory
+	}
 	if ui.Service.invByLevel {
 		// l1 := fmt.Sprintf("%.0f %s\x00", s.Value(), iname)
 		ui.display.SetLines(

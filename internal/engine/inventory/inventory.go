@@ -81,6 +81,9 @@ func (inv *Inventory) GetIngredientByName(ingredientName string) (*Ingredient, b
 
 func (inv *Inventory) GetStockByingredientName(name string) (*Stock, bool) {
 	for i, v := range inv.Stocks {
+		if v.Ingredient == nil {
+			continue
+		}
 		if v.Ingredient.Name == name {
 			return &inv.Stocks[i], true
 		}
@@ -102,8 +105,26 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, log *log2.Log)
 	sort.Slice(inv.Stocks, func(a, b int) bool {
 		return inv.Stocks[a].Code < inv.Stocks[b].Code
 	})
+	seenCodes := make(map[int]string, len(inv.Stocks))
+	for _, s := range inv.Stocks {
+		switch {
+		case s.Code <= 0:
+			errs = errors.Join(errs, fmt.Errorf("stock=%s invalid code=%d", s.Label, s.Code))
+		case s.Code > len(inv.Stocks):
+			errs = errors.Join(errs, fmt.Errorf("stock=%s code=%d out of range max=%d", s.Label, s.Code, len(inv.Stocks)))
+		default:
+			if prev, ok := seenCodes[s.Code]; ok {
+				errs = errors.Join(errs, fmt.Errorf("duplicate stock code=%d labels=%s,%s", s.Code, prev, s.Label))
+			} else {
+				seenCodes[s.Code] = s.Label
+			}
+		}
+	}
 	for i := range inv.Ingredient {
 		inv.Ingredient[i].fillLevels()
+	}
+	if errs != nil {
+		return errs
 	}
 	for i, s := range inv.Stocks {
 		if s.Ingredient == nil {
@@ -172,8 +193,12 @@ func (inv *Inventory) InventoryLoad() {
 
 	stat, err := f.Stat()
 	numInventory := len(inv.Stocks)
-	if err != nil || int(stat.Size()) != numInventory*4 {
-		inv.log.Errorf("load inventory file stat. len(%d) error(%v)", int(stat.Size()), err)
+	size := 0
+	if err == nil && stat != nil {
+		size = int(stat.Size())
+	}
+	if err != nil || size != numInventory*4 {
+		inv.log.Errorf("load inventory file stat. len(%d) error(%v)", size, err)
 		return
 	}
 
