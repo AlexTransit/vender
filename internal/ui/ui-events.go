@@ -100,6 +100,13 @@ func (ui *UI) parseKeyEvent(e types.Event, l1 *string, l2 *string, tuneScreen *b
 			ui.inputBuf = []byte{}
 			return types.StateDoesNotChange
 		}
+		if mi.Doer == nil {
+			ui.g.Log.WarningF("validate menu:%v error: doer=nil", mi.Code)
+			*l1 = ui.g.Config.UI_config.Front.MsgMenuError
+			*l2 = ui.g.Config.UI_config.Front.MsgMenuNotAvailable
+			ui.inputBuf = []byte{}
+			return types.StateDoesNotChange
+		}
 		if err := mi.Doer.Validate(); err != nil {
 			ui.g.Log.WarningF("validate menu:%v error:%v", mi.Code, err)
 			*l1 = ui.g.Config.UI_config.Front.MsgMenuError

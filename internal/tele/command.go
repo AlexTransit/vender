@@ -116,6 +116,11 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 			t.makeOrderImposible(tele_api.OrderStatus_executionInaccessible, m)
 			return
 		}
+		if config_global.VMC.User.SelectedItem.Doer == nil {
+			t.makeOrderImposible(tele_api.OrderStatus_executionInaccessible, m)
+			t.log.Infof("remote cook error: code doer is nil")
+			return
+		}
 		if err := config_global.VMC.User.SelectedItem.Doer.Validate(); err != nil {
 			t.makeOrderImposible(tele_api.OrderStatus_executionInaccessible, m)
 			t.log.Infof("remote cook error: code not valid")
@@ -241,7 +246,7 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 
 func (t *tele) cmdValidateCode(cmd *tele_api.Command, code string) {
 	mitem, ok := config_global.GetMenuItem(code)
-	if ok {
+	if ok && mitem.Doer != nil {
 		if err := mitem.Doer.Validate(); err == nil {
 			t.CookReply(cmd, tele_api.CookReplay_waitPay, uint32(mitem.Price))
 			return

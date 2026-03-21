@@ -22,6 +22,10 @@ func (g *Global) CheckMenuExecution() {
 		g.Inventory.Stocks[i].Set(math.MaxFloat32)
 	}
 	for _, v := range g.Config.Engine.Menu.Items {
+		if v.Doer == nil {
+			g.Log.Errorf("scenario menu code:%s error (doer=nil)", v.Code)
+			continue
+		}
 		if e := v.Doer.Validate(); e != nil {
 			g.Log.Errorf("scenario menu code:%s error (%v)", v.Code, e)
 		}
@@ -38,6 +42,10 @@ func (g *Global) CheckMenuExecution() {
 func (g *Global) ListMenuPriceCost() {
 	g.Log.Infof("code;price;cost;name;scenario")
 	for _, v := range g.Config.Engine.Menu.Items {
+		if v.Doer == nil {
+			g.Log.Infof("%s;%v;%v;%v;%v", v.Code, v.Price.Format100I(), "ERR", v.Name, v.Scenario)
+			continue
+		}
 		c := v.Doer.Calculation()
 		cost := currency.Amount(int(math.Round(c * 100)))
 		g.Log.Infof("%s;%v;%v;%v;%v", v.Code, v.Price.Format100I(), cost.Format100I(), v.Name, v.Scenario)

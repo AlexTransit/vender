@@ -15,6 +15,9 @@ func MenuMaxPrice() (currency.Amount, error) {
 	max := currency.Amount(0)
 	empty := true
 	for _, item := range config_global.VMC.Engine.Menu.Items {
+		if item.Doer == nil {
+			continue
+		}
 		valErr := item.Doer.Validate()
 		if valErr == nil {
 			empty = false
