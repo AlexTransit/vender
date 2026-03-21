@@ -46,6 +46,7 @@ var /*const*/ serviceMenuMax = uint8(len(serviceMenu) - 1)
 type uiService struct { //nolint:maligned
 	resetTimeout time.Duration
 	askReport    bool
+	invByLevel   bool
 	menuIdx      uint8
 	invIdx       uint8
 	// invList   []*inventory.Stock
@@ -136,8 +137,6 @@ func (ui *UI) onServiceMenu() types.UiState {
 	return types.StateServiceMenu
 }
 
-var lv bool
-
 func (ui *UI) onServiceInventory() types.UiState {
 	if len(ui.g.Inventory.Stocks) == 0 {
 		ui.display.SetLine(1, "inv empty") // FIXME extract message string)
@@ -145,7 +144,7 @@ func (ui *UI) onServiceInventory() types.UiState {
 		return types.StateServiceMenu
 	}
 	s := ui.g.Inventory.Stocks[ui.Service.invIdx]
-	if lv {
+	if ui.Service.invByLevel {
 		// l1 := fmt.Sprintf("%.0f %s\x00", s.Value(), iname)
 		ui.display.SetLines(
 			fmt.Sprintf("%.0f %s", s.Value(), s.Ingredient.Name),
@@ -179,11 +178,7 @@ func (ui *UI) onServiceInventory() types.UiState {
 	case e.Key == input.EvendKeyDot || e.IsDigit():
 		ui.inputBuf = append(ui.inputBuf, byte(e.Key))
 	case e.Key == input.EvendKeySugarLess || e.Key == input.EvendKeySugarMore:
-		if lv {
-			lv = false
-		} else {
-			lv = true
-		}
+		ui.Service.invByLevel = !ui.Service.invByLevel
 		return types.StateServiceInventory
 	case input.IsAccept(&e):
 		if len(ui.inputBuf) == 0 {
@@ -202,11 +197,11 @@ func (ui *UI) onServiceInventory() types.UiState {
 			return types.StateServiceInventory
 		}
 		if v := strings.Index(string(ui.inputBuf), "."); v >= 0 {
-			lv = true
+			ui.Service.invByLevel = true
 		}
 		ui.inputBuf = ui.inputBuf[:0]
 
-		if lv {
+		if ui.Service.invByLevel {
 			ui.g.Inventory.Stocks[ui.Service.invIdx].SetLevel(x)
 		} else {
 			ui.g.Inventory.Stocks[ui.Service.invIdx].Set(float32(x) / 100)
@@ -318,6 +313,11 @@ func (ui *UI) onServiceNetwork() types.UiState {
 }
 
 func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
+	if ui.ms.CoinValidator == nil {
+		ui.display.SetLines("coin offline", "")
+		ui.serviceWaitInput()
+		return types.StateServiceMenu
+	}
 	ui.ms.TestingDispense()
 	alive := alive.NewAlive()
 	defer func() {

@@ -69,6 +69,10 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 }
 
 func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
+	if m == nil || m.MakeOrder == nil {
+		t.log.Error("remote make error: empty order payload")
+		return
+	}
 	g := state.GetGlobal(ctx)
 	g.UI().PauseStateMashine(true)
 	defer g.UI().PauseStateMashine(false)
@@ -174,6 +178,7 @@ func (t *tele) messageShowQr(ctx context.Context, m *tele_api.ToRoboMessage) {
 				config_global.VMC.User.PaymenId, err = strconv.ParseInt(m.ShowQR.DataStr, 10, 64)
 				if err != nil {
 					t.Error(err)
+					return
 				}
 			}
 			g.Log.Infof("show paymeng QR for order:%s", m.ShowQR.OrderId)
@@ -267,6 +272,9 @@ func tuneCook(b []byte, def uint8, max uint8) uint8 {
 }
 
 func (t *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgExec) error {
+	if arg == nil {
+		return errInvalidArg
+	}
 	if arg != nil && arg.Scenario != "" && arg.Scenario[:1] == "_" { // If the command contains the "_" prefix, then you ignore the client lock flag
 		arg.Scenario = arg.Scenario[1:]
 	} else if config_global.VMC.User.Lock {
