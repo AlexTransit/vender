@@ -102,11 +102,11 @@ func (td *TextDisplay) Clear() {
 // }
 
 func (td *TextDisplay) SetLine(line int, value string) {
+	td.mu.Lock()
+	defer td.mu.Unlock()
 	if td.line[line-1] == value {
 		return
 	}
-	td.mu.Lock()
-	defer td.mu.Unlock()
 
 	td.line[line-1] = value
 	bs := td.Translate(value)
