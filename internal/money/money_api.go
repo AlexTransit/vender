@@ -122,7 +122,7 @@ func (ms *MoneySystem) ReturnMoney() error {
 	ms.lk.Lock()
 	defer ms.lk.Unlock()
 	cash := ms.billCredit.Total() + ms.coinCredit.Total() - ms.bill.EscrowAmount()
-	ms.SetDirty(0)
+	ms.setDirtyLocked(0)
 	ms.billCredit.Clear()
 	ms.coinCredit.Clear()
 	ms.giftCredit = 0
@@ -135,7 +135,7 @@ func (ms *MoneySystem) ReturnMoney() error {
 
 func (ms *MoneySystem) locked_zero() {
 	// ms.dirty = 0
-	ms.SetDirty(0)
+	ms.setDirtyLocked(0)
 	ms.billCredit.Clear()
 	ms.coinCredit.Clear()
 	ms.giftCredit = 0

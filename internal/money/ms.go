@@ -230,15 +230,13 @@ func SetCurrentPrice(ctx context.Context, p currency.Amount) context.Context {
 
 func (ms *MoneySystem) AddDirty(dirty currency.Amount) {
 	ms.lk.Lock()
-	ms.dirty += dirty
-	config_global.VMC.User.DirtyMoney = ms.dirty
+	ms.setDirtyLocked(ms.dirty + dirty)
 	ms.lk.Unlock()
 }
 
 func (ms *MoneySystem) SetDirty(dirty currency.Amount) {
 	ms.lk.Lock()
-	ms.dirty = dirty
-	config_global.VMC.User.DirtyMoney = ms.dirty
+	ms.setDirtyLocked(dirty)
 	ms.lk.Unlock()
 }
 
@@ -246,6 +244,11 @@ func (ms *MoneySystem) GetDirty() currency.Amount {
 	ms.lk.RLock()
 	defer ms.lk.RUnlock()
 	return ms.dirty
+}
+
+func (ms *MoneySystem) setDirtyLocked(dirty currency.Amount) {
+	ms.dirty = dirty
+	config_global.VMC.User.DirtyMoney = ms.dirty
 }
 
 func (ms *MoneySystem) ResetMoney() {
