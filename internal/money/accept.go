@@ -17,9 +17,10 @@ import (
 
 func (ms *MoneySystem) SetAcceptMax(ctx context.Context, limit currency.Amount) error {
 	g := state.GetGlobal(ctx)
-	errs := []error{
-		// g.Engine.Exec(ctx, ms.bill.AcceptMax(limit)),
-		g.Engine.Exec(ctx, ms.CoinValidator.AcceptMax(limit)),
+	errs := make([]error, 0, 1)
+	// errs = append(errs, g.Engine.Exec(ctx, ms.bill.AcceptMax(limit)))
+	if ms.CoinValidator != nil {
+		errs = append(errs, g.Engine.Exec(ctx, ms.CoinValidator.AcceptMax(limit)))
 	}
 	err := helpers.FoldErrors(errs)
 	if err != nil {
@@ -93,6 +94,10 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 		mainAlive.Done()
 	}
 	// ----------------------coin ------------------------------------------------------------------
+	if ms.CoinValidator == nil {
+		mainAlive.Done()
+		return ErrCoinAcceptorOffline
+	}
 	go ms.CoinValidator.CoinRun(mainAlive, func(e money.ValidatorEvent) {
 		event := types.Event{}
 		switch e.Event {

@@ -19,9 +19,16 @@ import (
 var (
 	ErrNeedMoreMoney        = errors.New("add-money")
 	ErrChangeRetainOverflow = errors.New("ReturnChange(retain>total)")
+	ErrCoinAcceptorOffline  = errors.New("coin-acceptor-offline")
 )
 
-func (ms *MoneySystem) TestingDispense() { ms.CoinValidator.TestingDispense() }
+func (ms *MoneySystem) TestingDispense() {
+	if ms.CoinValidator == nil {
+		ms.Log.Error(ErrCoinAcceptorOffline)
+		return
+	}
+	ms.CoinValidator.TestingDispense()
+}
 
 func (ms *MoneySystem) WaitEscrowAccept(amount currency.Amount) (wait bool) {
 	ms.lk.RLock()
@@ -63,15 +70,23 @@ func (ms *MoneySystem) GetCredit() currency.Amount {
 func (ms *MoneySystem) WithdrawPrepare(ctx context.Context, amount currency.Amount) error {
 	const tag = "money.withdraw-prepare"
 	ms.Log.Debugf("%s amount=%s", tag, amount.FormatCtx(ctx))
-	available := ms.GetCredit()
+	ms.lk.Lock()
+	available := ms.billCredit.Total() + ms.coinCredit.Total()
 	if available < amount {
+		ms.lk.Unlock()
 		return ErrNeedMoreMoney
 	}
 	change := available - amount
 	// ms.Log.Debugf("%s. return short change=%s", tag, change.FormatCtx(ctx))
 	ms.billCredit.Clear()
 	ms.coinCredit.Clear()
+	ms.lk.Unlock()
 	go func() {
+		if ms.CoinValidator == nil {
+			ms.Log.WarningF("%s CRITICAL change err=%v", tag, ErrCoinAcceptorOffline)
+			ms.SetDirty(amount)
+			return
+		}
 		if err := ms.CoinValidator.Dispense(change); err != nil {
 			err = oerr.Annotate(err, tag)
 			ms.Log.WarningF("%s CRITICAL change err=%v", tag, err)
@@ -116,19 +131,26 @@ func (ms *MoneySystem) WithdrawCommit(ctx context.Context, amount currency.Amoun
 
 func (ms *MoneySystem) ReturnDirty() error {
 	ms.lk.Lock()
-	defer ms.lk.Unlock()
-	return ms.CoinValidator.ReturnMoney(ms.dirty)
+	dirty := ms.dirty
+	ms.lk.Unlock()
+	if ms.CoinValidator == nil {
+		return ErrCoinAcceptorOffline
+	}
+	return ms.CoinValidator.ReturnMoney(dirty)
 }
 
 func (ms *MoneySystem) ReturnMoney() error {
 	ms.lk.Lock()
-	defer ms.lk.Unlock()
 	cash := ms.billCredit.Total() + ms.coinCredit.Total() - ms.bill.EscrowAmount()
 	ms.setDirtyLocked(0)
 	ms.billCredit.Clear()
 	ms.coinCredit.Clear()
 	ms.giftCredit = 0
+	ms.lk.Unlock()
 	if cash > 0 {
+		if ms.CoinValidator == nil {
+			return ErrCoinAcceptorOffline
+		}
 		ms.Log.Infof("return money (%v)", cash)
 		return ms.CoinValidator.Dispense(cash)
 	}

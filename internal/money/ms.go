@@ -71,8 +71,10 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 
 	ms.billCashbox.SetValid(ms.bill.SupportedNominals())
 	ms.billCredit.SetValid(ms.bill.SupportedNominals())
-	ms.coinCashbox.SetValid(ms.CoinValidator.SupportedNominals())
-	ms.coinCredit.SetValid(ms.CoinValidator.SupportedNominals())
+	if ms.CoinValidator != nil {
+		ms.coinCashbox.SetValid(ms.CoinValidator.SupportedNominals())
+		ms.coinCredit.SetValid(ms.CoinValidator.SupportedNominals())
+	}
 
 	g.Engine.RegisterNewFunc(
 		"money.cashbox_zero",
@@ -138,17 +140,25 @@ func (ms *MoneySystem) Start(ctx context.Context) error {
 			time.Sleep(10 * time.Second)
 			alive.Stop()
 			alive.Wait()
-			ms.CoinValidator.ReadTubeStatus()
+			if ms.CoinValidator != nil {
+				ms.CoinValidator.ReadTubeStatus()
+			}
 			return nil
 		},
 	}
 	g.Engine.Register(doAccept.Name, doAccept)
 
 	g.Engine.RegisterNewFuncAgr("money.dispense(?)", func(ctx context.Context, arg engine.Arg) error {
+		if ms.CoinValidator == nil {
+			return ErrCoinAcceptorOffline
+		}
 		return ms.CoinValidator.Dispense(g.Config.ScaleU(uint32(arg.(int16))))
 	})
 
 	g.Engine.RegisterNewFuncAgr("money.return(?)", func(ctx context.Context, arg engine.Arg) error {
+		if ms.CoinValidator == nil {
+			return ErrCoinAcceptorOffline
+		}
 		return ms.CoinValidator.ReturnMoney(g.Config.ScaleU(uint32(arg.(int16))))
 	})
 
@@ -171,7 +181,9 @@ func (ms *MoneySystem) Stop(ctx context.Context) error {
 	errs := make([]error, 0, 8)
 	errs = append(errs, ms.ReturnMoney())
 	// errs = append(errs, g.Engine.Exec(ctx, ms.bill.AcceptMax(0)))
-	errs = append(errs, g.Engine.Exec(ctx, ms.CoinValidator.AcceptMax(0)))
+	if ms.CoinValidator != nil {
+		errs = append(errs, g.Engine.Exec(ctx, ms.CoinValidator.AcceptMax(0)))
+	}
 	return oerr.Annotate(helpers.FoldErrors(errs), tag)
 }
 
@@ -195,6 +207,9 @@ func (ms *MoneySystem) TeleChange(ctx context.Context) *tele_api.Telemetry_Money
 	pb := &tele_api.Telemetry_Money{
 		// TODO support bill recycler Bills: make(map[uint32]uint32, bill.TypeCount),
 		Coins: make(map[uint32]uint32, coin.TypeCount),
+	}
+	if ms.CoinValidator == nil {
+		return pb
 	}
 	if err := ms.CoinValidator.ReadTubeStatus(); err != nil {
 		state.GetGlobal(ctx).Error(oerr.Annotate(err, "TeleChange"))
