@@ -77,12 +77,15 @@ func (t *tele) Report(ctx context.Context, serviceTag bool) error {
 	}
 
 	g := state.GetGlobal(ctx)
-	moneysys := money.GetGlobal(ctx)
 	tm := &tele_api.Telemetry{
-		Inventory:    g.Inventory.Tele(),
-		MoneyCashbox: moneysys.TeleCashbox(ctx),
-		MoneyChange:  moneysys.TeleChange(ctx),
-		AtService:    serviceTag,
+		Inventory: g.Inventory.Tele(),
+		AtService: serviceTag,
+	}
+	if v := g.XXX_money.Load(); v != nil {
+		if moneysys, ok := v.(*money.MoneySystem); ok && moneysys != nil {
+			tm.MoneyCashbox = moneysys.TeleCashbox(ctx)
+			tm.MoneyChange = moneysys.TeleChange(ctx)
+		}
 	}
 	t.Telemetry(tm)
 	return nil
