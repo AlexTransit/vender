@@ -212,10 +212,10 @@ func (inv *Inventory) InventorySave() error {
 
 func (inv *Inventory) Iter(fun func(s *Stock)) {
 	inv.mu.Lock()
-	for _, stock := range inv.Stocks {
-		fun(&stock)
+	defer inv.mu.Unlock()
+	for i := range inv.Stocks {
+		fun(&inv.Stocks[i])
 	}
-	inv.mu.Unlock()
 }
 
 func (inv *Inventory) WithTuning(ctx context.Context, ingredientName string, adj float32) (context.Context, error) {
