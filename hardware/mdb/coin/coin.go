@@ -533,7 +533,7 @@ func (ca *CoinAcceptor) CommandFeatureEnable(requested Features) error {
 
 func (ca *CoinAcceptor) ReadTubeStatus() error {
 	const tag = deviceName + ".tubestatus"
-	const expectLengthMin = 18
+	const expectLengthMin = 2
 	request := mdb.MustPacketFromHex("0a", true)
 	response := mdb.Packet{}
 	if err := ca.Device.Tx(request, &response); err != nil {
