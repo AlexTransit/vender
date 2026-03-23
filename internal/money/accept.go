@@ -40,12 +40,13 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 			event := types.Event{}
 			switch e.Event {
 			case money.InEscrow:
-				if (g.Config.Money.MinimalBill != 0 && e.Nominal < currency.Nominal(g.Config.Money.MinimalBill)) ||
-					(g.Config.Money.MaximumBill != 0 && e.Nominal > currency.Nominal(g.Config.Money.MaximumBill)) {
+				inBill := int(e.Nominal.FormatBaseInt())
+				if (g.Config.Money.MinimalBill != 0 && inBill < g.Config.Money.MinimalBill) ||
+					(g.Config.Money.MaximumBill != 0 && inBill > g.Config.Money.MaximumBill) {
 					// say not posible
 					// go sound.TextSpeech("купюру " + e.Nominal.Format100I() + " рублей не принимаем")
 					// g.MustTextDisplay().SetLines("купюру "+e.Nominal.Format100I(), "не принимаем")
-					ms.Log.Infof("reject money. min(%d) > (%s) > max(%d)", g.Config.Money.MinimalBill, e.Nominal.Format100I(), g.Config.Money.MaximumBill)
+					ms.Log.Infof("reject money. min(%d) > (%d) > max(%d)", g.Config.Money.MinimalBill, inBill, g.Config.Money.MaximumBill)
 					ms.bill.SendCommand(bill.Reject)
 					return
 				}

@@ -221,7 +221,7 @@ func newDefaultConfig() *Config {
 			Scale:       100,
 			CreditMax:   100,
 			MinimalBill: 10,
-			MaximumBill: 100,
+			MaximumBill: 200,
 		},
 		Hardware: HardwareStruct{
 			EvendDevices: map[string]DeviceConfig{},
