@@ -140,10 +140,10 @@ func initedDevice(ctx context.Context, need bool) {
 
 func showText(ctx context.Context, s []string) {
 	var l1, l2 string
-	if cap(s) >= 1 {
+	if len(s) >= 1 {
 		l1 = s[0]
 	}
-	if cap(s) >= 2 {
+	if len(s) >= 2 {
 		l2 = s[1]
 	}
 	g := state.GetGlobal(ctx)
@@ -156,6 +156,6 @@ func showHelpCMD() {
 	fmt.Println("vender cmd text line1_text line2_text (use _ instead space)")
 	fmt.Println("vender cmd broken - broken mode")
 	fmt.Println("vender cmd inited - not release cup after start")
-	fmt.Println("vender cmd needinit - need init divices before start system")
+	fmt.Println("vender cmd needinit - need init devices before start system")
 	fmt.Println("vender cmd exitcode $EXIT_STATUS $SERVICE_RESULT - use systemd service exit code and exit result. if result not `success` the script_if_broken in the config will run")
 }

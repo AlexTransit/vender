@@ -7,11 +7,13 @@ import (
 	"testing"
 
 	"github.com/AlexTransit/vender/hardware/mdb"
+	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/log2"
 	tele_api "github.com/AlexTransit/vender/tele"
+	"github.com/hashicorp/hcl/v2/hclsimple"
 	"github.com/juju/errors"
 	"github.com/temoto/alive/v2"
 )
@@ -37,10 +39,6 @@ func NewContext(log *log2.Log, teler tele_api.Teler) (context.Context, *state.Gl
 }
 
 func NewTestContext(t testing.TB, buildVersion string, confString string) (context.Context, *state.Global) {
-	// fs := state.NewMockFullReader(map[string]string{
-	// 	"test-inline": confString,
-	// })
-
 	var log *log2.Log
 	if os.Getenv("vender_test_log_stderr") == "1" {
 		log = log2.NewStderr(log2.LOG_DEBUG) // useful with panics
@@ -50,7 +48,13 @@ func NewTestContext(t testing.TB, buildVersion string, confString string) (conte
 	log.SetFlags(log2.LTestFlags)
 	ctx, g := NewContext(log, tele_api.NewStub())
 	g.BuildVersion = buildVersion
-	// g.MustInit(ctx, state.MustReadConfig_old(log, fs, "test-inline"))
+	cfg := testConfig()
+	if confString != "" {
+		if err := hclsimple.Decode("test-inline.hcl", []byte(confString), nil, cfg); err != nil {
+			t.Fatal(errors.Trace(err))
+		}
+	}
+	g.Config = cfg
 
 	mdbus, mdbMock := mdb.NewMockBus(t)
 	g.Hardware.Mdb.Bus = mdbus
@@ -60,4 +64,8 @@ func NewTestContext(t testing.TB, buildVersion string, confString string) (conte
 	ctx = context.WithValue(ctx, mdb.MockContextKey, mdbMock)
 
 	return ctx, g
+}
+
+func testConfig() *config_global.Config {
+	return config_global.NewConfig()
 }

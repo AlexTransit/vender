@@ -81,7 +81,7 @@ var rgb565 = variableScreenInfo{
 }
 
 func encode565(c color.RGBA) uint16 {
-	return (uint16(c.R) & 0xf8 << 8) | (uint16(c.G) & 0xfc << 3) | (uint16(c.B) & 0xf8 >> 3)
+	return ((uint16(c.R) & 0xf8) << 8) | (uint16(c.G) & 0xfc << 3) | ((uint16(c.B) & 0xf8) >> 3)
 }
 
 func ioctl(fd uintptr, cmd uintptr, data uintptr) error {

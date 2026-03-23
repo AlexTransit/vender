@@ -40,7 +40,7 @@ VMC overall structure:
 
 # Build
 
-- Install latest Go from https://golang.org/dl/ (now worked on 1.23)
+- Install latest Go from https://golang.org/dl/ (now worked on 1.24)
 - Set target environment, default is `GOARCH=arm GOOS=linux`
 - Run `script/build`
 - Deploy file `build/vender` to your hardware

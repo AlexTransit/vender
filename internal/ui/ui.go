@@ -64,7 +64,10 @@ func (ui *UI) Init(ctx context.Context) error {
 	ui.display = ui.g.MustTextDisplay()
 	ui.eventch = make(chan types.Event)
 	ui.inputBuf = make([]byte, 0, 32)
-	ui.inputch = *ui.g.Hardware.Input.InputChain()
+	if ui.g.Hardware.Input == nil {
+		ui.g.Hardware.Input = &input.Dispatch{Log: ui.g.Log, Bus: make(chan types.InputEvent)}
+	}
+	ui.inputch = ui.g.Hardware.Input.InputChain()
 
 	ui.frontResetTimeout = helpers.IntSecondDefault(ui.g.Config.UI_config.Front.ResetTimeoutSec, 0)
 	ui.Service.Init(ctx)

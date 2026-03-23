@@ -69,7 +69,16 @@ func (t *tele) messageForRobot(ctx context.Context, payload []byte) bool {
 }
 
 func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
+	if m == nil || m.MakeOrder == nil {
+		t.log.Error("remote make error: empty order payload")
+		return
+	}
 	g := state.GetGlobal(ctx)
+	if g.XXX_uier.Load() == nil || g.XXX_money.Load() == nil {
+		t.log.Error("remote make error: vmc is not ready")
+		t.makeOrderImposible(tele_api.OrderStatus_robotIsBusy, m)
+		return
+	}
 	g.UI().PauseStateMashine(true)
 	defer g.UI().PauseStateMashine(false)
 	currentRobotState := t.GetState()
@@ -90,7 +99,8 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 	switch m.MakeOrder.OrderStatus {
 	case tele_api.OrderStatus_doSelected: // make selected code. payment via QR, etc
 		if config_global.VMC.User.PaymenId != m.MakeOrder.OwnerInt || // the payer and payer do not match
-			uint32(config_global.VMC.User.DirtyMoney) != m.MakeOrder.Amount { //
+			uint32(config_global.VMC.User.DirtyMoney) != m.MakeOrder.Amount ||
+			config_global.VMC.User.SelectedItem.Doer == nil { //
 			t.log.Errorf("make doSelected unposible. robo state:%s <> WaitingForExternalPayment or payerID:%d <> ownerID:%d or qr amount:%d<>order amount^%d",
 				currentRobotState.String(), config_global.VMC.User.PaymenId, m.MakeOrder.OwnerInt, config_global.VMC.User.DirtyMoney, m.MakeOrder.Amount)
 			t.makeOrderImposible(tele_api.OrderStatus_orderError, m)
@@ -109,6 +119,11 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 		if !found {
 			t.log.Infof("remote cook error: code not found")
 			t.makeOrderImposible(tele_api.OrderStatus_executionInaccessible, m)
+			return
+		}
+		if config_global.VMC.User.SelectedItem.Doer == nil {
+			t.makeOrderImposible(tele_api.OrderStatus_executionInaccessible, m)
+			t.log.Infof("remote cook error: code doer is nil")
 			return
 		}
 		if err := config_global.VMC.User.SelectedItem.Doer.Validate(); err != nil {
@@ -141,12 +156,14 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 func (t *tele) makeOrderImposible(oStatus tele_api.OrderStatus, m *tele_api.ToRoboMessage) {
 	rm := tele_api.FromRoboMessage{
 		State: t.currentState,
-		Order: &tele_api.Order{
+	}
+	if m != nil && m.MakeOrder != nil {
+		rm.Order = &tele_api.Order{
 			OrderStatus:   oStatus,
 			PaymentMethod: 0,
 			OwnerInt:      m.MakeOrder.OwnerInt,
 			OwnerType:     m.MakeOrder.OwnerType,
-		},
+		}
 	}
 	t.RoboSend(&rm)
 }
@@ -173,12 +190,13 @@ func (t *tele) messageShowQr(ctx context.Context, m *tele_api.ToRoboMessage) {
 				config_global.VMC.User.PaymenId, err = strconv.ParseInt(m.ShowQR.DataStr, 10, 64)
 				if err != nil {
 					t.Error(err)
+					return
 				}
 			}
 			g.Log.Infof("show paymeng QR for order:%s", m.ShowQR.OrderId)
 			g.ShowQR(m.ShowQR.QrText)
 			l1 := fmt.Sprintf(g.Config.UI_config.Front.MsgRemotePay+g.Config.UI_config.Front.MsgPrice, currency.Amount(config_global.VMC.User.QRPayAmount).Format100I())
-			g.Hardware.HD44780.Display.SetLine(1, l1)
+			g.MustTextDisplay().SetLine(1, l1)
 			config_global.VMC.User.DirtyMoney = currency.Amount(config_global.VMC.User.QRPayAmount)
 			config_global.VMC.User.PaymentType = tele_api.OwnerType_qrCashLessUser
 			config_global.VMC.User.PaymentMethod = tele_api.PaymentMethod_Cashless
@@ -187,11 +205,15 @@ func (t *tele) messageShowQr(ctx context.Context, m *tele_api.ToRoboMessage) {
 		t := m.ShowQR.QrText
 		g.ShowQR(t)
 	case tele_api.ShowQR_error:
-		_ = g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicQRPayError)
+		if g.Hardware.Display.Graphic != nil {
+			_ = g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicQRPayError)
+		}
 	case tele_api.ShowQR_errorOverdraft:
-		g.Hardware.HD44780.Display.SetLines(g.Config.UI_config.Front.MsgMenuInsufficientCreditL1,
+		g.MustTextDisplay().SetLines(g.Config.UI_config.Front.MsgMenuInsufficientCreditL1,
 			g.Config.UI_config.Front.MsgRemotePayReject)
-		_ = g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicPayReject)
+		if g.Hardware.Display.Graphic != nil {
+			_ = g.Hardware.Display.Graphic.CopyFile2FB(g.Config.UI_config.Front.PicPayReject)
+		}
 	}
 }
 
@@ -212,6 +234,9 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 		return nil
 
 	case *tele_api.Command_ValidateCode:
+		if task.ValidateCode == nil {
+			return errInvalidArg
+		}
 		t.cmdValidateCode(cmd, task.ValidateCode.Code)
 		return nil
 
@@ -220,6 +245,9 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 		return nil
 
 	case *tele_api.Command_Show_QR:
+		if task.Show_QR == nil {
+			return errInvalidArg
+		}
 		return t.cmdShowQR(ctx, task.Show_QR)
 
 	default:
@@ -231,9 +259,9 @@ func (t *tele) dispatchCommand(ctx context.Context, cmd *tele_api.Command) error
 
 func (t *tele) cmdValidateCode(cmd *tele_api.Command, code string) {
 	mitem, ok := config_global.GetMenuItem(code)
-	if ok {
-		if err := mitem.Doer.Validate(); err != nil {
-			t.CookReply(cmd, tele_api.CookReplay_cookNothing, uint32(mitem.Price))
+	if ok && mitem.Doer != nil {
+		if err := mitem.Doer.Validate(); err == nil {
+			t.CookReply(cmd, tele_api.CookReplay_waitPay, uint32(mitem.Price))
 			return
 		}
 	}
@@ -262,7 +290,13 @@ func tuneCook(b []byte, def uint8, max uint8) uint8 {
 }
 
 func (t *tele) cmdExec(ctx context.Context, cmd *tele_api.Command, arg *tele_api.Command_ArgExec) error {
-	if arg != nil && arg.Scenario[:1] == "_" { // If the command contains the "_" prefix, then you ignore the client lock flag
+	if arg == nil {
+		return errInvalidArg
+	}
+	if arg.Scenario == "" {
+		return errInvalidArg
+	}
+	if arg.Scenario[:1] == "_" { // If the command contains the "_" prefix, then you ignore the client lock flag
 		arg.Scenario = arg.Scenario[1:]
 	} else if config_global.VMC.User.Lock {
 		t.log.Infof("ignore income remove command (locked) from: (%v) scenario: (%s)", cmd.Executer, arg.Scenario)

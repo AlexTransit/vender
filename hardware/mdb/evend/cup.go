@@ -59,9 +59,6 @@ func (c *DeviceCup) Reset() error {
 }
 
 func (c *DeviceCup) LightOn() error {
-	if c.light {
-		return nil
-	}
 	c.dev.Log.Info("light on")
 	c.Command(0x02)
 	c.light = true
@@ -69,9 +66,6 @@ func (c *DeviceCup) LightOn() error {
 }
 
 func (c *DeviceCup) LightOff() error {
-	if !c.light {
-		return nil
-	}
 	c.dev.Log.Info("light off")
 	c.light = false
 	c.Command(0x03)

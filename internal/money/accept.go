@@ -17,9 +17,10 @@ import (
 
 func (ms *MoneySystem) SetAcceptMax(ctx context.Context, limit currency.Amount) error {
 	g := state.GetGlobal(ctx)
-	errs := []error{
-		// g.Engine.Exec(ctx, ms.bill.AcceptMax(limit)),
-		g.Engine.Exec(ctx, ms.CoinValidator.AcceptMax(limit)),
+	errs := make([]error, 0, 1)
+	// errs = append(errs, g.Engine.Exec(ctx, ms.bill.AcceptMax(limit)))
+	if ms.CoinValidator != nil {
+		errs = append(errs, g.Engine.Exec(ctx, ms.CoinValidator.AcceptMax(limit)))
 	}
 	err := helpers.FoldErrors(errs)
 	if err != nil {
@@ -39,30 +40,38 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 			event := types.Event{}
 			switch e.Event {
 			case money.InEscrow:
-				if (g.Config.Money.MinimalBill != 0 && e.Nominal < currency.Nominal(g.Config.Money.MinimalBill)) ||
-					(g.Config.Money.MaximumBill != 0 && e.Nominal < currency.Nominal(g.Config.Money.MaximumBill)) {
+				inBill := int(e.Nominal.FormatBaseInt())
+				if (g.Config.Money.MinimalBill != 0 && inBill < g.Config.Money.MinimalBill) ||
+					(g.Config.Money.MaximumBill != 0 && inBill > g.Config.Money.MaximumBill) {
 					// say not posible
 					// go sound.TextSpeech("купюру " + e.Nominal.Format100I() + " рублей не принимаем")
 					// g.MustTextDisplay().SetLines("купюру "+e.Nominal.Format100I(), "не принимаем")
-					ms.Log.Infof("reject money. min(%d) > (%s) > max(%d)", g.Config.Money.MinimalBill, e.Nominal.Format100I(), g.Config.Money.MaximumBill)
+					ms.Log.Infof("reject money. min(%d) > (%d) > max(%d)", g.Config.Money.MinimalBill, inBill, g.Config.Money.MaximumBill)
 					ms.bill.SendCommand(bill.Reject)
 					return
 				}
 				event.Kind = types.EventMoneyPreCredit
+				ms.lk.Lock()
 				ms.billCredit.Add(e.Nominal)
-				if ms.GetCredit() < maxPrice {
+				credit := ms.billCredit.Total() + ms.coinCredit.Total()
+				ms.lk.Unlock()
+				if credit < maxPrice {
 					ms.bill.SendCommand(bill.Accept)
 				}
 			case money.OutEscrow:
 				event.Kind = types.EventMoneyPreCredit
+				ms.lk.Lock()
 				if ms.billCredit.Total() > 0 {
 					ms.billCredit.Sub(e.Nominal)
 				}
+				ms.lk.Unlock()
 			case money.Stacked:
 				event.Kind = types.EventMoneyCredit
 				if !ms.bill.BillStacked() {
 					ms.Log.Error("bill not stacked. substruct bill credit")
+					ms.lk.Lock()
 					ms.billCredit.Sub(e.Nominal)
+					ms.lk.Unlock()
 				}
 			default:
 				return
@@ -86,22 +95,34 @@ func (ms *MoneySystem) AcceptCredit(ctx context.Context, maxPrice currency.Amoun
 		mainAlive.Done()
 	}
 	// ----------------------coin ------------------------------------------------------------------
+	if ms.CoinValidator == nil {
+		mainAlive.Done()
+		return ErrCoinAcceptorOffline
+	}
 	go ms.CoinValidator.CoinRun(mainAlive, func(e money.ValidatorEvent) {
 		event := types.Event{}
 		switch e.Event {
 		case money.CoinRejectKey:
-			g.Hardware.Input.Emit(types.InputEvent{Source: input.MoneySourceTag, Key: input.MoneyKeyAbort})
+			if g.Hardware.Input != nil {
+				g.Hardware.Input.Emit(types.InputEvent{Source: input.MoneySourceTag, Key: input.MoneyKeyAbort})
+			} else {
+				ms.Log.Warning("ignore money abort event: input dispatch is not initialized")
+			}
 		case money.CoinCredit:
 			event.Kind = types.EventMoneyCredit
+			ms.lk.Lock()
 			ms.coinCredit.Add(e.Nominal)
-			x := ms.GetCredit()
+			x := ms.billCredit.Total() + ms.coinCredit.Total()
+			ms.lk.Unlock()
 			if x >= maxPrice {
 				ms.CoinValidator.DisableAccept()
 			}
 		default:
 			ms.Log.WarningF("coin event not parce (%v)", e)
 		}
-		go func() { out <- event }()
+		if event.Kind != 0 {
+			go func() { out <- event }()
+		}
 		// out <- event
 	})
 	return nil

@@ -106,7 +106,7 @@ func (g *Global) Mdb() (*mdb.Bus, error) {
 				err = errors.Errorf("code error mega=nil")
 			}
 			if err != nil {
-				return errors.Annotate(x.err, "Mdber() driver=mega")
+				return errors.Annotate(err, "Mdber() driver=mega")
 			}
 			x.Uarter = mdb_client.NewMegaUart(mc)
 

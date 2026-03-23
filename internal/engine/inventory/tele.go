@@ -16,6 +16,9 @@ func (inv *Inventory) locked_tele() *tele_api.Inventory {
 	pb := &tele_api.Inventory{Stocks: make([]*tele_api.Inventory_StockItem, 0, 16)}
 
 	for _, s := range inv.Stocks {
+		if s.Ingredient == nil {
+			continue
+		}
 		if s.value != 0 {
 			si := &tele_api.Inventory_StockItem{
 				Code: uint32(s.Code),

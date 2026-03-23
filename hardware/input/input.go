@@ -22,14 +22,11 @@ type Dispatch struct {
 	Bus chan types.InputEvent
 }
 
-func (d *Dispatch) InputChain() *chan types.InputEvent {
+func (d *Dispatch) InputChain() chan types.InputEvent {
 	if d == nil {
-		d = &Dispatch{
-			Bus: make(chan types.InputEvent),
-		}
+		return nil
 	}
-	ch := d.Bus
-	return &ch
+	return d.Bus
 }
 
 func (d *Dispatch) ReadEvendKeyboard(s Source) {
@@ -60,15 +57,11 @@ func (d *Dispatch) ReadEvendKeyboard(s Source) {
 			fmt.Printf(" key event (%v)", event)
 		}
 
-		if len(d.Bus) == 0 {
-			if event.Source == DevInputEventTag || config_global.VMC.User.KeyboardReadEnable {
-				d.Log.Infof("key press (%s) ", kn)
-				d.Bus <- event
-			} else {
-				d.Log.Infof("ignore key. input disabled. (%s) ", kn)
-			}
+		if event.Source == DevInputEventTag || config_global.VMC.User.KeyboardReadEnable {
+			d.Log.Infof("key press (%s) ", kn)
+			d.Bus <- event
 		} else {
-			d.Log.Infof("ignore key. previous button not handled. (%s) ", kn)
+			d.Log.Infof("ignore key. input disabled. (%s) ", kn)
 		}
 	}
 }

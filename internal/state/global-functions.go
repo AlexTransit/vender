@@ -22,6 +22,10 @@ func (g *Global) CheckMenuExecution() {
 		g.Inventory.Stocks[i].Set(math.MaxFloat32)
 	}
 	for _, v := range g.Config.Engine.Menu.Items {
+		if v.Doer == nil {
+			g.Log.Errorf("scenario menu code:%s error (doer=nil)", v.Code)
+			continue
+		}
 		if e := v.Doer.Validate(); e != nil {
 			g.Log.Errorf("scenario menu code:%s error (%v)", v.Code, e)
 		}
@@ -38,6 +42,10 @@ func (g *Global) CheckMenuExecution() {
 func (g *Global) ListMenuPriceCost() {
 	g.Log.Infof("code;price;cost;name;scenario")
 	for _, v := range g.Config.Engine.Menu.Items {
+		if v.Doer == nil {
+			g.Log.Infof("%s;%v;%v;%v;%v", v.Code, v.Price.Format100I(), "ERR", v.Name, v.Scenario)
+			continue
+		}
 		c := v.Doer.Calculation()
 		cost := currency.Amount(int(math.Round(c * 100)))
 		g.Log.Infof("%s;%v;%v;%v;%v", v.Code, v.Price.Format100I(), cost.Format100I(), v.Name, v.Scenario)
@@ -86,11 +94,11 @@ func (g *Global) RunBashSript(script string) (err error) {
 		return nil
 	}
 	cmd := exec.Command("/usr/bin/bash", "-c", script)
-	stdout, e := cmd.Output()
+	output, e := cmd.CombinedOutput()
 	if e == nil {
 		return nil
 	}
-	return fmt.Errorf("script(%s) stdout(%s) error(%s)", script, stdout, cmd.Stderr)
+	return fmt.Errorf("script(%s) output(%s) error(%v)", script, output, e)
 }
 
 func (g *Global) ShowQR(t string) {
@@ -177,14 +185,14 @@ func (g *Global) TeleCancelOrder(s tele_api.State) {
 		State: s,
 	}
 	// if the order is not completed, the order is canceled
-	if g.Config.User.PaymenId != 0 {
+	if config_global.VMC.User.PaymenId != 0 {
 		rm.Order = g.OrderToMessage()
-		if g.Config.User.DirtyMoney != 0 {
+		if config_global.VMC.User.DirtyMoney != 0 {
 			rm.Order.OrderStatus = tele_api.OrderStatus_orderError // return cashless money
 		} else {
 			// order full maked and not completed.
 			rm.Order.OrderStatus = tele_api.OrderStatus_complete
-			g.GlobalError += fmt.Sprintf("set complete order in cancel order point. paymentId:%d dirty money=0", g.Config.User.PaymenId)
+			g.GlobalError += fmt.Sprintf("set complete order in cancel order point. paymentId:%d dirty money=0", config_global.VMC.User.PaymenId)
 		}
 	}
 	if g.GlobalError != "" {
@@ -204,7 +212,7 @@ func (g *Global) TeleCancelQr(s tele_api.State) {
 	rm := tele_api.FromRoboMessage{
 		State: s,
 	}
-	if g.Config.User.PaymenId != 0 {
+	if config_global.VMC.User.PaymenId != 0 {
 		rm.Order = g.OrderToMessage()
 		rm.Order.OrderStatus = tele_api.OrderStatus_cancel
 		g.Tele.RoboSend(&rm)
@@ -215,7 +223,7 @@ func (g *Global) TeleCancelQr(s tele_api.State) {
 
 func (g *Global) SendCooking() {
 	rm := tele_api.FromRoboMessage{State: tele_api.State_Process}
-	if g.Config.User.PaymenId != 0 {
+	if config_global.VMC.User.PaymenId != 0 {
 		rm.Order = g.OrderToMessage()
 		rm.Order.OrderStatus = tele_api.OrderStatus_executionStart
 	}
@@ -225,11 +233,11 @@ func (g *Global) SendCooking() {
 
 func (g *Global) OrderToMessage() *tele_api.Order {
 	o := &tele_api.Order{
-		MenuCode:      g.Config.User.SelectedItem.Code,
+		MenuCode:      config_global.VMC.User.SelectedItem.Code,
 		Amount:        uint32(config_global.VMC.User.SelectedItem.Price),
-		PaymentMethod: g.Config.User.PaymentMethod,
-		OwnerInt:      g.Config.User.PaymenId,
-		OwnerType:     g.Config.User.PaymentType,
+		PaymentMethod: config_global.VMC.User.PaymentMethod,
+		OwnerInt:      config_global.VMC.User.PaymenId,
+		OwnerType:     config_global.VMC.User.PaymentType,
 	}
 	return o
 }

@@ -256,10 +256,10 @@ func (ca *CoinAcceptor) DispenceCoin(nominal currency.Nominal) (complete bool, e
 	if inTubeBefore == 0 {
 		return false, fmt.Errorf("can`t dispense, tube value = 0")
 	}
-	if inTubeBefore != ca.tubes.InTube(nominal) {
-		ca.Log.Errorf("nominal %v preview and now tubes dismash preview value (%v) now(%v)", nominal, inTubeBefore, ca.tubes)
-	}
 	coinType := ca.nominalCoinType(nominal)
+	if coinType == -1 {
+		return false, fmt.Errorf("can`t dispense, coin type not found")
+	}
 	request := mdb.MustPacketFromBytes([]byte{0x0d, (1 << 4) + uint8(coinType)}, true)
 	if e := ca.Device.Tx(request, nil); e != nil {
 		return false, fmt.Errorf("coin tx command. error:%v", e)
@@ -273,7 +273,7 @@ func (ca *CoinAcceptor) DispenceCoin(nominal currency.Nominal) (complete bool, e
 		err = errors.Join(err, errp)
 		if emptyResponse {
 			// stop poll
-			if ert := ca.ReadTubeStatus(); err != nil {
+			if ert := ca.ReadTubeStatus(); ert != nil {
 				err = errors.Join(err, ert)
 				return false, err
 			}
@@ -361,12 +361,13 @@ func (ca *CoinAcceptor) pollF(returnEvent func(money.ValidatorEvent)) (empty boo
 		return true, nil
 	}
 	rb := response.Bytes()
-	if len(rb) == 0 {
+	bytesResponse := len(rb)
+	if bytesResponse == 0 {
 		return true, nil
 	}
-	for i := 0; i < len(rb); i++ {
+	for i := 0; i < bytesResponse; i++ {
 		var e money.ValidatorEvent
-		if rb[i]>>6 > 0 {
+		if rb[i]>>6 > 0 && i+1 < bytesResponse {
 			e = ca.decodeByte(rb[i], rb[i+1])
 			i++
 		} else {
@@ -532,7 +533,7 @@ func (ca *CoinAcceptor) CommandFeatureEnable(requested Features) error {
 
 func (ca *CoinAcceptor) ReadTubeStatus() error {
 	const tag = deviceName + ".tubestatus"
-	const expectLengthMin = 2
+	const expectLengthMin = 18
 	request := mdb.MustPacketFromHex("0a", true)
 	response := mdb.Packet{}
 	if err := ca.Device.Tx(request, &response); err != nil {

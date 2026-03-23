@@ -54,8 +54,10 @@ func main() {
 	if err := flagset.Parse(os.Args[1:]); err != nil {
 		log.Fatal(err)
 	}
-	versionMain(context.Background(), nil)
 	if *onlyVersion || reFlagVersion.MatchString(flagset.Arg(0)) {
+		if err := versionMain(context.Background(), nil); err != nil {
+			log.Fatal(err)
+		}
 		return
 	}
 

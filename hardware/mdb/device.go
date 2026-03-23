@@ -197,7 +197,7 @@ func (dev *Device) SetError(e error) {
 
 func (dev *Device) ErrorCode() int32 { return atomic.LoadInt32(&dev.errCode) }
 func (dev *Device) SetErrorCode(code int32) {
-	dev.errCode = code
+	atomic.StoreInt32(&dev.errCode, code)
 }
 
 // func (dev *Device) SetErrorCode(c int32) {

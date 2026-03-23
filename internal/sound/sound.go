@@ -97,7 +97,6 @@ func SetVolume(v int16) {
 }
 
 // set volume from config
-// value is fixed point. 10 = 100%
 func SetDefaultVolume() {
 	if s.config == nil {
 		return

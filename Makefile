@@ -37,4 +37,5 @@ build:
 	-ldflags="-s -w -X 'main.BuildVersion=$(VERSION)'" \
 	-o $(BINARY_NAME) ./cmd/vender
 	@rm -rf ./go-tmp
+	@rsync -av ./build/vender ..
 	@echo "===> Done. Binary: $(BINARY_NAME), Size: $$(du -h $(BINARY_NAME) | cut -f1)"
