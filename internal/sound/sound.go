@@ -92,7 +92,7 @@ func PlayKeyBeep() { playStream(&s.keyBeep) }
 func PlayMoneyIn() { playStream(&s.moneyIn) }
 func SetVolume(v int16) {
 	s.volumeMu.Lock()
-	s.currentVolume = float64(v) / 100
+	s.currentVolume = float64(v) / 1000
 	s.volumeMu.Unlock()
 }
 
@@ -101,9 +101,7 @@ func SetDefaultVolume() {
 	if s.config == nil {
 		return
 	}
-	s.volumeMu.Lock()
-	s.currentVolume = float64(s.config.DefaultVolume) / 100
-	s.volumeMu.Unlock()
+	SetVolume(s.config.DefaultVolume)
 }
 
 func getCurrentVolume() float64 {
