@@ -92,7 +92,7 @@ func PlayKeyBeep() { playStream(&s.keyBeep) }
 func PlayMoneyIn() { playStream(&s.moneyIn) }
 func SetVolume(v int16) {
 	s.volumeMu.Lock()
-	s.currentVolume = float64(v) / 1000
+	s.currentVolume = float64(v) / 100
 	s.volumeMu.Unlock()
 }
 
