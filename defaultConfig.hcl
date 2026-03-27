@@ -186,7 +186,7 @@ ui {
 
 sound {
   disabled       = false
-  default_volume = 10
+  default_volume = 100
   folder         = "/home/vmc/vender-db/audio/"
   keyBeep        = "bb.mp3"
   moneyIn        = "moneyIn.mp3"
