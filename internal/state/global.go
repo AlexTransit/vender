@@ -158,6 +158,16 @@ func (g *Global) initEngine() error {
 			continue
 		}
 		g.Engine.Register(x.Name, x.Doer)
+		for i, v := range x.OnError {
+			errActionName := fmt.Sprintf("%s-Err:%s", x.Name, i)
+			var d engine.Doer
+			d, err = g.Engine.ParseText(errActionName, v.Scenario)
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			g.Engine.Register(errActionName, d)
+		}
 	}
 
 	for code, x := range g.Config.Engine.Menu.Items {

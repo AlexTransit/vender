@@ -30,7 +30,18 @@ type ProfileStruct struct {
 }
 
 type Alias struct {
-	Name     string `hcl:"name,label"`
+	Name        string           `hcl:"name,label"`
+	Scenario    string           `hcl:"scenario"`
+	XXX_OnError []XXXErrorAction `hcl:"onError,block"`
+	OnError     map[string]ErrorAction
+	Doer        engine.Doer
+}
+type XXXErrorAction struct {
+	ErrCode  string `hcl:",label"`
 	Scenario string `hcl:"scenario"`
+}
+
+type ErrorAction struct {
+	Scenario string
 	Doer     engine.Doer
 }

@@ -155,9 +155,14 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 		}
 		cfg.Inventory.Ingredient = nil
 		for _, v := range cfg.Engine.XXX_Aliases {
+			errActions := map[string]engine_config.ErrorAction{}
+			for _, ea := range v.XXX_OnError {
+				errActions[ea.ErrCode] = engine_config.ErrorAction{Scenario: ea.Scenario}
+			}
 			s := engine_config.Alias{
 				Name:     v.Name,
 				Scenario: v.Scenario,
+				OnError:  errActions,
 			}
 			cfg.Engine.Aliases[v.Name] = s
 		}

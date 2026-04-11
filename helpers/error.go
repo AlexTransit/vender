@@ -8,6 +8,23 @@ import (
 	"time"
 )
 
+type AppError struct {
+	ErrorCode int32
+	Err       error
+}
+
+func (e *AppError) Error() string {
+	return e.Err.Error()
+}
+
+func (e *AppError) Unwrap() error {
+	return e.Err
+}
+
+func (e *AppError) Code() int32 {
+	return e.ErrorCode
+}
+
 func FoldErrors(errs []error) (err error) {
 	// // common fast path
 	// if len(errs) == 0 {
