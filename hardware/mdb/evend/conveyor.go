@@ -64,15 +64,9 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 
 func (c *DeviceConveyor) move(position int16) (err error) {
 	if err = c.mv(position); err == nil {
-		return
+		return nil
 	}
 	c.dev.TeleError(err)
-	c.reset()
-	time.Sleep(5000 * time.Millisecond)
-	if err = c.mv(position); err == nil {
-		return
-	}
-	c.reset()
 	return err
 }
 

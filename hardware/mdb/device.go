@@ -140,7 +140,7 @@ func (dev *Device) Rst() (err error) {
 	dev.LastOff.SetNowIfZero() // consider device offline from now till successful response
 	dev.lastReset.SetNow()
 	dev.SetState(DeviceError)
-	dev.SetErrorCode(0)
+	// dev.SetErrorCode(0)
 	err = dev.Tx(dev.PacketReset, nil)
 	time.Sleep(200 * time.Millisecond)
 	if err == nil {
@@ -195,10 +195,8 @@ func (dev *Device) SetError(e error) {
 	dev.TeleError(e)
 }
 
-func (dev *Device) ErrorCode() int32 { return atomic.LoadInt32(&dev.errCode) }
-func (dev *Device) SetErrorCode(code int32) {
-	atomic.StoreInt32(&dev.errCode, code)
-}
+// func (dev *Device) ErrorCode() int32        { return atomic.LoadInt32(&dev.errCode) }
+// func (dev *Device) SetErrorCode(code int32) { atomic.StoreInt32(&dev.errCode, code) }
 
 // func (dev *Device) SetErrorCode(c int32) {
 // 	// prev := atomic.SwapInt32(&dev.errCode, c)

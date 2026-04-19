@@ -16,53 +16,62 @@ type Doer interface {
 	Calculation() float64
 	Do(context.Context) error
 	String() string // for logs
+	AddErrorAction(code int32, d Doer)
 }
 
 type Nothing struct{ Name string }
 
-func (n Nothing) Do(ctx context.Context) error { return nil }
-func (n Nothing) Validate() error              { return nil }
-func (n Nothing) Calculation() float64         { return 0 }
-func (n Nothing) String() string               { return n.Name }
+func (n Nothing) Do(ctx context.Context) error      { return nil }
+func (n Nothing) Validate() error                   { return nil }
+func (n Nothing) Calculation() float64              { return 0 }
+func (n Nothing) String() string                    { return n.Name }
+func (n Nothing) AddErrorAction(code int32, d Doer) {}
 
 type Func struct {
-	Name string
-	F    func(context.Context) error
-	V    ValidateFunc
-	C    CalculationFunc
+	Name   string
+	F      func(context.Context) error
+	ErrorF map[int32]func(context.Context) error
+	V      ValidateFunc
+	C      CalculationFunc
 }
 
-func (f Func) Validate() error              { return useValidator(f.V) }
-func (f Func) Calculation() float64         { return useCalculation(f.C) }
-func (f Func) Do(ctx context.Context) error { return f.F(ctx) }
-func (f Func) String() string               { return f.Name }
+func (f Func) Validate() error                   { return useValidator(f.V) }
+func (f Func) Calculation() float64              { return useCalculation(f.C) }
+func (f Func) Do(ctx context.Context) error      { return f.F(ctx) }
+func (f Func) String() string                    { return f.Name }
+func (f Func) AddErrorAction(code int32, d Doer) { f.ErrorF[code] = d.Do }
 
 type Func0 struct {
-	Name string
-	F    func() error
-	V    ValidateFunc
-	C    CalculationFunc
+	Name   string
+	F      func() error
+	ErrorF map[int32]func(context.Context) error
+	V      ValidateFunc
+	C      CalculationFunc
 }
 
-func (f Func0) Validate() error              { return useValidator(f.V) }
-func (f Func0) Calculation() float64         { return useCalculation(f.C) }
-func (f Func0) Do(ctx context.Context) error { return f.F() }
-func (f Func0) String() string               { return f.Name }
+func (f Func0) Validate() error                   { return useValidator(f.V) }
+func (f Func0) Calculation() float64              { return useCalculation(f.C) }
+func (f Func0) Do(ctx context.Context) error      { return f.F() }
+func (f Func0) String() string                    { return f.Name }
+func (f Func0) AddErrorAction(code int32, d Doer) {}
 
 type Sleep struct{ time.Duration }
 
-func (s Sleep) Validate() error              { return nil }
-func (s Sleep) Calculation() float64         { return 0 }
-func (s Sleep) Do(ctx context.Context) error { time.Sleep(s.Duration); return nil }
-func (s Sleep) String() string               { return fmt.Sprintf("Sleep(%v)", s.Duration) }
+func (s Sleep) Validate() error                   { return nil }
+func (s Sleep) Calculation() float64              { return 0 }
+func (s Sleep) Do(ctx context.Context) error      { time.Sleep(s.Duration); return nil }
+func (s Sleep) String() string                    { return fmt.Sprintf("Sleep(%v)", s.Duration) }
+func (s Sleep) AddErrorAction(code int32, d Doer) {}
 
 type RepeatN struct {
 	N uint
 	D Doer
 }
 
-func (r RepeatN) Validate() error      { return r.D.Validate() }
-func (r RepeatN) Calculation() float64 { return r.D.Calculation() }
+func (r RepeatN) Validate() error                   { return r.D.Validate() }
+func (r RepeatN) Calculation() float64              { return r.D.Calculation() }
+func (r RepeatN) AddErrorAction(code int32, d Doer) {}
+
 func (r RepeatN) Do(ctx context.Context) error {
 	// FIXME solve import cycle, use GetGlobal(ctx).Log
 	log := log2.ContextValueLogger(ctx)
@@ -99,10 +108,11 @@ func useCalculation(c CalculationFunc) float64 {
 
 type Fail struct{ E error }
 
-func (f Fail) Validate() error              { return f.E }
-func (f Fail) Calculation() float64         { return 0 }
-func (f Fail) Do(ctx context.Context) error { return f.E }
-func (f Fail) String() string               { return f.E.Error() }
+func (f Fail) Validate() error                   { return f.E }
+func (f Fail) Calculation() float64              { return 0 }
+func (f Fail) Do(ctx context.Context) error      { return f.E }
+func (f Fail) String() string                    { return f.E.Error() }
+func (f Fail) AddErrorAction(code int32, d Doer) {}
 
 type RestartError struct {
 	Doer

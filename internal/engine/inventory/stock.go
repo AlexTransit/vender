@@ -118,6 +118,11 @@ type custom struct {
 	spend  float32
 }
 
+// AddErrorAction implements [engine.Doer].
+func (c *custom) AddErrorAction(code int32, d engine.Doer) {
+	panic("unimplemented")
+}
+
 func (c *custom) Apply(arg engine.Arg) (engine.Doer, bool, error) {
 	if c.after != nil {
 		err := engine.ErrArgOverwrite

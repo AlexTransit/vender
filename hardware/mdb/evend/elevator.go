@@ -2,7 +2,6 @@ package evend
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -41,26 +40,12 @@ func (e *DeviceElevator) init(ctx context.Context) error {
 		if movePosition == e.currentPos {
 			return nil
 		}
-		previewPosition := e.currentPos
-		for i := 1; i <= 2; i++ {
-			er := e.move(uint8(arg.(int16)))
-			if er == nil {
-				if i > 1 {
-					e.dev.TeleError(fmt.Errorf("restart fix error (%v)", err))
-				}
-				return nil
-			}
-			err = errors.Join(err, er)
-			// FIXME тут можно добавть скрипт действий после ошибки
-			if e.dev.ErrorCode() == 36 { // reverse high load
-				if !((previewPosition == 100 && movePosition == 0) || (previewPosition == 0 && movePosition == 100)) {
-					e.reset()
-					break
-				}
-			}
-			e.reset()
-			time.Sleep(5 * time.Second)
+		err = e.move(uint8(arg.(int16)))
+		if err == nil {
+			e.currentPos = movePosition
+			return nil
 		}
+		e.dev.TeleError(fmt.Errorf("error (%v)", err))
 		return err
 	}})
 
@@ -88,6 +73,7 @@ func (e *DeviceElevator) moveNoWait(position uint8) (err error) {
 
 func (e *DeviceElevator) move(position uint8) (err error) {
 	e.dev.Action = fmt.Sprintf("%s move %d=>%d", e.name, e.currentPos, position)
+	e.currentPos = -1
 	if err = e.moveNoWait(position); err != nil {
 		// e.errorCode =
 		return fmt.Errorf("send command(%v) error(%v)", e.dev.Action, err)

@@ -49,6 +49,11 @@ func NewEngine(log *log2.Log) *Engine {
 	return e
 }
 
+func (e *Engine) CheckAction(action string) (ok bool, doer Doer) {
+	doer, ok = e.actions[action]
+	return ok, doer
+}
+
 func (e *Engine) Register(action string, d Doer) {
 	e.lk.Lock()
 	e.actions[action] = d
@@ -202,13 +207,15 @@ func (e *Engine) ParseText(tag, text string) (Doer, error) {
 
 	errs := make([]error, 0)
 	words := reNotSpace.FindAllString(text, -1)
+	itemsCount := len(words)
 
-	tx := NewSeq(tag)
+	tx := NewSeq(tag, itemsCount)
 	for _, word := range words {
 		d, err := e.ResolveOrLazy(word)
 		if err != nil {
 			return nil, errors.Annotatef(err, "scenario=%s unparsed=%s", text, word)
 		}
+
 		tx.Append(d)
 	}
 	return tx, helpers.FoldErrors(errs)

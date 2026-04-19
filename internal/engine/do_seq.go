@@ -15,14 +15,26 @@ const seqBuffer uint = 8
 // Error in one action aborts whole group.
 // Build graph with NewSeq().Append()
 type Seq struct {
-	name  string
-	_b    [seqBuffer]Doer
-	items []Doer
+	name string
+	// _b    [seqBuffer]Doer
+	items        []Doer
+	ErrorActions map[int32]Doer
 }
 
-func NewSeq(name string) *Seq {
+func (seq *Seq) AddErrorAction(code int32, d Doer) {
+	if seq.ErrorActions == nil {
+		seq.ErrorActions = make(map[int32]Doer)
+	}
+	seq.ErrorActions[code] = d
+}
+
+func NewSeq(name string, items ...int) *Seq {
 	seq := &Seq{name: name}
-	seq.items = seq._b[:0]
+	if len(items) > 0 {
+		seq.items = make([]Doer, 0, items[0])
+	} else {
+		seq.items = make([]Doer, 0, seqBuffer)
+	}
 	return seq
 }
 
@@ -59,12 +71,24 @@ func (seq *Seq) Do(ctx context.Context) error {
 		err := e.Exec(ctx, d)
 		itemsList = append(itemsList, time.Now().Format("<- 15:04:05.00000 ")+d.String())
 		if err != nil {
+			var appErr *helpers.AppError
+			if !errors.As(err, &appErr) {
+				return err
+			}
+			ok, ErrorD := e.CheckAction(fmt.Sprintf("%s-Err:%d", d.String(), appErr.Code()))
+			if !ok {
+				return err
+			}
+			err1 := e.Exec(ctx, ErrorD)
+			if err1 == nil {
+				e.Log.Infof("error action fix problem. (%v)", err)
+				continue
+			}
 			// FIXME AlexM
 			helpers.SaveAndShowDoError(itemsList, err, "/home/vmc/vender-db/errors/")
 			return err
 		}
 	}
-	//	helpers.SaveAndShowDoError(itemsList, nil)
 	return nil
 }
 
@@ -82,6 +106,6 @@ func (seq *Seq) cloneEmpty() *Seq {
 
 func (seq *Seq) setItems(ds []Doer) {
 	var zeroBuffer [seqBuffer]Doer
-	copy(seq._b[:], zeroBuffer[:])
+	copy(seq.items[:], zeroBuffer[:])
 	seq.items = ds
 }

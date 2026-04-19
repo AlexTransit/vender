@@ -35,12 +35,20 @@ type (
 )
 
 type FuncArg struct {
-	Name string
-	F    func(context.Context, Arg) error
-	V    ValidateFunc
-	C    CalculationFunc
-	arg  Arg
-	set  bool
+	Name   string
+	F      func(context.Context, Arg) error
+	ErrorF map[int32]func(context.Context) error
+	V      ValidateFunc
+	C      CalculationFunc
+	arg    Arg
+	set    bool
+}
+
+func (fa FuncArg) AddErrorAction(code int32, d Doer) {
+	if fa.ErrorF == nil {
+		fa.ErrorF = make(map[int32]func(context.Context) error)
+	}
+	fa.ErrorF[code] = d.Do
 }
 
 func (fa FuncArg) Validate() error {
@@ -61,7 +69,8 @@ func (fa FuncArg) Do(ctx context.Context) error {
 	if !fa.set {
 		return errors.Annotatef(ErrArgNotApplied, FmtErrContext, fa.Name)
 	}
-	return fa.F(ctx, fa.arg)
+	err := fa.F(ctx, fa.arg)
+	return err
 }
 
 func (fa FuncArg) String() string {
