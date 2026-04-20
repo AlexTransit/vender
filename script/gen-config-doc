@@ -1,0 +1,7 @@
+#!/bin/bash
+set -eu
+
+base="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+
+cd "$base"
+go run script/gen-config-doc.go > config_description.md

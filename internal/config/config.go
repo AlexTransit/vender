@@ -32,7 +32,7 @@ func WriteConfigToFile() {
 	// 	}
 	f := hclwrite.NewEmptyFile()
 	gohcl.EncodeIntoBody(newDefaultConfig(), f.Body())
-	file, err := os.OpenFile("defaultConfig.hcl", os.O_WRONLY|os.O_CREATE, 0o644)
+	file, err := os.OpenFile("defaultConfig.hcl", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		panic(err)
 	}

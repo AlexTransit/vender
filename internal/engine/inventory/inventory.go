@@ -39,12 +39,18 @@ import (
 // при чтении когфига, все перекладывается в карту. ( перезапись значений )
 // потом из карты переноситья в рабочий масив
 
+// Inventory - main struct for inventory system. Contains stocks and ingredients. Also contains methods for loading and saving inventory, and for getting stock and ingredient by name.
 type Inventory struct {
-	ReportInv      int
-	log            *log2.Log
-	mu             sync.RWMutex
-	File           string       `hcl:"stock_file,optional"`
-	Stocks         []Stock      `hcl:"stock,block"`
+	ReportInv int
+	log       *log2.Log
+	mu        sync.RWMutex
+	// Файл для хранения инвентаря. В нем хранится количество каждого склада в виде int32 (для возможности сохранения в CMOS). Код склада соответствует позиции в файле.
+	// Example: если у вас 3 склада, то в файле будет 12 байт. Первые 4 байта - количество первого склада, следующие 4 байта - количество второго склада, и т.д.
+	File string `hcl:"stock_file,optional"`
+	// список бункеров. название склада и код одинаковые.
+	// название ингридиента. должно соответствовать названию в блоке ингридиентов. нужно для связи склада и ингридиента. пока движок не переделан - это уникальное значение
+	Stocks []Stock `hcl:"stock,block"`
+	// список ингридиентов. название ингридиента должно быть уникальным. нужно для связи склада и ингридиента. пока движок не переделан - это уникальное значение
 	Ingredient     []Ingredient `hcl:"ingredient,block"`
 	XXX_Stocks     map[string]Stock
 	XXX_Ingredient map[string]Ingredient
@@ -53,11 +59,24 @@ type Inventory struct {
 // if the minimum ingredient is not specified (equal to zero), then the consumption check is disabled
 // если минимум ингридиента не указан (равен нулю), тогда проверка расхода выключена
 type Ingredient struct {
-	Name       string     `hcl:"name,label"`
-	Min        int        `hcl:"min,optional"`
-	SpendRate  float32    `hcl:"spend_rate,optional"`
-	Level      string     `hcl:"level,optional"`
-	TuneKey    string     `hcl:"tuning_key,optional"`
+	// name - название ингридиента ( иникальное значение)
+	Name string `hcl:"name,label"`
+	// min - минимальный остаток ( если остаток меньше минимума, то будет отказ в отгрузке.
+	//       если минимум не указан то огружает в минус. может быть отрицательным числом)
+	Min int `hcl:"min,optional"`
+	// расход на единицу. какое количество ингридиента расходуется при отгрузке 1 единицы товара.
+	SpendRate float32 `hcl:"spend_rate,optional"`
+	// level - уровень (плотность) ингридиента
+	// указыватеся как "x(y)"
+	// x - метка на бункере, y - вес
+	// пример: "0.5(200) 1(360) 2(680) 3.1(1020)"
+	Level string `hcl:"level,optional"`
+	// tuning_key - название кнопки коррекции отгрузки. подробне в описании кнопки коррекции
+	//    кнопка коррекции. имеет название и значение по умолчанию (обычно 4) можно указать максимальное значение.
+	//    единица значения равна 25%.
+	//    например: базовое = 4 и это 100% если указать 2 то это 50%. если 8 то это 200%
+	TuneKey string `hcl:"tuning_key,optional"`
+	// cost - закупочная цена. нужна дял расчета себестоимости
 	Cost       float64    `hcl:"cost,optional"`
 	levelValue []struct { // used fixed comma x.xx
 		lev int

@@ -13,14 +13,16 @@ import (
 // const tuneKeyFormat = "run/inventory-%s-tune"
 
 type Stock struct {
-	Log            *log2.Log
-	ErrorSend      bool
-	Label          string `hcl:",label"`
-	Code           int    `hcl:"code,optional"`
+	Log       *log2.Log
+	ErrorSend bool
+	Label     string `hcl:",label"`
+	Code      int    `hcl:"code,optional"`
+	// название ингридиента. должно соответствовать названию в блоке ингридиентов. нужно для связи склада и ингридиента. пока движок не переделан - это уникальное значение
 	XXX_Ingredient string `hcl:"ingredient"`
-	RegisterAdd    string `hcl:"register_add,optional"`
-	Ingredient     *Ingredient
-	value          float32
+	// дейсвия при отгрузке. создается команда: название_ингридиента.run(?) которая выполняет эти действия.
+	RegisterAdd string `hcl:"register_add,optional"`
+	Ingredient  *Ingredient
+	value       float32
 }
 
 func (s *Stock) String() string {
