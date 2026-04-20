@@ -162,7 +162,7 @@ func (e *Engine) Resolve(action string) Doer {
 	d, err := e.resolve(action)
 	if err != nil {
 		e.Log.Errorf("engine.Resolve action=%s err=%v", action, err)
-		return Fail{E: err}
+		// return Fail{E: err}
 	}
 	return d
 }
@@ -195,8 +195,6 @@ func (e *Engine) ResolveOrLazy(action string) (Doer, error) {
 		}
 		return Sleep{duration}, nil
 	}
-
-	// e.Log.Debugf("engine.ResolveOrLazy %s -> lazy %#v", action, d)
 	return &Lazy{Name: action, r: e.resolve}, nil
 }
 

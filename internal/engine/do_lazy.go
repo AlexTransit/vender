@@ -27,6 +27,18 @@ type Lazy struct {
 	mu    sync.Mutex
 	r     func(string) (Doer, error)
 	cache Doer
+	// ErrorF map[int32]func(context.Context) error
+	ErrorF map[string]Doer
+}
+
+// FixErrorAction implements [Doer].
+func (l *Lazy) FixErrorAction(code string) Doer {
+	return Doer(nil)
+}
+
+// AddErrorAction implements [Doer].
+func (l *Lazy) AddErrorAction(code string, d Doer) {
+	panic("unimplemented")
 }
 
 func (l *Lazy) Force() (d Doer, forced bool, err error) {
@@ -64,7 +76,7 @@ func (l *Lazy) Do(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return GetGlobal(ctx).ExecPart(ctx, d)
+	return GetGlobal(ctx).Exec(ctx, d)
 }
 
 func (l *Lazy) String() string { return l.Name }

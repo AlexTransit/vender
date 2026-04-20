@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -163,8 +162,7 @@ func (g *Global) initEngine() error {
 			errActionName := fmt.Sprintf("%s-Err:%s", x.Name, i)
 			var d engine.Doer
 			d, err = g.Engine.ParseText(errActionName, v.Scenario)
-			code, _ := strconv.Atoi(i)
-			x.Doer.AddErrorAction(int32(code), d)
+			x.Doer.AddErrorAction(i, d)
 			// if err != nil {
 			// 	errs = append(errs, err)
 			// 	continue

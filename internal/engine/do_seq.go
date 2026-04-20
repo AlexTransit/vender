@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
@@ -18,12 +19,31 @@ type Seq struct {
 	name string
 	// _b    [seqBuffer]Doer
 	items        []Doer
-	ErrorActions map[int32]Doer
+	ErrorActions map[string]Doer
 }
 
-func (seq *Seq) AddErrorAction(code int32, d Doer) {
+// FixErrorAction returns Doer for error string matching regex keys. If no Doer matches, returns nil.
+// add action after fixing error
+func (seq *Seq) FixErrorAction(errorCode string) Doer {
 	if seq.ErrorActions == nil {
-		seq.ErrorActions = make(map[int32]Doer)
+		return nil
+	}
+	for pattern, action := range seq.ErrorActions {
+		if matched, _ := regexp.MatchString(pattern, errorCode); matched {
+			newSeq := NewSeq("fix-error")
+			newSeq.Append(action)
+			for _, item := range seq.items {
+				newSeq.Append(item)
+			}
+			return newSeq
+		}
+	}
+	return nil
+}
+
+func (seq *Seq) AddErrorAction(code string, d Doer) {
+	if seq.ErrorActions == nil {
+		seq.ErrorActions = make(map[string]Doer)
 	}
 	seq.ErrorActions[code] = d
 }
@@ -75,14 +95,21 @@ func (seq *Seq) Do(ctx context.Context) error {
 			if !errors.As(err, &appErr) {
 				return err
 			}
-			ok, ErrorD := e.CheckAction(fmt.Sprintf("%s-Err:%d", d.String(), appErr.Code()))
-			if !ok {
-				return err
-			}
-			err1 := e.Exec(ctx, ErrorD)
-			if err1 == nil {
-				e.Log.Infof("error action fix problem. (%v)", err)
-				continue
+			e.Log.Error(err)
+			errorCode := fmt.Sprint(appErr.Code())
+			ErrorD := seq.FixErrorAction(errorCode)
+			if ErrorD != nil {
+				e.Log.Infof("trying to fix the error(%v)", err)
+				err1 := e.Exec(ctx, ErrorD)
+				if err1 == nil {
+					e.Log.Info("the fix worked. try the action")
+					d := seq
+					err2 := e.Exec(ctx, d)
+					if err2 == nil {
+						e.Log.Info("error fixed. error")
+						continue
+					}
+				}
 			}
 			// FIXME AlexM
 			helpers.SaveAndShowDoError(itemsList, err, "/home/vmc/vender-db/errors/")
@@ -100,6 +127,7 @@ func (seq *Seq) cloneEmpty() *Seq {
 	new := NewSeq(seq.name)
 	if n := len(seq.items); n > cap(new.items) {
 		new.items = make([]Doer, 0, len(seq.items))
+		new.ErrorActions = make(map[string]Doer, len(seq.ErrorActions))
 	}
 	return new
 }

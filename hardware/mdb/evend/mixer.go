@@ -10,6 +10,16 @@ import (
 	"github.com/AlexTransit/vender/internal/state"
 )
 
+// 31	DEVICE_ERROR_MOTOR_DISCONNECTED
+// 32	DEVICE_ERROR_MOTOR_HIGH_LOAD
+// 33	DEVICE_ERROR_SHAKER_DISCONNECTED
+// 34	DEVICE_ERROR_SHAKER_HIGH_LOAD
+// 35	DEVICE_ERROR_REVERSE_DISCONNECTED
+// 36	DEVICE_ERROR_REVERSE_HIGH_LOAD
+// 37	DEVICE_ERROR_REVERSE_TOP_SENSOR
+// 38	DEVICE_ERROR_REVERSE_BOTTOM_SENSOR
+// 39	DEVICE_ERROR_REVERSE_NOT_IN_TOP_POSITION
+
 const DefaultShakeSpeed uint8 = 100
 
 type DeviceMixer struct { //nolint:maligned
@@ -50,19 +60,10 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 	g.Engine.RegisterNewFuncAgr(m.name+".WaitSuccess(?)", func(ctx context.Context, arg engine.Arg) error { return m.WaitSuccess(uint16(arg.(int16)*5+5), true) })
 	g.Engine.RegisterNewFunc(m.name+".movingComplete", func(ctx context.Context) error { return m.mvComplete() })
 	g.Engine.Register(m.name+".move(?)", engine.FuncArg{Name: m.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
-		for i := 1; i <= 3; i++ {
-			e := m.move(int8(arg.(int16)))
-			if e == nil {
-				if i > 1 {
-					m.dev.TeleError(fmt.Errorf("restart fix error (%v)", err))
-				}
-				return
-			}
-			err = errors.Join(err, e)
-			m.reset()
-			time.Sleep(3 * time.Second)
+		if e := m.move(int8(arg.(int16))); e != nil {
+			return e
 		}
-		return err
+		return nil
 	}})
 	g.Engine.Register(m.name+".fan_on", m.NewFan(true))
 	g.Engine.Register(m.name+".fan_off", m.NewFan(false))

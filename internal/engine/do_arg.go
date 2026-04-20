@@ -37,18 +37,27 @@ type (
 type FuncArg struct {
 	Name   string
 	F      func(context.Context, Arg) error
-	ErrorF map[int32]func(context.Context) error
+	ErrorF map[string]Doer
 	V      ValidateFunc
 	C      CalculationFunc
 	arg    Arg
 	set    bool
 }
 
-func (fa FuncArg) AddErrorAction(code int32, d Doer) {
-	if fa.ErrorF == nil {
-		fa.ErrorF = make(map[int32]func(context.Context) error)
+// FixErrorAction implements [Doer].
+func (fa FuncArg) FixErrorAction(code string) Doer {
+	d, ok := fa.ErrorF[code]
+	if !ok {
+		return Doer(nil)
 	}
-	fa.ErrorF[code] = d.Do
+	return d
+}
+
+func (fa FuncArg) AddErrorAction(code string, d Doer) {
+	if fa.ErrorF == nil {
+		fa.ErrorF = make(map[string]Doer)
+	}
+	fa.ErrorF[code] = d
 }
 
 func (fa FuncArg) Validate() error {
@@ -125,6 +134,7 @@ func (seq *Seq) Apply(arg Arg) (Doer, bool, error) {
 	if !found && places > 0 {
 		return nil, false, errors.Annotatef(ErrArgNotApplied, FmtErrContext, seq.String())
 	}
+	result.ErrorActions = seq.ErrorActions
 	return result, true, nil
 }
 

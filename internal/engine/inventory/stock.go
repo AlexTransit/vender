@@ -118,8 +118,13 @@ type custom struct {
 	spend  float32
 }
 
+// FixErrorAction implements [engine.Doer].
+func (c *custom) FixErrorAction(code string) engine.Doer {
+	panic("unimplemented")
+}
+
 // AddErrorAction implements [engine.Doer].
-func (c *custom) AddErrorAction(code int32, d engine.Doer) {
+func (c *custom) AddErrorAction(code string, d engine.Doer) {
 	panic("unimplemented")
 }
 
