@@ -2,8 +2,6 @@ package evend
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"time"
 
 	"github.com/AlexTransit/vender/hardware/mdb"
@@ -40,10 +38,10 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 	c.Generic.Init(ctx, 0xd8, "conveyor", proto2)
 	g.Engine.RegisterNewFuncAgr(c.name+".set_speed(?)", func(ctx context.Context, speed engine.Arg) error { return c.setSpeed(uint8(speed.(int16))) })
 	g.Engine.RegisterNewFuncAgr(c.name+".moveNoWait(?)", func(ctx context.Context, position engine.Arg) error {
-		return c.CommandNoWait(commandMove, byte(position.(int16)&0xff), byte(position.(int16)>>8))
+		return c.moveNoWait(position.(int16))
 	})
 	g.Engine.RegisterNewFunc(c.name+".movingDone", func(ctx context.Context) error { return c.WaitSuccess(c.timeout, true) })
-	g.Engine.RegisterNewFunc("conveyor.status", func(ctx context.Context) error {
+	g.Engine.RegisterNewFunc(c.name+".status", func(ctx context.Context) error {
 		g.Log.Infof("%s.position:%d speed:%d", c.name, c.position, c.speed)
 		return nil
 	})
@@ -56,39 +54,16 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 		return c.CommandWaitSuccess(uint16(cnt.(int16))*2*5, commandShake, byte(cnt.(int16)), 0)
 	})
 
-	if err := c.reset(); err != nil {
-		return errors.Join(errors.New(c.name+".init"), err)
-	}
-	return nil
+	return c.reset()
+}
+
+func (c *DeviceConveyor) moveNoWait(position int16) error {
+	return c.CommandNoWait(commandMove, byte(position&0xff), byte(position>>8))
 }
 
 func (c *DeviceConveyor) move(position int16) (err error) {
-	if err = c.mv(position); err == nil {
-		return nil
-	}
-	c.dev.TeleError(err)
-	return err
-}
-
-func (c *DeviceConveyor) mv(position int16) (err error) {
-	defer func() {
-		if err != nil {
-			err = errors.Join(errors.New(c.dev.Action), err)
-		}
-	}()
-	if c.position == -1 {
-		if err = c.setZero(); err != nil {
-			err = errors.Join(fmt.Errorf("%s move to zero error", c.name), err)
-			return err
-		}
-	}
-	c.dev.Action = fmt.Sprintf("%s move %v=>%v ", c.name, c.position, position)
-	if position == c.position {
-		return nil
-	}
 	if err = c.CommandWaitSuccess(c.timeout, commandMove, byte(position&0xff), byte(position>>8)); err == nil {
 		if err = c.ReadError(); err != nil {
-			err = errors.Join(errors.New(c.dev.Action), err)
 			c.position = -1
 			return err
 		}
@@ -96,17 +71,6 @@ func (c *DeviceConveyor) mv(position int16) (err error) {
 		return nil
 	}
 	return err
-}
-
-func (c *DeviceConveyor) setZero() (err error) {
-	if err = c.CommandWaitSuccess(c.timeout, commandMove, 0, 0); err != nil {
-		return
-	}
-	if errb := c.ReadError_proto2(); errb != 0 {
-		return fmt.Errorf("device:%v error:%v", c.dev.Name(), errb)
-	}
-	c.position = 0
-	return nil
 }
 
 func (c *DeviceConveyor) reset() error {
