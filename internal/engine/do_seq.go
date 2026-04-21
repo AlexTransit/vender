@@ -95,21 +95,20 @@ func (seq *Seq) Do(ctx context.Context) error {
 			if !errors.As(err, &appErr) {
 				return err
 			}
-			e.Log.Error(err)
 			errorCode := fmt.Sprint(appErr.Code())
 			ErrorD := seq.FixErrorAction(errorCode)
 			if ErrorD != nil {
-				e.Log.Infof("trying to fix the error(%v)", err)
 				err1 := e.Exec(ctx, ErrorD)
 				if err1 == nil {
 					e.Log.Info("the fix worked. try the action")
 					d := seq
 					err2 := e.Exec(ctx, d)
 					if err2 == nil {
-						e.Log.Info("error fixed. error")
+						e.Log.Errorf("error fixed. error:%v", err)
 						continue
 					}
 				}
+				e.Log.Error("!!! NOT FIXED" + d.String() + " error:" + errorCode)
 			}
 			// FIXME AlexM
 			helpers.SaveAndShowDoError(itemsList, err, "/home/vmc/vender-db/errors/")

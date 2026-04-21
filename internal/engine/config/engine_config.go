@@ -6,7 +6,8 @@ import (
 )
 
 type Config struct {
-	// RU: список псевдонимов.
+	// RU: список псевдонимов. псевдоним соджержит имя сценарий и может содержать сценарии действий при ошибках. при вызове псевдонима выполняется сценарий действий. если при выполнении возникает ошибка, то выполняется сценарий действий для этой ошибки. если сценария для этой ошибки нет, то выполнение псевдонима прерывается и ошибка возвращается в вызывающий код. сценарии действий если произошла ошибка. Ключ - регулярное выражение кода ошибки ( '\' надо экранировать ). на каждую ошибку свой сценарий. не допускается пересечение регулярных выражений для разных ошибок.
+	// Example: onError "3[78]" { scenario = "error_scenario" } - при ошибках с кодами 37,38 будет выполняться сценарий "error_scenario". onError "\\d+" { scenario = "error_scenario" } - для любой ошибки.
 	XXX_Aliases []Alias `hcl:"alias,block"`
 	Aliases     map[string]Alias
 	// RU: список действий при загрузке системы.
@@ -46,13 +47,9 @@ type ProfileStruct struct {
 }
 
 type Alias struct {
-	// RU: имя псевдонима.
-	Name string `hcl:"name,label"`
-	// RU: сценарий, который будет выполнен при вызове псевдонима.
+	Name     string `hcl:"name,label"`
 	Scenario string `hcl:"scenario"`
-	// RU: сценарии действий если произошла ошибка. Ключ - регулярное выражение кода ошибки. на каждую ошибку свой сценарий. не допускается пересечение регулярных выражений для разных ошибок.
-	// EN: error scenarios. Key - regular expression of the error code. each error has its own scenario. overlapping of regular expressions for different errors is not allowed.
-	// Example: onError "3[78]" { scenario = "error_scenario" } - при ошибках с кодами 37,38 будет выполняться сценарий "error_scenario"
+
 	XXX_OnError []XXXErrorAction `hcl:"onError,block"`
 	OnError     map[string]ErrorAction
 	Doer        engine.Doer

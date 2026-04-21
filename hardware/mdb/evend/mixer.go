@@ -2,7 +2,6 @@ package evend
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -10,61 +9,33 @@ import (
 	"github.com/AlexTransit/vender/internal/state"
 )
 
+// error codes:
 // 31	DEVICE_ERROR_MOTOR_DISCONNECTED
 // 32	DEVICE_ERROR_MOTOR_HIGH_LOAD
 // 33	DEVICE_ERROR_SHAKER_DISCONNECTED
 // 34	DEVICE_ERROR_SHAKER_HIGH_LOAD
-// 35	DEVICE_ERROR_REVERSE_DISCONNECTED
-// 36	DEVICE_ERROR_REVERSE_HIGH_LOAD
-// 37	DEVICE_ERROR_REVERSE_TOP_SENSOR
-// 38	DEVICE_ERROR_REVERSE_BOTTOM_SENSOR
-// 39	DEVICE_ERROR_REVERSE_NOT_IN_TOP_POSITION
 
 const DefaultShakeSpeed uint8 = 100
 
 type DeviceMixer struct { //nolint:maligned
-	Generic
+	MiherElevator
 
-	cPos       int8
-	nPos       int8
-	shakeSpeed uint8
+	// cPos       int8
+	// nPos       int8
+	// shakeSpeed uint8
 }
 
 func (m *DeviceMixer) init(ctx context.Context) error {
-	m.cPos = -1
+	m.currentPos = -1
 	m.shakeSpeed = DefaultShakeSpeed
 	g := state.GetGlobal(ctx)
-	m.Generic.Init(ctx, 0xc8, "mixer", proto1)
-
+	err := m.InitMiherElevator(ctx, 0xc8, "mixer", proto1)
 	g.Engine.Register(m.name+".shake(?)",
 		engine.FuncArg{Name: m.name + ".shake", F: func(ctx context.Context, arg engine.Arg) (err error) {
-			m.dev.Action = fmt.Sprintf("mixer shake(%d)", arg)
-			for i := 0; i < 5; i++ {
-				e := m.shake(uint8(arg.(int16)))
-				if e == nil {
-					if i > 0 {
-						m.dev.TeleError(fmt.Errorf("%d restart fix error (%v)", i, err))
-					}
-					return
-				}
-				err = errors.Join(err, e)
-				// FIXME тут можно добавть скрипт действий после ошибки
-				m.dev.Rst()
-				time.Sleep(3 * time.Second)
-			}
-			return err
+			m.dev.Action = fmt.Sprintf("miher shake(%d)", arg)
+			return m.shake(uint8(arg.(int16)))
 		}})
-	g.Engine.RegisterNewFunc(m.name+".reset", func(ctx context.Context) error { return m.reset() })
-	g.Engine.RegisterNewFuncAgr(m.name+".moveNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return m.moveNoWait(int8(arg.(int16))) })
 	g.Engine.RegisterNewFuncAgr(m.name+".shakeNoWait(?)", func(ctx context.Context, arg engine.Arg) error { return m.shakeNoWait(uint8(arg.(int16))) })
-	g.Engine.RegisterNewFuncAgr(m.name+".WaitSuccess(?)", func(ctx context.Context, arg engine.Arg) error { return m.WaitSuccess(uint16(arg.(int16)*5+5), true) })
-	g.Engine.RegisterNewFunc(m.name+".movingComplete", func(ctx context.Context) error { return m.mvComplete() })
-	g.Engine.Register(m.name+".move(?)", engine.FuncArg{Name: m.name + ".move", F: func(ctx context.Context, arg engine.Arg) (err error) {
-		if e := m.move(int8(arg.(int16))); e != nil {
-			return e
-		}
-		return nil
-	}})
 	g.Engine.Register(m.name+".fan_on", m.NewFan(true))
 	g.Engine.Register(m.name+".fan_off", m.NewFan(false))
 	g.Engine.Register(m.name+".shake_set_speed(?)",
@@ -72,42 +43,7 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 			m.shakeSpeed = uint8(arg.(int16))
 			return nil
 		}})
-
-	g.Engine.RegisterNewFunc("mixer.status", func(ctx context.Context) error {
-		g.Log.Infof("%s.position:%d shake speed:%d", m.name, m.cPos, m.shakeSpeed)
-		return nil
-	})
-	err := m.dev.Rst()
 	return err
-}
-
-func (m *DeviceMixer) reset() error {
-	m.cPos = -1
-	return m.dev.Rst()
-}
-
-func (m *DeviceMixer) move(position int8) (err error) {
-	m.dev.Action = fmt.Sprintf("mixer move %d=>%d", m.cPos, position)
-	if err = m.moveNoWait(position); err != nil {
-		return fmt.Errorf("send command(%v) error(%v)", m.dev.Action, err)
-	}
-	return m.mvComplete()
-}
-
-func (m *DeviceMixer) mvComplete() (err error) {
-	err = m.WaitSuccess(100, true) // FIXME timeout to config
-	if err == nil {
-		m.cPos = m.nPos
-		m.dev.Action = ""
-	}
-	return err
-}
-
-func (m *DeviceMixer) moveNoWait(position int8) (err error) {
-	m.cPos = -1
-	m.nPos = position
-	// return m.Command([]byte{0x03, byte(position), 0x64})
-	return m.Command(0x03, byte(position), 0x64)
 }
 
 func (m *DeviceMixer) shakeNoWait(steps uint8) (err error) {

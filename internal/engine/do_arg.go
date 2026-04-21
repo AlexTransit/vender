@@ -86,7 +86,7 @@ func (fa FuncArg) String() string {
 	if !fa.set {
 		return fmt.Sprintf("%s:Arg?", fa.Name)
 	}
-	return fmt.Sprintf("%s:%v", fa.Name, fa.arg)
+	return fmt.Sprintf("%s(%v)", fa.Name, fa.arg)
 }
 
 func (fa FuncArg) Apply(a Arg) (Doer, bool, error) {

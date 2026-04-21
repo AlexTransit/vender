@@ -232,7 +232,6 @@ func newDefaultConfig() *Config {
 			EvendDevices: map[string]DeviceConfig{},
 			Evend: evend_config.Config{
 				Cup:      evend_config.CupStruct{TimeoutSec: 60},
-				Elevator: evend_config.ElevatorStruct{MoveTimeoutSec: 100},
 				Espresso: evend_config.EspressoStruct{TimeoutSec: 300},
 				Valve:    evend_config.ValveStruct{TemperatureHot: 86},
 			},

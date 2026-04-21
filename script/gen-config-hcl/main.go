@@ -126,7 +126,7 @@ func addExamples(hclPath string) error {
     onError "4" {
       scenario = "error_scenario2"
     }
-    onError "\d{2}" { // this will match any 2 digit error code, but if there are more specific regexes for 30-39, they will take precedence over this one
+    onError "\d{2}" { // this will match any 2 digit error code.
       scenario = "error_scenario2"
     }
   }

@@ -94,12 +94,6 @@ hardware {
       timeout_sec = 60
     }
 
-# RU: блок управления подъемником.
-# EN: Elevator control block.
-    elevator {
-      move_timeout_sec = 100
-    }
-
 # RU: блок управления эспрессо.
 # EN: Espresso control block.
     espresso {
@@ -333,39 +327,25 @@ watchdog {
 
 # RU: Конфигурация для движка. В ней описано как готовить напитки, какие вложенные сценарии использовать и т.д.
 engine {
-# RU: список псевдонимов.
-# RU: имя псевдонима.
+# RU: список псевдонимов. псевдоним соджержит имя сценарий и может содержать сценарии действий при ошибках. при вызове псевдонима выполняется сценарий действий. если при выполнении возникает ошибка, то выполняется сценарий действий для этой ошибки. если сценария для этой ошибки нет, то выполнение псевдонима прерывается и ошибка возвращается в вызывающий код. сценарии действий если произошла ошибка. Ключ - регулярное выражение кода ошибки ( '\' надо экранировать ). на каждую ошибку свой сценарий. не допускается пересечение регулярных выражений для разных ошибок.
+# Example: onError "3[78]" { scenario = "error_scenario" } - при ошибках с кодами 37,38 будет выполняться сценарий "error_scenario". onError "\\d+" { scenario = "error_scenario" } - для любой ошибки.
   alias "example" {
-# RU: сценарий, который будет выполнен при вызове псевдонима.
     scenario = "example_scenario"
-# RU: сценарии действий если произошла ошибка. Ключ - регулярное выражение кода ошибки. на каждую ошибку свой сценарий. не допускается пересечение регулярных выражений для разных ошибок.
-# EN: error scenarios. Key - regular expression of the error code. each error has its own scenario. overlapping of regular expressions for different errors is not allowed.
-# Example: onError "3[78]" { scenario = "error_scenario" } - при ошибках с кодами 37,38 будет выполняться сценарий "error_scenario"
     onError "3[78]" { // this will match error codes 37 and 38
       scenario = "error_scenario"
     }
   }
-# RU: список псевдонимов.
-# RU: имя псевдонима.
+# RU: список псевдонимов. псевдоним соджержит имя сценарий и может содержать сценарии действий при ошибках. при вызове псевдонима выполняется сценарий действий. если при выполнении возникает ошибка, то выполняется сценарий действий для этой ошибки. если сценария для этой ошибки нет, то выполнение псевдонима прерывается и ошибка возвращается в вызывающий код. сценарии действий если произошла ошибка. Ключ - регулярное выражение кода ошибки ( '\' надо экранировать ). на каждую ошибку свой сценарий. не допускается пересечение регулярных выражений для разных ошибок.
+# Example: onError "3[78]" { scenario = "error_scenario" } - при ошибках с кодами 37,38 будет выполняться сценарий "error_scenario". onError "\\d+" { scenario = "error_scenario" } - для любой ошибки.
   alias "example1" {
-# RU: сценарий, который будет выполнен при вызове псевдонима.
     scenario = "example_scenario1"
-# RU: сценарии действий если произошла ошибка. Ключ - регулярное выражение кода ошибки. на каждую ошибку свой сценарий. не допускается пересечение регулярных выражений для разных ошибок.
-# EN: error scenarios. Key - regular expression of the error code. each error has its own scenario. overlapping of regular expressions for different errors is not allowed.
-# Example: onError "3[78]" { scenario = "error_scenario" } - при ошибках с кодами 37,38 будет выполняться сценарий "error_scenario"
     onError "3" {
       scenario = "error_scenario1"
     }
-# RU: сценарии действий если произошла ошибка. Ключ - регулярное выражение кода ошибки. на каждую ошибку свой сценарий. не допускается пересечение регулярных выражений для разных ошибок.
-# EN: error scenarios. Key - regular expression of the error code. each error has its own scenario. overlapping of regular expressions for different errors is not allowed.
-# Example: onError "3[78]" { scenario = "error_scenario" } - при ошибках с кодами 37,38 будет выполняться сценарий "error_scenario"
     onError "4" {
       scenario = "error_scenario2"
     }
-# RU: сценарии действий если произошла ошибка. Ключ - регулярное выражение кода ошибки. на каждую ошибку свой сценарий. не допускается пересечение регулярных выражений для разных ошибок.
-# EN: error scenarios. Key - regular expression of the error code. each error has its own scenario. overlapping of regular expressions for different errors is not allowed.
-# Example: onError "3[78]" { scenario = "error_scenario" } - при ошибках с кодами 37,38 будет выполняться сценарий "error_scenario"
-    onError "\d{2}" { // this will match any 2 digit error code, but if there are more specific regexes for 30-39, they will take precedence over this one
+    onError "\d{2}" { // this will match any 2 digit error code.
       scenario = "error_scenario2"
     }
   }
