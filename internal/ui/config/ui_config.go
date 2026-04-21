@@ -84,10 +84,11 @@ type TestsStruct struct {
 }
 
 type UIUser struct {
-	QrText             string
-	UiState            uint32
-	Lock               bool
-	DirtyMoney         currency.Amount
-	KeyboardReadEnable bool
+	QrText string
 	menu_config.UIMenuStruct
+	UiState               uint32
+	DirtyMoney            currency.Amount
+	Lock                  bool
+	KeyboardReadEnable    bool
+	RemoteOrderInProgress bool
 }

@@ -142,6 +142,9 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 		t.log.Errorf("unknown order status(%v)", m.MakeOrder.OrderStatus)
 		return
 	}
+	config_global.VMC.User.RemoteOrderInProgress = true
+	defer func() { config_global.VMC.User.RemoteOrderInProgress = false }()
+
 	sound.PlayMoneyIn()
 	config_global.VMC.User.DirtyMoney = config_global.VMC.User.SelectedItem.Price
 	config_global.VMC.User.PaymenId = m.MakeOrder.OwnerInt
