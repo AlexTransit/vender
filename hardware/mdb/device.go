@@ -142,7 +142,7 @@ func (dev *Device) Rst() (err error) {
 	dev.SetState(DeviceError)
 	// dev.SetErrorCode(0)
 	err = dev.Tx(dev.PacketReset, nil)
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(3000 * time.Millisecond)
 	if err == nil {
 		err = dev.TxReadSetup()
 		if dev.SetupResponse.l == 0 {

@@ -298,7 +298,7 @@ func newDefaultConfig() *Config {
 				"--config", "/home/vmc/vender-db/audio/tts/ruslan/voice.json",
 			},
 		},
-		Watchdog: watchdog_config.Config{Folder: "/run/vender/"},
+		Watchdog: watchdog_config.Config{Folder: "/run/user/1000/vender/"},
 		Engine: engine_config.Config{
 			Aliases: map[string]engine_config.Alias{},
 			Menu: menu_config.MenuStruct{
