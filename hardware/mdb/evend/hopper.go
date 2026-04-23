@@ -34,7 +34,7 @@ func (h *DeviceHopper) init(ctx context.Context, addr uint8, nameSuffix string) 
 		return runWitchControl(h, byte(spinTime.(int16)), 0)
 	})
 	g.Engine.RegisterNewFunc(h.name+".reset", func(ctx context.Context) error { return h.reset() })
-	return h.reset()
+	return h.dev.Rst()
 }
 
 func (mh *DeviceMultiHopper) init(ctx context.Context) error {
@@ -49,7 +49,7 @@ func (mh *DeviceMultiHopper) init(ctx context.Context) error {
 			return runWitchControl(mh, byte(spinTime.(int16)), hopperNumber)
 		})
 	}
-	return mh.reset()
+	return mh.dev.Rst()
 }
 
 func runWitchControl(b BunkerDevice, spinTime byte, hopperNumber byte) (err error) {

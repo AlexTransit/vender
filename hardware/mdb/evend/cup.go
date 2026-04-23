@@ -2,7 +2,6 @@ package evend
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"strconv"
 	"time"
@@ -39,23 +38,19 @@ func (c *DeviceCup) init(ctx context.Context) error {
 	g.Engine.RegisterNewFunc(c.name+".light_on", func(ctx context.Context) error { return c.LightOn() })
 	g.Engine.RegisterNewFunc(c.name+".light_off", func(ctx context.Context) error { return c.LightOff() })
 	g.Engine.RegisterNewFunc(c.name+".reset", func(ctx context.Context) error { return c.dev.Rst() })
-	g.Engine.RegisterNewFunc(c.name+".light_on_schedule", func(ctx context.Context) error {
-		if !c.lightShouldWork() {
-			if c.light {
-				return c.LightOff()
-			}
-			return nil
-		}
-		return c.LightOn()
-	})
-	if err := c.dev.Rst(); err != nil {
-		return fmt.Errorf("%s init error:%v", c.name, err)
-	}
-	return nil
+	g.Engine.RegisterNewFunc(c.name+".light_on_schedule", func(ctx context.Context) error { return c.lightOnSchedule() })
+
+	return c.dev.Rst()
 }
 
-func (c *DeviceCup) Reset() error {
-	return c.dev.Rst()
+func (c *DeviceCup) lightOnSchedule() error {
+	if !c.lightShouldWork() {
+		if c.light {
+			return c.LightOff()
+		}
+		return nil
+	}
+	return c.LightOn()
 }
 
 func (c *DeviceCup) LightOn() error {
