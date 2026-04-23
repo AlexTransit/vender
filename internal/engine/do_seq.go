@@ -19,7 +19,12 @@ type Seq struct {
 	name string
 	// _b    [seqBuffer]Doer
 	items        []Doer
-	ErrorActions map[string]Doer
+	ErrorActions map[string]ErrorActionEntry
+}
+
+type ErrorActionEntry struct {
+	Doer     Doer
+	SkipMain bool
 }
 
 // FixErrorAction returns Doer for error string matching regex keys. If no Doer matches, returns nil.
@@ -28,10 +33,13 @@ func (seq *Seq) FixErrorAction(errorCode string) Doer {
 	if seq.ErrorActions == nil {
 		return nil
 	}
-	for pattern, action := range seq.ErrorActions {
+	for pattern, entry := range seq.ErrorActions {
 		if matched, _ := regexp.MatchString(pattern, errorCode); matched {
+			if entry.SkipMain {
+				return entry.Doer
+			}
 			newSeq := NewSeq("fix-error")
-			newSeq.Append(action)
+			newSeq.Append(entry.Doer)
 			for _, item := range seq.items {
 				newSeq.Append(item)
 			}
@@ -41,11 +49,11 @@ func (seq *Seq) FixErrorAction(errorCode string) Doer {
 	return nil
 }
 
-func (seq *Seq) AddErrorAction(code string, d Doer) {
+func (seq *Seq) AddErrorAction(code string, d Doer, skipMain bool) {
 	if seq.ErrorActions == nil {
-		seq.ErrorActions = make(map[string]Doer)
+		seq.ErrorActions = make(map[string]ErrorActionEntry)
 	}
-	seq.ErrorActions[code] = d
+	seq.ErrorActions[code] = ErrorActionEntry{Doer: d, SkipMain: skipMain}
 }
 
 func NewSeq(name string, items ...int) *Seq {
@@ -101,12 +109,7 @@ func (seq *Seq) Do(ctx context.Context) error {
 				err1 := e.Exec(ctx, ErrorD)
 				if err1 == nil {
 					e.Log.Info("the fix worked. try the action")
-					d := seq
-					err2 := e.Exec(ctx, d)
-					if err2 == nil {
-						e.Log.Errorf("error fixed. error:%v", err)
-						continue
-					}
+					return nil
 				}
 				e.Log.Error("!!! NOT FIXED" + d.String() + " error:" + errorCode)
 			}
@@ -126,7 +129,7 @@ func (seq *Seq) cloneEmpty() *Seq {
 	new := NewSeq(seq.name)
 	if n := len(seq.items); n > cap(new.items) {
 		new.items = make([]Doer, 0, len(seq.items))
-		new.ErrorActions = make(map[string]Doer, len(seq.ErrorActions))
+		new.ErrorActions = make(map[string]ErrorActionEntry)
 	}
 	return new
 }

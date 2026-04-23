@@ -48,12 +48,12 @@ type FuncArg struct {
 func (fa FuncArg) FixErrorAction(code string) Doer {
 	d, ok := fa.ErrorF[code]
 	if !ok {
-		return Doer(nil)
+		return nil
 	}
 	return d
 }
 
-func (fa FuncArg) AddErrorAction(code string, d Doer) {
+func (fa FuncArg) AddErrorAction(code string, d Doer, skipMain bool) {
 	if fa.ErrorF == nil {
 		fa.ErrorF = make(map[string]Doer)
 	}

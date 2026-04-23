@@ -420,7 +420,7 @@ func (gen *Generic) ReadError_proto2() (errb byte) {
 
 func (gen *Generic) ReadError() (err error) {
 	if errb := gen.ReadError_proto2(); errb != 0 {
-		gen.dev.Rst()
+		// gen.dev.Rst()
 		return &helpers.AppError{ErrorCode: int32(errb), Err: fmt.Errorf("device:%s error:%v", gen.name, errb)}
 	}
 	return nil

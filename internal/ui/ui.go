@@ -56,6 +56,7 @@ func (ui *UI) Init(ctx context.Context) error {
 	ui.setState(types.StateBoot)
 
 	if watchdog.IsBroken() {
+		ui.g.Log.Warning("watchdog set broken state. !!!!!!!!!!!!!!!!!!!!!!!!!!")
 		ui.setState(types.StateBroken)
 	}
 

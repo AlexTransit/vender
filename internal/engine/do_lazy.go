@@ -33,11 +33,11 @@ type Lazy struct {
 
 // FixErrorAction implements [Doer].
 func (l *Lazy) FixErrorAction(code string) Doer {
-	return Doer(nil)
+	return nil
 }
 
 // AddErrorAction implements [Doer].
-func (l *Lazy) AddErrorAction(code string, d Doer) {
+func (l *Lazy) AddErrorAction(code string, d Doer, skipMain bool) {
 	panic("unimplemented")
 }
 

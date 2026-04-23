@@ -16,18 +16,18 @@ type Doer interface {
 	Calculation() float64
 	Do(context.Context) error
 	String() string // for logs
-	AddErrorAction(code string, d Doer)
+	AddErrorAction(code string, d Doer, skipMain bool)
 	FixErrorAction(code string) Doer
 }
 
 type Nothing struct{ Name string }
 
-func (n Nothing) Do(ctx context.Context) error       { return nil }
-func (n Nothing) Validate() error                    { return nil }
-func (n Nothing) Calculation() float64               { return 0 }
-func (n Nothing) String() string                     { return n.Name }
-func (n Nothing) AddErrorAction(code string, d Doer) {}
-func (n Nothing) FixErrorAction(code string) Doer    { return Doer(nil) }
+func (n Nothing) Do(ctx context.Context) error                      { return nil }
+func (n Nothing) Validate() error                                   { return nil }
+func (n Nothing) Calculation() float64                              { return 0 }
+func (n Nothing) String() string                                    { return n.Name }
+func (n Nothing) AddErrorAction(code string, d Doer, skipMain bool) {}
+func (n Nothing) FixErrorAction(code string) Doer                   { return Doer(nil) }
 
 type Func struct {
 	Name   string
@@ -37,12 +37,12 @@ type Func struct {
 	C      CalculationFunc
 }
 
-func (f Func) Validate() error                    { return useValidator(f.V) }
-func (f Func) Calculation() float64               { return useCalculation(f.C) }
-func (f Func) Do(ctx context.Context) error       { return f.F(ctx) }
-func (f Func) String() string                     { return f.Name }
-func (f Func) AddErrorAction(code string, d Doer) { f.ErrorF[code] = d.Do }
-func (f Func) FixErrorAction(code string) Doer    { return Doer(nil) }
+func (f Func) Validate() error                                   { return useValidator(f.V) }
+func (f Func) Calculation() float64                              { return useCalculation(f.C) }
+func (f Func) Do(ctx context.Context) error                      { return f.F(ctx) }
+func (f Func) String() string                                    { return f.Name }
+func (f Func) AddErrorAction(code string, d Doer, skipMain bool) { f.ErrorF[code] = d.Do }
+func (f Func) FixErrorAction(code string) Doer                   { return Doer(nil) }
 
 type Func0 struct {
 	Name   string
@@ -52,31 +52,31 @@ type Func0 struct {
 	C      CalculationFunc
 }
 
-func (f Func0) Validate() error                    { return useValidator(f.V) }
-func (f Func0) Calculation() float64               { return useCalculation(f.C) }
-func (f Func0) Do(ctx context.Context) error       { return f.F() }
-func (f Func0) String() string                     { return f.Name }
-func (f Func0) AddErrorAction(code string, d Doer) {}
-func (f Func0) FixErrorAction(code string) Doer    { return Doer(nil) }
+func (f Func0) Validate() error                                   { return useValidator(f.V) }
+func (f Func0) Calculation() float64                              { return useCalculation(f.C) }
+func (f Func0) Do(ctx context.Context) error                      { return f.F() }
+func (f Func0) String() string                                    { return f.Name }
+func (f Func0) AddErrorAction(code string, d Doer, skipMain bool) {}
+func (f Func0) FixErrorAction(code string) Doer                   { return Doer(nil) }
 
 type Sleep struct{ time.Duration }
 
-func (s Sleep) Validate() error                    { return nil }
-func (s Sleep) Calculation() float64               { return 0 }
-func (s Sleep) Do(ctx context.Context) error       { time.Sleep(s.Duration); return nil }
-func (s Sleep) String() string                     { return fmt.Sprintf("Sleep(%v)", s.Duration) }
-func (s Sleep) AddErrorAction(code string, d Doer) {}
-func (s Sleep) FixErrorAction(code string) Doer    { return Doer(nil) }
+func (s Sleep) Validate() error                                   { return nil }
+func (s Sleep) Calculation() float64                              { return 0 }
+func (s Sleep) Do(ctx context.Context) error                      { time.Sleep(s.Duration); return nil }
+func (s Sleep) String() string                                    { return fmt.Sprintf("Sleep(%v)", s.Duration) }
+func (s Sleep) AddErrorAction(code string, d Doer, skipMain bool) {}
+func (s Sleep) FixErrorAction(code string) Doer                   { return Doer(nil) }
 
 type RepeatN struct {
 	N uint
 	D Doer
 }
 
-func (r RepeatN) Validate() error                    { return r.D.Validate() }
-func (r RepeatN) Calculation() float64               { return r.D.Calculation() }
-func (r RepeatN) AddErrorAction(code string, d Doer) {}
-func (r RepeatN) FixErrorAction(code string) Doer    { return Doer(nil) }
+func (r RepeatN) Validate() error                                   { return r.D.Validate() }
+func (r RepeatN) Calculation() float64                              { return r.D.Calculation() }
+func (r RepeatN) AddErrorAction(code string, d Doer, skipMain bool) {}
+func (r RepeatN) FixErrorAction(code string) Doer                   { return Doer(nil) }
 
 func (r RepeatN) Do(ctx context.Context) error {
 	// FIXME solve import cycle, use GetGlobal(ctx).Log

@@ -157,7 +157,7 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 		for _, v := range cfg.Engine.XXX_Aliases {
 			errActions := map[string]engine_config.ErrorAction{}
 			for _, ea := range v.XXX_OnError {
-				errActions[ea.ErrCode] = engine_config.ErrorAction{Scenario: ea.Scenario}
+				errActions[ea.ErrCode] = engine_config.ErrorAction{Scenario: ea.Scenario, SkipMain: ea.SkipMain}
 			}
 			s := engine_config.Alias{
 				Name:     v.Name,

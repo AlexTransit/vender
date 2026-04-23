@@ -57,9 +57,10 @@ type Alias struct {
 type XXXErrorAction struct {
 	ErrCode  string `hcl:",label"`
 	Scenario string `hcl:"scenario"`
+	SkipMain bool   `hcl:"skip,optional"`
 }
-
 type ErrorAction struct {
 	Scenario string
 	Doer     engine.Doer
+	SkipMain bool
 }

@@ -126,7 +126,7 @@ func (c *custom) FixErrorAction(code string) engine.Doer {
 }
 
 // AddErrorAction implements [engine.Doer].
-func (c *custom) AddErrorAction(code string, d engine.Doer) {
+func (c *custom) AddErrorAction(code string, d engine.Doer, skipMain bool) {
 	panic("unimplemented")
 }
 

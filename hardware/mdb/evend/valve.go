@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"time"
 
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/engine/inventory"
@@ -31,9 +30,10 @@ func (e *ErrWaterTemperature) Error() string {
 type DeviceValve struct { //nolint:maligned
 	Generic
 
-	tempHot       int32
-	tempHotTarget uint8
-	waterStock    *inventory.Stock
+	tempHot         int32
+	tempHotTarget   uint8
+	pourMilliliters byte
+	waterStock      *inventory.Stock
 }
 
 var EValve DeviceValve
@@ -54,14 +54,16 @@ func (dv *DeviceValve) init(ctx context.Context) (err error) {
 	}
 	dv.waterStock = waterStock
 	g.Engine.RegisterNewFuncAgr("add.water_hot(?)", func(ctx context.Context, arg engine.Arg) error { return dv.waterRun(waterHot, uint8(arg.(int16))) })
+	g.Engine.RegisterNewFuncAgr("add.water_hot_NoWait(?)", func(ctx context.Context, arg engine.Arg) error {
+		return dv.waterRunNoWait(waterHot, uint8(arg.(int16)))
+	})
 	g.Engine.RegisterNewFuncAgr("add.water_cold(?)", func(ctx context.Context, arg engine.Arg) error { return dv.waterRun(waterCold, uint8(arg.(int16))) })
 	g.Engine.RegisterNewFuncAgr("add.water_espresso(?)", func(ctx context.Context, arg engine.Arg) error { return dv.waterRun(waterEspresso, uint8(arg.(int16))) })
 	g.Engine.RegisterNewFunc("evend.valve.get_temp_hot", func(ctx context.Context) error { return dv.readTemp() })
 	g.Engine.RegisterNewFunc("evend.valve.reset", func(ctx context.Context) error { return dv.Reset() })
-
 	g.Engine.RegisterNewFuncAgr("evend.valve.set_temp_hot(?)", func(ctx context.Context, arg engine.Arg) error { return dv.SetTemp(uint8(arg.(int16))) })
-
 	g.Engine.RegisterNewFunc("evend.valve.set_temp_hot_config", func(ctx context.Context) error { return dv.SetTemp(uint8(valveConfig.TemperatureHot)) })
+	g.Engine.RegisterNewFunc(dv.name+".flowDone", func(ctx context.Context) error { return dv.flowDone() })
 	g.Engine.RegisterNewFunc("evend.valve.status", func(ctx context.Context) error {
 		ct, err := dv.GetTemperature()
 		g.Log.Infof("current temp=%v target temp=%v", ct, EValve.tempHotTarget)
@@ -88,9 +90,9 @@ const (
 	waterEspresso = byte(0x03)
 )
 
-func (dv *DeviceValve) SetStore() bool {
-	fmt.Printf("\033[41m %v \033[0m\n", dv)
-	return true
+func (dv *DeviceValve) UpdateStore() {
+	dv.waterStock.SpendValue(dv.pourMilliliters)
+	dv.pourMilliliters = 0
 }
 
 func waterTypeString(waterType byte) string {
@@ -106,26 +108,39 @@ func waterTypeString(waterType byte) string {
 }
 
 func (dv *DeviceValve) Reset() (err error) {
-	err = dv.dev.Rst()
-	if err != nil {
-		return
-	}
-	time.Sleep(3 * time.Second)
-	dv.WaitSuccess(1, false)
-	dv.SetTemp(0)
-	dv.readTemp()
-	return dv.WaitSuccess(1, false)
+	dv.pourMilliliters = 0
+	return dv.dev.Rst()
 }
 
-func (dv *DeviceValve) waterRun(waterType byte, steps uint8) (err error) {
+func (dv *DeviceValve) flowDone() (err error) {
+	timeuot := uint16(dv.pourMilliliters) * 32
+	if timeuot == 0 {
+		timeuot = 5
+	}
+	err = dv.WaitSuccess(timeuot, true)
+	if err != nil {
+		return err
+	}
+	dv.log.Infof("stop flow %d ml.", dv.pourMilliliters)
+	dv.UpdateStore()
+	return nil
+}
+
+func (dv *DeviceValve) waterRunNoWait(waterType byte, milliliters uint8) (err error) {
 	wts := waterTypeString(waterType)
-	dv.log.Infof("start %s %d ml.", wts, steps)
-	milliliterToHW := byte(math.Round(float64(dv.waterStock.GetSpendRate() * float32(steps))))
-	timeuot := uint16(steps) * 32
-	err = dv.CommandWaitSuccess(timeuot, waterType, milliliterToHW)
-	dv.log.Infof("stop %s %d ml.", wts, steps)
-	dv.waterStock.SpendValue(milliliterToHW)
+	dv.log.Infof("start %s %d ml.", wts, milliliters)
+	dv.pourMilliliters = dv.milliliters(milliliters)
+	err = dv.CommandNoWait(waterType, dv.pourMilliliters)
 	return err
+}
+
+func (dv *DeviceValve) waterRun(waterType byte, milliliters uint8) (err error) {
+	dv.waterRunNoWait(waterType, milliliters)
+	return dv.flowDone()
+}
+
+func (dv *DeviceValve) milliliters(milliliters uint8) (hwValue byte) {
+	return byte(math.Round(float64(dv.waterStock.GetSpendRate() * float32(milliliters))))
 }
 
 func (dv *DeviceValve) GetTemperature() (int32, error) {
