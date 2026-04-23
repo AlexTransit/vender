@@ -10,21 +10,31 @@ import (
 func EnumHopper(ctx context.Context, hNo int) error {
 	g := state.GetGlobal(ctx)
 	dev := &DeviceHopper{}
-	addr := uint8(0x40 + (hNo-1)*8)
 	suffix := strconv.Itoa(hNo)
-	return g.RegisterDevice("evend.hopper"+suffix, dev, func() error { return dev.init(ctx, addr, suffix) })
+	dev.name = "hopper" + suffix
+	addr := uint8(0x40 + (hNo-1)*8)
+	return g.RegisterDevice("evend."+dev.name, dev, func() error {
+		err := dev.init(ctx, addr, proto2)
+		return err
+		// return dev.init(ctx, addr, suffix, proto2)
+	})
 }
 
 func EnumMultiHopper(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
-	dev := &DeviceMultiHopper{}
-	return g.RegisterDevice("evend.multihopper", dev, func() error { return dev.init(ctx) })
+	dev := &DeviceHopper{}
+	dev.name = "multihopper"
+	return g.RegisterDevice("evend."+dev.name, dev, func() error {
+		err := dev.init(ctx, 0xb8, proto1)
+		return err
+		// return dev.init(ctx, 0xb8, "", proto1)
+	})
 }
 
 func EnumValve(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	// dev := &DeviceValve{}
-	dev := &EValve
+	dev := &DeviceValve{}
 	return g.RegisterDevice("evend.valve", dev, func() error { return dev.init(ctx) })
 }
 

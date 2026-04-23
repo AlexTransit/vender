@@ -10,68 +10,80 @@ import (
 
 type DeviceHopper struct {
 	Generic
+	count uint8
 }
 
-type DeviceMultiHopper struct {
-	Generic
-}
 type BunkerDevice interface {
 	run(byte, byte) error
 	reset() error
-	logError(error)
+	// logError(error)
 }
 
-func (h *DeviceHopper) reset() error             { return h.dev.Rst() }
-func (h *DeviceHopper) logError(err error)       { h.dev.Log.Error(err) }
-func (mh *DeviceMultiHopper) reset() error       { return mh.dev.Rst() }
-func (mh *DeviceMultiHopper) logError(err error) { mh.dev.Log.Error(err) }
+func (h *DeviceHopper) reset() error { return h.dev.Rst() }
 
-func (h *DeviceHopper) init(ctx context.Context, addr uint8, nameSuffix string) error {
-	name := "hopper" + nameSuffix
+// func (h *DeviceHopper) logError(err error) { h.dev.Log.Error(err) }
+
+func (h *DeviceHopper) init(ctx context.Context, addr uint8, proto evendProtocol) error {
 	g := state.GetGlobal(ctx)
-	h.Generic.Init(ctx, addr, name, proto2)
-	g.Engine.RegisterNewFuncAgr(h.name+".run(?)", func(ctx context.Context, spinTime engine.Arg) (err error) {
-		return runWitchControl(h, byte(spinTime.(int16)), 0)
-	})
-	g.Engine.RegisterNewFunc(h.name+".reset", func(ctx context.Context) error { return h.reset() })
+	h.Generic.Init(ctx, addr, h.name, proto)
+
+	g.Engine.RegisterNewFunc(h.name+".reset", func(ctx context.Context) error { return h.dev.Rst() })
+	// одиночный хоппер
+	if proto == proto2 {
+		g.Engine.RegisterNewFuncAgr(h.name+".run(?)", func(ctx context.Context, spinTime engine.Arg) error {
+			return runWithControl(h, byte(spinTime.(int16)), 0)
+		})
+		g.Engine.RegisterNewFuncAgr(h.name+".runNoWait(?)", func(ctx context.Context, spinTime engine.Arg) error {
+			return runNoWait(h, byte(spinTime.(int16)), 0)
+		})
+	}
+	// мультихоппер
+	if proto == proto1 {
+		for i := uint8(1); i <= 8; i++ {
+			n := i
+			g.Engine.RegisterNewFuncAgr(fmt.Sprintf("%s%d.run(?)", h.name, n), func(ctx context.Context, spinTime engine.Arg) error {
+				return runWithControl(h, byte(spinTime.(int16)), n)
+			})
+			g.Engine.RegisterNewFuncAgr(fmt.Sprintf("%s%d.runNoWait(?)", h.name, n), func(ctx context.Context, spinTime engine.Arg) error {
+				return runNoWait(h, byte(spinTime.(int16)), n)
+			})
+		}
+	}
 	return h.dev.Rst()
 }
 
-func (mh *DeviceMultiHopper) init(ctx context.Context) error {
-	const addr = 0xb8
-	g := state.GetGlobal(ctx)
-	mh.Generic.Init(ctx, addr, "multihopper", proto1)
-
-	g.Engine.RegisterNewFunc(mh.name+".run", func(ctx context.Context) error { return mh.reset() })
-	for i := uint8(1); i <= 8; i++ {
-		hopperNumber := i
-		g.Engine.RegisterNewFuncAgr(fmt.Sprintf("%s%d.run(?)", mh.name, hopperNumber), func(ctx context.Context, spinTime engine.Arg) (err error) {
-			return runWitchControl(mh, byte(spinTime.(int16)), hopperNumber)
-		})
+func (h *DeviceHopper) run(spinTime byte, hopperNumber byte) error {
+	if hopperNumber == 0 {
+		h.dev.Action = fmt.Sprintf("hopper %s run(%v)", h.name, spinTime)
+		h.log.Infof("%s start (%d)", h.name, spinTime)
+		defer h.log.Infof("%s stop", h.name)
+		return h.CommandWaitSuccess(uint16(spinTime)+5, spinTime)
 	}
-	return mh.dev.Rst()
+	h.dev.Action = fmt.Sprintf("multihopper%v run(%v)", hopperNumber, spinTime)
+	h.log.Infof("%s%d start (%d)", h.name, hopperNumber, spinTime)
+	defer h.log.Infof("%s%d stop", h.name, hopperNumber)
+	return h.CommandWaitSuccess(uint16(spinTime)+5, hopperNumber, spinTime)
 }
 
-func runWitchControl(b BunkerDevice, spinTime byte, hopperNumber byte) (err error) {
+func runWithControl(b BunkerDevice, spinTime byte, hopperNumber byte) error {
 	if spinTime == 0 {
-		return
+		return nil
 	}
-	err = b.run(spinTime, hopperNumber)
-	return err
+	return b.run(spinTime, hopperNumber)
 }
 
-func (h *DeviceHopper) run(spinTime byte, _tmp byte) error {
-	h.dev.Action = fmt.Sprintf("hopper %s run(%v)", h.name, spinTime)
-	timeout := uint16(spinTime) + 5
-	h.log.Infof("%s start (%d)", h.name, spinTime)
-	defer h.log.Infof("%s stop", h.name)
-	return h.CommandWaitSuccess(timeout, spinTime)
+func runNoWait(b BunkerDevice, spinTime byte, hopperNumber byte) error {
+	if spinTime == 0 {
+		return nil
+	}
+	return b.run(spinTime, hopperNumber)
 }
 
-func (mh *DeviceMultiHopper) run(spinTime byte, hopperNumber byte) error {
-	mh.dev.Action = fmt.Sprintf("multihopper%v run(%v)", hopperNumber, spinTime)
-	timeout := uint16(spinTime) + 5
-	mh.log.Infof("%s%d start (%d)", mh.name, hopperNumber, spinTime)
-	defer mh.log.Infof("%s%d stop", mh.name, hopperNumber)
-	return mh.CommandWaitSuccess(timeout, hopperNumber, spinTime)
+func (h *DeviceHopper) runNoWait(spinTime byte, hopperNumber byte) error {
+	if hopperNumber == 0 {
+		h.log.Infof("%s start (%d)", h.name, spinTime)
+		return h.CommandNoWait(spinTime)
+	}
+	h.log.Infof("%s%d start (%d)", h.name, hopperNumber, spinTime)
+	return h.CommandNoWait(hopperNumber, spinTime)
 }
