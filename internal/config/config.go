@@ -231,7 +231,6 @@ func newDefaultConfig() *Config {
 		Hardware: HardwareStruct{
 			EvendDevices: map[string]DeviceConfig{},
 			Evend: evend_config.Config{
-				Cup:      evend_config.CupStruct{TimeoutSec: 60},
 				Espresso: evend_config.EspressoStruct{TimeoutSec: 300},
 				Valve:    evend_config.ValveStruct{TemperatureHot: 86},
 			},

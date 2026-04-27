@@ -37,6 +37,10 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 	c.dev.DelayNext = 200 * time.Millisecond // empirically found lower total WaitReady
 	c.Generic.Init(ctx, 0xd8, "conveyor", proto2)
 	g.Engine.RegisterNewFuncAgr(c.name+".set_speed(?)", func(ctx context.Context, speed engine.Arg) error { return c.setSpeed(uint8(speed.(int16))) })
+	g.Engine.RegisterNewFuncAgr("pc(?)", func(ctx context.Context, poolCount engine.Arg) error {
+		return c.WaitSuccess(uint16(poolCount.(int16)), false)
+	})
+
 	g.Engine.RegisterNewFuncAgr(c.name+".moveNoWait(?)", func(ctx context.Context, position engine.Arg) error {
 		return c.moveNoWait(position.(int16))
 	})

@@ -113,7 +113,7 @@ func (dv *DeviceValve) Reset() (err error) {
 }
 
 func (dv *DeviceValve) flowDone() (err error) {
-	timeuot := uint16(dv.pourMilliliters) * 32
+	timeuot := uint16(dv.pourMilliliters) * 10
 	if timeuot == 0 {
 		timeuot = 5
 	}

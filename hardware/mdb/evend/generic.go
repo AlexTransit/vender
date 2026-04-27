@@ -332,31 +332,20 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error
 
 func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool) (err error) {
 	response := mdb.Packet{}
-	var needReset bool
 	for count > 0 {
 		count--
 		time.Sleep(200 * time.Millisecond)
 		if err = gen.dev.Tx(gen.dev.PacketPoll, &response); err != nil {
 			return err
 		}
-		// AlexM FIXME
-		// for valve clear 2 bit. 8-bit = not configure 7-bit -temp not walid
 		rb := response.Byte() << 2
 		rb = rb >> 2
-		if rb&0x08 == 0x08 || response.Len() == 0 || rb == 0 {
-			// len=0 maybe sucsess :)
+		if rb&(1<<3) != 0 { // error bit
 			return gen.ReadError()
 		}
-		if rb&0x20 == 0x20 {
-			needReset = true
+		if response.Len() == 0 || rb == 0 { // complete
+			return nil
 		}
-		if rb&0x50 == 0x50 { // executing
-			continue
-		}
-	}
-	if needReset {
-		gen.dev.Rst()
-		return fmt.Errorf("device %v reseted", gen.dev.Name())
 	}
 	if timeOut {
 		return errors.New("time out pool")
@@ -375,7 +364,7 @@ func (gen *Generic) CommandNoWait(cmd ...byte) (err error) {
 	if err = gen.Command(cmd...); err != nil {
 		return
 	}
-	return gen.WaitSuccess(5, false)
+	return gen.WaitSuccess(1, false)
 }
 
 func (gen *Generic) CommandWaitSuccess(count uint16, cmd ...byte) (err error) {
@@ -439,6 +428,9 @@ func (gen *Generic) ReadData(readCommand byte) (rp []byte, err error) {
 			rp = response.Bytes()
 			if err != nil {
 				gen.log.Errorf("%s read data (%v)", gen.name, err)
+			}
+			if err = gen.WaitSuccess(1, false); err != nil {
+				return nil, err
 			}
 			return
 		}

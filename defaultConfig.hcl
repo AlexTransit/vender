@@ -86,14 +86,6 @@ hardware {
 
   evend {
 
-# RU: блок вызачи стаканов.
-# EN: Cup dispensing block.
-    cup {
-# RU: Время в секундах, через которое стакан считается не выданным и устройство может начать выдавать новый стакан.
-# EN: Time in seconds after which a cup is considered not dispensed and the device can start dispensing a new cup.
-      timeout_sec = 60
-    }
-
 # RU: блок управления эспрессо.
 # EN: Espresso control block.
     espresso {
