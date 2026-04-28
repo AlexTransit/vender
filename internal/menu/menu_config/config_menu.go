@@ -20,13 +20,20 @@ type MenuStruct struct {
 }
 
 type MenuItem struct {
-	Code      string `hcl:"code,label"`
-	Disabled  bool   `hcl:"disabled,optional"`
-	Name      string `hcl:"name,optional"`
-	XXX_Price int    `hcl:"price"` // use scaled `Price`, this is for decoding config only
-	Scenario  string `hcl:"scenario"`
-	CreamMax  uint8  `hcl:"creamMax,optional"`
-	SugarMax  uint8  `hcl:"sugarMax,optional"`
+	// RU: код напитка. должен быть уникальным для каждого напитка.
+	Code string `hcl:"code,label"`
+	// RU: отключить напиток. если true, то напиток не будет отображаться в меню и не будет доступен для приготовления.
+	Disabled bool `hcl:"disabled,optional"`
+	// RU: имя напитка.
+	Name string `hcl:"name,optional"`
+	// RU: цена напитка в копейках. например, 25 рублей это 2500 копеек. если цена 0, то напиток будет бесплатным.
+	XXX_Price int `hcl:"price"` // use scaled `Price`, this is for decoding config only
+	// RU: сценарий приготовления напитка. может содержать псевдонимы.
+	Scenario string `hcl:"scenario"`
+	// RU: максимальное количество сливок для этого напитка. если 0, то будет использоваться значение из DefaultCreamMax.
+	CreamMax uint8 `hcl:"creamMax,optional"`
+	// RU: максимальное количество сахара для этого напитка. если 0, то будет использоваться значение из DefaultSugarMax.
+	SugarMax uint8 `hcl:"sugarMax,optional"`
 
 	Price currency.Amount
 	Doer  engine.Doer

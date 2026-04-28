@@ -3,18 +3,12 @@
 package evend_config
 
 type Config struct { //nolint:maligned
-	Cup      CupStruct      `hcl:"cup,block"`
-	Elevator ElevatorStruct `hcl:"elevator,block"`
+	// RU: блок управления эспрессо.
+	// EN: Espresso control block.
 	Espresso EspressoStruct `hcl:"espresso,block"`
-	Valve    ValveStruct    `hcl:"valve,block"`
-}
-
-type CupStruct struct { //nolint:maligned
-	TimeoutSec int `hcl:"timeout_sec"`
-}
-
-type ElevatorStruct struct { //nolint:maligned
-	MoveTimeoutSec int `hcl:"move_timeout_sec,optional"`
+	// RU: блок управления клапанами.
+	// EN: Valve control block.
+	Valve ValveStruct `hcl:"valve,block"`
 }
 
 type EspressoStruct struct { //nolint:maligned

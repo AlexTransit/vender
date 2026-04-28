@@ -2,9 +2,7 @@ package evend
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"time"
 
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
@@ -36,7 +34,7 @@ func (h *DeviceHopper) init(ctx context.Context, addr uint8, nameSuffix string) 
 		return runWitchControl(h, byte(spinTime.(int16)), 0)
 	})
 	g.Engine.RegisterNewFunc(h.name+".reset", func(ctx context.Context) error { return h.reset() })
-	return h.reset()
+	return h.dev.Rst()
 }
 
 func (mh *DeviceMultiHopper) init(ctx context.Context) error {
@@ -44,32 +42,21 @@ func (mh *DeviceMultiHopper) init(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	mh.Generic.Init(ctx, addr, "multihopper", proto1)
 
-	g.Engine.RegisterNewFunc(mh.name+".reset", func(ctx context.Context) error { return mh.reset() })
+	g.Engine.RegisterNewFunc(mh.name+".run", func(ctx context.Context) error { return mh.reset() })
 	for i := uint8(1); i <= 8; i++ {
 		hopperNumber := i
 		g.Engine.RegisterNewFuncAgr(fmt.Sprintf("%s%d.run(?)", mh.name, hopperNumber), func(ctx context.Context, spinTime engine.Arg) (err error) {
 			return runWitchControl(mh, byte(spinTime.(int16)), hopperNumber)
 		})
 	}
-	return mh.reset()
+	return mh.dev.Rst()
 }
 
 func runWitchControl(b BunkerDevice, spinTime byte, hopperNumber byte) (err error) {
 	if spinTime == 0 {
 		return
 	}
-	for i := 1; i <= 2; i++ {
-		e := b.run(spinTime, hopperNumber)
-		if e == nil {
-			if err != nil {
-				b.logError(fmt.Errorf("(%d) restart fix error (%v)", i, err))
-			}
-			return
-		}
-		err = errors.Join(err, e)
-		b.reset()
-		time.Sleep(5 * time.Second)
-	}
+	err = b.run(spinTime, hopperNumber)
 	return err
 }
 

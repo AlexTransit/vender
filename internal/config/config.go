@@ -32,7 +32,7 @@ func WriteConfigToFile() {
 	// 	}
 	f := hclwrite.NewEmptyFile()
 	gohcl.EncodeIntoBody(newDefaultConfig(), f.Body())
-	file, err := os.OpenFile("defaultConfig.hcl", os.O_WRONLY|os.O_CREATE, 0o644)
+	file, err := os.OpenFile("defaultConfig.hcl", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
 		panic(err)
 	}
@@ -155,9 +155,14 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 		}
 		cfg.Inventory.Ingredient = nil
 		for _, v := range cfg.Engine.XXX_Aliases {
+			errActions := map[string]engine_config.ErrorAction{}
+			for _, ea := range v.XXX_OnError {
+				errActions[ea.ErrCode] = engine_config.ErrorAction{Scenario: ea.Scenario, SkipMain: ea.SkipMain}
+			}
 			s := engine_config.Alias{
 				Name:     v.Name,
 				Scenario: v.Scenario,
+				OnError:  errActions,
 			}
 			cfg.Engine.Aliases[v.Name] = s
 		}
@@ -226,8 +231,6 @@ func newDefaultConfig() *Config {
 		Hardware: HardwareStruct{
 			EvendDevices: map[string]DeviceConfig{},
 			Evend: evend_config.Config{
-				Cup:      evend_config.CupStruct{TimeoutSec: 60},
-				Elevator: evend_config.ElevatorStruct{MoveTimeoutSec: 100},
 				Espresso: evend_config.EspressoStruct{TimeoutSec: 300},
 				Valve:    evend_config.ValveStruct{TemperatureHot: 86},
 			},
@@ -294,7 +297,7 @@ func newDefaultConfig() *Config {
 				"--config", "/home/vmc/vender-db/audio/tts/ruslan/voice.json",
 			},
 		},
-		Watchdog: watchdog_config.Config{Folder: "/run/vender/"},
+		Watchdog: watchdog_config.Config{Folder: "/run/user/1000/vender/"},
 		Engine: engine_config.Config{
 			Aliases: map[string]engine_config.Alias{},
 			Menu: menu_config.MenuStruct{

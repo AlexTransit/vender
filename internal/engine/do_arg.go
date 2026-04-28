@@ -35,12 +35,29 @@ type (
 )
 
 type FuncArg struct {
-	Name string
-	F    func(context.Context, Arg) error
-	V    ValidateFunc
-	C    CalculationFunc
-	arg  Arg
-	set  bool
+	Name   string
+	F      func(context.Context, Arg) error
+	ErrorF map[string]Doer
+	V      ValidateFunc
+	C      CalculationFunc
+	arg    Arg
+	set    bool
+}
+
+// FixErrorAction implements [Doer].
+func (fa FuncArg) FixErrorAction(code string) Doer {
+	d, ok := fa.ErrorF[code]
+	if !ok {
+		return nil
+	}
+	return d
+}
+
+func (fa FuncArg) AddErrorAction(code string, d Doer, skipMain bool) {
+	if fa.ErrorF == nil {
+		fa.ErrorF = make(map[string]Doer)
+	}
+	fa.ErrorF[code] = d
 }
 
 func (fa FuncArg) Validate() error {
@@ -61,14 +78,15 @@ func (fa FuncArg) Do(ctx context.Context) error {
 	if !fa.set {
 		return errors.Annotatef(ErrArgNotApplied, FmtErrContext, fa.Name)
 	}
-	return fa.F(ctx, fa.arg)
+	err := fa.F(ctx, fa.arg)
+	return err
 }
 
 func (fa FuncArg) String() string {
 	if !fa.set {
 		return fmt.Sprintf("%s:Arg?", fa.Name)
 	}
-	return fmt.Sprintf("%s:%v", fa.Name, fa.arg)
+	return fmt.Sprintf("%s(%v)", fa.Name, fa.arg)
 }
 
 func (fa FuncArg) Apply(a Arg) (Doer, bool, error) {
@@ -116,6 +134,7 @@ func (seq *Seq) Apply(arg Arg) (Doer, bool, error) {
 	if !found && places > 0 {
 		return nil, false, errors.Annotatef(ErrArgNotApplied, FmtErrContext, seq.String())
 	}
+	result.ErrorActions = seq.ErrorActions
 	return result, true, nil
 }
 

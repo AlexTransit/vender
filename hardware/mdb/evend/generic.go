@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/AlexTransit/vender/hardware/mdb"
+	"github.com/AlexTransit/vender/helpers"
 	"github.com/AlexTransit/vender/internal/engine"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/log2"
@@ -43,10 +44,6 @@ const (
 	DefaultReadyTimeout = 5 * time.Second
 	DefaultResetDelay   = 2100 * time.Millisecond
 )
-
-type DeviceErrorCode byte
-
-func (c DeviceErrorCode) Error() string { return fmt.Sprintf("evend errorcode=%d", c) }
 
 type Generic struct {
 	log          *log2.Log
@@ -154,9 +151,9 @@ func (gen *Generic) NewWaitReady(tag string) engine.Doer {
 				if code == 0 {
 					return true, nil
 				}
-				gen.dev.Log.Errorf("%s response=%x errorcode=%d", tag, bs, code)
-				// gen.dev.SetErrorCode(int32(code))
-				return true, DeviceErrorCode(code)
+				err := fmt.Errorf("%s response=%x errorcode=%d", tag, bs, code)
+				gen.dev.Log.Error(err)
+				return true, &helpers.AppError{ErrorCode: int32(code), Err: err}
 
 			default:
 				err := fmt.Errorf("%s unknown response=%x", tag, bs)
@@ -263,8 +260,8 @@ func (gen *Generic) newProto1PollWaitSuccess(tag string, timeout time.Duration) 
 		}
 		if bs[0] == 0x04 {
 			code := bs[1]
-			gen.dev.SetErrorCode(int32(code))
-			return true, DeviceErrorCode(code)
+			err := fmt.Errorf("%s errorcode=%d", tag, code)
+			return true, &helpers.AppError{ErrorCode: int32(code), Err: err}
 		}
 		return true, gen.NewErrPollUnexpected(p)
 	}
@@ -290,7 +287,8 @@ func (gen *Generic) proto2PollCommon(tag string, bs []byte) (bool, error) {
 			err = fmt.Errorf("%s %v", tag, err)
 			return true, err
 		}
-		return true, DeviceErrorCode(code)
+		// return true, DeviceErrorCode(code)
+		return true, &helpers.AppError{ErrorCode: int32(code), Err: err}
 	}
 	return false, nil
 }
@@ -316,9 +314,8 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error
 			return
 		case 0x04:
 			errCode := rb[1]
-			gen.dev.SetErrorCode(int32(errCode))
 			e := fmt.Errorf("execute command(%s) error(%v)", gen.dev.Action, errCode)
-			return e
+			return &helpers.AppError{ErrorCode: int32(errCode), Err: e}
 		case 0x05:
 		default:
 			err = fmt.Errorf("unknow answer(%v) on command(%s)", rb, gen.dev.Action)
@@ -335,31 +332,20 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error
 
 func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool) (err error) {
 	response := mdb.Packet{}
-	var needReset bool
 	for count > 0 {
 		count--
 		time.Sleep(200 * time.Millisecond)
 		if err = gen.dev.Tx(gen.dev.PacketPoll, &response); err != nil {
 			return err
 		}
-		// AlexM FIXME
-		// for valve clear 2 bit. 8-bit = not configure 7-bit -temp not walid
 		rb := response.Byte() << 2
 		rb = rb >> 2
-		if rb&0x08 == 0x08 || response.Len() == 0 || rb == 0 {
-			// len=0 maybe sucsess :)
+		if rb&(1<<3) != 0 { // error bit
 			return gen.ReadError()
 		}
-		if rb&0x20 == 0x20 {
-			needReset = true
+		if response.Len() == 0 || rb == 0 { // complete
+			return nil
 		}
-		if rb&0x50 == 0x50 { // executing
-			continue
-		}
-	}
-	if needReset {
-		gen.dev.Rst()
-		return fmt.Errorf("device %v reseted", gen.dev.Name())
 	}
 	if timeOut {
 		return errors.New("time out pool")
@@ -378,7 +364,7 @@ func (gen *Generic) CommandNoWait(cmd ...byte) (err error) {
 	if err = gen.Command(cmd...); err != nil {
 		return
 	}
-	return gen.WaitSuccess(5, false)
+	return gen.WaitSuccess(1, false)
 }
 
 func (gen *Generic) CommandWaitSuccess(count uint16, cmd ...byte) (err error) {
@@ -423,9 +409,8 @@ func (gen *Generic) ReadError_proto2() (errb byte) {
 
 func (gen *Generic) ReadError() (err error) {
 	if errb := gen.ReadError_proto2(); errb != 0 {
-		gen.dev.Rst()
-		gen.dev.SetErrorCode(int32(errb))
-		return fmt.Errorf("device:%s error:%v", gen.name, errb)
+		// gen.dev.Rst()
+		return &helpers.AppError{ErrorCode: int32(errb), Err: fmt.Errorf("device:%s error:%v", gen.name, errb)}
 	}
 	return nil
 }
@@ -443,6 +428,9 @@ func (gen *Generic) ReadData(readCommand byte) (rp []byte, err error) {
 			rp = response.Bytes()
 			if err != nil {
 				gen.log.Errorf("%s read data (%v)", gen.name, err)
+			}
+			if err = gen.WaitSuccess(1, false); err != nil {
+				return nil, err
 			}
 			return
 		}

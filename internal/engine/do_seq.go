@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
@@ -15,14 +16,53 @@ const seqBuffer uint = 8
 // Error in one action aborts whole group.
 // Build graph with NewSeq().Append()
 type Seq struct {
-	name  string
-	_b    [seqBuffer]Doer
-	items []Doer
+	name string
+	// _b    [seqBuffer]Doer
+	items        []Doer
+	ErrorActions map[string]ErrorActionEntry
 }
 
-func NewSeq(name string) *Seq {
+type ErrorActionEntry struct {
+	Doer     Doer
+	SkipMain bool
+}
+
+// FixErrorAction returns Doer for error string matching regex keys. If no Doer matches, returns nil.
+// add action after fixing error
+func (seq *Seq) FixErrorAction(errorCode string) Doer {
+	if seq.ErrorActions == nil {
+		return nil
+	}
+	for pattern, entry := range seq.ErrorActions {
+		if matched, _ := regexp.MatchString(pattern, errorCode); matched {
+			if entry.SkipMain {
+				return entry.Doer
+			}
+			newSeq := NewSeq("fix-error")
+			newSeq.Append(entry.Doer)
+			for _, item := range seq.items {
+				newSeq.Append(item)
+			}
+			return newSeq
+		}
+	}
+	return nil
+}
+
+func (seq *Seq) AddErrorAction(code string, d Doer, skipMain bool) {
+	if seq.ErrorActions == nil {
+		seq.ErrorActions = make(map[string]ErrorActionEntry)
+	}
+	seq.ErrorActions[code] = ErrorActionEntry{Doer: d, SkipMain: skipMain}
+}
+
+func NewSeq(name string, items ...int) *Seq {
 	seq := &Seq{name: name}
-	seq.items = seq._b[:0]
+	if len(items) > 0 {
+		seq.items = make([]Doer, 0, items[0])
+	} else {
+		seq.items = make([]Doer, 0, seqBuffer)
+	}
 	return seq
 }
 
@@ -59,12 +99,25 @@ func (seq *Seq) Do(ctx context.Context) error {
 		err := e.Exec(ctx, d)
 		itemsList = append(itemsList, time.Now().Format("<- 15:04:05.00000 ")+d.String())
 		if err != nil {
+			var appErr *helpers.AppError
+			if !errors.As(err, &appErr) {
+				return err
+			}
+			errorCode := fmt.Sprint(appErr.Code())
+			ErrorD := seq.FixErrorAction(errorCode)
+			if ErrorD != nil {
+				err1 := e.Exec(ctx, ErrorD)
+				if err1 == nil {
+					e.Log.Info("the fix worked. try the action")
+					return nil
+				}
+				e.Log.Error("!!! NOT FIXED" + d.String() + " error:" + errorCode)
+			}
 			// FIXME AlexM
 			helpers.SaveAndShowDoError(itemsList, err, "/home/vmc/vender-db/errors/")
 			return err
 		}
 	}
-	//	helpers.SaveAndShowDoError(itemsList, nil)
 	return nil
 }
 
@@ -76,12 +129,13 @@ func (seq *Seq) cloneEmpty() *Seq {
 	new := NewSeq(seq.name)
 	if n := len(seq.items); n > cap(new.items) {
 		new.items = make([]Doer, 0, len(seq.items))
+		new.ErrorActions = make(map[string]ErrorActionEntry)
 	}
 	return new
 }
 
 func (seq *Seq) setItems(ds []Doer) {
 	var zeroBuffer [seqBuffer]Doer
-	copy(seq._b[:], zeroBuffer[:])
+	copy(seq.items[:], zeroBuffer[:])
 	seq.items = ds
 }

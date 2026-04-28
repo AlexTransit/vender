@@ -3,6 +3,7 @@ GOBUILD=$(GOCMD) build
 GOVULN=govulncheck
 BINARY_NAME=./build/vender
 TARGET_ENV=CGO_ENABLED=1 CC=arm-linux-gnueabihf-gcc GOOS=linux GOARCH=arm GOARM=7
+TARGET_ENV_64=CGO_ENABLED=1 CC=aarch64-linux-gnu-gcc GOOS=linux GOARCH=arm64
 VERSION=$(shell git describe --always --dirty --tags)
 UNAME_M := $(shell uname -m)
 
@@ -12,9 +13,20 @@ else
     DEFAULT_TARGET := build
 endif
 
-.PHONY: all audit build64 build
+.PHONY: all audit build64 build gen-doc gen-hcl
 
 all: $(DEFAULT_TARGET)
+
+gen-doc:
+	@echo "===> Generating config documentation..."
+	@./script/gen-config-doc
+	@echo "===> Done. Documentation: config_description.md"
+
+gen-hcl:
+	@echo "===> Generating default HCL config with comments..."
+	@go run ./script/gen-config-hcl
+	@echo "===> Done. File: defaultConfig.hcl"
+
 # .PHONY: audit build64 build
 audit:
 	@echo "===> Scanning for vulnerabilities..."
@@ -25,6 +37,14 @@ audit:
 	}
 	@# Запуск самой проверки
 	@$(GOVULN) ./... && echo "===> [OK] No vulnerabilities found."
+build64_cross:
+	@echo "===> Cross-building for ARM64 (from AMD64)..."
+	@mkdir -p ./go-tmp
+	GOTMPDIR=$(shell pwd)/go-tmp $(TARGET_ENV_64) $(GOBUILD) -trimpath \
+	-ldflags="-s -w -X 'main.BuildVersion=$(VERSION)'" \
+	-o $(BINARY_NAME)_arm64 ./cmd/vender
+	@rm -rf ./go-tmp
+	@echo "===> Done. Binary: $(BINARY_NAME)_arm64"
 build64:
 	@echo "===> Building for Native (ARM64)..."
 	CGO_ENABLED=1 $(GOBUILD) "-ldflags=-X 'main.BuildVersion=$(VERSION)'" -o $(BINARY_NAME) ./cmd/vender

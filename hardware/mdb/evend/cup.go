@@ -2,7 +2,6 @@ package evend
 
 import (
 	"context"
-	"fmt"
 	"regexp"
 	"strconv"
 	"time"
@@ -32,30 +31,29 @@ func (c *DeviceCup) init(ctx context.Context) error {
 	Cup = c
 	g := state.GetGlobal(ctx)
 	c.initLightSheduler(g.Config.UI_config.Front.LightShedule)
-	c.timeout = uint16(g.Config.Hardware.Evend.Cup.TimeoutSec) * 5
+	c.timeout = 50 * 5 // 40 second max time for cup dispensing
 	g.Engine.RegisterNewFunc(c.name+".ensure", func(ctx context.Context) error { return c.CommandWaitSuccess(c.timeout, 0x04) })
+	g.Engine.RegisterNewFunc(c.name+".ensureNoWait", func(ctx context.Context) error { return c.CommandNoWait(0x04) })
 	g.Engine.RegisterNewFuncAgr(c.name+".dispense(?)", func(ctx context.Context, _ engine.Arg) error { return c.CommandWaitSuccess(c.timeout, 0x01) })
+	g.Engine.RegisterNewFuncAgr(c.name+".dispenseNoWait(?)", func(ctx context.Context, _ engine.Arg) error { return c.CommandNoWait(0x01) })
 	g.Engine.RegisterNewFunc(c.name+".wait_complete", func(ctx context.Context) error { return c.WaitSuccess(c.timeout, true) })
+	g.Engine.RegisterNewFunc(c.name+".wait_completeNoWait", func(ctx context.Context) error { return c.Proto2PollWaitSuccess(5, true) })
 	g.Engine.RegisterNewFunc(c.name+".light_on", func(ctx context.Context) error { return c.LightOn() })
 	g.Engine.RegisterNewFunc(c.name+".light_off", func(ctx context.Context) error { return c.LightOff() })
 	g.Engine.RegisterNewFunc(c.name+".reset", func(ctx context.Context) error { return c.dev.Rst() })
-	g.Engine.RegisterNewFunc(c.name+".light_on_schedule", func(ctx context.Context) error {
-		if !c.lightShouldWork() {
-			if c.light {
-				return c.LightOff()
-			}
-			return nil
-		}
-		return c.LightOn()
-	})
-	if err := c.dev.Rst(); err != nil {
-		return fmt.Errorf("%s init error:%v", c.name, err)
-	}
-	return nil
+	g.Engine.RegisterNewFunc(c.name+".light_on_schedule", func(ctx context.Context) error { return c.lightOnSchedule() })
+
+	return c.dev.Rst()
 }
 
-func (c *DeviceCup) Reset() error {
-	return c.dev.Rst()
+func (c *DeviceCup) lightOnSchedule() error {
+	if !c.lightShouldWork() {
+		if c.light {
+			return c.LightOff()
+		}
+		return nil
+	}
+	return c.LightOn()
 }
 
 func (c *DeviceCup) LightOn() error {

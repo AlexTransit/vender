@@ -40,6 +40,7 @@ func Main(ctx context.Context, _ ...[]string) error {
 	if err != nil {
 		g.Fatal(err)
 	}
+	//* testwsl for WSL
 	if err := g.Engine.ValidateExec(ctx, doMdbBusReset); err != nil {
 		return errors.Annotate(err, "mdb bus reset")
 	}
@@ -64,7 +65,7 @@ func Main(ctx context.Context, _ ...[]string) error {
 	if err := ms.Start(ctx); err != nil {
 		g.Log.Error(errors.ErrorStack(err))
 	}
-
+	//*/
 	cli.MainLoop("vender-engine-cli", newExecutor(ctx), newCompleter(ctx))
 
 	return nil
@@ -94,8 +95,11 @@ func newExecutor(ctx context.Context) func(string) {
 			return
 		}
 		tbegin := time.Now()
+		//* testwsl
 		err = g.Engine.ValidateExec(ctx, d)
-		if err != nil {
+		/*/
+		err = g.Engine.Exec(ctx, d)
+		//*/if err != nil {
 			g.Log.Error(err)
 		}
 		texec := time.Since(tbegin)
