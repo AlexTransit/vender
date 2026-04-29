@@ -21,15 +21,15 @@ const (
 type DeviceConveyor struct { //nolint:maligned
 	Generic
 
-	DoSetSpeed engine.FuncArg
-	maxTimeout time.Duration
-	timeout    uint16
-	speed      int8
-	position   int16
+	DoSetSpeed  engine.FuncArg
+	maxTimeout  time.Duration
+	timeout     uint16
+	speed       int8
+	position    int16
+	newPosition int16
 }
 
 func (c *DeviceConveyor) init(ctx context.Context) error {
-	c.position = -1
 	c.speed = -1
 	c.timeout = 10 * 5
 	g := state.GetGlobal(ctx)
@@ -44,7 +44,7 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 	g.Engine.RegisterNewFuncAgr(c.name+".moveNoWait(?)", func(ctx context.Context, position engine.Arg) error {
 		return c.moveNoWait(position.(int16))
 	})
-	g.Engine.RegisterNewFunc(c.name+".movingDone", func(ctx context.Context) error { return c.WaitSuccess(c.timeout, true) })
+	g.Engine.RegisterNewFunc(c.name+".movingDone", func(ctx context.Context) error { return c.movingDone() })
 	g.Engine.RegisterNewFunc(c.name+".status", func(ctx context.Context) error {
 		g.Log.Infof("%s.position:%d speed:%d", c.name, c.position, c.speed)
 		return nil
@@ -62,19 +62,29 @@ func (c *DeviceConveyor) init(ctx context.Context) error {
 }
 
 func (c *DeviceConveyor) moveNoWait(position int16) error {
+	c.newPosition = position
+	c.position = -1
 	return c.CommandNoWait(commandMove, byte(position&0xff), byte(position>>8))
 }
 
 func (c *DeviceConveyor) move(position int16) (err error) {
-	if err = c.CommandWaitSuccess(c.timeout, commandMove, byte(position&0xff), byte(position>>8)); err == nil {
-		if err = c.ReadError(); err != nil {
-			c.position = -1
-			return err
-		}
-		c.position = position
+	if c.position == -1 {
+		c.CommandWaitSuccess(c.timeout, commandMove, byte(0x00), byte(0x00))
+		c.position = 0
+	}
+	if c.position == position {
 		return nil
 	}
-	return err
+	c.moveNoWait(position)
+	return c.movingDone()
+}
+
+func (c *DeviceConveyor) movingDone() (err error) {
+	if err = c.WaitSuccess(c.timeout, true); err != nil {
+		return err
+	}
+	c.position = c.newPosition
+	return nil
 }
 
 func (c *DeviceConveyor) reset() error {
