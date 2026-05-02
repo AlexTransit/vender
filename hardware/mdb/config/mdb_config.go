@@ -9,7 +9,7 @@ type Config struct { //nolint:maligned
 	Coin       CoinStruct `hcl:"coin,block"`
 	LogDebug   bool       `hcl:"log_debug,optional"`
 	UartDevice string     `hcl:"uart_device,optional"`
-	UartDriver string     `hcl:"uart_driver"` // file|mega|iodin
+	UartDriver string     `hcl:"uart_driver"` // file|mega|iodin|dummy
 }
 
 type BillStruct struct {

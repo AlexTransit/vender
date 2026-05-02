@@ -207,6 +207,13 @@ func (g *Global) initEngine() error {
 }
 
 func (g *Global) RegisterCommands(ctx context.Context) {
+	// g.Engine.RegisterNewFunc("cmerr",
+	// 	func(ctx context.Context) error {
+	// 		g.Log.WarningF("типа двигаемся но будет 23 ошибка")
+	// 		return &helpers.AppError{ErrorCode: 23, Err: fmt.Errorf("test 23 error")}
+	// 	},
+	// )
+
 	g.Engine.RegisterNewFunc(
 		"vmc.stop!",
 		func(ctx context.Context) error {
