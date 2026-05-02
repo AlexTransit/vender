@@ -50,6 +50,23 @@
                 "vmc"
             ],
         },
+                {
+            "console": "integratedTerminal",
+            "name": "wsl-cli",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/cmd/vender/main.go",
+            "buildFlags": "-ldflags=' -X main.BuildVersion=debugCLI'",
+            // "env": {"DEBUG_AS_ROOT": "true",    },
+            "args": [
+                "-config",
+                // "${workspaceFolder}/../config.hcl",
+                "${workspaceFolder}/../config-torig.hcl",
+                "engine-cli"
+            ],
+        },
+
         {
             "console": "integratedTerminal",
             "name": "cli",

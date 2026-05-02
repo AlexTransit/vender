@@ -35,13 +35,12 @@ func (seq *Seq) FixErrorAction(errorCode string) Doer {
 	}
 	for pattern, entry := range seq.ErrorActions {
 		if matched, _ := regexp.MatchString(pattern, errorCode); matched {
-			if entry.SkipMain {
-				return entry.Doer
-			}
-			newSeq := NewSeq("fix-error")
+			newSeq := NewSeq(entry.Doer.String() + "_fix")
 			newSeq.Append(entry.Doer)
-			for _, item := range seq.items {
-				newSeq.Append(item)
+			if !entry.SkipMain {
+				for _, item := range seq.items {
+					newSeq.Append(item)
+				}
 			}
 			return newSeq
 		}
@@ -111,7 +110,7 @@ func (seq *Seq) Do(ctx context.Context) error {
 					e.Log.Info("the fix worked. try the action")
 					return nil
 				}
-				e.Log.Error("!!! NOT FIXED" + d.String() + " error:" + errorCode)
+				e.Log.Error("!!! NOT FIXED " + d.String() + " error:" + errorCode)
 			}
 			// FIXME AlexM
 			helpers.SaveAndShowDoError(itemsList, err, "/home/vmc/vender-db/errors/")

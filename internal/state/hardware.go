@@ -120,8 +120,11 @@ func (g *Global) Mdb() (*mdb.Bus, error) {
 			}
 			x.Uarter = mdb_client.NewIodinUart(iodin)
 
+		case "dummy":
+			x.Uarter = mdb_client.NewDummyUart()
+
 		default:
-			return fmt.Errorf("config: unknown mdb.uart_driver=\"%s\" valid: file, mega, iodin", g.Config.Hardware.Mdb.UartDriver)
+			return fmt.Errorf("config: unknown mdb.uart_driver=\"%s\" valid: file, mega, iodin, dummy", g.Config.Hardware.Mdb.UartDriver)
 		}
 
 		mdbLog := g.Log.Clone(log2.LOG_INFO)
@@ -185,21 +188,27 @@ func (g *Global) TextDisplay() (*text_display.TextDisplay, error) {
 			g.Log.Infof("text display hd44780 is disabled")
 			return nil
 		}
-
-		devWrap := new(hd44780.LCD)
-		if err := devWrap.Init(devConfig.PinChip, devConfig.Pinmap); err != nil {
-			err = errors.Annotatef(err, "hd44780.Init config=%#v", devConfig)
-			return err
+		var dev text_display.Devicer
+		if devConfig.PinChip == "dummy" {
+			dev = hd44780.NewDummy()
+			g.Log.Info("text display hd44780 dummy stub is enabled")
+		} else {
+			devWrap := new(hd44780.LCD)
+			if err := devWrap.Init(devConfig.PinChip, devConfig.Pinmap); err != nil {
+				err = errors.Annotatef(err, "hd44780.Init config=%#v", devConfig)
+				return err
+			}
+			ctrl := hd44780.ControlOn
+			if devConfig.ControlBlink {
+				ctrl |= hd44780.ControlBlink
+			}
+			if devConfig.ControlCursor {
+				ctrl |= hd44780.ControlUnderscore
+			}
+			devWrap.SetControl(ctrl)
+			x.Device = devWrap
+			dev = devWrap
 		}
-		ctrl := hd44780.ControlOn
-		if devConfig.ControlBlink {
-			ctrl |= hd44780.ControlBlink
-		}
-		if devConfig.ControlCursor {
-			ctrl |= hd44780.ControlUnderscore
-		}
-		devWrap.SetControl(ctrl)
-		x.Device = devWrap
 
 		displayConfig := &text_display.TextDisplayConfig{
 			Width:       uint32(devConfig.Width),
@@ -211,7 +220,7 @@ func (g *Global) TextDisplay() (*text_display.TextDisplay, error) {
 		}
 		disp.SetLogger(g.Log)
 		x.Display = disp
-		x.Display.SetDevice(devWrap)
+		x.Display.SetDevice(dev)
 		go x.Display.Run()
 		return nil
 	})
