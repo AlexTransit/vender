@@ -9,6 +9,7 @@ package log2
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -272,6 +273,11 @@ func (lg *Log) NoticeF(format string, args ...interface{}) {
 //			}
 //		}
 //	}
+func (lg *Log) ErrorF(args ...interface{}) error {
+	lg.Error(args)
+	return errors.New(fmt.Sprint(args...))
+}
+
 func (lg *Log) Error(args ...interface{}) {
 	lg.Errorf("%v", args)
 }
