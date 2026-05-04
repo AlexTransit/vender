@@ -273,6 +273,8 @@ func (lg *Log) NoticeF(format string, args ...interface{}) {
 //			}
 //		}
 //	}
+
+// ErrorF is a helper for logging and returning error in one line
 func (lg *Log) ErrorF(args ...interface{}) error {
 	lg.Error(args)
 	return errors.New(fmt.Sprint(args...))
