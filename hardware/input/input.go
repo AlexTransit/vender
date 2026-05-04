@@ -2,7 +2,7 @@
 package input
 
 import (
-	"fmt"
+	"strconv"
 
 	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/types"
@@ -29,39 +29,75 @@ func (d *Dispatch) InputChain() chan types.InputEvent {
 	return d.Bus
 }
 
+// func (d *Dispatch) ReadEvendKeyboard(s Source) {
+// 	for {
+// 		event, err := s.Read()
+// 		if err != nil {
+// 			d.Log.Fatal(errors.ErrorStack(err))
+// 		}
+// 		var kn string
+// 		switch event.Key {
+// 		case EvendKeyAccept:
+// 			kn = "Ok"
+// 		case EvendKeyReject:
+// 			kn = "C"
+// 		case EvendKeyCreamLess:
+// 			kn = "cream-"
+// 		case EvendKeyCreamMore:
+// 			kn = "cream+"
+// 		case EvendKeySugarLess:
+// 			kn = "sugar-"
+// 		case EvendKeySugarMore:
+// 			kn = "sugar+"
+// 		case EvendKeyDot:
+// 			kn = "."
+// 		case 48, 49, 50, 51, 52, 53, 54, 55, 56, 57:
+// 			kn = fmt.Sprintf("%d", event.Key-48)
+// 		default:
+// 			fmt.Printf(" key event (%v)", event)
+// 		}
+
+// 		if event.Source == DevInputEventTag || config_global.VMC.User.KeyboardReadEnable {
+// 			d.Log.Infof("key press (%s) ", kn)
+// 			d.Bus <- event
+// 		} else {
+// 			d.Log.Infof("ignore key. input disabled. (%s) ", kn)
+// 		}
+// 	}
+// }
+
+var evendKeyNames = map[types.InputKey]string{
+	EvendKeyAccept:    "Ok",
+	EvendKeyReject:    "C",
+	EvendKeyCreamLess: "cream-",
+	EvendKeyCreamMore: "cream+",
+	EvendKeySugarLess: "sugar-",
+	EvendKeySugarMore: "sugar+",
+	EvendKeyDot:       ".",
+}
+
 func (d *Dispatch) ReadEvendKeyboard(s Source) {
 	for {
 		event, err := s.Read()
 		if err != nil {
 			d.Log.Fatal(errors.ErrorStack(err))
 		}
-		var kn string
-		switch event.Key {
-		case EvendKeyAccept:
-			kn = "Ok"
-		case EvendKeyReject:
-			kn = "C"
-		case EvendKeyCreamLess:
-			kn = "cream-"
-		case EvendKeyCreamMore:
-			kn = "cream+"
-		case EvendKeySugarLess:
-			kn = "sugar-"
-		case EvendKeySugarMore:
-			kn = "sugar+"
-		case EvendKeyDot:
-			kn = "."
-		case 48, 49, 50, 51, 52, 53, 54, 55, 56, 57:
-			kn = fmt.Sprintf("%d", event.Key-48)
-		default:
-			fmt.Printf(" key event (%v)", event)
+
+		kn, ok := evendKeyNames[event.Key]
+		if !ok {
+			if event.Key >= 48 && event.Key <= 57 {
+				kn = strconv.Itoa(int(event.Key) - 48)
+			} else {
+				d.Log.Infof("unknown key event (%v)", event)
+				continue
+			}
 		}
 
 		if event.Source == DevInputEventTag || config_global.VMC.User.KeyboardReadEnable {
-			d.Log.Infof("key press (%s) ", kn)
+			d.Log.Infof("key press (%s)", kn)
 			d.Bus <- event
 		} else {
-			d.Log.Infof("ignore key. input disabled. (%s) ", kn)
+			d.Log.Infof("ignore key. input disabled. (%s)", kn)
 		}
 	}
 }
