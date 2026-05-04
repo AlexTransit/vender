@@ -62,6 +62,7 @@ func Init(ctx context.Context, startingVMC bool) {
 		PlayFile(arg.(string))
 		return nil
 	})
+
 	g.Engine.RegisterNewFuncAgr("speech(?)", func(ctx context.Context, arg engine.Arg) error {
 		TextSpeech(arg.(string))
 		return nil
@@ -70,6 +71,7 @@ func Init(ctx context.Context, startingVMC bool) {
 	g.Engine.RegisterNewFuncAgr("sound.volume(?)", func(ctx context.Context, arg engine.Arg) error { SetVolume(arg.(int16)); return nil })
 
 	g.Engine.RegisterNewFunc("sound.volume.default", func(ctx context.Context) error { SetDefaultVolume(); return nil })
+	// g.Engine.RegisterNewFunc("key.beep", func(ctx context.Context) error { PlayKeyBeep(); return nil })
 
 	if s.config.Disabled {
 		return

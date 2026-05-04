@@ -45,8 +45,8 @@
             "buildFlags": "-ldflags=' -X main.BuildVersion=debugVMC'",
             // "env": {                "DEBUG_AS_ROOT": "true",            },
             "args": [
-                // "-config",
-                // "/home/vmc/config-test.hcl",
+                "-config",
+                "${workspaceFolder}/../config.hcl",
                 "vmc"
             ],
         },
