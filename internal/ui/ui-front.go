@@ -246,6 +246,7 @@ func createScale(currentValue uint8, maximumValue uint8, defaultValue uint8) (ba
 }
 
 func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
+	ui.g.KeyBoadInput(false)
 	ui.g.SendCooking()
 	moneysys := money.GetGlobal(ctx)
 	selected := config_global.VMC.User.SelectedItem.Code
