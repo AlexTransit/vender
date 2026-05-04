@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/AlexTransit/vender/hardware/input"
 	"github.com/AlexTransit/vender/helpers"
 	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/engine"
@@ -206,10 +207,44 @@ func (g *Global) initEngine() error {
 	return helpers.FoldErrors(errs)
 }
 
+// KeyBoadInput enables keyboard input.
+func (g *Global) KeyBoadInput(value bool) {
+	config_global.VMC.User.KeyboardReadEnable = value
+}
+
 func (g *Global) RegisterCommands(ctx context.Context) {
 	g.Engine.RegisterNewFuncAgr("error(?)",
 		func(ctx context.Context, arg engine.Arg) error {
 			return g.Log.ErrorF(arg.(string))
+		},
+	)
+
+	g.Engine.RegisterNewFuncAgr("wait.ok(?)",
+		func(ctx context.Context, arg engine.Arg) error {
+			// if config_global.VMC.User.KeyboardReadEnable {
+			// 	return errors.New("keyboard input listem on UI")
+			// }
+			config_global.VMC.User.KeyboardReadEnable = true
+			watchdog.Disable()
+			defer func() {
+				watchdog.Enable()
+				config_global.VMC.User.KeyboardReadEnable = false
+			}()
+
+			kbd := g.Hardware.Input.InputChain()
+			tmr := time.NewTimer(time.Duration(arg.(int16)) * time.Second)
+			for {
+				select {
+				case e := <-kbd:
+
+					// if  e.Source == input.DevInputEventTag && e.Up {
+					if e.Key == input.EvendKeyAccept {
+						return nil
+					}
+				case <-tmr.C:
+					return &helpers.AppError{ErrorCode: 99, Err: errors.New("timeout wait.ok")}
+				}
+			}
 		},
 	)
 
