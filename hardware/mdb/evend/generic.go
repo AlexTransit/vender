@@ -348,7 +348,7 @@ func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool) (err error
 		}
 	}
 	if timeOut {
-		return errors.New("time out pool")
+		return &helpers.AppError{ErrorCode: int32(11), Err: errors.New("time out pool")}
 	}
 	return nil
 }
