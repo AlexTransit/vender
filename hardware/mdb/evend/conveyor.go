@@ -31,7 +31,7 @@ type DeviceConveyor struct { //nolint:maligned
 
 func (c *DeviceConveyor) init(ctx context.Context) error {
 	c.speed = -1
-	c.timeout = 10 * 5
+	c.timeout = 20 * 5
 	g := state.GetGlobal(ctx)
 	c.maxTimeout = ConveyorDefaultTimeout
 	c.dev.DelayNext = 200 * time.Millisecond // empirically found lower total WaitReady
