@@ -215,7 +215,7 @@ func (g *Global) KeyBoadInput(value bool) {
 func (g *Global) RegisterCommands(ctx context.Context) {
 	g.Engine.RegisterNewFuncAgr("error(?)",
 		func(ctx context.Context, arg engine.Arg) error {
-			return g.Log.ErrorF(arg.(string))
+			return g.Log.ErrorF(fmt.Sprintf("error:%v", arg))
 		},
 	)
 
