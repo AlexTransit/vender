@@ -50,6 +50,9 @@ func (me *MiherElevator) InitMiherElevator(ctx context.Context, address uint8, n
 }
 
 func (me *MiherElevator) move(position int8) error {
+	if me.currentPos == -1 {
+		me.reset()
+	}
 	me.dev.Action = fmt.Sprintf("%s move %d=>%d", me.name, me.currentPos, position)
 	if err := me.moveNoWait(position); err != nil {
 		return fmt.Errorf("send command(%v) error(%v)", me.dev.Action, err)
