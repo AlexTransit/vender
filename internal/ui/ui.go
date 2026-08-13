@@ -9,6 +9,7 @@ import (
 	"github.com/AlexTransit/vender/hardware/text_display"
 	"github.com/AlexTransit/vender/helpers"
 	config_global "github.com/AlexTransit/vender/internal/config"
+	"github.com/AlexTransit/vender/internal/menu/menu_config"
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/state"
 	"github.com/AlexTransit/vender/internal/types"
@@ -27,6 +28,7 @@ type UI struct { //nolint:maligned
 	eventch       chan types.Event
 	inputch       chan types.InputEvent
 	lock          uiLock
+	remoteOrder   remoteOrderGuard
 	waitSM        bool
 	// lock              bool
 	frontResetTimeout time.Duration
@@ -39,6 +41,33 @@ var _ types.UIer = &UI{} // compile-time interface test
 func (ui *UI) CreateEvent(e types.EventKind) {
 	acceptEvent := types.Event{Kind: e}
 	ui.eventch <- acceptEvent
+}
+
+// CreateOrderEvent passes a remote order to the UI goroutine inside the event.
+// The caller must not touch config_global.VMC.User: applying the order is the
+// job of the UI goroutine, right before cooking starts.
+//
+// key identifies the order; a repeated key or an order arriving while another
+// one is being cooked is refused. returned reason is empty when the order was
+// handed over to the state machine.
+func (ui *UI) CreateOrderEvent(order menu_config.UIMenuStruct, key string) (reason string) {
+	if reason = ui.remoteOrder.begin(key); reason != "" {
+		return reason
+	}
+	// bounded send: the state machine may sit in a state that never consumes
+	// EventAccept, and the slot must not stay reserved forever.
+	tmr := time.NewTimer(orderHandoverTimeout)
+	defer tmr.Stop()
+	select {
+	case ui.eventch <- types.Event{Kind: types.EventAccept, Order: &order}:
+		return ""
+	case <-ui.g.Alive.StopChan():
+		ui.remoteOrder.abort()
+		return "vmc is stopping"
+	case <-tmr.C:
+		ui.remoteOrder.abort()
+		return "state machine did not accept the order in time"
+	}
 }
 
 func (ui *UI) PauseStateMashine(v bool) {
@@ -89,6 +118,11 @@ again:
 	select {
 
 	case e := <-ui.eventch:
+		if e.Kind == types.EventAccept {
+			// the order left the channel. states that ignore accept drop it here,
+			// so releasing the slot becomes the job of FrontBegin/Broken.
+			ui.remoteOrder.handedOver()
+		}
 		if e.Kind != types.EventInvalid {
 			return e
 		}

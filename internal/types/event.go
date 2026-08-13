@@ -2,6 +2,7 @@ package types
 
 import (
 	"github.com/AlexTransit/vender/currency"
+	"github.com/AlexTransit/vender/internal/menu/menu_config"
 )
 
 //go:generate stringer -type=EventKind -trimprefix=Event
@@ -25,7 +26,11 @@ const (
 type Event struct {
 	Input  InputEvent
 	Amount currency.Amount
-	Kind   EventKind
+	// Order != nil only for EventAccept created by a remote (tele) order.
+	// RU: заказ передаётся внутри события. глобал VMC.User пишет только горутина UI,
+	// иначе RefreshUserPresets успевает обнулить SelectedItem до готовки.
+	Order *menu_config.UIMenuStruct
+	Kind  EventKind
 }
 
 // func (e *Event) String() string {

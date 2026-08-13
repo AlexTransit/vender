@@ -1,12 +1,20 @@
 package types
 
-import "context"
+import (
+	"context"
+
+	"github.com/AlexTransit/vender/internal/menu/menu_config"
+)
 
 type UIer interface {
 	Loop(context.Context)
 	// FrontSelectShowZero(context.Context)
 	GetUiState() uint32
 	CreateEvent(EventKind)
+	// CreateOrderEvent delivers a remote order together with the accept event.
+	// key identifies the order for duplicate detection. returned reason is
+	// empty when the order was accepted for execution.
+	CreateOrderEvent(order menu_config.UIMenuStruct, key string) (reason string)
 	PauseStateMashine(v bool)
 	Scheduler
 }

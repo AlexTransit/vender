@@ -8,10 +8,10 @@ import (
 
 	"github.com/AlexTransit/vender/currency"
 	config_global "github.com/AlexTransit/vender/internal/config"
+	"github.com/AlexTransit/vender/internal/menu/menu_config"
 	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
-	"github.com/AlexTransit/vender/internal/types"
 	tele_api "github.com/AlexTransit/vender/tele"
 	"github.com/juju/errors"
 	"google.golang.org/protobuf/proto"
@@ -96,18 +96,21 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 	default: // state not valid
 		return
 	}
+	// RU: заказ собирается в локальной копии и передаётся в горутину UI внутри события.
+	order := menu_config.UIMenuStruct{}
 	switch m.MakeOrder.OrderStatus {
 	case tele_api.OrderStatus_doSelected: // make selected code. payment via QR, etc
+		// selection made by the user on the keyboard
+		order = config_global.VMC.User.UIMenuStruct
 		if config_global.VMC.User.PaymenId != m.MakeOrder.OwnerInt || // the payer and payer do not match
 			uint32(config_global.VMC.User.DirtyMoney) != m.MakeOrder.Amount ||
-			config_global.VMC.User.SelectedItem.Doer == nil { //
+			order.SelectedItem.Doer == nil { //
 			t.log.Errorf("make doSelected unposible. robo state:%s <> WaitingForExternalPayment or payerID:%d <> ownerID:%d or qr amount:%d<>order amount^%d",
 				currentRobotState.String(), config_global.VMC.User.PaymenId, m.MakeOrder.OwnerInt, config_global.VMC.User.DirtyMoney, m.MakeOrder.Amount)
 			t.makeOrderImposible(tele_api.OrderStatus_orderError, m)
 			return
 		}
-		// config_global.VMC.User.SelectedItem.Price = config_global.VMC.User.DirtyMoney
-		config_global.VMC.User.SelectedItem.Price = config_global.VMC.User.DirtyMoney
+		order.SelectedItem.Price = config_global.VMC.User.DirtyMoney
 	case tele_api.OrderStatus_doTransferred: // TODO execute external order. сделать внешний заказ
 		if m.MakeOrder.PaymentMethod != tele_api.PaymentMethod_Balance {
 			t.log.Errorf("make doTransferred unposible.robo state:%s <> Nominal or PaymentMethod %s <> Balance", currentRobotState.String(), tele_api.PaymentMethod_Balance.String())
@@ -115,29 +118,29 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 			return
 		}
 		var found bool
-		config_global.VMC.User.SelectedItem, found = config_global.GetMenuItem(m.MakeOrder.MenuCode)
+		order.SelectedItem, found = config_global.GetMenuItem(m.MakeOrder.MenuCode)
 		if !found {
 			t.log.Infof("remote cook error: code not found")
 			t.makeOrderImposible(tele_api.OrderStatus_executionInaccessible, m)
 			return
 		}
-		if config_global.VMC.User.SelectedItem.Doer == nil {
+		if order.SelectedItem.Doer == nil {
 			t.makeOrderImposible(tele_api.OrderStatus_executionInaccessible, m)
 			t.log.Infof("remote cook error: code doer is nil")
 			return
 		}
-		if err := config_global.VMC.User.SelectedItem.Doer.Validate(); err != nil {
+		if err := order.SelectedItem.Doer.Validate(); err != nil {
 			t.makeOrderImposible(tele_api.OrderStatus_executionInaccessible, m)
 			t.log.Infof("remote cook error: code not valid")
 			return
 		}
-		if m.MakeOrder.Amount < uint32(config_global.VMC.User.SelectedItem.Price) { // стоимость заказа не меньше баланса
+		if m.MakeOrder.Amount < uint32(order.SelectedItem.Price) { // стоимость заказа не меньше баланса
 			t.makeOrderImposible(tele_api.OrderStatus_overdraft, m)
 			t.log.Infof("remote cook error: money overdraft")
 			return
 		}
-		config_global.VMC.User.Sugar = tuneCook(m.MakeOrder.GetSugar(), config_global.VMC.Engine.Menu.DefaultSugar, config_global.VMC.Engine.Menu.DefaultSugarMax)
-		config_global.VMC.User.Cream = tuneCook(m.MakeOrder.GetCream(), config_global.VMC.Engine.Menu.DefaultCream, config_global.VMC.Engine.Menu.DefaultCreamMax)
+		order.Sugar = tuneCook(m.MakeOrder.GetSugar(), config_global.VMC.Engine.Menu.DefaultSugar, config_global.VMC.Engine.Menu.DefaultSugarMax)
+		order.Cream = tuneCook(m.MakeOrder.GetCream(), config_global.VMC.Engine.Menu.DefaultCream, config_global.VMC.Engine.Menu.DefaultCreamMax)
 	default: // unknown status
 		t.log.Errorf("unknown order status(%v)", m.MakeOrder.OrderStatus)
 		return
@@ -145,15 +148,28 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 	config_global.VMC.User.RemoteOrderInProgress = true
 	defer func() { config_global.VMC.User.RemoteOrderInProgress = false }()
 
-	sound.PlayMoneyIn()
-	config_global.VMC.User.DirtyMoney = config_global.VMC.User.SelectedItem.Price
-	config_global.VMC.User.PaymenId = m.MakeOrder.OwnerInt
-	config_global.VMC.User.PaymentMethod = m.MakeOrder.PaymentMethod
-	config_global.VMC.User.PaymentType = m.MakeOrder.OwnerType
+	order.PaymenId = m.MakeOrder.OwnerInt
+	order.PaymentMethod = m.MakeOrder.PaymentMethod
+	order.PaymentType = m.MakeOrder.OwnerType
 	ms := money.GetGlobal(ctx)
-	ms.SetDirty(config_global.VMC.User.DirtyMoney)
+	ms.SetDirty(order.SelectedItem.Price)
 	// run cooking
-	g.UI().CreateEvent(types.EventAccept)
+	if reason := g.UI().CreateOrderEvent(order, orderKey(m)); reason != "" {
+		t.log.Errorf("make order refused: %s. key:%s", reason, orderKey(m))
+		ms.SetDirty(0)
+		t.makeOrderImposible(tele_api.OrderStatus_robotIsBusy, m)
+		return
+	}
+	sound.PlayMoneyIn()
+}
+
+// orderKey identifies one order message. a retransmission carries a byte
+// identical payload, hence an identical key.
+// RU: своего id у заказа в протоколе нет, поэтому ключ собирается из полей
+// сообщения. serverTime отсекает разные заказы одного клиента.
+func orderKey(m *tele_api.ToRoboMessage) string {
+	return fmt.Sprintf("%d/%d/%s/%d/%d", m.ServerTime, m.MakeOrder.OwnerInt,
+		m.MakeOrder.MenuCode, m.MakeOrder.Amount, m.MakeOrder.OrderStatus)
 }
 
 func (t *tele) makeOrderImposible(oStatus tele_api.OrderStatus, m *tele_api.ToRoboMessage) {

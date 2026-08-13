@@ -73,6 +73,9 @@ func (ui *UI) checkTemperature() (correct bool, stateIfNotCorrect types.UiState)
 }
 
 func (ui *UI) onFrontBegin(ctx context.Context) types.UiState {
+	// backstop: reaching FrontBegin means nothing is being cooked, so a slot
+	// reserved by an order that was never picked up must not stay held.
+	ui.remoteOrder.end()
 	ui.g.TeleCancelQr(tele_api.State_Nominal) // if order not complete, send cancel order and nominal state
 	if !config_global.VMC.User.RemoteOrderInProgress {
 		ui.RefreshUserPresets()
@@ -140,7 +143,10 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 		e := ui.wait(timeout)
 		switch e.Kind {
 		case types.EventAccept:
-			return types.StateFrontAccept
+			if nextState := ui.applyRemoteOrder(&e); nextState != types.StateDoesNotChange {
+				return nextState
+			}
+			ui.linesCreate(&l1, &l2, &tuneScreen)
 		case types.EventInput: // from keyboard
 			if nextState := ui.parseKeyEvent(e, &l1, &l2, &tuneScreen, alive); nextState != types.StateDoesNotChange {
 				return nextState
@@ -173,6 +179,23 @@ func (ui *UI) onFrontSelect(ctx context.Context) types.UiState {
 			panic(fmt.Sprintf("code error state=%v unhandled event=%v", ui.State(), e))
 		}
 	}
+}
+
+// applyRemoteOrder installs an accepted remote order into the shared user state.
+// RU: выполняется в горутине UI непосредственно перед готовкой, поэтому
+// RefreshUserPresets больше не может обнулить SelectedItem между проверкой в tele и Cook.
+// Событие без исполнителя игнорируется, а не роняет автомат в StateBroken.
+func (ui *UI) applyRemoteOrder(e *types.Event) types.UiState {
+	if e.Order != nil {
+		config_global.VMC.User.UIMenuStruct = *e.Order
+		config_global.VMC.User.DirtyMoney = e.Order.SelectedItem.Price
+	}
+	if config_global.VMC.User.SelectedItem.Doer == nil {
+		ui.g.Log.Errorf("accept ignored: order code:%q has no doer", config_global.VMC.User.SelectedItem.Code)
+		ui.remoteOrder.abort()
+		return types.StateDoesNotChange
+	}
+	return types.StateFrontAccept
 }
 
 // send request for pay ( if posible ) and
@@ -246,6 +269,9 @@ func createScale(currentValue uint8, maximumValue uint8, defaultValue uint8) (ba
 }
 
 func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
+	// the slot stays reserved for the whole cooking, so a retried makeOrder
+	// arriving meanwhile is refused instead of queueing a second brew
+	defer ui.remoteOrder.end()
 	ui.g.KeyBoadInput(false)
 	ui.g.SendCooking()
 	moneysys := money.GetGlobal(ctx)
