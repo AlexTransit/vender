@@ -31,7 +31,11 @@ func (h *DeviceHopper) init(ctx context.Context, addr uint8, nameSuffix string) 
 	g := state.GetGlobal(ctx)
 	h.Generic.Init(ctx, addr, name, proto2)
 	g.Engine.RegisterNewFuncAgr(h.name+".run(?)", func(ctx context.Context, spinTime engine.Arg) (err error) {
-		return runWitchControl(h, byte(spinTime.(int16)), 0)
+		e := runWitchControl(h, byte(spinTime.(int16)), 0)
+		if e != nil {
+			h.dev.Rst()
+		}
+		return e
 	})
 	g.Engine.RegisterNewFunc(h.name+".reset", func(ctx context.Context) error { return h.reset() })
 	return h.dev.Rst()
@@ -42,11 +46,15 @@ func (mh *DeviceMultiHopper) init(ctx context.Context) error {
 	g := state.GetGlobal(ctx)
 	mh.Generic.Init(ctx, addr, "multihopper", proto1)
 
-	g.Engine.RegisterNewFunc(mh.name+".run", func(ctx context.Context) error { return mh.reset() })
+	g.Engine.RegisterNewFunc(mh.name+".reset", func(ctx context.Context) error { return mh.reset() })
 	for i := uint8(1); i <= 8; i++ {
 		hopperNumber := i
 		g.Engine.RegisterNewFuncAgr(fmt.Sprintf("%s%d.run(?)", mh.name, hopperNumber), func(ctx context.Context, spinTime engine.Arg) (err error) {
-			return runWitchControl(mh, byte(spinTime.(int16)), hopperNumber)
+			e := runWitchControl(mh, byte(spinTime.(int16)), hopperNumber)
+			if e != nil {
+				mh.reset()
+			}
+			return e
 		})
 	}
 	return mh.dev.Rst()
