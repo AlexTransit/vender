@@ -9,7 +9,6 @@ import (
 	"github.com/AlexTransit/vender/currency"
 	config_global "github.com/AlexTransit/vender/internal/config"
 	"github.com/AlexTransit/vender/internal/menu/menu_config"
-	"github.com/AlexTransit/vender/internal/money"
 	"github.com/AlexTransit/vender/internal/sound"
 	"github.com/AlexTransit/vender/internal/state"
 	tele_api "github.com/AlexTransit/vender/tele"
@@ -151,12 +150,11 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 	order.PaymenId = m.MakeOrder.OwnerInt
 	order.PaymentMethod = m.MakeOrder.PaymentMethod
 	order.PaymentType = m.MakeOrder.OwnerType
-	ms := money.GetGlobal(ctx)
-	ms.SetDirty(order.SelectedItem.Price)
-	// run cooking
+	// run cooking. dirty money are set by the UI goroutine together with the
+	// order itself: a refused order must not touch the money of the order that
+	// is being cooked right now.
 	if reason := g.UI().CreateOrderEvent(order, orderKey(m)); reason != "" {
 		t.log.Errorf("make order refused: %s. key:%s", reason, orderKey(m))
-		ms.SetDirty(0)
 		t.makeOrderImposible(tele_api.OrderStatus_robotIsBusy, m)
 		return
 	}
@@ -168,8 +166,7 @@ func (t *tele) mesageMakeOrger(ctx context.Context, m *tele_api.ToRoboMessage) {
 // RU: своего id у заказа в протоколе нет, поэтому ключ собирается из полей
 // сообщения. serverTime отсекает разные заказы одного клиента.
 func orderKey(m *tele_api.ToRoboMessage) string {
-	return fmt.Sprintf("%d/%d/%s/%d/%d", m.ServerTime, m.MakeOrder.OwnerInt,
-		m.MakeOrder.MenuCode, m.MakeOrder.Amount, m.MakeOrder.OrderStatus)
+	return fmt.Sprintf("%d/%d/%s", m.ServerTime, m.MakeOrder.OwnerInt, m.MakeOrder.MenuCode)
 }
 
 func (t *tele) makeOrderImposible(oStatus tele_api.OrderStatus, m *tele_api.ToRoboMessage) {

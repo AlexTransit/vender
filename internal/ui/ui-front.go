@@ -284,6 +284,8 @@ func (ui *UI) onFrontAccept(ctx context.Context) types.UiState {
 		if err := moneysys.WithdrawPrepare(ctx, config_global.VMC.User.SelectedItem.Price); err != nil {
 			ui.g.Log.Errorf("ui-front CRITICAL error while return change")
 		}
+	} else {
+		moneysys.SetDirty(config_global.VMC.User.DirtyMoney)
 	}
 	watchdog.DevicesInitializationRequired()
 	err := menu_vmc.Cook(ctx)
