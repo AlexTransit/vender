@@ -98,8 +98,8 @@ func (seq *Seq) Do(ctx context.Context) error {
 		// itemsList = append(itemsList, time.Now().Format("<- 15:04:05.00000 ")+d.String())
 		if err != nil {
 			var appErr *helpers.AppError
-			e.Log.Errorf("error seq:%v", seq.items)
-			e.Log.Errorf("error doer:%v", d.String())
+			// e.Log.Errorf("error seq:%v", seq.items)
+			// e.Log.Errorf("error doer:%v", d.String())
 			if !errors.As(err, &appErr) {
 				return err
 			}
@@ -111,7 +111,7 @@ func (seq *Seq) Do(ctx context.Context) error {
 					e.Log.Info("the fix worked. try the action")
 					return nil
 				}
-				e.Log.Error("!!! NOT FIXED " + d.String() + " error:" + errorCode)
+				// e.Log.Error("!!! NOT FIXED " + d.String() + " error:" + errorCode)
 			}
 			// e.Log.Errorf("%v", seq.String())
 			// FIXME AlexM

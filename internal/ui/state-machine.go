@@ -93,6 +93,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 			}
 		}
 		ui.broken = true
+		ui.remoteOrder.end()
 		ui.RefreshUserPresets()
 		for ui.g.Alive.IsRunning() {
 			// e := ui.wait(5* time.Second)

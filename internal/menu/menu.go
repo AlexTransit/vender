@@ -53,7 +53,8 @@ func Cook(ctx context.Context) error {
 		}
 	}
 	if config_global.VMC.User.SelectedItem.Doer == nil {
-		err := fmt.Errorf("doer nil")
+		err := fmt.Errorf("doer nil. code:%q price:%d payment:%s", config_global.VMC.User.SelectedItem.Code,
+			config_global.VMC.User.SelectedItem.Price, config_global.VMC.User.PaymentMethod)
 		g.Tele.Error(err)
 		return err
 	}
