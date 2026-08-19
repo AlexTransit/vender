@@ -98,99 +98,7 @@ func ReadConfig(log *log2.Log, fn string) *Config {
 	// overwrite duplacates values
 	for i := range cc.bodies {
 		_ = gohcl.DecodeBody(cc.bodies[i], nil, cfg)
-		for _, v := range cfg.Hardware.XXX_Devices {
-			devConf := cfg.Hardware.EvendDevices[v.Name]
-			devConf.Name = v.Name
-			if v.Required {
-				devConf.Required = true
-			}
-			if v.Disabled {
-				devConf.Disabled = true
-			}
-			cfg.Hardware.EvendDevices[v.Name] = devConf
-		}
-		cfg.Hardware.XXX_Devices = nil
-		for _, v := range cfg.UI_config.Service.XXX_Tests {
-			uiTest := ui_config.TestsStruct{
-				Name:     v.Name,
-				Scenario: v.Scenario,
-			}
-			cfg.UI_config.Service.Tests[v.Name] = uiTest
-		}
-		cfg.UI_config.Service.XXX_Tests = nil
-		for _, v := range cfg.Inventory.Stocks {
-			confStock := cfg.Inventory.XXX_Stocks[v.Label]
-			confStock.Label = v.Label
-			if v.Code != 0 {
-				confStock.Code = v.Code
-			}
-			if v.RegisterAdd != "" {
-				confStock.RegisterAdd = v.RegisterAdd
-			}
-			if v.XXX_Ingredient != "" {
-				confStock.XXX_Ingredient = v.XXX_Ingredient
-			}
-			cfg.Inventory.XXX_Stocks[v.Label] = confStock
-		}
-		cfg.Inventory.Stocks = nil
-		for _, v := range cfg.Inventory.Ingredient {
-			ing := cfg.Inventory.XXX_Ingredient[v.Name]
-			ing.Name = v.Name
-			if v.SpendRate != 0 {
-				ing.SpendRate = v.SpendRate
-			}
-			if v.Level != "" {
-				ing.Level = v.Level
-			}
-			if v.Min != 0 {
-				ing.Min = v.Min
-			}
-			if v.Cost != 0 {
-				ing.Cost = v.Cost
-			}
-			if v.TuneKey != "" {
-				ing.TuneKey = v.TuneKey
-			}
-			cfg.Inventory.XXX_Ingredient[v.Name] = ing
-		}
-		cfg.Inventory.Ingredient = nil
-		for _, v := range cfg.Engine.XXX_Aliases {
-			errActions := map[string]engine_config.ErrorAction{}
-			for _, ea := range v.XXX_OnError {
-				errActions[ea.ErrCode] = engine_config.ErrorAction{Scenario: ea.Scenario, SkipMain: ea.SkipMain}
-			}
-			s := engine_config.Alias{
-				Name:     v.Name,
-				Scenario: v.Scenario,
-				OnError:  errActions,
-			}
-			cfg.Engine.Aliases[v.Name] = s
-		}
-		cfg.Engine.XXX_Aliases = nil
-		for _, v := range cfg.Engine.XXX_Menu.XXX_Items {
-			mi := cfg.Engine.Menu.Items[v.Code]
-			mi.Code = v.Code
-			if v.Disabled {
-				mi.Disabled = true
-			}
-			if v.Name != "" {
-				mi.Name = v.Name
-			}
-			if v.Scenario != "" {
-				mi.Scenario = v.Scenario
-			}
-			if v.CreamMax != 0 {
-				mi.CreamMax = v.CreamMax
-			}
-			if v.SugarMax != 0 {
-				mi.SugarMax = v.SugarMax
-			}
-			if v.XXX_Price != 0 {
-				mi.Price = cfg.ScaleI(v.XXX_Price)
-			}
-			cfg.Engine.Menu.Items[v.Code] = mi
-		}
-		cfg.Engine.XXX_Menu.XXX_Items = nil
+		ProcessConfig(cfg)
 	}
 	VMC = cfg
 	return cfg
@@ -202,12 +110,6 @@ func (u *Config) KeyboardReader(v ...bool) bool {
 	}
 	return u.User.KeyboardReadEnable
 }
-
-// func (u *Config) UIState(v ...uint32) uint32 {
-// 	if len(v) > 0 {
-// 	}
-// 	return u.User.UiState
-// }
 
 func NewConfig() *Config {
 	return newDefaultConfig()
@@ -309,4 +211,105 @@ func newDefaultConfig() *Config {
 			},
 		},
 	}
+}
+
+// ProcessConfig переносит данные из XXX_ полей в рабочие структуры.
+// Вызывается как в ReadConfig так и в тестах.
+func ProcessConfig(cfg *Config) {
+	for _, v := range cfg.Hardware.XXX_Devices {
+		devConf := cfg.Hardware.EvendDevices[v.Name]
+		devConf.Name = v.Name
+		if v.Required {
+			devConf.Required = true
+		}
+		if v.Disabled {
+			devConf.Disabled = true
+		}
+		cfg.Hardware.EvendDevices[v.Name] = devConf
+	}
+	cfg.Hardware.XXX_Devices = nil
+
+	for _, v := range cfg.UI_config.Service.XXX_Tests {
+		cfg.UI_config.Service.Tests[v.Name] = ui_config.TestsStruct{
+			Name:     v.Name,
+			Scenario: v.Scenario,
+		}
+	}
+	cfg.UI_config.Service.XXX_Tests = nil
+
+	for _, v := range cfg.Inventory.Stocks {
+		confStock := cfg.Inventory.XXX_Stocks[v.Label]
+		confStock.Label = v.Label
+		if v.Code != 0 {
+			confStock.Code = v.Code
+		}
+		if v.RegisterAdd != "" {
+			confStock.RegisterAdd = v.RegisterAdd
+		}
+		if v.XXX_Ingredient != "" {
+			confStock.XXX_Ingredient = v.XXX_Ingredient
+		}
+		cfg.Inventory.XXX_Stocks[v.Label] = confStock
+	}
+	cfg.Inventory.Stocks = nil
+
+	for _, v := range cfg.Inventory.Ingredient {
+		ing := cfg.Inventory.XXX_Ingredient[v.Name]
+		ing.Name = v.Name
+		if v.SpendRate != 0 {
+			ing.SpendRate = v.SpendRate
+		}
+		if v.Level != "" {
+			ing.Level = v.Level
+		}
+		if v.Min != 0 {
+			ing.Min = v.Min
+		}
+		if v.Cost != 0 {
+			ing.Cost = v.Cost
+		}
+		if v.TuneKey != "" {
+			ing.TuneKey = v.TuneKey
+		}
+		cfg.Inventory.XXX_Ingredient[v.Name] = ing
+	}
+	cfg.Inventory.Ingredient = nil
+
+	for _, v := range cfg.Engine.XXX_Aliases {
+		errActions := map[string]engine_config.ErrorAction{}
+		for _, ea := range v.XXX_OnError {
+			errActions[ea.ErrCode] = engine_config.ErrorAction{Scenario: ea.Scenario, SkipMain: ea.SkipMain}
+		}
+		cfg.Engine.Aliases[v.Name] = engine_config.Alias{
+			Name:     v.Name,
+			Scenario: v.Scenario,
+			OnError:  errActions,
+		}
+	}
+	cfg.Engine.XXX_Aliases = nil
+
+	for _, v := range cfg.Engine.XXX_Menu.XXX_Items {
+		mi := cfg.Engine.Menu.Items[v.Code]
+		mi.Code = v.Code
+		if v.Disabled {
+			mi.Disabled = true
+		}
+		if v.Name != "" {
+			mi.Name = v.Name
+		}
+		if v.Scenario != "" {
+			mi.Scenario = v.Scenario
+		}
+		if v.CreamMax != 0 {
+			mi.CreamMax = v.CreamMax
+		}
+		if v.SugarMax != 0 {
+			mi.SugarMax = v.SugarMax
+		}
+		if v.XXX_Price != 0 {
+			mi.Price = cfg.ScaleI(v.XXX_Price)
+		}
+		cfg.Engine.Menu.Items[v.Code] = mi
+	}
+	cfg.Engine.XXX_Menu.XXX_Items = nil
 }
