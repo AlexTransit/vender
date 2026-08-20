@@ -126,11 +126,17 @@ func addExamples(hclPath string) error {
     onError "4" {
       scenario = "error_scenario2"
     }
-    onError "\d{2}" { // this will match any 2 digit error code.
+    onError "\\d{2}" { // this will match any 2 digit error code.
       scenario = "error_scenario2"
     }
   }
   menu {
+    item "4" {
+      name = "test" 
+      price = 60 
+      scenario = " preset add.coffee(5) add.chocolate(30) mix_midle w_hot85 add.peanut(7) cup_serve_p "
+	  disabled = true
+    }
     item "43." {
       name = "горячий шоколад со сливками и орешками" 
       price = 80 
@@ -138,7 +144,6 @@ func addExamples(hclPath string) error {
       sugarMax = 4 
       scenario = " preset add.sugar(5) add.chocolate(40) cream20 mix_strong w_hot70 cup_serve_p "
     }
-    item "4" { disabled = true}
     item "31" {
       name = "кофе с шоколадом и орешками" 
       price = 60 
