@@ -45,15 +45,16 @@ engine {
 	env.requireDisplay(t, fmt.Sprintf("%s7", g.Config.UI_config.Front.MsgCredit), " ")
 
 	env.emit(env._Key('1'))
-	env.requireDisplay(t,
+	env.requireDisplay(
+		t,
 		fmt.Sprintf("%s7", g.Config.UI_config.Front.MsgCredit),
 		fmt.Sprintf(g.Config.UI_config.Front.MsgInputCode, "1"),
 	)
 
 	env.emit(env._Key(byte(_KeyAccept)))
 	env.requireState(t, types.StateFrontAccept)
-	env.requireState(t, types.StateFrontEnd)
 
+	env.requireState(t, types.StateFrontEnd)
 	env.g.Alive.Wait()
 }
 
@@ -69,7 +70,7 @@ engine {
 			sugarMax = 4
 			name     = "latte"
 			price    = 10
-			scenario = ""
+			scenario = "money.commit"
 		}
 	}
 }
@@ -89,14 +90,16 @@ engine {
 	env.requireDisplay(t, fmt.Sprintf("%s5", g.Config.UI_config.Front.MsgCredit), " ")
 
 	env.emit(env._Key('2'))
-	env.requireDisplay(t,
+	env.requireDisplay(
+		t,
 		fmt.Sprintf("%s5", g.Config.UI_config.Front.MsgCredit),
 		fmt.Sprintf(g.Config.UI_config.Front.MsgInputCode, "2"),
 	)
 	env.emit(env._Key(byte(_KeyAccept)))
 
-	// Недостаточно — продакшен-код выводит на второй строке код+цену, а не пусто
-	env.requireDisplay(t,
+	// Недостаточно — продакшен-код выводит на второй строке код+цену
+	env.requireDisplay(
+		t,
 		g.Config.UI_config.Front.MsgMenuInsufficientCreditL1,
 		fmt.Sprintf(g.Config.UI_config.Front.MsgInputCode+" "+g.Config.UI_config.Front.MsgPrice, "2", "10"),
 	)
@@ -184,7 +187,8 @@ engine {
 	env.requireDisplay(t, fmt.Sprintf("%s5", g.Config.UI_config.Front.MsgCredit), " ")
 
 	env.emit(env._Key('2'))
-	env.requireDisplay(t,
+	env.requireDisplay(
+		t,
 		fmt.Sprintf("%s5", g.Config.UI_config.Front.MsgCredit),
 		fmt.Sprintf(g.Config.UI_config.Front.MsgInputCode, "2"),
 	)
@@ -225,14 +229,16 @@ engine {
 	// Выбор заказа
 	env.requireState(t, types.StateFrontSelect)
 	env.emit(env._Key('1'))
-	env.requireDisplay(t,
+	env.requireDisplay(
+		t,
 		fmt.Sprintf("%s0", g.Config.UI_config.Front.MsgCredit),
 		fmt.Sprintf(g.Config.UI_config.Front.MsgInputCode, "1"),
 	)
 
 	// Внесение наличных больше стоимости напитка
 	require.NoError(t, moneysys.XXX_InjectCoin(ctx, 1000))
-	env.requireDisplay(t,
+	env.requireDisplay(
+		t,
 		fmt.Sprintf("%s10", g.Config.UI_config.Front.MsgCredit),
 		fmt.Sprintf(g.Config.UI_config.Front.MsgInputCode, "1"),
 	)
@@ -295,14 +301,16 @@ engine {
 	// Выбор напитка
 	env.requireState(t, types.StateFrontSelect)
 	env.emit(env._Key('1'))
-	env.requireDisplay(t,
+	env.requireDisplay(
+		t,
 		fmt.Sprintf("%s0", g.Config.UI_config.Front.MsgCredit),
 		fmt.Sprintf(g.Config.UI_config.Front.MsgInputCode, "1"),
 	)
 
 	// Вносим больше стоимости напитка — должна получиться сдача
 	require.NoError(t, moneysys.XXX_InjectCoin(ctx, 1000))
-	env.requireDisplay(t,
+	env.requireDisplay(
+		t,
 		fmt.Sprintf("%s10", g.Config.UI_config.Front.MsgCredit),
 		fmt.Sprintf(g.Config.UI_config.Front.MsgInputCode, "1"),
 	)

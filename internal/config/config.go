@@ -46,7 +46,9 @@ func WriteConfigToFile() {
 func (c *Config) ScaleI(i int) currency.Amount {
 	return currency.Amount(i) * currency.Amount(c.Money.Scale)
 }
-func (c *Config) ScaleU(u uint32) currency.Amount          { return currency.Amount(u * uint32(c.Money.Scale)) }
+
+func (c *Config) ScaleU(u uint32) currency.Amount { return currency.Amount(u * uint32(c.Money.Scale)) }
+
 func (c *Config) ScaleA(a currency.Amount) currency.Amount { return a * currency.Amount(c.Money.Scale) }
 
 type configLoadStruct struct {
