@@ -26,27 +26,16 @@ func (e *AppError) Code() int32 {
 }
 
 func FoldErrors(errs []error) (err error) {
-	// // common fast path
-	// if len(errs) == 0 {
-	// 	return nil
-	// }
-
-	// ss := make([]string, 0, 1+len(errs))
-	// for _, e := range errs {
-	// 	if e != nil {
-	// 		// ss = append(ss, e.Error())
-	// 		ss = append(ss, errors.ErrorStack(e))
-	// 		// ss = append(ss, errors.Details(e))
-	// 	}
-	// }
 	for _, e := range errs {
-		errors.Join(err, e)
+		if e != nil {
+			err = errors.Join(err, e)
+		}
 	}
 	return err
 }
 
 func FoldErrChan(ch <-chan error) error {
-	errs := make([]error, 0, cap(ch))
+	var errs []error
 	for e := range ch {
 		if e != nil {
 			errs = append(errs, e)
@@ -73,7 +62,15 @@ func SaveAndShowDoError(li []string, err error, errorFolder string) {
 	d = d + fmt.Sprintf("err: %v ", err)
 	fmt.Printf("------------------- begin \n%v\n------------------- end\n", d)
 
-	f, _ := os.Create(sf)
-	_, _ = f.WriteString(d)
-	f.Close()
+	f, err := os.Create(sf)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create file: %v\n", err)
+		return
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(d)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to write to file: %v\n", err)
+	}
 }
