@@ -108,6 +108,13 @@ func InitDevice(ctx context.Context) error {
 	CoinValidator = new(CoinAcceptor)
 	ca := CoinValidator
 	g := state.GetGlobal(ctx)
+	return g.RegisterDevice(deviceName, ca, func() error {
+		return ca.init(ctx)
+	})
+}
+
+func (ca *CoinAcceptor) init(ctx context.Context) error {
+	g := state.GetGlobal(ctx)
 	mdbus, err := g.Mdb()
 	if err != nil {
 		return err

@@ -25,8 +25,7 @@ func InitMDBDevices(ctx context.Context) error {
 		case "bill":
 			go helpers.WrapErrChan(&wg, errch, func() error { return bill.Enum(ctx) })
 		case "coin":
-			go coin.InitDevice(ctx)
-			wg.Done()
+			go helpers.WrapErrChan(&wg, errch, func() error { return coin.InitDevice(ctx) })
 		case "evend.conveyor":
 			go helpers.WrapErrChan(&wg, errch, func() error { return evend.EnumConveyor(ctx) })
 		case "evend.cup":
