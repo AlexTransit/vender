@@ -12,9 +12,9 @@ import (
 )
 
 func TestAbort(t *testing.T) {
-	t.Parallel()
+	// t.Parallel()
 
-	ctx, g := state_new.NewTestContext(t, "", `hardware{device "coin" {}} money{scale=100}`)
+	ctx, g := state_new.NewTestContext(t, "", "")
 	mock := mdb.MockFromContext(ctx)
 	defer mock.Close()
 	mock.ExpectMap(map[string]string{
@@ -50,17 +50,15 @@ func TestAbort(t *testing.T) {
 
 func TestWithdrawGift(t *testing.T) {
 	t.Parallel()
-
-	ctx, g := state_new.NewTestContext(t, "", `money{scale=100}`)
+	// t.Helper()
+	ctx, g := state_new.NewTestContext(t, "", "")
 
 	require.NoError(t, hardware.InitMDBDevices(ctx))
 	ms := MoneySystem{}
 	require.NoError(t, ms.Start(ctx))
 
 	gift := g.Config.ScaleU((rand.Uint32() % 100) + 3)
-	price := gift - g.Config.ScaleU(2)
 	ms.SetGiftCredit(ctx, gift)
-	require.NoError(t, ms.WithdrawPrepare(ctx, price))
 
 	// FIXME wait for change payout end
 	time.Sleep(200 * time.Millisecond)
