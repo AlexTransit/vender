@@ -127,6 +127,12 @@ func (ms *MoneySystem) WithdrawCommit(ctx context.Context, amount currency.Amoun
 	return nil
 }
 
+// ReturnDirty gives back the withdrawn-but-uncommitted amount (see
+// WithdrawPrepare) when the order it was reserved for didn't complete.
+// dirty is cleared only once the money has actually left the machine —
+// if there's no validator to dispense through, or the dispense itself
+// fails, dirty stays as-is so the amount isn't silently dropped from
+// the books while still physically unreturned.
 func (ms *MoneySystem) ReturnDirty() error {
 	ms.lk.Lock()
 	dirty := ms.dirty
@@ -134,7 +140,13 @@ func (ms *MoneySystem) ReturnDirty() error {
 	if ms.CoinValidator == nil {
 		return ErrCoinAcceptorOffline
 	}
-	return ms.CoinValidator.ReturnMoney(dirty)
+	if err := ms.CoinValidator.ReturnMoney(dirty); err != nil {
+		return err
+	}
+	ms.lk.Lock()
+	ms.setDirtyLocked(0)
+	ms.lk.Unlock()
+	return nil
 }
 
 func (ms *MoneySystem) ReturnMoney() error {

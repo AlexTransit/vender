@@ -269,3 +269,24 @@ func (ms *MoneySystem) setDirtyLocked(dirty currency.Amount) {
 func (ms *MoneySystem) ResetMoney() {
 	ms.locked_zero()
 }
+
+// XXX_InjectCoin is a test helper: it credits the given amount the same way
+// coin.CoinRun does on a real CoinCredit event, then notifies the running UI
+// so the front screen refreshes — a direct balance mutation alone is invisible
+// to the UI loop, which only reacts to events on its channel.
+// EnsureValid is needed because in tests there is no real CoinValidator to
+// call SetValid with the supported nominals — without it, Add silently
+// rejects the amount (nominal group considers it invalid).
+func (ms *MoneySystem) XXX_InjectCoin(ctx context.Context, amount currency.Amount) error {
+	n := currency.Nominal(amount)
+	ms.lk.Lock()
+	ms.coinCredit.EnsureValid(n)
+	err := ms.coinCredit.Add(n)
+	ms.lk.Unlock()
+	if err != nil {
+		return err
+	}
+
+	state.GetGlobal(ctx).UI().CreateEvent(types.EventMoneyCredit)
+	return nil
+}
