@@ -14,6 +14,9 @@ type AppError struct {
 }
 
 func (e *AppError) Error() string {
+	if e.Err == nil {
+		return fmt.Sprintf("errorcode=%d", e.ErrorCode)
+	}
 	return e.Err.Error()
 }
 

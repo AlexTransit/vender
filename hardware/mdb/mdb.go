@@ -68,7 +68,7 @@ func (b *Bus) Tx(request Packet, response *Packet) (err error) {
 	reqBs := request.Bytes()
 	rp.l, err = b.u.Tx(reqBs, rp.b[:])
 	if err != nil {
-		err = fmt.Errorf("error=%v mdb.Tx send=%x recv=%x", err, reqBs, rp.Bytes())
+		err = oerr.Annotatef(err, "mdb.Tx send=%x recv=%x", reqBs, rp.Bytes())
 	}
 	// if response != nil && rp.l == 0 { // need answer
 	// 	err = fmt.Errorf("device not anwer")

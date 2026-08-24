@@ -28,6 +28,7 @@ func TestDeviceTx(t *testing.T) {
 	require.NoError(t, d.TxKnown(d.PacketPoll, nil))
 	assert.Equal(t, mdb.DeviceOnline, d.State())
 
-	require.Error(t, mdb.ErrTimeoutMDB, d.TxKnown(d.PacketPoll, nil))
+	err := d.TxKnown(d.PacketPoll, nil)
+	require.Error(t, err)
 	assert.Equal(t, mdb.DeviceOffline, d.State())
 }
