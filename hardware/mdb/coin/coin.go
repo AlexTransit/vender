@@ -461,9 +461,8 @@ func (ca *CoinAcceptor) decodeByte(b byte, b2 ...byte) (ve money.ValidatorEvent)
 		// yyy = coins dispensed
 		// xxxx = coin type
 		count := (b >> 4) & 7
-		nominal := ca.coinTypeNominal(b & 0xf)
-		// return money.PollItem{Status: money.StatusDispensed, DataNominal: nominal, DataCount: count}
-		fmt.Printf("\033[41m dispense count(%v) nominal(%v) tubevoint(%v) \033[0m\n", count, nominal, b2)
+		nominal := ca.coinTypeNominal(b & 0xf).Format100I()
+		ca.Log.Error(fmt.Sprintf("manual dispense nominal(%s) count(%v) tubevoint(%v)", nominal, count, b2))
 		return money.ValidatorEvent{}
 	}
 
@@ -571,7 +570,8 @@ func (ca *CoinAcceptor) ReadTubeStatus() error {
 		}
 	}
 	for k, v := range ct {
-		ca.Tub = append(ca.Tub,
+		ca.Tub = append(
+			ca.Tub,
 			Tube{
 				Count:    ca.tubes.InTube(currency.Nominal(k)),
 				Nominal:  currency.Nominal(k),
