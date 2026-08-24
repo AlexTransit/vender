@@ -96,12 +96,12 @@ func hasCyrillic(s string) bool {
 
 func generateDoc(t reflect.Type, prefix string, comments map[string]map[string]FieldInfo) {
 	typeName := t.PkgPath() + "." + t.Name()
-	if typeName == "." && t.Kind() == reflect.Ptr {
+	if typeName == "." && t.Kind() == reflect.Pointer {
 		elem := t.Elem()
 		typeName = elem.PkgPath() + "." + elem.Name()
 	}
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
+	for field := range t.Fields() {
+		field := field
 		if !field.IsExported() {
 			continue
 		}
@@ -109,7 +109,7 @@ func generateDoc(t reflect.Type, prefix string, comments map[string]map[string]F
 		if tag == "" {
 			continue
 		}
-		name := strings.Split(tag, ",")[0]
+		name, _, _ := strings.Cut(tag, ",")
 		if name == "" {
 			name = strings.ToLower(field.Name)
 		}
@@ -129,7 +129,7 @@ func generateDoc(t reflect.Type, prefix string, comments map[string]map[string]F
 			}
 		}
 		ft := field.Type
-		if ft.Kind() == reflect.Ptr {
+		if ft.Kind() == reflect.Pointer {
 			ft = ft.Elem()
 		}
 		if ft.Kind() == reflect.Struct {

@@ -42,8 +42,8 @@ func MainLoop(tag string, execP func(line string), complete func(d prompt.Docume
 		if err != nil {
 			log.Fatal(err)
 		}
-		linesb := bytes.Split(stdinAll, []byte{'\n'})
-		for _, lineb := range linesb {
+		linesb := bytes.SplitSeq(stdinAll, []byte{'\n'})
+		for lineb := range linesb {
 			line := string(bytes.TrimSpace(lineb))
 			execP(line)
 		}

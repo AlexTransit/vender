@@ -3,6 +3,7 @@ package currency
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math"
 	"math/rand"
 	"sort"
@@ -50,9 +51,7 @@ func (ng *NominalGroup) Copy() *NominalGroup {
 	ng2 := &NominalGroup{
 		values: make(map[Nominal]uint, len(ng.values)),
 	}
-	for k, v := range ng.values {
-		ng2.values[k] = v
-	}
+	maps.Copy(ng2.values, ng.values)
 	return ng2
 }
 

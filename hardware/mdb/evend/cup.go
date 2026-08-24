@@ -99,7 +99,7 @@ func (c *DeviceCup) initLightSheduler(sh string) {
 		c.dev.Log.Infof("add light shedule %v", v[0])
 		switch v[1] {
 		case "*":
-			for i := 0; i < 7; i++ {
+			for i := range 7 {
 				c.writeShedule(i, v)
 			}
 		default:

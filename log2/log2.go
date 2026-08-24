@@ -89,7 +89,7 @@ func (l *Log) LogToSyslog(tag string) {
 		return
 	}
 	var err error
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		l.logWriter[i], err = syslog.New(syslog.Priority(i), tag)
 		if err != nil {
 			l.LogToConsole()
@@ -102,7 +102,7 @@ func (l *Log) LogToConsole() {
 	if l == nil {
 		return
 	}
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		if i < 5 {
 			l.logWriter[i] = os.Stderr
 		} else {
@@ -113,7 +113,7 @@ func (l *Log) LogToConsole() {
 
 type (
 	ErrorFunc     func(error)
-	FmtFunc       func(format string, args ...interface{})
+	FmtFunc       func(format string, args ...any)
 	FmtFuncWriter struct{ FmtFunc }
 )
 
@@ -197,7 +197,7 @@ func (lg *Log) Log(level Level, s string) {
 	}
 }
 
-func (lg *Log) Logf(level Level, format string, args ...interface{}) {
+func (lg *Log) Logf(level Level, format string, args ...any) {
 	if lg.Enabled(level) {
 		s := fmt.Sprintf(format, args...)
 		lg.Log(level, s)
@@ -205,50 +205,50 @@ func (lg *Log) Logf(level Level, format string, args ...interface{}) {
 }
 
 // compatibility with eclipse.paho.mqtt
-func (lg *Log) Printf(format string, args ...interface{}) { lg.Logf(LOG_INFO, format, args...) }
-func (lg *Log) Println(args ...interface{})               { lg.Log(LOG_INFO, fmt.Sprint(args...)) }
+func (lg *Log) Printf(format string, args ...any) { lg.Logf(LOG_INFO, format, args...) }
+func (lg *Log) Println(args ...any)               { lg.Log(LOG_INFO, fmt.Sprint(args...)) }
 
-func (lg *Log) Info(args ...interface{}) {
+func (lg *Log) Info(args ...any) {
 	lg.Log(LOG_INFO, fmt.Sprint(args...))
 }
 
-func (lg *Log) Infof(format string, args ...interface{}) {
+func (lg *Log) Infof(format string, args ...any) {
 	s := fmt.Sprintf(format, args...)
 	lg.Log(LOG_INFO, s)
 }
 
-func (lg *Log) Debug(args ...interface{}) {
+func (lg *Log) Debug(args ...any) {
 	lg.Log(LOG_DEBUG, fmt.Sprint(args...))
 }
 
-func (lg *Log) Debugf(format string, args ...interface{}) {
+func (lg *Log) Debugf(format string, args ...any) {
 	s := fmt.Sprintf(format, args...)
 	lg.Log(LOG_DEBUG, s)
 }
 
-func (lg *Log) Err(args ...interface{}) {
+func (lg *Log) Err(args ...any) {
 	lg.Log(LOG_ERR, fmt.Sprint(args...))
 }
 
-func (lg *Log) Errf(format string, args ...interface{}) {
+func (lg *Log) Errf(format string, args ...any) {
 	s := fmt.Sprintf(format, args...)
 	lg.Log(LOG_ERR, s)
 }
 
-func (lg *Log) Warning(args ...interface{}) {
+func (lg *Log) Warning(args ...any) {
 	lg.Log(LOG_WARNING, fmt.Sprint(args...))
 }
 
-func (lg *Log) WarningF(format string, args ...interface{}) {
+func (lg *Log) WarningF(format string, args ...any) {
 	s := fmt.Sprintf(format, args...)
 	lg.Log(LOG_WARNING, s)
 }
 
-func (lg *Log) Notice(args ...interface{}) {
+func (lg *Log) Notice(args ...any) {
 	lg.Log(LOG_NOTICE, fmt.Sprint(args...))
 }
 
-func (lg *Log) NoticeF(format string, args ...interface{}) {
+func (lg *Log) NoticeF(format string, args ...any) {
 	s := fmt.Sprintf(format, args...)
 	lg.Log(LOG_NOTICE, s)
 }
@@ -275,18 +275,18 @@ func (lg *Log) NoticeF(format string, args ...interface{}) {
 //	}
 
 // ErrorF is a helper for logging and returning error in one line
-func (lg *Log) ErrorF(args ...interface{}) error {
+func (lg *Log) ErrorF(args ...any) error {
 	lg.Error(args)
 	return errors.New(fmt.Sprint(args...))
 }
 
-func (lg *Log) Error(args ...interface{}) {
+func (lg *Log) Error(args ...any) {
 	lg.Errorf("%v", args)
 }
 
 var ErrStr string
 
-func (lg *Log) Errorf(format string, args ...interface{}) {
+func (lg *Log) Errorf(format string, args ...any) {
 	s := fmt.Sprintf(format, args...)
 	if ErrStr == s {
 		return
@@ -302,7 +302,7 @@ func (lg *Log) Errorf(format string, args ...interface{}) {
 	}
 }
 
-func (lg *Log) Fatalf(format string, args ...interface{}) {
+func (lg *Log) Fatalf(format string, args ...any) {
 	if lg.fatalf != nil {
 		lg.fatalf(format, args...)
 	} else {
@@ -311,7 +311,7 @@ func (lg *Log) Fatalf(format string, args ...interface{}) {
 	}
 }
 
-func (lg *Log) Fatal(args ...interface{}) {
+func (lg *Log) Fatal(args ...any) {
 	s := fmt.Sprint(args...)
 	if lg.fatalf != nil {
 		lg.fatalf(s)

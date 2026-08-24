@@ -27,8 +27,8 @@ const (
 )
 
 type Device struct { //nolint:maligned
-	state   uint32 // atomic
-	errCode int32  // atomic
+	state   atomic.Uint32 // atomic
+	errCode int32         // atomic
 
 	bus   *Bus
 	cmdLk sync.Mutex // TODO explore if chan approach is better
@@ -208,9 +208,9 @@ func (dev *Device) SetError(e error) {
 // 	// }
 // }
 
-func (dev *Device) State() DeviceState       { return DeviceState(atomic.LoadUint32(&dev.state)) }
+func (dev *Device) State() DeviceState       { return DeviceState(dev.state.Load()) }
 func (dev *Device) Ready() bool              { return dev.State() == DeviceReady }
-func (dev *Device) SetState(new DeviceState) { atomic.StoreUint32(&dev.state, uint32(new)) }
+func (dev *Device) SetState(new DeviceState) { dev.state.Store(uint32(new)) }
 func (dev *Device) SetReady()                { dev.SetState(DeviceReady) }
 func (dev *Device) SetOnline()               { dev.SetState(DeviceOnline) }
 

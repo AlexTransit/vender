@@ -273,7 +273,7 @@ func (ca *CoinAcceptor) DispenceCoin(nominal currency.Nominal) (complete bool, e
 	}
 	// timeout poll dispense 1 coin
 	var errp error
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		time.Sleep(500 * time.Millisecond)
 		var emptyResponse bool
 		emptyResponse, errp = ca.pollF(nil)
@@ -557,7 +557,7 @@ func (ca *CoinAcceptor) ReadTubeStatus() error {
 	ca.tubes.Clear()
 	ca.Tub = make([]Tube, 0)
 	ct := make(map[uint32]bool)
-	for coinType := uint8(0); coinType < TypeCount; coinType++ {
+	for coinType := range uint8(TypeCount) {
 		full := (fulls & (1 << coinType)) != 0
 		nominal := ca.coinTypeNominal(coinType)
 		if counts[coinType] != 0 {

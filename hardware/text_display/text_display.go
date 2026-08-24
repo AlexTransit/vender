@@ -27,7 +27,7 @@ type TextDisplay struct { //nolint:maligned
 	line []string
 
 	tickd time.Duration
-	tick  uint32
+	tick  atomic.Uint32
 	upd   chan<- State
 }
 
@@ -121,7 +121,7 @@ func (td *TextDisplay) SetLine(line int, value string) {
 	case 2:
 		td.state.L2 = bs
 	}
-	atomic.StoreUint32(&td.tick, 0)
+	td.tick.Store(0)
 	td.flush()
 	time.Sleep(100 * time.Millisecond)
 }
@@ -136,7 +136,7 @@ func (td *TextDisplay) Tick() {
 	td.mu.Lock()
 	defer td.mu.Unlock()
 
-	atomic.AddUint32(&td.tick, 1)
+	td.tick.Add(1)
 	td.flush()
 }
 
@@ -233,7 +233,7 @@ func (td *TextDisplay) flush() {
 	var buf2 [MaxWidth]byte
 	b1 := buf1[:td.width]
 	b2 := buf2[:td.width]
-	tick := atomic.LoadUint32(&td.tick)
+	tick := td.tick.Load()
 	n1 := scrollWrap(b1, td.state.L1, tick)
 	n2 := scrollWrap(b2, td.state.L2, tick)
 

@@ -389,12 +389,12 @@ func (g *Global) initInputEvendKeyboard() (input.Source, error) {
 
 type once struct {
 	sync.Mutex
-	called uint32 // atomic bool
+	called atomic.Uint32 // atomic bool
 	err    error
 }
 
 func (o *once) done() bool {
-	return atomic.LoadUint32(&o.called) == 1
+	return o.called.Load() == 1
 }
 
 func (o *once) do(f func() error) error {
@@ -407,6 +407,6 @@ func (o *once) do(f func() error) error {
 		return o.err
 	}
 	o.err = f()
-	atomic.StoreUint32(&o.called, 1)
+	o.called.Store(1)
 	return o.err
 }

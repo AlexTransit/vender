@@ -2,6 +2,7 @@ package config_global
 
 import (
 	"os"
+	"slices"
 
 	"github.com/AlexTransit/vender/currency"
 	"github.com/AlexTransit/vender/hardware/hd44780"
@@ -64,10 +65,8 @@ var includeFile = &hcl.BodySchema{
 }
 
 func (c *configLoadStruct) readConfig(fileName string) {
-	for _, v := range c.includes {
-		if v == fileName {
-			return
-		}
+	if slices.Contains(c.includes, fileName) {
+		return
 	}
 	c.includes = append(c.includes, fileName)
 	src, err := os.ReadFile(fileName)

@@ -67,7 +67,6 @@ func TestLog2(t *testing.T) {
 		}},
 	}
 	for _, c := range cases {
-		c := c
 		t.Run(c.name+"/logger=nil", func(t *testing.T) {
 			c.fun(t, nil)
 		})
@@ -140,7 +139,7 @@ func BenchmarkLog2(b *testing.B) {
 
 func benchCapture(call func(FmtFunc)) string {
 	s := ""
-	call(func(format string, args ...interface{}) {
+	call(func(format string, args ...any) {
 		s = fmt.Sprintf(format+"\n", args...)
 	})
 	return s

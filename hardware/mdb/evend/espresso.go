@@ -49,7 +49,7 @@ func (d *DeviceEspresso) heatOn() error        { return d.CommandNoWait(0x05) }
 func (d *DeviceEspresso) heatOff() error       { return d.CommandNoWait(0x06) }
 
 func (d *DeviceEspresso) grind() (err error) {
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		d.log.Debug("grind start")
 		e := d.CommandWaitSuccess(d.timeout, 0x01)
 		if e == nil {

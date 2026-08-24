@@ -34,7 +34,6 @@ func TestWrap(t *testing.T) {
 		{"long2", "too-much-very-long-line1;too-much-very-long-line2"},
 	}
 	for _, c := range cases {
-		c := c
 		t.Run(c.name, func(t *testing.T) {
 			for tick := uint32(0); tick < uint32(len(c.input)*3); tick++ {
 				var buf [width]byte

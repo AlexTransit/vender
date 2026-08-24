@@ -5,10 +5,10 @@ import (
 	"time"
 )
 
-type FatalFunc func(...interface{})
+type FatalFunc func(...any)
 
 type Fataler interface {
-	Fatal(...interface{})
+	Fatal(...any)
 }
 
 func RandUnix() *rand.Rand {

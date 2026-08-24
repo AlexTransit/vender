@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"syscall"
@@ -121,13 +122,7 @@ func TextSpeech(tts string) {
 	stdin := strings.NewReader(tts)
 	stderr := bytes.NewBuffer(nil)
 	ttsArgs := append([]string{}, s.config.TTSExec[1:]...)
-	hasOutputRaw := false
-	for _, arg := range ttsArgs {
-		if arg == "--output_raw" {
-			hasOutputRaw = true
-			break
-		}
-	}
+	hasOutputRaw := slices.Contains(ttsArgs, "--output_raw")
 	if !hasOutputRaw {
 		ttsArgs = append(ttsArgs, "--output_raw")
 	}
