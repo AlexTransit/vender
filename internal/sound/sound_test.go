@@ -55,7 +55,7 @@ func TestSetVolume(t *testing.T) {
 
 	SetVolume(15)
 
-	if got := getCurrentVolume(); got != 1.5 {
+	if got := getCurrentVolume(); got != 0.15 {
 		t.Fatalf("getCurrentVolume()=%v want=1.5", got)
 	}
 }
@@ -67,7 +67,7 @@ func TestSetDefaultVolume(t *testing.T) {
 	s.config = &sound_config.Config{DefaultVolume: 7}
 	SetDefaultVolume()
 
-	if got := getCurrentVolume(); got != 0.7 {
+	if got := getCurrentVolume(); got != 0.07 {
 		t.Fatalf("getCurrentVolume()=%v want=0.7", got)
 	}
 }
@@ -80,7 +80,7 @@ func TestSetDefaultVolumeNilConfig(t *testing.T) {
 	SetVolume(13)
 	SetDefaultVolume()
 
-	if got := getCurrentVolume(); got != 1.3 {
+	if got := getCurrentVolume(); got != 0.13 {
 		t.Fatalf("getCurrentVolume()=%v want=1.3", got)
 	}
 }

@@ -59,7 +59,8 @@ func TestConfig1(t *testing.T) {
 func TestConfig2(t *testing.T) {
 	content := []byte(`
         stock "sugar" { 
-        code = 1  \n           check = true
+        code = 1
+		check = true
         }
         stock "amaretto" { 
             code = 2
