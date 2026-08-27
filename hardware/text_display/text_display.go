@@ -88,19 +88,6 @@ func (td *TextDisplay) Clear() {
 	td.flush()
 }
 
-// func (td *TextDisplay) SetLinesBytes(b1, b2 []byte) {
-// 	td.mu.Lock()
-// 	defer td.mu.Unlock()
-// 	if b1 != nil {
-// 		td.state.L1 = b1
-// 	}
-// 	if b2 != nil {
-// 		td.state.L2 = b2
-// 	}
-// 	atomic.StoreUint32(&td.tick, 0)
-// 	td.flush()
-// }
-
 func (td *TextDisplay) SetLine(line int, value string) {
 	td.mu.Lock()
 	defer td.mu.Unlock()
@@ -127,9 +114,36 @@ func (td *TextDisplay) SetLine(line int, value string) {
 }
 
 func (td *TextDisplay) SetLines(line1 string, line2 string) {
-	// td.SetLinesBytes(td.Translate(line1), td.Translate(line2))
-	td.SetLine(1, line1)
-	td.SetLine(2, line2)
+	td.mu.Lock()
+	defer td.mu.Unlock()
+
+	changed := false
+	if td.line[0] != line1 {
+		td.line[0] = line1
+		bs := td.Translate(line1)
+		if bs == nil {
+			td.log.NoticeF("translate %s retutn nil", line1)
+		}
+		td.log.NoticeF("Display.L1=%s", line1)
+		td.state.L1 = bs
+		changed = true
+	}
+	if td.line[1] != line2 {
+		td.line[1] = line2
+		bs := td.Translate(line2)
+		if bs == nil {
+			td.log.NoticeF("translate %s retutn nil", line2)
+		}
+		td.log.NoticeF("Display.L2=%s", line2)
+		td.state.L2 = bs
+		changed = true
+	}
+	if !changed {
+		return
+	}
+	td.tick.Store(0)
+	td.flush()
+	time.Sleep(100 * time.Millisecond)
 }
 
 func (td *TextDisplay) Tick() {
@@ -285,7 +299,8 @@ func (s State) Copy() State {
 }
 
 func (s State) Format(width uint32) string {
-	return fmt.Sprintf("%s\n%s",
+	return fmt.Sprintf(
+		"%s\n%s",
 		PadSpace(s.L1, width),
 		PadSpace(s.L2, width),
 	)
