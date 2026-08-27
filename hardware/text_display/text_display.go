@@ -282,6 +282,15 @@ func (td *TextDisplay) flush() {
 	}
 }
 
+func (td *TextDisplay) sendCommand(cmd byte) {
+	td.dev.CursorYX(0, 0)
+	td.dev.Write([]byte{cmd})
+}
+
+func (td *TextDisplay) writeData(data byte) {
+	td.dev.Write([]byte{data})
+}
+
 type State struct {
 	L1, L2 []byte
 }
