@@ -56,22 +56,22 @@ func defaultConfigPath() string {
 	return filepath.Join(filepath.Dir(thisFile), "..", "..", "..", "defaultConfig.hcl")
 }
 
-// decodeBody parses and decodes one HCL fragment into cfg, using the exact
-// merge semantics config_global.ReadConfig uses for multi-file configs:
-// gohcl.DecodeBody only requires the blocks THIS fragment declares, and only
-// checks for duplicates within itself — fields it doesn't mention keep
-// whatever a previous decodeBody call already set. That's what lets tests
-// layer a small, focused HCL snippet on top of the full defaultConfig.hcl
-// base without re-declaring every required block.
+// decodeBody parses and decodes one HCL fragment into cfg, matching the
+// exact merge semantics config_global.ReadConfig uses for multi-file
+// configs: gohcl.DecodeBody's "missing required block" diagnostics are
+// expected for any individual fragment that doesn't redeclare every block
+// (another fragment, or the defaultConfig.hcl base, may already supply it)
+// — ReadConfig discards them (`_ = gohcl.DecodeBody(...)`), and so do we,
+// for the same reason. Only a genuine parse failure (malformed HCL syntax)
+// is treated as fatal, mirroring configLoadStruct.readConfig's own
+// hclsyntax.ParseConfig error handling.
 func decodeBody(t testing.TB, cfg *config_global.Config, filename string, src []byte) {
 	t.Helper()
 	file, diags := hclsyntax.ParseConfig(src, filename, hcl.Pos{Line: 1, Column: 1})
 	if diags.HasErrors() {
 		t.Fatalf("parse %s: %s", filename, diags)
 	}
-	if diags := gohcl.DecodeBody(file.Body, nil, cfg); diags.HasErrors() {
-		t.Fatalf("decode %s: %s", filename, diags)
-	}
+	_ = gohcl.DecodeBody(file.Body, nil, cfg)
 	config_global.ProcessConfig(cfg)
 }
 

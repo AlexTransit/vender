@@ -56,10 +56,8 @@ func TestMessage(t *testing.T) {
 	ch := make(chan State, 1)
 	d.SetUpdateChan(ch)
 	d.SetLines("hello", "cursor\x00")
-	assert.Equal(t, "hello   \ncursor", (<-ch).String())
-	// d.Message("padded", "msg", func() {
-	// assert.Equal(t, "padded  \nmsg     ", (<-ch).String())
-	// })
+	// SetLines sets both lines under one lock and flushes once — a single
+	// complete update, not two partial ones (see text_display.go).
 	assert.Equal(t, "hello   \ncursor", (<-ch).String())
 }
 

@@ -28,12 +28,22 @@ device "evend.conveyor" {}
 		"d0": "", "d1": "", "e0": "", "e1": "", "e8": "", "e9": "",
 	})
 	require.NoError(t, EnumHopper(ctx, 1))
+	require.NoError(t, EnumConveyor(ctx))
 
 	mock.ExpectMap(nil)
 	go mock.Expect([]mdb.MockR{
-		{"db", ""}, {"da010000", ""}, {"db", ""}, // conveyor calibrate / conveyor_move(0)
-		{"db", ""}, {"da01fa00", ""}, {"db", ""}, // conveyor move to hopper
-		{"43", ""}, {"420a", ""}, {"43", ""}, // hopper run
+		// conveyor calibrate (move to 0): CommandWaitSuccess = Command +
+		// single-poll immediate success (see TestConveyor's calibrate fix).
+		{"da010000", ""},
+		{"db", ""},
+		// conveyor move to hopper position: moveNoWait=CommandNoWait
+		// (Command + 1 mandatory poll) then movingDone's own poll-loop.
+		{"da01fa00", ""},
+		{"db", ""},
+		{"db", ""},
+		// hopper run: CommandWaitSuccess = Command + single-poll success.
+		{"420a", ""},
+		{"43", ""},
 	})
 
 	assert.NoError(t, g.Engine.RegisterParse("hopper1(?)", "evend.conveyor.move(250) evend.hopper1.run(?)"))
