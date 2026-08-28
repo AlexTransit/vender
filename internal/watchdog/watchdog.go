@@ -96,7 +96,9 @@ func SetBroken() {
 		return
 	}
 	f.Sync()
-	f.Close()
+	if cerr := f.Close(); cerr != nil {
+		WD.log.Errorf("close broken file failed: %v", cerr)
+	}
 }
 
 func UnsetBroken() { os.Remove(config_global.VMC.BrokenFile) }

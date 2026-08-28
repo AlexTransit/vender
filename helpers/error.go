@@ -70,7 +70,11 @@ func SaveAndShowDoError(li []string, err error, errorFolder string) {
 		fmt.Fprintf(os.Stderr, "Failed to create file: %v\n", err)
 		return
 	}
-	defer f.Close()
+	defer func() {
+		if cerr := f.Close(); cerr != nil {
+			fmt.Fprintf(os.Stderr, "Failed to close file: %v\n", cerr)
+		}
+	}()
 
 	_, err = f.WriteString(d)
 	if err != nil {

@@ -235,11 +235,11 @@ func (inv *Inventory) InventoryLoad() {
 
 func (inv *Inventory) InventorySave() error {
 	file, err := os.OpenFile(inv.File, os.O_WRONLY|os.O_SYNC|os.O_CREATE|os.O_TRUNC, 0o644)
+	defer func() { _ = file.Close() }()
 	if err != nil {
 		inv.log.Errorf("save inventory fail. error open file(%v)", err)
 		return err
 	}
-	defer file.Close()
 
 	bs := make([]byte, len(inv.Stocks)*4)
 	for _, cl := range inv.Stocks {

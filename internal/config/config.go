@@ -1,6 +1,7 @@
 package config_global
 
 import (
+	"fmt"
 	"os"
 	"slices"
 
@@ -35,11 +36,17 @@ func WriteConfigToFile() {
 	gohcl.EncodeIntoBody(newDefaultConfig(), f.Body())
 	file, err := os.OpenFile("defaultConfig.hcl", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to create defaultConfig.hcl: %v\n", err)
 		panic(err)
 	}
-	defer file.Close()
+	defer func() {
+		if cerr := file.Close(); cerr != nil {
+			fmt.Fprintf(os.Stderr, "Failed to close defaultConfig.hcl: %v\n", cerr)
+		}
+	}()
 	_, err = file.Write(f.Bytes())
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to write defaultConfig.hcl: %v\n", err)
 		panic(err)
 	}
 }
