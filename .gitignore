@@ -1,37 +1,31 @@
-*.a
-*.cgo1.go
-*.cgo2.c
-*.dSYM/
-*.exe
-*.gcda
-*.gcno
-*.o
-*.prof
-*.so
-*.test
-.DS_Store
+# Dependencies
+go.sum
+# vendor/
+
+# Logs and temp files
+*.log
+*.tmp
+
+# Environment
 .env
-/.tags*
-/.vagrant
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# Build artifacts
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+__debug_bin*
 /build
-/mega-cli
-/vender
-__Previews/
-_cgo_defun.c
-_cgo_export.*
-_cgo_gotypes.go
-_obj
-_test
-_testmain.go
-cmd/mega-cli/mega-cli
-cmd/vender/vender
-cover.out
-coverage*.info
-coverage*.txt
-local.hcl
-tmp-vender-db/
-vender.sublime-*
-cmd/vender/__debug_bin*
-cmd/vender/broken
-hardware/schematic/evend-adapter/#auto_saved_files#
-hardware/schematic/evend-adapter/_autosave-evend-adapter.kicad_sch
+
+# Go specific
+*.test
+*.prof
