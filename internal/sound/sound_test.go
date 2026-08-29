@@ -109,7 +109,7 @@ func TestTextSpeechEarlyReturn(t *testing.T) {
 func TestPlayStreamEarlyReturn(t *testing.T) {
 	st := snapshotSoundState()
 	t.Cleanup(func() { restoreSoundState(st) })
-	audioCtx := audio.NewContext(sampleRate)
+	audioCtx := audio.NewContext(s.config.SampleRate)
 
 	assertNoPanic := func(t *testing.T, fn func()) {
 		t.Helper()

@@ -206,6 +206,7 @@ func newDefaultConfig() *Config {
 				"--model", "/home/vmc/vender-db/audio/tts/ruslan/voice.onnx",
 				"--config", "/home/vmc/vender-db/audio/tts/ruslan/voice.json",
 			},
+			SampleRate: 11025,
 		},
 		Watchdog: watchdog_config.Config{Folder: "/run/vender/"},
 		Engine: engine_config.Config{

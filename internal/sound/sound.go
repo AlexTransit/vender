@@ -27,8 +27,6 @@ import (
 	"github.com/temoto/alive/v2"
 )
 
-const sampleRate = 11025
-
 type Sound struct {
 	config        *sound_config.Config
 	alive         *alive.Alive
@@ -79,7 +77,7 @@ func Init(ctx context.Context, startingVMC bool) {
 	}
 	s.log = g.Log
 	SetDefaultVolume()
-	audioContext := audio.NewContext(sampleRate)
+	audioContext := audio.NewContext(s.config.SampleRate)
 	s.audioContext = audioContext
 	// g.Engine.Exec(ctx, g.Engine.Resolve("sound(cat.mp3)"))
 	if startingVMC {
@@ -192,7 +190,7 @@ func playMP3controlled(file string) (err error) {
 		return
 	}
 	// str, err := mp3.DecodeWithoutResampling(f)
-	str, err := mp3.DecodeWithSampleRate(sampleRate, f)
+	str, err := mp3.DecodeWithSampleRate(s.config.SampleRate, f)
 	if err != nil {
 		f.Close()
 		return
@@ -243,7 +241,7 @@ func loadStream(file string) ([]byte, error) {
 		return nil, err
 	}
 	defer f.Close()
-	bs, err := mp3.DecodeWithSampleRate(sampleRate, f)
+	bs, err := mp3.DecodeWithSampleRate(s.config.SampleRate, f)
 	if err != nil {
 		return nil, err
 	}

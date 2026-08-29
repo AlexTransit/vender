@@ -21,4 +21,7 @@ type Config struct {
 	// EN: Command for generating TTS sound. Text To Sound.
 	// Example: ["/home/vmc/vender-db/audio/tts/piper", "--model", "/home/vmc/vender-db/audio/tts/ruslan/voice.onnx", "--config", "/home/vmc/vender-db/audio/tts/ruslan/voice.json"]
 	TTSExec []string `hcl:"tts_exec,optional"`
+	// RU: Частота дискретизации аудио файлов в Гц.
+	// EN: Audio file sample rate in Hz.
+	SampleRate int `hcl:"sample_rate,optional"`
 }

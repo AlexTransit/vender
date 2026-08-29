@@ -306,6 +306,10 @@ sound {
 # EN: Command for generating TTS sound. Text To Sound.
 # Example: ["/home/vmc/vender-db/audio/tts/piper", "--model", "/home/vmc/vender-db/audio/tts/ruslan/voice.onnx", "--config", "/home/vmc/vender-db/audio/tts/ruslan/voice.json"]
   tts_exec       = ["/home/vmc/vender-db/audio/tts/piper", "--model", "/home/vmc/vender-db/audio/tts/ruslan/voice.onnx", "--config", "/home/vmc/vender-db/audio/tts/ruslan/voice.json"]
+# RU: Частота дискретизации аудио файлов в Гц.
+# EN: Audio file sample rate in Hz.
+  sample_rate = 11025
+
 }
 
 # RU: Конфигурация для системы наблюдения за сервисом. Если стророжевую собаку не кормить то сервис будет перезапущен.
