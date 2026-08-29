@@ -215,16 +215,13 @@ func playMP3controlled(file string) (err error) {
 }
 
 func waitingEndPlay(player *audio.Player) {
-	for {
-		if player == nil {
-			return
-		}
-		if !player.IsPlaying() {
-			player.Close()
-			return
-		}
+	if player == nil {
+		return
+	}
+	for player.IsPlaying() {
 		time.Sleep(100 * time.Millisecond)
 	}
+	player.Close()
 }
 
 func (ss *soundStream) prepare(name string, file string) {
