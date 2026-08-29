@@ -71,15 +71,11 @@ func NewWriter(w io.Writer, level Level) *Log {
 		return nil
 	}
 	var lg Log
-	var err error
 	lg.logWriter = make([]io.Writer, 8)
-	lg.l, err = syslog.NewLogger(syslog.Priority(level), LServiceFlags)
-	if err != nil {
-		lg.l = log.New(os.Stderr, "", LServiceFlags)
-		lg.LogToConsole()
-	} else {
-		lg.LogToSyslog("")
+	for i := range lg.logWriter {
+		lg.logWriter[i] = w
 	}
+	lg.l = log.New(w, "", LServiceFlags)
 	lg.level = level
 	return &lg
 }
@@ -218,11 +214,11 @@ func (lg *Log) Infof(format string, args ...any) {
 }
 
 func (lg *Log) Debug(args ...any) {
-	lg.Log(LOG_DEBUG, fmt.Sprint(args...))
+	lg.Log(LOG_DEBUG, "debug: "+fmt.Sprint(args...))
 }
 
 func (lg *Log) Debugf(format string, args ...any) {
-	s := fmt.Sprintf(format, args...)
+	s := "debug: " + fmt.Sprintf(format, args...)
 	lg.Log(LOG_DEBUG, s)
 }
 
@@ -276,25 +272,46 @@ func (lg *Log) NoticeF(format string, args ...any) {
 
 // ErrorF is a helper for logging and returning error in one line
 func (lg *Log) ErrorF(args ...any) error {
-	lg.Error(args)
+	lg.Error(args...)
 	return errors.New(fmt.Sprint(args...))
 }
 
+// Error logs args (formatted the same way as fmt.Sprint) and, if an error
+// handler is registered via SetErrorFunc, invokes it. When args[0] is
+// itself an error, that exact value is passed through unchanged — so
+// callers doing errors.Is/errors.As or equality checks on it still work —
+// rather than being reformatted into a brand new error.
 func (lg *Log) Error(args ...any) {
-	lg.Errorf("%v", args)
+	if lg == nil {
+		return
+	}
+	s := "error: " + fmt.Sprint(args...)
+	if ErrStr != s {
+		ErrStr = s
+		lg.Log(LOG_ERR, s)
+	}
+	if errfun := lg.loadErrorFunc(); errfun != nil {
+		var e error
+		if len(args) >= 1 {
+			e, _ = args[0].(error)
+		}
+		if e == nil {
+			e = errors.New(fmt.Sprint(args...))
+		}
+		errfun(e)
+	}
 }
 
 var ErrStr string
 
 func (lg *Log) Errorf(format string, args ...any) {
-	s := fmt.Sprintf(format, args...)
-	if ErrStr == s {
-		return
-	}
-	ErrStr = s
-	lg.Log(LOG_ERR, s)
 	if lg == nil {
 		return
+	}
+	s := "error: " + fmt.Sprintf(format, args...)
+	if ErrStr != s {
+		ErrStr = s
+		lg.Log(LOG_ERR, s)
 	}
 	if errfun := lg.loadErrorFunc(); errfun != nil {
 		e := fmt.Errorf(format, args...)
