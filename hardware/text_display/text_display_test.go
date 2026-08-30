@@ -34,7 +34,6 @@ func TestWrap(t *testing.T) {
 		{"long2", "too-much-very-long-line1;too-much-very-long-line2"},
 	}
 	for _, c := range cases {
-		c := c
 		t.Run(c.name, func(t *testing.T) {
 			for tick := uint32(0); tick < uint32(len(c.input)*3); tick++ {
 				var buf [width]byte
@@ -57,10 +56,8 @@ func TestMessage(t *testing.T) {
 	ch := make(chan State, 1)
 	d.SetUpdateChan(ch)
 	d.SetLines("hello", "cursor\x00")
-	assert.Equal(t, "hello   \ncursor", (<-ch).String())
-	// d.Message("padded", "msg", func() {
-	// assert.Equal(t, "padded  \nmsg     ", (<-ch).String())
-	// })
+	// SetLines sets both lines under one lock and flushes once — a single
+	// complete update, not two partial ones (see text_display.go).
 	assert.Equal(t, "hello   \ncursor", (<-ch).String())
 }
 

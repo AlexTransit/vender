@@ -50,9 +50,9 @@ func (mr *mockReader) Read(p []byte) (int, error) {
 
 func parseMockReader(s string) *mockReader {
 	mr := new(mockReader)
-	for _, es := range strings.Fields(s) {
+	for es := range strings.FieldsSeq(s) {
 		mre := mockReadEffect{}
-		for _, token := range strings.Split(es, ",") {
+		for token := range strings.SplitSeq(es, ",") {
 			switch token[0] {
 			case 'b':
 				b, err := hex.DecodeString(token[1:])
@@ -126,7 +126,6 @@ func TestUarterTx(t *testing.T) {
 	}
 	helpers.RandUnix().Shuffle(len(cases), func(i int, j int) { cases[i], cases[j] = cases[j], cases[i] })
 	for _, c := range cases {
-		c := c
 		// for u in all kinds of Uarter
 		t.Run(c.name, func(t *testing.T) {
 			t.Parallel()

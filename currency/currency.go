@@ -3,6 +3,7 @@ package currency
 import (
 	"context"
 	"fmt"
+	"maps"
 	"math"
 	"math/rand"
 	"sort"
@@ -50,9 +51,7 @@ func (ng *NominalGroup) Copy() *NominalGroup {
 	ng2 := &NominalGroup{
 		values: make(map[Nominal]uint, len(ng.values)),
 	}
-	for k, v := range ng.values {
-		ng2.values[k] = v
-	}
+	maps.Copy(ng2.values, ng.values)
 	return ng2
 }
 
@@ -62,6 +61,19 @@ func (ng *NominalGroup) SetValid(valid []Nominal) {
 		if n != 0 {
 			ng.values[n] = 0
 		}
+	}
+}
+
+// EnsureValid registers n as an accepted nominal if it isn't already,
+// preserving any existing counts. Unlike SetValid, it never resets the group.
+// Useful when the set of valid nominals isn't known upfront (e.g. no real
+// validator hardware attached, as in tests).
+func (ng *NominalGroup) EnsureValid(n Nominal) {
+	if ng.values == nil {
+		ng.values = make(map[Nominal]uint, 1)
+	}
+	if _, ok := ng.values[n]; !ok {
+		ng.values[n] = 0
 	}
 }
 

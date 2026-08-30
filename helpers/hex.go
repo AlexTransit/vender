@@ -3,6 +3,7 @@ package helpers
 import (
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"unicode"
 )
 
@@ -20,15 +21,15 @@ func HexSpecialBytes(input []byte) string {
 }
 
 func HexSpecialString(input string) string {
-	result := ""
+	var result strings.Builder
 	for _, r := range input {
 		if unicode.In(r, unicode.Digit, unicode.Letter, unicode.Punct, unicode.Space) {
-			result += string(r)
+			result.WriteString(string(r))
 		} else {
-			result += fmt.Sprintf("{%02x}", r)
+			result.WriteString(fmt.Sprintf("{%02x}", r))
 		}
 	}
-	return result
+	return result.String()
 }
 
 func MustHex(s string) []byte {

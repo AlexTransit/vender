@@ -12,7 +12,7 @@ import (
 )
 
 type Int32 struct {
-	value   int32
+	value   atomic.Int32
 	updated *atomic_clock.Clock
 	valid   time.Duration
 }
@@ -24,13 +24,13 @@ func (c *Int32) Init(valid time.Duration) {
 }
 
 func (c *Int32) get() (int32, bool) {
-	v := atomic.LoadInt32(&c.value)
+	v := c.value.Load()
 	age := atomic_clock.Since(c.updated)
 	return v, age >= 0 && age <= c.valid
 }
 
 // Returns current (possibly stale) value. Fast and cheap.
-func (c *Int32) Get() int32 { return atomic.LoadInt32(&c.value) }
+func (c *Int32) Get() int32 { return c.value.Load() }
 
 // Returns current value and true if it's fresh. Costs current timestamp lookup.
 func (c *Int32) GetFresh() (int32, bool) { return c.get() }
@@ -45,7 +45,7 @@ func (c *Int32) GetOrUpdate(f func()) int32 {
 	v, ok := c.get()
 	if !ok {
 		f()
-		v = atomic.LoadInt32(&c.value)
+		v = c.value.Load()
 	}
 	return v
 }
@@ -54,6 +54,6 @@ func (c *Int32) GetOrUpdate(f func()) int32 {
 // Both value and timestamp are updated atomically, but not consistently with each other.
 // Costs current timestamp lookup.
 func (c *Int32) Set(new int32) {
-	atomic.StoreInt32(&c.value, new)
+	c.value.Store(new)
 	c.updated.SetNow()
 }

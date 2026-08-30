@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"slices"
 	"strings"
 
 	config_global "github.com/AlexTransit/vender/internal/config"
@@ -126,11 +127,17 @@ func addExamples(hclPath string) error {
     onError "4" {
       scenario = "error_scenario2"
     }
-    onError "\d{2}" { // this will match any 2 digit error code.
+    onError "\\d{2}" { // this will match any 2 digit error code.
       scenario = "error_scenario2"
     }
   }
   menu {
+    item "4" {
+      name = "test" 
+      price = 60 
+      scenario = " preset add.coffee(5) add.chocolate(30) mix_midle w_hot85 add.peanut(7) cup_serve_p "
+	  disabled = true
+    }
     item "43." {
       name = "горячий шоколад со сливками и орешками" 
       price = 80 
@@ -138,7 +145,6 @@ func addExamples(hclPath string) error {
       sugarMax = 4 
       scenario = " preset add.sugar(5) add.chocolate(40) cream20 mix_strong w_hot70 cup_serve_p "
     }
-    item "4" { disabled = true}
     item "31" {
       name = "кофе с шоколадом и орешками" 
       price = 60 
@@ -208,20 +214,20 @@ func parseComments(files []string, pkgPaths []string) (map[string]map[string]Fie
 
 func buildPathComments(comments map[string]map[string]FieldInfo) map[string]FieldInfo {
 	paths := make(map[string]FieldInfo)
-	walkType(reflect.TypeOf(config_global.Config{}), "", comments, paths)
+	walkType(reflect.TypeFor[config_global.Config](), "", comments, paths)
 	return paths
 }
 
 func walkType(t reflect.Type, prefix string, comments map[string]map[string]FieldInfo, paths map[string]FieldInfo) {
-	if t.Kind() == reflect.Ptr {
+	if t.Kind() == reflect.Pointer {
 		t = t.Elem()
 	}
 	if t.Kind() != reflect.Struct {
 		return
 	}
 	typeComments := comments[t.PkgPath()+"."+t.Name()]
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
+	for field := range t.Fields() {
+		field := field
 		if !field.IsExported() {
 			continue
 		}
@@ -234,13 +240,7 @@ func walkType(t reflect.Type, prefix string, comments map[string]map[string]Fiel
 		if name == "" {
 			name = strings.ToLower(field.Name)
 		}
-		isLabel := false
-		for _, opt := range tagParts[1:] {
-			if opt == "label" {
-				isLabel = true
-				break
-			}
-		}
+		isLabel := slices.Contains(tagParts[1:], "label")
 		path := name
 		if prefix != "" {
 			path = prefix + "." + name
@@ -257,14 +257,14 @@ func walkType(t reflect.Type, prefix string, comments map[string]map[string]Fiel
 			}
 		}
 		ft := field.Type
-		if ft.Kind() == reflect.Ptr {
+		if ft.Kind() == reflect.Pointer {
 			ft = ft.Elem()
 		}
 		if ft.Kind() == reflect.Struct {
 			walkType(ft, path, comments, paths)
 		} else if ft.Kind() == reflect.Slice {
 			elem := ft.Elem()
-			if elem.Kind() == reflect.Ptr {
+			if elem.Kind() == reflect.Pointer {
 				elem = elem.Elem()
 			}
 			if elem.Kind() == reflect.Struct {
@@ -272,7 +272,7 @@ func walkType(t reflect.Type, prefix string, comments map[string]map[string]Fiel
 			}
 		} else if ft.Kind() == reflect.Map {
 			elem := ft.Elem()
-			if elem.Kind() == reflect.Ptr {
+			if elem.Kind() == reflect.Pointer {
 				elem = elem.Elem()
 			}
 			if elem.Kind() == reflect.Struct {

@@ -43,6 +43,13 @@ func NewDevInputEventSource(device string) (*DevInputEventSource, error) {
 	return &DevInputEventSource{f: f}, nil
 }
 
+func (ds *DevInputEventSource) Close() error {
+	if ds.f == nil {
+		return nil
+	}
+	return ds.f.Close()
+}
+
 func (ds *DevInputEventSource) Read() (types.InputEvent, error) {
 	for {
 		ie, err := inputevent.ReadOne(ds.f)

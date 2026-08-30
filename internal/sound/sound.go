@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"syscall"
@@ -25,8 +26,6 @@ import (
 	"github.com/hajimehoshi/ebiten/v2/audio/mp3"
 	"github.com/temoto/alive/v2"
 )
-
-const sampleRate = 11025
 
 type Sound struct {
 	config        *sound_config.Config
@@ -78,7 +77,7 @@ func Init(ctx context.Context, startingVMC bool) {
 	}
 	s.log = g.Log
 	SetDefaultVolume()
-	audioContext := audio.NewContext(sampleRate)
+	audioContext := audio.NewContext(s.config.SampleRate)
 	s.audioContext = audioContext
 	// g.Engine.Exec(ctx, g.Engine.Resolve("sound(cat.mp3)"))
 	if startingVMC {
@@ -121,13 +120,7 @@ func TextSpeech(tts string) {
 	stdin := strings.NewReader(tts)
 	stderr := bytes.NewBuffer(nil)
 	ttsArgs := append([]string{}, s.config.TTSExec[1:]...)
-	hasOutputRaw := false
-	for _, arg := range ttsArgs {
-		if arg == "--output_raw" {
-			hasOutputRaw = true
-			break
-		}
-	}
+	hasOutputRaw := slices.Contains(ttsArgs, "--output_raw")
 	if !hasOutputRaw {
 		ttsArgs = append(ttsArgs, "--output_raw")
 	}
@@ -197,7 +190,7 @@ func playMP3controlled(file string) (err error) {
 		return
 	}
 	// str, err := mp3.DecodeWithoutResampling(f)
-	str, err := mp3.DecodeWithSampleRate(sampleRate, f)
+	str, err := mp3.DecodeWithSampleRate(s.config.SampleRate, f)
 	if err != nil {
 		f.Close()
 		return
@@ -222,16 +215,13 @@ func playMP3controlled(file string) (err error) {
 }
 
 func waitingEndPlay(player *audio.Player) {
-	for {
-		if player == nil {
-			return
-		}
-		if !player.IsPlaying() {
-			player.Close()
-			return
-		}
+	if player == nil {
+		return
+	}
+	for player.IsPlaying() {
 		time.Sleep(100 * time.Millisecond)
 	}
+	player.Close()
 }
 
 func (ss *soundStream) prepare(name string, file string) {
@@ -248,7 +238,7 @@ func loadStream(file string) ([]byte, error) {
 		return nil, err
 	}
 	defer f.Close()
-	bs, err := mp3.DecodeWithSampleRate(sampleRate, f)
+	bs, err := mp3.DecodeWithSampleRate(s.config.SampleRate, f)
 	if err != nil {
 		return nil, err
 	}

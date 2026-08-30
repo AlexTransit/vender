@@ -6,6 +6,7 @@ import (
 	"regexp"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/AlexTransit/vender/helpers"
@@ -26,7 +27,7 @@ type Engine struct {
 	actions map[string]Doer
 	profile struct {
 		// optimistic field access guard; fastpath=0 -> profiling disabled, don't touch mutex
-		fastpath uint32
+		fastpath atomic.Uint32
 
 		sync.Mutex // fields below access guard
 
@@ -268,7 +269,7 @@ func (e *Engine) exec(ctx context.Context, d Doer, validate, enableProfile bool)
 }
 
 // IsNotResolved Test `error` or `Doer` against ErrNotResolved
-func IsNotResolved(x interface{}) bool {
+func IsNotResolved(x any) bool {
 	if x == nil {
 		return false
 	}

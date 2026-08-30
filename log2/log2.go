@@ -71,15 +71,11 @@ func NewWriter(w io.Writer, level Level) *Log {
 		return nil
 	}
 	var lg Log
-	var err error
 	lg.logWriter = make([]io.Writer, 8)
-	lg.l, err = syslog.NewLogger(syslog.Priority(level), LServiceFlags)
-	if err != nil {
-		lg.l = log.New(os.Stderr, "", LServiceFlags)
-		lg.LogToConsole()
-	} else {
-		lg.LogToSyslog("")
+	for i := range lg.logWriter {
+		lg.logWriter[i] = w
 	}
+	lg.l = log.New(w, "", LServiceFlags)
 	lg.level = level
 	return &lg
 }
@@ -89,7 +85,7 @@ func (l *Log) LogToSyslog(tag string) {
 		return
 	}
 	var err error
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		l.logWriter[i], err = syslog.New(syslog.Priority(i), tag)
 		if err != nil {
 			l.LogToConsole()
@@ -102,7 +98,7 @@ func (l *Log) LogToConsole() {
 	if l == nil {
 		return
 	}
-	for i := 0; i < 8; i++ {
+	for i := range 8 {
 		if i < 5 {
 			l.logWriter[i] = os.Stderr
 		} else {
@@ -113,7 +109,7 @@ func (l *Log) LogToConsole() {
 
 type (
 	ErrorFunc     func(error)
-	FmtFunc       func(format string, args ...interface{})
+	FmtFunc       func(format string, args ...any)
 	FmtFuncWriter struct{ FmtFunc }
 )
 
@@ -197,7 +193,7 @@ func (lg *Log) Log(level Level, s string) {
 	}
 }
 
-func (lg *Log) Logf(level Level, format string, args ...interface{}) {
+func (lg *Log) Logf(level Level, format string, args ...any) {
 	if lg.Enabled(level) {
 		s := fmt.Sprintf(format, args...)
 		lg.Log(level, s)
@@ -205,50 +201,50 @@ func (lg *Log) Logf(level Level, format string, args ...interface{}) {
 }
 
 // compatibility with eclipse.paho.mqtt
-func (lg *Log) Printf(format string, args ...interface{}) { lg.Logf(LOG_INFO, format, args...) }
-func (lg *Log) Println(args ...interface{})               { lg.Log(LOG_INFO, fmt.Sprint(args...)) }
+func (lg *Log) Printf(format string, args ...any) { lg.Logf(LOG_INFO, format, args...) }
+func (lg *Log) Println(args ...any)               { lg.Log(LOG_INFO, fmt.Sprint(args...)) }
 
-func (lg *Log) Info(args ...interface{}) {
+func (lg *Log) Info(args ...any) {
 	lg.Log(LOG_INFO, fmt.Sprint(args...))
 }
 
-func (lg *Log) Infof(format string, args ...interface{}) {
+func (lg *Log) Infof(format string, args ...any) {
 	s := fmt.Sprintf(format, args...)
 	lg.Log(LOG_INFO, s)
 }
 
-func (lg *Log) Debug(args ...interface{}) {
-	lg.Log(LOG_DEBUG, fmt.Sprint(args...))
+func (lg *Log) Debug(args ...any) {
+	lg.Log(LOG_DEBUG, "debug: "+fmt.Sprint(args...))
 }
 
-func (lg *Log) Debugf(format string, args ...interface{}) {
-	s := fmt.Sprintf(format, args...)
+func (lg *Log) Debugf(format string, args ...any) {
+	s := "debug: " + fmt.Sprintf(format, args...)
 	lg.Log(LOG_DEBUG, s)
 }
 
-func (lg *Log) Err(args ...interface{}) {
+func (lg *Log) Err(args ...any) {
 	lg.Log(LOG_ERR, fmt.Sprint(args...))
 }
 
-func (lg *Log) Errf(format string, args ...interface{}) {
+func (lg *Log) Errf(format string, args ...any) {
 	s := fmt.Sprintf(format, args...)
 	lg.Log(LOG_ERR, s)
 }
 
-func (lg *Log) Warning(args ...interface{}) {
+func (lg *Log) Warning(args ...any) {
 	lg.Log(LOG_WARNING, fmt.Sprint(args...))
 }
 
-func (lg *Log) WarningF(format string, args ...interface{}) {
+func (lg *Log) WarningF(format string, args ...any) {
 	s := fmt.Sprintf(format, args...)
 	lg.Log(LOG_WARNING, s)
 }
 
-func (lg *Log) Notice(args ...interface{}) {
+func (lg *Log) Notice(args ...any) {
 	lg.Log(LOG_NOTICE, fmt.Sprint(args...))
 }
 
-func (lg *Log) NoticeF(format string, args ...interface{}) {
+func (lg *Log) NoticeF(format string, args ...any) {
 	s := fmt.Sprintf(format, args...)
 	lg.Log(LOG_NOTICE, s)
 }
@@ -275,26 +271,47 @@ func (lg *Log) NoticeF(format string, args ...interface{}) {
 //	}
 
 // ErrorF is a helper for logging and returning error in one line
-func (lg *Log) ErrorF(args ...interface{}) error {
-	lg.Error(args)
+func (lg *Log) ErrorF(args ...any) error {
+	lg.Error(args...)
 	return errors.New(fmt.Sprint(args...))
 }
 
-func (lg *Log) Error(args ...interface{}) {
-	lg.Errorf("%v", args)
+// Error logs args (formatted the same way as fmt.Sprint) and, if an error
+// handler is registered via SetErrorFunc, invokes it. When args[0] is
+// itself an error, that exact value is passed through unchanged — so
+// callers doing errors.Is/errors.As or equality checks on it still work —
+// rather than being reformatted into a brand new error.
+func (lg *Log) Error(args ...any) {
+	if lg == nil {
+		return
+	}
+	s := "error: " + fmt.Sprint(args...)
+	if ErrStr != s {
+		ErrStr = s
+		lg.Log(LOG_ERR, s)
+	}
+	if errfun := lg.loadErrorFunc(); errfun != nil {
+		var e error
+		if len(args) >= 1 {
+			e, _ = args[0].(error)
+		}
+		if e == nil {
+			e = errors.New(fmt.Sprint(args...))
+		}
+		errfun(e)
+	}
 }
 
 var ErrStr string
 
-func (lg *Log) Errorf(format string, args ...interface{}) {
-	s := fmt.Sprintf(format, args...)
-	if ErrStr == s {
-		return
-	}
-	ErrStr = s
-	lg.Log(LOG_ERR, s)
+func (lg *Log) Errorf(format string, args ...any) {
 	if lg == nil {
 		return
+	}
+	s := "error: " + fmt.Sprintf(format, args...)
+	if ErrStr != s {
+		ErrStr = s
+		lg.Log(LOG_ERR, s)
 	}
 	if errfun := lg.loadErrorFunc(); errfun != nil {
 		e := fmt.Errorf(format, args...)
@@ -302,7 +319,7 @@ func (lg *Log) Errorf(format string, args ...interface{}) {
 	}
 }
 
-func (lg *Log) Fatalf(format string, args ...interface{}) {
+func (lg *Log) Fatalf(format string, args ...any) {
 	if lg.fatalf != nil {
 		lg.fatalf(format, args...)
 	} else {
@@ -311,7 +328,7 @@ func (lg *Log) Fatalf(format string, args ...interface{}) {
 	}
 }
 
-func (lg *Log) Fatal(args ...interface{}) {
+func (lg *Log) Fatal(args ...any) {
 	s := fmt.Sprint(args...)
 	if lg.fatalf != nil {
 		lg.fatalf(s)

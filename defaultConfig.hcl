@@ -77,9 +77,9 @@ money {
 hardware {
 # RU: список устройств.
 # RU: имя устройства, например "mixer", "hopper1", "hopper2" и т.д. Должно быть уникальным в рамках конфигурации.
-  device "example" {
+  device "mixer" {
 # RU: required - если true, то устройство обязательно для работы системы. Если устройство с таким именем не будет найдено, система перейдет в состояние "сломано".
-    required = true
+    required = false
 # RU: disabled - если true, то устройство будет отключено. Система будет игнорировать его отсутствие и не будет пытаться с ним взаимодействовать. Это может быть полезно для устройств, которые не всегда нужны или для временного отключения устройства без удаления его конфигурации.
     disabled = false
   }
@@ -165,6 +165,7 @@ hardware {
 
     log_debug   = false
     uart_device = ""
+    # uart_driver = "dummy"
     uart_driver = "mega"
   }
 
@@ -305,6 +306,10 @@ sound {
 # EN: Command for generating TTS sound. Text To Sound.
 # Example: ["/home/vmc/vender-db/audio/tts/piper", "--model", "/home/vmc/vender-db/audio/tts/ruslan/voice.onnx", "--config", "/home/vmc/vender-db/audio/tts/ruslan/voice.json"]
   tts_exec       = ["/home/vmc/vender-db/audio/tts/piper", "--model", "/home/vmc/vender-db/audio/tts/ruslan/voice.onnx", "--config", "/home/vmc/vender-db/audio/tts/ruslan/voice.json"]
+# RU: Частота дискретизации аудио файлов в Гц.
+# EN: Audio file sample rate in Hz.
+  sample_rate = 11025
+
 }
 
 # RU: Конфигурация для системы наблюдения за сервисом. Если стророжевую собаку не кормить то сервис будет перезапущен.
@@ -337,12 +342,23 @@ engine {
     onError "4" {
       scenario = "error_scenario2"
     }
-    onError "\d{2}" { // this will match any 2 digit error code.
+    onError "\\d{2}" { // this will match any 2 digit error code.
       scenario = "error_scenario2"
     }
   }
 # RU: список меню.
   menu {
+# RU: код напитка. должен быть уникальным для каждого напитка.
+    item "4" {
+# RU: имя напитка.
+      name = "test" 
+# RU: цена напитка в копейках. например, 25 рублей это 2500 копеек. если цена 0, то напиток будет бесплатным.
+      price = 60 
+# RU: сценарий приготовления напитка. может содержать псевдонимы.
+      scenario = " preset add.coffee(5) add.chocolate(30) mix_midle w_hot85 add.peanut(7) cup_serve_p "
+# RU: отключить напиток. если true, то напиток не будет отображаться в меню и не будет доступен для приготовления. п
+	  disabled = true
+    }
 # RU: код напитка. должен быть уникальным для каждого напитка.
     item "43." {
 # RU: имя напитка.
@@ -355,11 +371,6 @@ engine {
       sugarMax = 4 
 # RU: сценарий приготовления напитка. может содержать псевдонимы.
       scenario = " preset add.sugar(5) add.chocolate(40) cream20 mix_strong w_hot70 cup_serve_p "
-    }
-# RU: код напитка. должен быть уникальным для каждого напитка.
-    item "4" {
-# RU: отключить напиток. если true, то напиток не будет отображаться в меню и не будет доступен для приготовления.
-      disabled = true
     }
 # RU: код напитка. должен быть уникальным для каждого напитка.
     item "31" {

@@ -18,9 +18,7 @@ import (
 func (g *Global) CheckMenuExecution() {
 	// FIXME aAlexM переделать проверку сценария меню
 	// сейчас заполняю по максимуму склад, что бы проверить сченарий через валидатор
-	for i := range g.Inventory.Stocks {
-		g.Inventory.Stocks[i].Set(math.MaxFloat32)
-	}
+	g.Inventory.FillAll(math.MaxFloat32)
 	for _, v := range g.Config.Engine.Menu.Items {
 		if v.Doer == nil {
 			g.Log.Errorf("scenario menu code:%s error (doer=nil)", v.Code)
@@ -241,47 +239,3 @@ func (g *Global) OrderToMessage() *tele_api.Order {
 	}
 	return o
 }
-
-// func (g *Global) Broken(ctx context.Context) {
-// 	watchdog.SetBroken()
-// 	g.TeleCancelOrder(tele_api.State_Broken)
-// 	g.Display()
-// 	display := g.MustTextDisplay()
-// 	// FIXME alexm
-// 	display.SetLine(1, "ABTOMAT")
-// 	display.SetLine(2, "HE ABTOMAT :(")
-// 	g.RunBashSript(g.Config.ScriptIfBroken)
-// 	if errs := g.Engine.ExecList(ctx, "on_broken", g.Config.Engine.OnBroken); len(errs) != 0 {
-// 		g.Log.Error(errors.ErrorStack(errors.Annotate(helpers.FoldErrors(errs), "on_broken")))
-// 	}
-// 	// 	moneysys := money.GetGlobal(ctx)
-// 	// 	_ = moneysys.SetAcceptMax(ctx, 0)
-// 	// }
-
-// 	// FIXME alexm
-// 	// g.Engine.Exec(ctx, g.Engine.Resolve("sound(broken.mp3)"))
-// 	// sound.PlayFile("broken.mp3")
-// 	// g.Snd.PlayFile("broken.mp3")
-// 	// g.Stop()
-// 	// g.Tele.Close()
-
-// 	go func() {
-// 		for {
-// 			watchdog.Refresh()
-// 			time.Sleep(time.Duration(g.Config.UI_config.Front.ResetTimeoutSec / 2))
-// 		}
-// 	}()
-// 	// e := ui.wait(time.Second)
-// 	// // TODO receive tele command to reboot or change state
-// 	// if e.Kind == types.EventService {
-// 	// 	return types.StateServiceBegin
-// 	// }
-
-// 	// srcServiceKey, _ := input.NewDevInputEventSource(g.Config.Hardware.Input.ServiceKey)
-// 	// time.Sleep(2 * time.Minute)
-// 	// e, err := srcServiceKey.Read() // wait press service key
-// 	// fmt.Printf("\033[41m %v \033[0m\n", e)
-// 	// fmt.Printf("\033[41m %v \033[0m\n", err)
-// 	// watchdog.UnsetBroken()
-// 	// os.Exit(0)
-// }

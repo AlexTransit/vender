@@ -27,7 +27,7 @@ type TextDisplay struct { //nolint:maligned
 	line []string
 
 	tickd time.Duration
-	tick  uint32
+	tick  atomic.Uint32
 	upd   chan<- State
 }
 
@@ -88,19 +88,6 @@ func (td *TextDisplay) Clear() {
 	td.flush()
 }
 
-// func (td *TextDisplay) SetLinesBytes(b1, b2 []byte) {
-// 	td.mu.Lock()
-// 	defer td.mu.Unlock()
-// 	if b1 != nil {
-// 		td.state.L1 = b1
-// 	}
-// 	if b2 != nil {
-// 		td.state.L2 = b2
-// 	}
-// 	atomic.StoreUint32(&td.tick, 0)
-// 	td.flush()
-// }
-
 func (td *TextDisplay) SetLine(line int, value string) {
 	td.mu.Lock()
 	defer td.mu.Unlock()
@@ -121,22 +108,49 @@ func (td *TextDisplay) SetLine(line int, value string) {
 	case 2:
 		td.state.L2 = bs
 	}
-	atomic.StoreUint32(&td.tick, 0)
+	td.tick.Store(0)
 	td.flush()
 	time.Sleep(100 * time.Millisecond)
 }
 
 func (td *TextDisplay) SetLines(line1 string, line2 string) {
-	// td.SetLinesBytes(td.Translate(line1), td.Translate(line2))
-	td.SetLine(1, line1)
-	td.SetLine(2, line2)
+	td.mu.Lock()
+	defer td.mu.Unlock()
+
+	changed := false
+	if td.line[0] != line1 {
+		td.line[0] = line1
+		bs := td.Translate(line1)
+		if bs == nil {
+			td.log.NoticeF("translate %s retutn nil", line1)
+		}
+		td.log.NoticeF("Display.L1=%s", line1)
+		td.state.L1 = bs
+		changed = true
+	}
+	if td.line[1] != line2 {
+		td.line[1] = line2
+		bs := td.Translate(line2)
+		if bs == nil {
+			td.log.NoticeF("translate %s retutn nil", line2)
+		}
+		td.log.NoticeF("Display.L2=%s", line2)
+		td.state.L2 = bs
+		changed = true
+	}
+	if !changed {
+		return
+	}
+	td.tick.Store(0)
+	td.flush()
+	time.Sleep(100 * time.Millisecond)
 }
 
 func (td *TextDisplay) Tick() {
 	td.mu.Lock()
 	defer td.mu.Unlock()
 
-	atomic.AddUint32(&td.tick, 1)
+	td.tick.Add(1)
 	td.flush()
 }
 
@@ -233,7 +247,7 @@ func (td *TextDisplay) flush() {
 	var buf2 [MaxWidth]byte
 	b1 := buf1[:td.width]
 	b2 := buf2[:td.width]
-	tick := atomic.LoadUint32(&td.tick)
+	tick := td.tick.Load()
 	n1 := scrollWrap(b1, td.state.L1, tick)
 	n2 := scrollWrap(b2, td.state.L2, tick)
 
@@ -268,6 +282,15 @@ func (td *TextDisplay) flush() {
 	}
 }
 
+func (td *TextDisplay) sendCommand(cmd byte) {
+	td.dev.CursorYX(0, 0)
+	td.dev.Write([]byte{cmd})
+}
+
+func (td *TextDisplay) writeData(data byte) {
+	td.dev.Write([]byte{data})
+}
+
 type State struct {
 	L1, L2 []byte
 }
@@ -285,7 +308,8 @@ func (s State) Copy() State {
 }
 
 func (s State) Format(width uint32) string {
-	return fmt.Sprintf("%s\n%s",
+	return fmt.Sprintf(
+		"%s\n%s",
 		PadSpace(s.L1, width),
 		PadSpace(s.L2, width),
 	)

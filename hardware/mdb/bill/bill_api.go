@@ -36,45 +36,27 @@ type Biller interface {
 	DisableAccept()
 }
 
-var _ Biller = &BillValidator{}
-var _ Biller = Stub{}
-
-// func (bv *BillValidator) EscrowAccept() engine.Doer { return bv.DoEscrowAccept }
-// func (bv *BillValidator) EscrowReject() engine.Doer { return bv.DoEscrowReject }
-
-// func (bv *BillValidator) GetBillEventChannel()  { return chan money.BillEvent }
+var (
+	_ Biller = &BillValidator{}
+	_ Biller = Stub{}
+)
 
 type Stub struct{}
 
-// func (Stub) AcceptMax(currency.Amount) engine.Doer {
-// 	// return engine.Fail{E: errors.NotSupportedf("bill.Stub.AcceptMax")}
-// 	return engine.Nothing{}
-// }
-
-// func (Stub) Run(ctx context.Context, alive *alive.Alive, fun func(money.PollItem) bool) {
-// 	// fun(money.PollItem{
-// 	// 	Status: money.StatusFatal,
-// 	// 	Error:  errors.NotSupportedf("bill.Stub.Run"),
-// 	// })
-// 	if alive != nil {
-// 		alive.Done()
-// 	}
-// }
-
 func (Stub) SupportedNominals() []currency.Nominal { return nil }
 
-func (Stub) EscrowAmount() currency.Amount   { return 0 }
+func (Stub) EscrowAmount() currency.Amount { return 0 }
+
 func (Stub) EscrowNominal() currency.Nominal { return 0 }
 
 func (Stub) SendCommand(BillCommand) {}
 
-// func (Stub) EscrowAccept() engine.Doer { return engine.Nothing{} }
-// func (Stub) EscrowReject() engine.Doer { return engine.Nothing{} }
-
-func (Stub) BillRun(*alive.Alive, func(money.ValidatorEvent)) {}
-
-// func (Stub) BillRun(*alive.Alive, func(money.BillEvent)) {}
-// func (Stub) BillRun(chan<- money.BillEvent, *alive.Alive) {}
+// BillRun implements Biller. There is no real device behind the stub, so it
+// signals completion immediately — mirroring how AcceptCredit handles a nil
+// CoinValidator. Without this, callers that alive.Add() a slot per validator
+// and alive.Wait() for it (e.g. ui.onFrontSelect) deadlock forever whenever
+// no bill acceptor is configured.
+func (Stub) BillRun(a *alive.Alive, _ func(money.ValidatorEvent)) { a.Done() }
 
 func (Stub) BillReset() error { return nil }
 

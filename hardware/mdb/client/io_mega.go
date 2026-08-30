@@ -83,7 +83,7 @@ func (mu *megaUart) Tx(request, response []byte) (n int, err error) {
 	mu.lk.Lock()
 	defer mu.lk.Unlock()
 	var f mega.Frame
-	for i := 0; i < 2; i++ {
+	for range 2 {
 		f, err = mu.c.DoMdbTxSimple(request)
 		switch errors.Cause(err) {
 		case nil: // success path

@@ -28,7 +28,7 @@ func ArgApply(d Doer, arg Arg) (Doer, bool, error) {
 }
 
 type (
-	Arg        interface{}
+	Arg        any
 	ArgApplier interface {
 		Apply(a Arg) (Doer, bool, error)
 	}

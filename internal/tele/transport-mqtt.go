@@ -122,7 +122,7 @@ func (tm *transportMqtt) CloseTele() {
 	}
 }
 
-func (tm *transportMqtt) publish2Telemetry(topic string, qos byte, retained bool, payload interface{}) {
+func (tm *transportMqtt) publish2Telemetry(topic string, qos byte, retained bool, payload any) {
 	if !tm.enabled.Load() {
 		return
 	}

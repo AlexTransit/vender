@@ -38,8 +38,8 @@ func Main(ctx context.Context, args ...[]string) error {
 
 	// helper to display all CLCD characters
 	var bb [32]byte
-	for b0 := 0; b0 < 256/len(bb); b0++ {
-		for i := 0; i < len(bb); i++ {
+	for range 256 / len(bb) {
+		for range len(bb) {
 			// bb[i] = byte(b0*len(bb) + i)
 		}
 		// textDisplay.SetLinesBytes(bb[:16], bb[16:])

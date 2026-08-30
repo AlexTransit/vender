@@ -117,10 +117,7 @@ func (p *Packet) Format() string {
 	hlen := len(h)
 	ss := make([]string, (hlen/8)+1)
 	for i := range ss {
-		hi := (i + 1) * 8
-		if hi > hlen {
-			hi = hlen
-		}
+		hi := min((i+1)*8, hlen)
 		ss[i] = h[i*8 : hi]
 	}
 	line := strings.Join(ss, " ")

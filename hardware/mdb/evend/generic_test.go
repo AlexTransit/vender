@@ -18,12 +18,11 @@ func TestGenericProto2Error(t *testing.T) {
 	mock := mdb.MockFromContext(ctx)
 	defer mock.Close()
 	go mock.Expect([]mdb.MockR{
-		{"40", ""},
-		{"41", "00ff"},
-		{"43", ""},
-		{"4201", ""},
-		{"43", "08"},   // POLL -> 08 error state
-		{"4402", "ff"}, // error code ff
+		{"40", ""},     // авто-reset при первом POLL в состоянии Inited (locked_reset — без SETUP)
+		{"43", ""},     // WaitReady POLL -> пустой ответ = сразу успех
+		{"4201", ""},   // команда действия принята
+		{"43", "08"},   // WaitDone POLL -> 08 проблема
+		{"4402", "ff"}, // диагностика -> код ошибки ff
 	})
 	dev := &Generic{}
 	dev.Init(ctx, 0x40, "abstract", proto2)

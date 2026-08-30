@@ -287,8 +287,11 @@ func (gen *Generic) proto2PollCommon(tag string, bs []byte) (bool, error) {
 			err = fmt.Errorf("%s %v", tag, err)
 			return true, err
 		}
-		// return true, DeviceErrorCode(code)
-		return true, &helpers.AppError{ErrorCode: int32(code), Err: err}
+		// err is nil here — Diagnostic() succeeded and just told us the
+		// device's own error code. AppError needs a real Err (its Error()
+		// dereferences it unconditionally), so build one from the code
+		// instead of leaving it nil.
+		return true, &helpers.AppError{ErrorCode: int32(code), Err: fmt.Errorf("evend errorcode=%d", code)}
 	}
 	return false, nil
 }

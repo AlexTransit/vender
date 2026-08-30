@@ -199,7 +199,6 @@ func BenchmarkParse(b *testing.B) {
 	}
 
 	for _, c := range cases {
-		c := c
 		inputBytes, err := hex.DecodeString(c.input)
 		if err != nil {
 			b.Fatal(err)
@@ -210,7 +209,7 @@ func BenchmarkParse(b *testing.B) {
 
 type tv struct {
 	tag   Field_t
-	value interface{}
+	value any
 }
 
 func newResponse(header Response_t, fields ...tv) *Frame {

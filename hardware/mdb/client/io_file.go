@@ -94,17 +94,21 @@ func (fu *fileUart) Break(d, sleep time.Duration) (err error) {
 }
 
 func (fu *fileUart) Close() error {
+	if fu.f == nil {
+		return nil
+	}
+	err := fu.f.Close()
 	fu.f = nil
 	fu.r = nil
 	fu.w = nil
-	return errors.Trace(fu.f.Close())
+	return errors.Trace(err)
 }
 
 func (fu *fileUart) Open(path string) (err error) {
 	if fu.f != nil {
 		fu.Close() // skip error
 	}
-	fu.f, err = os.OpenFile(path, syscall.O_RDWR|syscall.O_NOCTTY|syscall.O_NDELAY, 0600)
+	fu.f, err = os.OpenFile(path, syscall.O_RDWR|syscall.O_NOCTTY|syscall.O_NDELAY, 0o600)
 	if err != nil {
 		return errors.Annotate(err, "fileUart.Open:OpenFile")
 	}
@@ -255,21 +259,24 @@ const (
 	cTCSETSF2 = 0x402c542d // flush both input,output TODO verify
 )
 
-type cc_t byte
-type speed_t uint32
-type tcflag_t uint32
-type termios2 struct {
-	c_iflag tcflag_t // input mode flags
-	//lint:ignore U1000 unused
-	c_oflag tcflag_t // output mode flags
-	c_cflag tcflag_t // control mode flags
-	c_lflag tcflag_t // local mode flags
-	//lint:ignore U1000 unused
-	c_line   cc_t        // line discipline
-	c_cc     [cNCCS]cc_t // control characters
-	c_ispeed speed_t     // input speed
-	c_ospeed speed_t     // output speed
-}
+type (
+	cc_t     byte
+	speed_t  uint32
+	tcflag_t uint32
+	termios2 struct {
+		c_iflag tcflag_t // input mode flags
+		//lint:ignore U1000 unused
+		c_oflag tcflag_t // output mode flags
+		c_cflag tcflag_t // control mode flags
+		c_lflag tcflag_t // local mode flags
+		//lint:ignore U1000 unused
+		c_line   cc_t        // line discipline
+		c_cc     [cNCCS]cc_t // control characters
+		c_ispeed speed_t     // input speed
+		c_ospeed speed_t     // output speed
+	}
+)
+
 type serial_info struct {
 	_type          int32  //lint:ignore U1000 unused
 	line           int32  //lint:ignore U1000 unused

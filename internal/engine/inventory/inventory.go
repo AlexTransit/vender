@@ -152,7 +152,7 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, log *log2.Log)
 		}
 		doSpendArg := engine.FuncArg{
 			Name: fmt.Sprintf("stock.%s.spend(?)", s.Ingredient.Name),
-			F:    s.spendArg,
+			F:    inv.Stocks[i].spendArg,
 		}
 		addName := fmt.Sprintf("add.%s(?)", s.Ingredient.Name)
 		e.Register(doSpendArg.Name, doSpendArg)
@@ -235,11 +235,11 @@ func (inv *Inventory) InventoryLoad() {
 
 func (inv *Inventory) InventorySave() error {
 	file, err := os.OpenFile(inv.File, os.O_WRONLY|os.O_SYNC|os.O_CREATE|os.O_TRUNC, 0o644)
+	defer func() { _ = file.Close() }()
 	if err != nil {
 		inv.log.Errorf("save inventory fail. error open file(%v)", err)
 		return err
 	}
-	defer file.Close()
 
 	bs := make([]byte, len(inv.Stocks)*4)
 	for _, cl := range inv.Stocks {
@@ -260,6 +260,13 @@ func (inv *Inventory) Iter(fun func(s *Stock)) {
 	for i := range inv.Stocks {
 		fun(&inv.Stocks[i])
 	}
+}
+
+// FillAll sets every stock's value to v.
+// Used for menu scenario validation (see state.CheckMenuExecution) and in tests
+// to bring stocks to a known level before exercising add.*/spend actions.
+func (inv *Inventory) FillAll(v float32) {
+	inv.Iter(func(s *Stock) { s.Set(v) })
 }
 
 func (inv *Inventory) WithTuning(ctx context.Context, ingredientName string, adj float32) (context.Context, error) {

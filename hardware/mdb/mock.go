@@ -25,21 +25,34 @@ func (m MockR) String() string {
 }
 
 type MockUart struct {
-	t  testing.TB
-	mu sync.Mutex
-	m  map[string]string
-	q  chan MockR
+	t         testing.TB
+	mu        sync.Mutex
+	m         map[string]string
+	q         chan MockR
+	closeCh   chan struct{}
+	closeOnce sync.Once
 }
 
 func NewMockUart(t testing.TB) *MockUart {
 	self := &MockUart{
-		t: t,
-		q: make(chan MockR),
+		t:       t,
+		q:       make(chan MockR),
+		closeCh: make(chan struct{}),
 	}
 	return self
 }
 
 func (mu *MockUart) Open(path string) error { return nil }
+
+// Close reports (via Fatal, from the test's own goroutine — always safe)
+// if there's an unconsumed item waiting to be sent, then signals any
+// still-running Expect() goroutine to stop via closeCh — deliberately NOT
+// closing mu.q itself. Closing mu.q would let a concurrent Expect() send
+// panic with "send on closed channel", and recovering from that panic just
+// to report it via t.Errorf() runs into a second, unrecoverable panic of
+// its own ("Fail in goroutine after test has completed") since that
+// goroutine may outlive the test. Never closing mu.q sidesteps the whole
+// class of problem — Expect() cooperatively bails out via closeCh instead.
 func (mu *MockUart) Close() error {
 	mu.mu.Lock()
 	defer mu.mu.Unlock()
@@ -54,7 +67,7 @@ func (mu *MockUart) Close() error {
 		mu.t.Fatal(err)
 		return err
 	default:
-		close(mu.q)
+		mu.closeOnce.Do(func() { close(mu.closeCh) })
 		return nil
 	}
 }
@@ -138,13 +151,20 @@ func (mu *MockUart) txQueue(request, response []byte) (n int, err error) {
 // wait use_mdb() to finish to catch all possible errors
 func (mu *MockUart) Expect(rrs []MockR) {
 	mu.t.Helper()
-
 	for _, rr := range rrs {
 		select {
 		case mu.q <- rr:
+		case <-mu.closeCh:
+			// Close() already ran (test is ending or has decided it's
+			// done) — abandon the remaining items quietly. Close()'s own
+			// non-empty-queue check, running in the test's own goroutine,
+			// already reports the mismatch; calling t.* from here would
+			// risk "Fail in goroutine after test has completed" if the
+			// test function has already returned by now.
+			return
 		case <-time.After(MockTimeout):
-			err := errors.Errorf("mdb-mock: background processing is too slow, timeout sending into mock queue rr=%s", rr)
-			mu.t.Fatal(err)
+			mu.t.Fatal(errors.Errorf("mdb-mock: background processing is too slow, timeout sending into mock queue rr=%s", rr))
+			return
 		}
 	}
 }

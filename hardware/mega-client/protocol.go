@@ -3,6 +3,7 @@ package mega
 import (
 	"encoding/binary"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/AlexTransit/vender/crc"
@@ -36,10 +37,10 @@ func parsePadding(b []byte, requireOK bool) (start int, code Errcode_t, err erro
 		err = errors.NotValidf("frame=%x padding=%x", b, pads)
 		return
 	}
-	for i := len(b) - 1; i >= 0; i-- {
-		if b[i] != pad {
+	for i, v := range slices.Backward(b) {
+		if v != pad {
 			start = i + 1
-			code = Errcode_t(b[i])
+			code = Errcode_t(v)
 			break
 		}
 	}

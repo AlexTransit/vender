@@ -29,7 +29,7 @@ var (
 )
 
 type Client struct { //nolint:maligned
-	refcount int32
+	refcount atomic.Int32
 
 	Log      *log2.Log
 	TwiChan  chan uint16
@@ -108,12 +108,12 @@ func (c *Client) Close() error {
 
 func (c *Client) IncRef(debug string) {
 	c.Log.Debugf("%s incref by %s", modName, debug)
-	atomic.AddInt32(&c.refcount, 1)
+	c.refcount.Add(1)
 }
 
 func (c *Client) DecRef(debug string) error {
 	c.Log.Debugf("%s decref by %s", modName, debug)
-	new := atomic.AddInt32(&c.refcount, -1)
+	new := c.refcount.Add(-1)
 	switch {
 	case new > 0:
 		return nil

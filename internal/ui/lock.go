@@ -17,7 +17,7 @@ const lockPoll = 300 * time.Millisecond
 type uiLock struct {
 	// ch   chan struct{}
 	// pri  uint32
-	sem  int32
+	sem  atomic.Int32
 	next types.UiState
 }
 
@@ -28,10 +28,10 @@ func (ui *UI) LockFunc(fun func()) bool {
 
 func (ui *UI) LockDecrementWait() {
 	ui.g.Log.Debugf("LockDecrementWait")
-	new := atomic.AddInt32(&ui.lock.sem, -1)
+	new := ui.lock.sem.Add(-1)
 	if new < 0 {
 		// Support concurrent LockEnd
-		atomic.StoreInt32(&ui.lock.sem, 0)
+		ui.lock.sem.Store(0)
 		new = 0
 	}
 	if new == 0 {
@@ -44,7 +44,7 @@ func (ui *UI) LockDecrementWait() {
 // LockEnd Stop locked state ignoring call balance
 func (ui *UI) LockEnd() {
 	ui.g.Log.Debugf("LockEnd")
-	atomic.StoreInt32(&ui.lock.sem, 0)
+	ui.lock.sem.Store(0)
 	for ui.g.Alive.IsRunning() && (ui.State() == types.StateLocked) {
 		time.Sleep(lockPoll)
 	}
@@ -63,6 +63,6 @@ func (ui *UI) LockEnd() {
 // 	return interrupt
 // }
 
-func (l *uiLock) locked() bool { return atomic.LoadInt32(&l.sem) > 0 }
+func (l *uiLock) locked() bool { return l.sem.Load() > 0 }
 
 // func (l *uiLock) priority() tele_api.Priority { return tele_api.Priority(atomic.LoadUint32(&l.pri)) }

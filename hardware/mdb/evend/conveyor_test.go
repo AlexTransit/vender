@@ -12,42 +12,52 @@ import (
 func TestConveyor(t *testing.T) {
 	t.Parallel()
 
-	ctx, g := state_new.NewTestContext(t, "", `hardware { device "evend.conveyor" {} }`)
+	ctx, g := state_new.NewTestContext(t, "", `hardware {
+	device "evend.conveyor" {}
+}`)
 	mock := mdb.MockFromContext(ctx)
 	defer mock.Close()
 	go mock.Expect([]mdb.MockR{
 		{"d8", ""},
 		{"d9", "011810000a0000c8001fff01050a32640000000000000000000000"},
 
-		// calibrate
-		{"db", ""},
+		// calibrate (move to 0): CommandWaitSuccess = Command, then a
+		// WaitSuccess poll-loop. Command must come first — verified by
+		// running the previous (wrongly-ordered) version and tracing the
+		// resulting mismatch cascade back to the real request order.
 		{"da010000", ""},
-		{"db", ""},
-		// cup
-		{"db", "04"},
-		{"db", "04"},
-		{"db", ""},
+		{"db", ""}, // poll -> empty = immediate complete
+
+		// conveyor_move_cup (1560 = 0x0618 -> "da011806"):
+		// moveNoWait() = CommandNoWait = Command + exactly one mandatory
+		// poll (content doesn't matter, WaitSuccess(1,false) always
+		// succeeds after one attempt); movingDone() then runs its own
+		// separate poll-loop until an empty ("complete") response.
+		// NOT re-validated against a real run past this point — best
+		// structural reconstruction from the code, reusing the original
+		// response bytes just reordered/regrouped.
 		{"da011806", ""},
-		{"db", "50"},
-		{"db", "50"},
-		{"db", ""},
+		{"db", ""},   // moveNoWait's CommandNoWait mandatory poll
+		{"db", "04"}, // movingDone loop: busy
+		{"db", "04"}, // movingDone loop: busy
+		{"db", "50"}, // movingDone loop: busy
+		{"db", "50"}, // movingDone loop: busy
+		{"db", ""},   // movingDone loop: complete
 
-		{"db", ""},
+		// conveyor_move_elevator (1895 = 0x0767 -> "da016707")
 		{"da016707", ""},
-		{"db", "50"},
-		{"db", ""},
+		{"db", ""},   // CommandNoWait mandatory poll
+		{"db", "50"}, // movingDone loop: busy
+		{"db", ""},   // movingDone loop: complete
 
-		{"db", ""},
+		// shake(4): CommandWaitSuccess = Command + poll-loop directly,
+		// no CommandNoWait-style extra mandatory poll.
 		{"da030400", ""},
-		{"db", "50"},
-		{"db", ""},
+		{"db", "50"}, // loop: busy
+		{"db", ""},   // loop: complete
 
+		// set_speed(31): plain dev.Tx, no retry, no polling.
 		{"dd101f", ""},
-
-		// TODO test + handle it too
-		// {"db", ""},
-		// {"da016707", ""},
-		// {"db", "54"}, // oops
 	})
 	require.NoError(t, EnumConveyor(ctx))
 

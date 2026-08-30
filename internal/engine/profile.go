@@ -2,7 +2,6 @@ package engine
 
 import (
 	"regexp"
-	"sync/atomic"
 	"time"
 )
 
@@ -14,7 +13,7 @@ func (e *Engine) SetProfile(re *regexp.Regexp, min time.Duration, fun ProfileFun
 	if re != nil || fun != nil {
 		fast = 1
 	}
-	defer atomic.StoreUint32(&e.profile.fastpath, fast)
+	defer e.profile.fastpath.Store(fast)
 	e.profile.Lock()
 	defer e.profile.Unlock()
 	e.profile.re = re
@@ -23,7 +22,7 @@ func (e *Engine) SetProfile(re *regexp.Regexp, min time.Duration, fun ProfileFun
 }
 
 func (e *Engine) matchProfile(s string) (ProfileFunc, time.Duration) {
-	if atomic.LoadUint32(&e.profile.fastpath) != 1 {
+	if e.profile.fastpath.Load() != 1 {
 		return nil, 0
 	}
 	e.profile.Lock()
