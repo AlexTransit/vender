@@ -307,23 +307,39 @@ func (ui *UI) onServiceNetwork() types.UiState {
 	case e.Key == '1':
 		ui.display.SetLines("wifi restart", "in progress") // FIXME extract message string
 
-		// lsCmd := exec.Command("bash", "-c", "wpa_cli select_network 0 && wpa_cli enable_network 1")
-		lsCmd := exec.Command("bash", "-c", "wpa_cli select_network 0")
+		output, err := exec.Command("iw", "dev").Output()
+		if err != nil {
+			ui.g.Log.Infof("Error getting Wi-Fi interfaces: %v", err)
+			ui.display.SetLines("Error getting Wi-Fi interfaces", err.Error())
+			return types.StateServiceMenu
+		}
+
+		var activeInterface string
+		lines := strings.Split(string(output), "\n")
+		for _, line := range lines {
+			if strings.Contains(line, "Interface") {
+				interfaceName := strings.TrimSpace(strings.Split(line, " ")[1])
+				outputInterface, err := exec.Command("iw", "dev", interfaceName, "link").Output()
+				if err == nil && strings.Contains(string(outputInterface), "connected to") {
+					activeInterface = interfaceName
+					break
+				}
+			}
+		}
+
+		if activeInterface == "" {
+			ui.g.Log.Infof("No active Wi-Fi interface found")
+			ui.display.SetLines("No active Wi-Fi interface found", "")
+			return types.StateServiceMenu
+		}
+
+		lsCmd := exec.Command("bash", "-c", fmt.Sprintf("sudo wpa_cli -i %s reassociate", activeInterface))
 		bashOut, err := lsCmd.Output()
 		ui.g.Log.Infof("restart wlan (%v)", bashOut)
-		if err != nil {
-			ui.g.Log.Infof("%v", err)
-			// panic(err)
+		if err == nil {
+			ui.display.SetLines("reassoc done", string(bashOut))
 		}
-
-		lsCmd = exec.Command("bash", "-c", "wpa_cli enable_network 1")
-		bashOut, err = lsCmd.Output()
-		ui.g.Log.Infof("restart wlan (%v)", bashOut)
-		if err != nil {
-			ui.g.Log.Infof("%v", err)
-			// panic(err)
-		}
-
+		ui.g.Log.Infof("%v", err)
 		return types.StateServiceEnd
 	}
 	return types.StateServiceMenu
