@@ -24,6 +24,7 @@
 ```bash
 apt update
 apt install pkg-config libasound2-dev libgl1-mesa-dev xorg-dev
+libdrm-dev libgbm-dev
 ```
 
 ## Обновление vendor

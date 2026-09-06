@@ -7,6 +7,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	cmd_engine "github.com/AlexTransit/vender/cmd/vender/engine"
 	"github.com/AlexTransit/vender/cmd/vender/mdb"
@@ -14,6 +15,8 @@ import (
 	cmd_tele "github.com/AlexTransit/vender/cmd/vender/tele"
 	"github.com/AlexTransit/vender/cmd/vender/ui"
 	"github.com/AlexTransit/vender/cmd/vender/vmc"
+	"github.com/AlexTransit/vender/hardware/display/ebitendisplay"
+	"github.com/AlexTransit/vender/hardware/display/framebuffer"
 	config_global "github.com/AlexTransit/vender/internal/config"
 	state_new "github.com/AlexTransit/vender/internal/state/new"
 	"github.com/AlexTransit/vender/internal/tele"
@@ -39,6 +42,7 @@ var (
 )
 
 func main() {
+	testtt()
 	flagset := flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 	flagset.Usage = func() {
 		fmt.Fprint(flagset.Output(), "Usage: [option...] command\n\nOptions:\n")
@@ -91,4 +95,58 @@ func main() {
 func versionMain(ctx context.Context, _ ...[]string) error {
 	fmt.Printf("vender %s\n", BuildVersion)
 	return nil
+}
+
+func testtt() {
+	// Открываем framebuffer
+	fb, err := framebuffer.New("/dev/fb0")
+	if err != nil {
+		panic(err)
+	}
+	defer fb.Close()
+
+	// Создаем дисплей
+	display, err := ebitendisplay.NewDisplay(fb)
+	if err != nil {
+		panic(err)
+	}
+
+	// Создаем анимацию
+	animation := ebitendisplay.NewBouncingBall(fb.Size().X, fb.Size().Y)
+	display.SetAnimation(animation)
+
+	// Запускаем рендеринг
+	display.Start()
+
+	// Работаем 10 секунд
+	time.Sleep(10 * time.Second)
+
+	// Останавливаем
+	display.Stop()
+
+	// 	// Открываем framebuffer
+	// 	fb, err := framebuffer.New("/dev/fb0")
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// 	defer fb.Close()
+
+	// 	// Создаем дисплей
+	// 	display, err := ebitendisplay.NewDisplay(fb)
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+
+	// 	// Создаем анимацию
+	// 	animation := ebitendisplay.NewBouncingBall(fb.Size().X, fb.Size().Y)
+	// 	display.SetAnimation(animation)
+
+	// 	// Запускаем рендеринг
+	// 	display.Start()
+
+	// 	// Работаем 10 секунд
+	// 	time.Sleep(10 * time.Second)
+
+	// 	// Останавливаем
+	// 	display.Stop()
 }
