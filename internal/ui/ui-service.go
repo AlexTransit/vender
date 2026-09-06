@@ -309,8 +309,7 @@ func (ui *UI) onServiceNetwork() types.UiState {
 
 		output, err := exec.Command("iw", "dev").Output()
 		if err != nil {
-			ui.g.Log.Infof("Error getting Wi-Fi interfaces: %v", err)
-			ui.display.SetLines("Error getting Wi-Fi interfaces", err.Error())
+			ui.showInfo("Error getting Wi-Fi interfaces", err.Error())
 			return types.StateServiceMenu
 		}
 
@@ -320,7 +319,7 @@ func (ui *UI) onServiceNetwork() types.UiState {
 			if strings.Contains(line, "Interface") {
 				interfaceName := strings.TrimSpace(strings.Split(line, " ")[1])
 				outputInterface, err := exec.Command("iw", "dev", interfaceName, "link").Output()
-				if err == nil && strings.Contains(string(outputInterface), "connected to") {
+				if err == nil && strings.Contains(string(outputInterface), "onnected to") {
 					activeInterface = interfaceName
 					break
 				}
@@ -328,21 +327,29 @@ func (ui *UI) onServiceNetwork() types.UiState {
 		}
 
 		if activeInterface == "" {
-			ui.g.Log.Infof("No active Wi-Fi interface found")
-			ui.display.SetLines("No active Wi-Fi interface found", "")
+			ui.showInfo("No active Wi-Fi interface found", "")
 			return types.StateServiceMenu
 		}
 
 		lsCmd := exec.Command("bash", "-c", fmt.Sprintf("sudo wpa_cli -i %s reassociate", activeInterface))
 		bashOut, err := lsCmd.Output()
-		ui.g.Log.Infof("restart wlan (%v)", bashOut)
 		if err == nil {
-			ui.display.SetLines("reassoc done", string(bashOut))
+			ui.showInfo("reassoc done", string(bashOut))
+		} else {
+			ui.showInfo("reassoc Error", err.Error())
 		}
-		ui.g.Log.Infof("%v", err)
 		return types.StateServiceEnd
 	}
 	return types.StateServiceMenu
+}
+
+func (ui *UI) showInfo(line1 string, line2 string) {
+	wait_Sec := 3
+	ui.display.SetLines(line1, line2)
+	if len(line2) > 16 {
+		wait_Sec = 8
+	}
+	time.Sleep(time.Duration(wait_Sec) * time.Second)
 }
 
 func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
