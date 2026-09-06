@@ -26,7 +26,7 @@ func NewFramebufferRenderer(fb *framebuffer.Framebuffer, animation Animation) (*
 	width := fb.Size().X
 	height := fb.Size().Y
 
-	display := New(width, height)
+	display := NewEbitenDisplay(width, height)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -78,19 +78,31 @@ func (r *FramebufferRenderer) renderFrame() {
 
 	// Создаем изображение ebiten
 	screen := ebiten.NewImage(r.width, r.height)
-	screen.Clear(color.Black)
+	screen.Clear()
 
 	// Рисуем анимацию
 	if r.animation != nil {
 		r.animation.Draw(screen)
 	}
 
-	// Получаем пиксели из ebiten
-	pixels := make([]color.RGBA, r.width*r.height)
-	screen.ReadPixels(pixels)
+	// Получаем пиксели через At() и конвертируем в color.RGBA
+	cs := make([]color.RGBA, r.width*r.height)
+	for y := 0; y < r.height; y++ {
+		for x := 0; x < r.width; x++ {
+			c := screen.At(x, y)
+			rr, gg, bb, aa := c.RGBA()
+			idx := y*r.width + x
+			cs[idx] = color.RGBA{
+				R: uint8(rr >> 8),
+				G: uint8(gg >> 8),
+				B: uint8(bb >> 8),
+				A: uint8(aa >> 8),
+			}
+		}
+	}
 
 	// Обновляем framebuffer
-	if err := r.fb.Update(pixels); err != nil {
+	if err := r.fb.Update(cs); err != nil {
 		// Логирование ошибки
 		return
 	}

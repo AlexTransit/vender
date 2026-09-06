@@ -22,15 +22,15 @@ type Display struct {
 	fps       float64
 }
 
-// New создает новый Display с использованием ebiten для рендеринга
-func New(fb *framebuffer.Framebuffer) (*Display, error) {
+// NewDisplay создает новый Display с использованием ebiten для рендеринга
+func NewDisplay(fb *framebuffer.Framebuffer) (*Display, error) {
 	size := fb.Size()
 
 	d := &Display{
 		fb:      fb,
 		width:   size.X,
 		height:  size.Y,
-		display: New(size.X, size.Y),
+		display: NewEbitenDisplay(size.X, size.Y),
 		fps:     30.0,
 	}
 
@@ -74,7 +74,7 @@ func (d *Display) renderLoop() {
 func (d *Display) renderFrame() {
 	// Создаем изображение ebiten
 	screen := ebiten.NewImage(d.width, d.height)
-	screen.Clear(color.Black)
+	screen.Clear()
 
 	// Обновляем и рисуем анимацию
 	if d.animation != nil {
@@ -82,12 +82,24 @@ func (d *Display) renderFrame() {
 		d.animation.Draw(screen)
 	}
 
-	// Получаем пиксели из ebiten
-	pixels := make([]color.RGBA, d.width*d.height)
-	screen.ReadPixels(pixels)
+	// Получаем пиксели через At() и конвертируем в color.RGBA
+	cs := make([]color.RGBA, d.width*d.height)
+	for y := 0; y < d.height; y++ {
+		for x := 0; x < d.width; x++ {
+			c := screen.At(x, y)
+			rr, gg, bb, aa := c.RGBA()
+			idx := y*d.width + x
+			cs[idx] = color.RGBA{
+				R: uint8(rr >> 8),
+				G: uint8(gg >> 8),
+				B: uint8(bb >> 8),
+				A: uint8(aa >> 8),
+			}
+		}
+	}
 
 	// Обновляем framebuffer
-	if err := d.fb.Update(pixels); err != nil {
+	if err := d.fb.Update(cs); err != nil {
 		return
 	}
 
@@ -105,12 +117,24 @@ func (d *Display) SetFPS(fps float64) {
 // Clear очищает экран
 func (d *Display) Clear() error {
 	screen := ebiten.NewImage(d.width, d.height)
-	screen.Clear(color.Black)
+	screen.Clear()
 
-	pixels := make([]color.RGBA, d.width*d.height)
-	screen.ReadPixels(pixels)
+	cs := make([]color.RGBA, d.width*d.height)
+	for y := 0; y < d.height; y++ {
+		for x := 0; x < d.width; x++ {
+			c := screen.At(x, y)
+			rr, gg, bb, aa := c.RGBA()
+			idx := y*d.width + x
+			cs[idx] = color.RGBA{
+				R: uint8(rr >> 8),
+				G: uint8(gg >> 8),
+				B: uint8(bb >> 8),
+				A: uint8(aa >> 8),
+			}
+		}
+	}
 
-	if err := d.fb.Update(pixels); err != nil {
+	if err := d.fb.Update(cs); err != nil {
 		return err
 	}
 
@@ -120,16 +144,28 @@ func (d *Display) Clear() error {
 // RenderOneShot рендерит один кадр без запуска цикла анимации
 func (d *Display) RenderOneShot(drawFn func(screen *ebiten.Image)) error {
 	screen := ebiten.NewImage(d.width, d.height)
-	screen.Clear(color.Black)
+	screen.Clear()
 
 	if drawFn != nil {
 		drawFn(screen)
 	}
 
-	pixels := make([]color.RGBA, d.width*d.height)
-	screen.ReadPixels(pixels)
+	cs := make([]color.RGBA, d.width*d.height)
+	for y := 0; y < d.height; y++ {
+		for x := 0; x < d.width; x++ {
+			c := screen.At(x, y)
+			rr, gg, bb, aa := c.RGBA()
+			idx := y*d.width + x
+			cs[idx] = color.RGBA{
+				R: uint8(rr >> 8),
+				G: uint8(gg >> 8),
+				B: uint8(bb >> 8),
+				A: uint8(aa >> 8),
+			}
+		}
+	}
 
-	if err := d.fb.Update(pixels); err != nil {
+	if err := d.fb.Update(cs); err != nil {
 		return err
 	}
 

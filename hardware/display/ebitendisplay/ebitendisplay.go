@@ -18,8 +18,8 @@ type EbitenDisplay struct {
 	currentFrame int
 }
 
-// New создает новый EbitenDisplay
-func New(width, height int) *EbitenDisplay {
+// NewEbitenDisplay создает новый EbitenDisplay
+func NewEbitenDisplay(width, height int) *EbitenDisplay {
 	return &EbitenDisplay{
 		screenWidth:  width,
 		screenHeight: height,
@@ -59,7 +59,7 @@ func (d *EbitenDisplay) Layout(outsideWidth, outsideHeight int) (int, int) {
 }
 
 // RenderToBuffer рендерит текущий кадр в буфер
-func (d *EbitenDisplay) RenderToBuffer() []color.RGBA {
+func (d *EbitenDisplay) RenderToBuffer() []byte {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
@@ -71,9 +71,19 @@ func (d *EbitenDisplay) RenderToBuffer() []color.RGBA {
 		d.drawFunc(tmpImage)
 	}
 
-	// Читаем пиксели в буфер
-	pixels := make([]color.RGBA, d.screenWidth*d.screenHeight)
-	tmpImage.ReadPixels(pixels)
+	// Читаем пиксели через At() и конвертируем в байты
+	pixels := make([]byte, d.screenWidth*d.screenHeight*4)
+	for y := 0; y < d.screenHeight; y++ {
+		for x := 0; x < d.screenWidth; x++ {
+			c := tmpImage.At(x, y)
+			r, g, b, a := c.RGBA()
+			idx := (y*d.screenWidth + x) * 4
+			pixels[idx] = uint8(r >> 8)
+			pixels[idx+1] = uint8(g >> 8)
+			pixels[idx+2] = uint8(b >> 8)
+			pixels[idx+3] = uint8(a >> 8)
+		}
+	}
 
 	return pixels
 }
@@ -83,11 +93,6 @@ func (d *EbitenDisplay) GetFrame() int {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	return d.currentFrame
-}
-
-// Clear очищает экран
-func (d *EbitenDisplay) Clear(screen *ebiten.Image) {
-	screen.Clear(color.Black)
 }
 
 // DrawCircle рисует круг

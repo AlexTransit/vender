@@ -21,7 +21,7 @@ func Example() {
 	defer fb.Close()
 
 	// Создаем дисплей
-	display, err := New(fb)
+	display, err := NewDisplay(fb)
 	if err != nil {
 		fmt.Printf("Ошибка создания дисплея: %v\n", err)
 		return
@@ -49,7 +49,7 @@ func Demo(ctx context.Context, dev string) error {
 	}
 	defer fb.Close()
 
-	display, err := New(fb)
+	display, err := NewDisplay(fb)
 	if err != nil {
 		return fmt.Errorf("create display: %w", err)
 	}
@@ -79,7 +79,7 @@ func ShowLoading(ctx context.Context, dev string, duration time.Duration) error 
 	}
 	defer fb.Close()
 
-	display, err := New(fb)
+	display, err := NewDisplay(fb)
 	if err != nil {
 		return fmt.Errorf("create display: %w", err)
 	}
@@ -105,14 +105,14 @@ func DrawCircleOnScreen(dev string, x, y, radius float32, clr color.Color) error
 	}
 	defer fb.Close()
 
-	display, err := New(fb)
+	display, err := NewDisplay(fb)
 	if err != nil {
 		return fmt.Errorf("create display: %w", err)
 	}
 
 	return display.RenderOneShot(func(screen *ebiten.Image) {
-		display2 := New(int(x)*2, int(y)*2)
-		display2.DrawCircle(screen, x, y, radius, clr)
+		d := NewEbitenDisplay(int(x)*2, int(y)*2)
+		d.DrawCircle(screen, x, y, radius, clr)
 	})
 }
 
@@ -124,13 +124,13 @@ func DrawRectangleOnScreen(dev string, x, y, w, h float32, clr color.Color) erro
 	}
 	defer fb.Close()
 
-	display, err := New(fb)
+	display, err := NewDisplay(fb)
 	if err != nil {
 		return fmt.Errorf("create display: %w", err)
 	}
 
 	return display.RenderOneShot(func(screen *ebiten.Image) {
-		d := New(fb.Size().X, fb.Size().Y)
+		d := NewEbitenDisplay(fb.Size().X, fb.Size().Y)
 		d.DrawRectangle(screen, x, y, w, h, clr)
 	})
 }
