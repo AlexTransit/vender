@@ -307,26 +307,49 @@ func (ui *UI) onServiceNetwork() types.UiState {
 	case e.Key == '1':
 		ui.display.SetLines("wifi restart", "in progress") // FIXME extract message string
 
-		// lsCmd := exec.Command("bash", "-c", "wpa_cli select_network 0 && wpa_cli enable_network 1")
-		lsCmd := exec.Command("bash", "-c", "wpa_cli select_network 0")
+		output, err := exec.Command("iw", "dev").Output()
+		if err != nil {
+			ui.showInfo("Error getting Wi-Fi interfaces", err.Error())
+			return types.StateServiceMenu
+		}
+
+		var activeInterface string
+		lines := strings.Split(string(output), "\n")
+		for _, line := range lines {
+			if strings.Contains(line, "Interface") {
+				interfaceName := strings.TrimSpace(strings.Split(line, " ")[1])
+				outputInterface, err := exec.Command("iw", "dev", interfaceName, "link").Output()
+				if err == nil && strings.Contains(string(outputInterface), "onnected to") {
+					activeInterface = interfaceName
+					break
+				}
+			}
+		}
+
+		if activeInterface == "" {
+			ui.showInfo("No active Wi-Fi interface found", "")
+			return types.StateServiceMenu
+		}
+
+		lsCmd := exec.Command("bash", "-c", fmt.Sprintf("sudo wpa_cli -i %s reassociate", activeInterface))
 		bashOut, err := lsCmd.Output()
-		ui.g.Log.Infof("restart wlan (%v)", bashOut)
-		if err != nil {
-			ui.g.Log.Infof("%v", err)
-			// panic(err)
+		if err == nil {
+			ui.showInfo("reassoc done", string(bashOut))
+		} else {
+			ui.showInfo("reassoc Error", err.Error())
 		}
-
-		lsCmd = exec.Command("bash", "-c", "wpa_cli enable_network 1")
-		bashOut, err = lsCmd.Output()
-		ui.g.Log.Infof("restart wlan (%v)", bashOut)
-		if err != nil {
-			ui.g.Log.Infof("%v", err)
-			// panic(err)
-		}
-
 		return types.StateServiceEnd
 	}
 	return types.StateServiceMenu
+}
+
+func (ui *UI) showInfo(line1 string, line2 string) {
+	wait_Sec := 3
+	ui.display.SetLines(line1, line2)
+	if len(line2) > 16 {
+		wait_Sec = 8
+	}
+	time.Sleep(time.Duration(wait_Sec) * time.Second)
 }
 
 func (ui *UI) onServiceMoneyLoad(ctx context.Context) types.UiState {
