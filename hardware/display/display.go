@@ -13,6 +13,7 @@ import (
 
 type Display struct {
 	fb   *framebuffer.Framebuffer
+	buf  *image.RGBA // программный буфер для рисования
 	pix  []color.RGBA
 	size image.Point
 }
@@ -25,6 +26,7 @@ func NewFb(dev string) (*Display, error) {
 	size := fb.Size()
 	d := &Display{
 		fb:   fb,
+		buf:  image.NewRGBA(image.Rect(0, 0, size.X, size.Y)),
 		pix:  make([]color.RGBA, size.X*size.Y),
 		size: size,
 	}
@@ -33,6 +35,7 @@ func NewFb(dev string) (*Display, error) {
 
 func NewMock(size image.Point) *Display {
 	return &Display{
+		buf:  image.NewRGBA(image.Rect(0, 0, size.X, size.Y)),
 		pix:  make([]color.RGBA, size.X*size.Y),
 		size: size,
 	}
@@ -41,7 +44,7 @@ func NewMock(size image.Point) *Display {
 func (d *Display) Clear() error {
 	for y := 0; y < d.size.Y; y++ {
 		for x := 0; x < d.size.X; x++ {
-			d.set(x, y, color.RGBA{0, 0, 0, 0xff})
+			d.buf.Set(x, y, color.RGBA{0, 0, 0, 0xff})
 		}
 	}
 	return d.Flush()
@@ -51,15 +54,23 @@ func (d *Display) ClearFB() {
 	if d.fb == nil {
 		return
 	}
+	// Очищаем программный буфер
 	for y := 0; y < d.size.Y; y++ {
 		for x := 0; x < d.size.X; x++ {
-			d.set(x, y, color.RGBA{0, 0, 0, 0xff})
+			d.buf.Set(x, y, color.RGBA{0, 0, 0, 0xff})
 		}
 	}
 }
 
 func (d *Display) Flush() error {
 	if d.fb != nil {
+		// Копируем пиксели из программного буфера buf в pix
+		for y := 0; y < d.size.Y; y++ {
+			for x := 0; x < d.size.X; x++ {
+				d.pix[y*d.size.X+x] = d.buf.At(x, y).(color.RGBA)
+			}
+		}
+		// Обновляем framebuffer из pix
 		if err := d.fb.Update(d.pix); err != nil {
 			return err
 		}
@@ -99,7 +110,7 @@ func (d *Display) String2() string {
 	b.Grow((d.size.X + 1) * d.size.Y) // +1 for \n
 	for y := 0; y < d.size.Y; y++ {
 		for x := 0; x < d.size.X; x++ {
-			c := d.get(x, y)
+			c := d.buf.At(x, y).(color.RGBA)
 			if c.R == 0 && c.G == 0 && c.B == 0 {
 				b.WriteString("  ")
 			} else {
@@ -122,13 +133,13 @@ func (d *Display) palleted2(img *image.Paletted) {
 			if palidx != 0 {
 				c = fg
 			}
-			d.set(x, y, c)
+			d.buf.Set(x, y, c)
 		}
 	}
 }
 
-func (d *Display) get(x, y int) color.RGBA    { return d.pix[y*d.size.X+x] }
-func (d *Display) set(x, y int, c color.RGBA) { d.pix[y*d.size.X+x] = c }
+// func (d *Display) get(x, y int) color.RGBA    { return d.pix[y*d.size.X+x] }
+func (d *Display) set(x, y int, c color.RGBA) { d.buf.Set(x, y, c) }
 
 func minInt(i1, i2 int) int {
 	if i1 <= i2 {

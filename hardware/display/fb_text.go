@@ -3,12 +3,13 @@ package display
 import (
 	"image"
 	"image/color"
+	"image/draw"
 
 	"github.com/fogleman/gg"
 )
 
 func (d *Display) DrawText(text string, size float64, x float64, y float64) error {
-	dc := gg.NewContext(240, 320)
+	dc := gg.NewContext(d.size.X, d.size.Y)
 	dc.SetRGB(1, 1, 1)
 	dc.Clear()
 	dc.SetRGB(0, 0, 0)
@@ -16,7 +17,8 @@ func (d *Display) DrawText(text string, size float64, x float64, y float64) erro
 	dc.DrawString(text, x, y)
 	// dc.DrawStringAnchored(text, x, y, 0.5, 0.5)
 	img := dc.Image() // *image.RGBA
-	d.rgba(img.(*image.RGBA))
+	// d.rgba(img.(*image.RGBA))
+	draw.Draw(d.buf, d.buf.Bounds(), img, image.Point{}, draw.Src)
 
 	return d.Flush()
 }
