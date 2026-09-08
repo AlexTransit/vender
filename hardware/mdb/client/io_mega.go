@@ -6,6 +6,7 @@ import (
 
 	"github.com/AlexTransit/vender/hardware/mdb"
 	"github.com/AlexTransit/vender/hardware/mega-client"
+	"github.com/AlexTransit/vender/log2"
 	"github.com/juju/errors"
 )
 
@@ -24,9 +25,8 @@ func NewMegaUart(client *mega.Client) mdb.Uarter {
 
 func (mu *megaUart) Open(_ string) error {
 	mu.c.IncRef("mdb-uart")
+	mu.c.Log.Log(log2.LOG_INFO, "open mdb-uart")
 	return nil
-	// _, err := mu.c.DoTimeout(mega.COMMAND_STATUS, nil, 5*time.Second)
-	// return err
 }
 
 func (mu *megaUart) Close() error {
@@ -91,7 +91,7 @@ func (mu *megaUart) Tx(request, response []byte) (n int, err error) {
 				err = errors.Errorf("mdb response (%v)", f.Fields.MdbResult.String())
 				if resendRequest(f.Fields.MdbResult) {
 					mu.c.Log.NoticeF("%v. request(%x)", err, request)
-					time.Sleep(5200 * time.Microsecond)
+					time.Sleep(100 * time.Millisecond)
 					continue
 				}
 				return 0, err
