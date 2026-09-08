@@ -82,6 +82,10 @@ func main() {
 	g.Log = log
 	log.Debugf("starting %s", flagset.Args())
 
+	d, err := g.Display()
+	d.QR("AAAAAA", true, 2)
+	d.DrawText("AAA")
+
 	if err := mod.Main(ctx, flagset.Args()); err != nil {
 		g.Log.Errorf("%v", err)
 		os.Exit(1)
