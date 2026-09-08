@@ -59,19 +59,22 @@ type devWrap struct {
 }
 
 func (g *Global) Display() (*display.Display, error) {
-	x := &g.Hardware.Display // short alias
-	_ = x.do(func() error {
-		cfg := &g.Config.Hardware.Display
-		switch {
-		case cfg.Framebuffer != "":
-			x.Graphic, x.err = display.NewFb(cfg.Framebuffer)
-			return x.err
+	x := &g.Hardware.Display
 
-		default:
-			// return fmt.Errorf("config: no display device (try framebuffer)")
+	_ = x.do(func() error {
+		if x.Graphic != nil {
 			return nil
 		}
+
+		cfg := &g.Config.Hardware.Display
+		if cfg.Framebuffer == "" {
+			return nil
+		}
+
+		x.Graphic, x.err = display.NewFb(cfg.Framebuffer)
+		return x.err
 	})
+
 	return x.Graphic, x.err
 }
 
