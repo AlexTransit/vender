@@ -83,8 +83,10 @@ func main() {
 	log.Debugf("starting %s", flagset.Args())
 
 	d, err := g.Display()
-	d.QR("AAAAAA", true, 2)
-	d.DrawText("AAA")
+	d.Clear()
+	d.DrawText("AAA", 24, 10, 50)
+	d.DrawText("AAA sdfsd f\nbbbbb ", 24, 10, 50)
+	d.DrawText("hello", 24, 20, 100)
 
 	if err := mod.Main(ctx, flagset.Args()); err != nil {
 		g.Log.Errorf("%v", err)
