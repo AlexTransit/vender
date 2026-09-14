@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"image/color"
 	"os"
 	"regexp"
 	"strings"
@@ -83,10 +84,24 @@ func main() {
 	log.Debugf("starting %s", flagset.Args())
 
 	d, err := g.Display()
-	d.Clear()
-	d.DrawText("AAA", 24, 10, 50)
-	d.DrawText("AAA sdfsd f\nbbbbb ", 24, 10, 50)
-	d.DrawText("hello", 24, 20, 100)
+	// d.Clear()
+	// d.OverlayText("AAAAAAA", 30, 11, 11, color.RGBA{255, 255, 255, 255}, color.RGBA{234, 22, 34, 100})
+
+	// d.DrawText("AAA", 24, 10, 50)
+	g.ShowQR("blasdfsdfsdfsdfsdfisdufsiodfugosfgsdfg")
+	// d.Clear()
+	d.OverlayText("Test", 30, 50, 70, color.RGBA{255, 0, 55, 255}, nil)
+	d.OverlayTextWrapped(
+		"Первая строка\nВторая строка с очень длинным словом суперкалифрагилистикэкспиалидоциус\n\nПосле пустой строки",
+		18, 5, 20, 240,
+		color.RGBA{255, 255, 255, 255},
+		color.RGBA{0, 0, 0, 180},
+	)
+	d.OverlayTextSimple("AAAA", 24, 10, 50)
+	d.OverlayTextWrapped("капучино \n1\nкрепкий с сахаром", 30, 0, 100, 200, color.RGBA{255, 0, 55, 255}, nil)
+	d.OverlayTextSimple("AAA sdfsd f\nbbbbb ", 24, 30, 70)
+	d.OverlayText("BBBsdf", 30, 50, 70, color.RGBA{255, 0, 55, 255}, color.RGBA{234, 22, 34, 0o0})
+	d.OverlayTextSimple("hello", 24, 20, 100)
 
 	if err := mod.Main(ctx, flagset.Args()); err != nil {
 		g.Log.Errorf("%v", err)
