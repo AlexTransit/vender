@@ -64,11 +64,12 @@ jobs:
           path: coverage.out
           retention-days: 7
 
-      # IMPORTANT (SonarCloud project setting, not a code change):
-      # This action performs a "CI analysis". If "Automatic Analysis" is also
-      # enabled for the project on SonarCloud, the scan fails with exit code 3:
+      # ВАЖНО (настройка проекта в SonarCloud, а не код):
+      # Это действие выполняет "CI analysis". Если для проекта на SonarCloud
+      # одновременно включён "Automatic Analysis", сканирование падает с
+      # кодом выхода 3:
       #   ERROR You are running CI analysis while Automatic Analysis is enabled.
-      # Before this step can succeed, turn Automatic Analysis OFF in the UI:
+      # Чтобы шаг прошёл успешно, отключите Automatic Analysis в интерфейсе:
       #   https://sonarcloud.io/project/analysis_method?id=AlexTransit_vender
       #   -> General Settings -> Analysis Method -> Automatic Analysis = Off
       - name: SonarCloud Scan
