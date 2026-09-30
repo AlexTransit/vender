@@ -13,7 +13,8 @@ import (
 	"golang.org/x/image/font"
 )
 
-const fontPath = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+// const fontPath = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+const fontPath = "/usr/share/fonts/truetype/dejavu/DejaVuSansMono-Bold.ttf"
 
 var (
 	fontOnce sync.Once
