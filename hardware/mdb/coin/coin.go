@@ -562,8 +562,7 @@ func (ca *CoinAcceptor) ReadTubeStatus() error {
 		if counts[coinType] != 0 {
 			ct[uint32(nominal)] = full
 		}
-		if full && counts[coinType] == 0 {
-		} else if counts[coinType] != 0 {
+		if counts[coinType] != 0 {
 			if err := ca.tubes.AddMany(nominal, uint(counts[coinType])); err != nil {
 				return err
 			}
@@ -643,18 +642,15 @@ func (ca *CoinAcceptor) DisableAccept() {
 
 // -----------------------------------------------------------------
 
-func (ca *CoinAcceptor) AcceptMax(max currency.Amount) engine.Doer {
-	// config := state.GetConfig(ctx)
+func (ca *CoinAcceptor) AcceptMax(maxCoin currency.Amount) engine.Doer {
 	enableBitset := uint16(0)
 
-	if max != 0 {
+	if maxCoin != 0 {
 		for i, n := range ca.nominals {
 			if n == 0 {
 				continue
 			}
-			if currency.Amount(n) <= max {
-				// TODO consult config
-				// _ = config
+			if currency.Amount(n) <= maxCoin {
 				enableBitset |= 1 << uint(i)
 			}
 		}
