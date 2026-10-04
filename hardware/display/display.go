@@ -112,11 +112,11 @@ func (d *Display) String2() string {
 }
 
 func (d *Display) palleted2(img *image.Paletted) {
-	min, max := img.Bounds().Min, img.Bounds().Max
+	minimum, maximum := img.Bounds().Min, img.Bounds().Max
 	bg := toRGBA(img.Palette[0])
 	fg := toRGBA(img.Palette[1])
-	for y := min.Y; y < max.Y; y++ {
-		for x := min.X; x < max.X; x++ {
+	for y := minimum.Y; y < maximum.Y; y++ {
+		for x := minimum.X; x < maximum.X; x++ {
 			palidx := img.Pix[img.PixOffset(x, y)]
 			c := bg
 			if palidx != 0 {

@@ -44,8 +44,6 @@ const (
 )
 
 type PollItem struct {
-	// TODO avoid time.Time for easy GC (contains pointer)
-	// Time        time.Time
 	Error        error
 	DataNominal  currency.Nominal
 	Status       PollItemStatus
@@ -55,7 +53,8 @@ type PollItem struct {
 }
 
 func (pi *PollItem) String() string {
-	return fmt.Sprintf("status=%s cashbox=%v nominal=%s count=%d hwcode=%02x err=%v",
+	return fmt.Sprintf(
+		"status=%s cashbox=%v nominal=%s count=%d hwcode=%02x err=%v",
 		pi.Status.String(),
 		pi.DataCashbox,
 		currency.Amount(pi.DataNominal).Format100I(),
