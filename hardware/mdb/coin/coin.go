@@ -462,7 +462,7 @@ func (ca *CoinAcceptor) decodeByte(b byte, b2 ...byte) (ve money.ValidatorEvent)
 		// xxxx = coin type
 		count := (b >> 4) & 7
 		nominal := ca.coinTypeNominal(b & 0xf).Format100I()
-		ca.Log.Error(fmt.Sprintf("manual dispense nominal(%s) count(%v) tubevoint(%v)", nominal, count, b2))
+		ca.Log.Warning(fmt.Sprintf("manual dispense nominal(%s) count(%v) tubevoint(%v)", nominal, count, b2))
 		return money.ValidatorEvent{}
 	}
 
