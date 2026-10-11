@@ -50,7 +50,7 @@ func uiTestSetup(t *testing.T, env *tenv, begin, endState types.UiState) {
 	env.ui = new(ui.UI)
 	require.NoError(t, env.ui.Init(env.ctx))
 
-	env.ui.XXX_testSetState(begin)
+	env.ui.TestSetState(begin)
 	env.ui.XXX_testHook = func(s types.UiState) {
 		select {
 		case env.uiState <- s:
