@@ -15,11 +15,15 @@ import (
 	"log"
 	"log/syslog"
 	"os"
+	"strings"
 	"sync/atomic"
 	"testing"
 )
 
 const ContextKey = "run/log"
+
+// logWriterSize is the number of per-level writers (LOG_EMERG..LOG_DEBUG).
+const logWriterSize = 8
 
 const (
 	// type specified here helped against accidentally passing flags as level
@@ -71,7 +75,7 @@ func NewWriter(w io.Writer, level Level) *Log {
 		return nil
 	}
 	var lg Log
-	lg.logWriter = make([]io.Writer, 8)
+	lg.logWriter = make([]io.Writer, logWriterSize)
 	for i := range lg.logWriter {
 		lg.logWriter[i] = w
 	}
@@ -85,7 +89,7 @@ func (l *Log) LogToSyslog(tag string) {
 		return
 	}
 	var err error
-	for i := range 8 {
+	for i := 0; i < logWriterSize; i++ {
 		l.logWriter[i], err = syslog.New(syslog.Priority(i), tag)
 		if err != nil {
 			l.LogToConsole()
@@ -98,7 +102,7 @@ func (l *Log) LogToConsole() {
 	if l == nil {
 		return
 	}
-	for i := range 8 {
+	for i := 0; i < logWriterSize; i++ {
 		if i < 5 {
 			l.logWriter[i] = os.Stderr
 		} else {
@@ -249,27 +253,6 @@ func (lg *Log) NoticeF(format string, args ...any) {
 	lg.Log(LOG_NOTICE, s)
 }
 
-//	func (lg *Log) Error(args ...interface{}) {
-//		lg.Log(LOG_ERR, "error: "+fmt.Sprint(args...))
-//		if lg == nil {
-//			return
-//		}
-//		if errfun := lg.loadErrorFunc(); errfun != nil {
-//			var e error
-//			if len(args) >= 1 {
-//				e, _ = args[0].(error)
-//			}
-//			if e != nil {
-//				args = args[1:]
-//				if len(args) > 0 { // Log.Error(err, arg1) please don't do this
-//					rest := fmt.Sprint(args...)
-//					e = errors.Annotate(e, rest)
-//				}
-//				errfun(e)
-//			}
-//		}
-//	}
-
 // ErrorF is a helper for logging and returning error in one line
 func (lg *Log) ErrorF(args ...any) error {
 	lg.Error(args...)
@@ -286,8 +269,7 @@ func (lg *Log) Error(args ...any) {
 		return
 	}
 	s := "error: " + fmt.Sprint(args...)
-	if ErrStr != s {
-		ErrStr = s
+	if !isDuplicateError(s) {
 		lg.Log(LOG_ERR, s)
 	}
 	if errfun := lg.loadErrorFunc(); errfun != nil {
@@ -302,15 +284,44 @@ func (lg *Log) Error(args ...any) {
 	}
 }
 
-var ErrStr string
+// lastErrMsg holds the message of the most recently logged Error/Errorf call.
+// It backs the duplicate-suppression logic and is accessed atomically, so it
+// is safe to call from multiple goroutines concurrently.
+var lastErrMsg atomic.Pointer[string]
+
+// isDuplicateError reports whether s equals the previously logged error
+// message. When it differs, the new message is stored for future comparisons.
+func isDuplicateError(s string) bool {
+	for {
+		prev := lastErrMsg.Load()
+		if prev != nil && *prev == s {
+			return true
+		}
+		if lastErrMsg.CompareAndSwap(prev, &s) {
+			return false
+		}
+		// Lost the race against another writer; retry with the fresh value.
+	}
+}
+
+// ErrStr returns the last error message logged via Error/Errorf
+// ("" if none yet). Safe for concurrent use.
+func ErrStr() string {
+	if p := lastErrMsg.Load(); p != nil {
+		return *p
+	}
+	return ""
+}
 
 func (lg *Log) Errorf(format string, args ...any) {
 	if lg == nil {
 		return
 	}
 	s := "error: " + fmt.Sprintf(format, args...)
-	if ErrStr != s {
-		ErrStr = s
+	if !strings.HasSuffix(s, "\n") { // log line should end with \n
+		s += "\n"
+	}
+	if !isDuplicateError(s) {
 		lg.Log(LOG_ERR, s)
 	}
 	if errfun := lg.loadErrorFunc(); errfun != nil {

@@ -7,23 +7,28 @@ import (
 )
 
 func (inv *Inventory) Tele() *tele_api.Inventory {
-	inv.mu.RLock()
-	defer inv.mu.RUnlock()
-	return inv.locked_tele()
+	return inv.lockedTele()
 }
 
-func (inv *Inventory) locked_tele() *tele_api.Inventory {
+// locked_tele читает value каждого склада через Value() (берётся только Stock.State.mu).
+// Инвентарный lock здесь не нужен: срез Stocks неизменен после Init, а отдельные
+// значения читаются под блокировкой состояния.
+// Порядок захвата блокировок в пакете: сначала inv.mu (кратковременно), затем State.mu -
+// так исключается взаимоблокировка с InventorySave.
+func (inv *Inventory) lockedTele() *tele_api.Inventory {
 	pb := &tele_api.Inventory{Stocks: make([]*tele_api.Inventory_StockItem, 0, 16)}
 
-	for _, s := range inv.Stocks {
+	for i := range inv.Stocks {
+		s := &inv.Stocks[i]
 		if s.Ingredient == nil {
 			continue
 		}
-		if s.value != 0 {
+		value := s.Value()
+		if value != 0 {
 			si := &tele_api.Inventory_StockItem{
 				Code: uint32(s.Code),
 				// XXX TODO retype Value to float
-				Value: int32(s.value),
+				Value: int32(value),
 				// Valuef: s.Value(),
 			}
 			si.Name = s.Ingredient.Name

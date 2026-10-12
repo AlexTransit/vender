@@ -113,27 +113,9 @@ func (g *Global) Init(ctx context.Context, cfg *config_global.Config) (err error
 }
 
 func (g *Global) ScheduleSync(ctx context.Context, fun types.TaskFunc) error {
-	// TODO task := g.Schedule(ctx, priority, fun)
-	// return task.wait()
-
 	g.Alive.Add(1)
 	defer g.Alive.Done()
 	return fun(ctx)
-
-	// switch priority {
-	// case tele_api.Priority_Default, tele_api.Priority_Now:
-	// 	return fun(ctx)
-
-	// case tele_api.Priority_IdleEngine:
-	// 	// TODO return g.Engine.Schedule(ctx, priority, fun)
-	// 	return fun(ctx)
-
-	// case tele_api.Priority_IdleUser:
-	// 	return g.UI().ScheduleSync(ctx, priority, fun)
-
-	// default:
-	// 	return errors.Errorf("code error ScheduleSync invalid priority=(%d)%s", priority, priority.String())
-	// }
 }
 
 func (g *Global) UI() types.UIer {
@@ -151,6 +133,23 @@ func (g *Global) UI() types.UIer {
 func (g *Global) initEngine() error {
 	errs := make([]error, 0)
 
+	aliasErrs := g.initEngineAliases()
+	errs = append(errs, aliasErrs...)
+
+	menuErrs := g.initEngineMenu()
+	errs = append(errs, menuErrs...)
+
+	profileErr := g.initEngineProfile()
+	if profileErr != nil {
+		errs = append(errs, profileErr)
+	}
+
+	return helpers.FoldErrors(errs)
+}
+
+func (g *Global) initEngineAliases() []error {
+	errs := make([]error, 0)
+
 	for _, x := range g.Config.Engine.Aliases {
 		var err error
 		x.Doer, err = g.Engine.ParseText(x.Name, x.Scenario)
@@ -166,6 +165,12 @@ func (g *Global) initEngine() error {
 		}
 		g.Engine.Register(x.Name, x.Doer)
 	}
+
+	return errs
+}
+
+func (g *Global) initEngineMenu() []error {
+	errs := make([]error, 0)
 
 	for code, x := range g.Config.Engine.Menu.Items {
 		if x.Disabled {
@@ -191,20 +196,25 @@ func (g *Global) initEngine() error {
 		// g.Engine.Register("menu."+x.Code, x.Doer)
 	}
 
-	if pcfg := g.Config.Engine.Profile; pcfg.Regexp != "" {
-		if re, err := regexp.Compile(pcfg.Regexp); err != nil {
-			errs = append(errs, err)
-		} else {
-			format := pcfg.LogFormat
-			if format == "" {
-				format = `engine profile action=%s time=%s`
-			}
-			min := time.Duration(pcfg.MinUs) * time.Microsecond
-			g.Engine.SetProfile(re, min, func(d engine.Doer, td time.Duration) { g.Log.Debugf(format, d.String(), td) })
-		}
-	}
+	return errs
+}
 
-	return helpers.FoldErrors(errs)
+func (g *Global) initEngineProfile() error {
+	pcfg := g.Config.Engine.Profile
+	if pcfg.Regexp == "" {
+		return nil
+	}
+	re, err := regexp.Compile(pcfg.Regexp)
+	if err != nil {
+		return err
+	}
+	format := pcfg.LogFormat
+	if format == "" {
+		format = `engine profile action=%s time=%s`
+	}
+	minTime := time.Duration(pcfg.MinUs) * time.Microsecond
+	g.Engine.SetProfile(re, minTime, func(d engine.Doer, td time.Duration) { g.Log.Debugf(format, d.String(), td) })
+	return nil
 }
 
 // KeyBoadInput enables keyboard input.
@@ -213,21 +223,32 @@ func (g *Global) KeyBoadInput(value bool) {
 }
 
 func (g *Global) RegisterCommands(ctx context.Context) {
-	g.Engine.RegisterNewFuncAgr("error(?)",
+	g.Engine.RegisterNewFuncAgr(
+		"error(?)",
 		func(ctx context.Context, arg engine.Arg) error {
 			return g.Log.ErrorF(fmt.Sprintf("error:%v", arg))
 		},
 	)
-	g.Engine.RegisterNewFuncAgr("error.log(?)",
+	g.Engine.RegisterNewFuncAgr(
+		"error.log(?)",
 		func(ctx context.Context, arg engine.Arg) error {
 			g.Log.ErrorF(fmt.Sprintf("error:%v", arg))
 			return nil
 		},
 	)
-	g.Engine.RegisterNewFuncAgr("wait.ok(?)",
+	g.Engine.RegisterNewFuncAgr(
+		"info.log(?)",
+		func(ctx context.Context, arg engine.Arg) error {
+			g.Log.Infof("info:%v", arg)
+			return nil
+		},
+	)
+
+	g.Engine.RegisterNewFuncAgr(
+		"wait.ok(?)",
 		func(ctx context.Context, arg engine.Arg) error {
 			// if config_global.VMC.User.KeyboardReadEnable {
-			// 	return errors.New("keyboard input listem on UI")
+			//      return errors.New("keyboard input listem on UI")
 			// }
 			config_global.VMC.User.KeyboardReadEnable = true
 			watchdog.Disable()
@@ -278,19 +299,23 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		func(ctx context.Context) error { g.UpgradeVender(); return nil },
 	)
 
-	g.Engine.RegisterNewFunc("check.menu",
+	g.Engine.RegisterNewFunc(
+		"check.menu",
 		func(ctx context.Context) error { g.CheckMenuExecution(); return nil },
 	)
 
-	g.Engine.RegisterNewFunc("write.config",
+	g.Engine.RegisterNewFunc(
+		"write.config",
 		func(ctx context.Context) error { config_global.WriteConfigToFile(); return nil },
 	)
 
-	g.Engine.RegisterNewFunc("menu.cost",
+	g.Engine.RegisterNewFunc(
+		"menu.cost",
 		func(ctx context.Context) error { g.ListMenuPriceCost(); return nil },
 	)
 
-	g.Engine.RegisterNewFuncAgr("line1(?)",
+	g.Engine.RegisterNewFuncAgr(
+		"line1(?)",
 		func(ctx context.Context, arg engine.Arg) error {
 			g.MustTextDisplay().SetLine(1, arg.(string))
 			return nil

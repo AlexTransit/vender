@@ -6,6 +6,10 @@
     },
     "[html]": {
         "editor.defaultFormatter": "vscode.html-language-features"
+    },
+    "sonarlint.connectedMode.project": {
+        "connectionId": "alextransit",
+        "projectKey": "AlexTransit_vender"
     }
 }
 // {

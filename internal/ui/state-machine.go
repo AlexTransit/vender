@@ -15,9 +15,12 @@ import (
 	"github.com/AlexTransit/vender/internal/watchdog"
 )
 
-func (ui *UI) State() types.UiState               { return types.UiState(atomic.LoadUint32((*uint32)(&ui.state))) }
-func (ui *UI) setState(new types.UiState)         { atomic.StoreUint32((*uint32)(&ui.state), uint32(new)) }
-func (ui *UI) XXX_testSetState(new types.UiState) { ui.setState(new) }
+func (ui *UI) State() types.UiState { return types.UiState(atomic.LoadUint32((*uint32)(&ui.state))) }
+
+func (ui *UI) setState(newState types.UiState) {
+	atomic.StoreUint32((*uint32)(&ui.state), uint32(newState))
+}
+func (ui *UI) TestSetState(newState types.UiState) { ui.setState(newState) }
 
 func (ui *UI) Loop(ctx context.Context) {
 	ui.g.Alive.Add(1)
@@ -86,10 +89,8 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		ui.g.RunBashSript(ui.g.Config.ScriptIfBroken)
 		ui.g.Log.Infof("state=broken")
 		if !ui.broken {
-			// ui.g.Tele.RoboSendState(tele_api.State_Broken)
 			if errs := ui.g.Engine.ExecList(ctx, "on_broken", ui.g.Config.Engine.OnBroken); len(errs) != 0 {
-				// TODO maybe ErrorStack should be removed
-				ui.g.Log.Error(errors.ErrorStack(errors.Annotate(helpers.FoldErrors(errs), "on_broken")))
+				ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_broken"))
 			}
 		}
 		ui.broken = true

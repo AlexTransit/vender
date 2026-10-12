@@ -22,7 +22,21 @@ type Stock struct {
 	// дейсвия при отгрузке. создается команда: название_ингридиента.run(?) которая выполняет эти действия.
 	RegisterAdd string `hcl:"register_add,optional"`
 	Ingredient  *Ingredient
-	value       float32
+	// State - защищаемое состояние склада (остаток). Указатель, потому что
+	// Stock копируется по значению на этапе конфигурации; саму структуру с
+	// мьютексом копировать нельзя (go vet copylocks). Инициализируется в
+	// Inventory.prepareInventory перед попаданием склада в рабочий массив.
+	State *StockState
+}
+
+// state возвращает защищаемое состояние склада, при необходимости лениво
+// инициализируя его (нужно для складов, собранных напрямую в тестах, и как
+// страховка от nil State в рантайме).
+func (s *Stock) state() *StockState {
+	if s.State == nil {
+		s.State = &StockState{}
+	}
+	return s.State
 }
 
 func (s *Stock) String() string {
@@ -36,11 +50,14 @@ func (s *Stock) SpendValue(value byte) {
 	if s.Ingredient.SpendRate == 0 {
 		return
 	}
-	s.value -= float32(value) / s.Ingredient.SpendRate
+	s.spendValue(float32(value) / s.Ingredient.SpendRate)
 }
 
 func (s *Stock) ShowLevel() string {
-	currenValue := int(s.value) * 100
+	st := s.state()
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	currenValue := int(st.value) * 100
 	valuePerDelay, i := s.valuePerDelay(currenValue, false)
 	if valuePerDelay == 0 {
 		return "0"
@@ -51,11 +68,14 @@ func (s *Stock) ShowLevel() string {
 }
 
 func (s *Stock) SetLevel(level int) {
+	st := s.state()
+	st.mu.Lock()
+	defer st.mu.Unlock()
 	valuePerDelay, i := s.valuePerDelay(level, true)
 	ost := level - s.Ingredient.levelValue[i].lev
 	l1 := s.Ingredient.levelValue[i].val
 	l2 := ost * valuePerDelay
-	s.value = float32((l1 + l2) / 100)
+	st.value = float32((l1 + l2) / 100)
 }
 
 // returns the number per 0.01 division and the index of the smaller value
@@ -83,15 +103,28 @@ func (s *Stock) valuePerDelay(value int, valueIsLevel bool) (valuePerDelay int, 
 	return 0, 0
 }
 
-func (s *Stock) Value() float32 { return s.value }
+func (s *Stock) Value() float32 {
+	st := s.state()
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	return st.value
+}
 
-func (s *Stock) Set(v float32) { s.value = v }
+func (s *Stock) Set(v float32) {
+	st := s.state()
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	st.value = v
+}
 
 func (s *Stock) Has(v float32) bool {
 	if s.Ingredient.Min == 0 {
 		return true
 	}
-	return s.value-v >= float32(s.Ingredient.Min)
+	st := s.state()
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	return st.value-v >= float32(s.Ingredient.Min)
 }
 
 func (s *Stock) Wrap(d engine.Doer) engine.Doer {
@@ -109,7 +142,10 @@ func (s *Stock) spendArg(ctx context.Context, arg engine.Arg) error {
 }
 
 func (s *Stock) spendValue(v float32) {
-	s.value -= v
+	st := s.state()
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	st.value -= v
 }
 
 type custom struct {
