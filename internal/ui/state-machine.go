@@ -90,8 +90,7 @@ func (ui *UI) enter(ctx context.Context, s types.UiState) types.UiState {
 		ui.g.Log.Infof("state=broken")
 		if !ui.broken {
 			if errs := ui.g.Engine.ExecList(ctx, "on_broken", ui.g.Config.Engine.OnBroken); len(errs) != 0 {
-				// TODO maybe ErrorStack should be removed
-				ui.g.Log.Error(errors.ErrorStack(errors.Annotate(helpers.FoldErrors(errs), "on_broken")))
+				ui.g.Error(errors.Annotate(helpers.FoldErrors(errs), "on_broken"))
 			}
 		}
 		ui.broken = true
