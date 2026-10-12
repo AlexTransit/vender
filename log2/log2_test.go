@@ -8,6 +8,7 @@ import (
 	"log"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,7 +35,7 @@ func TestLog2(t *testing.T) {
 		{"caller/error", func(t testing.TB, l *Log) string {
 			l.SetFlags(log.Lshortfile)
 			l.Errorf("problem")
-			return formatCallerShort(1) + "error: problem\n"
+			return formatCallerShort(1) + "error: problem\n" // Errorf appends \n if missing
 		}},
 		{"error-func/error", func(t testing.TB, l *Log) string {
 			ech := make(chan error, 1)
@@ -77,6 +78,49 @@ func TestLog2(t *testing.T) {
 			assert.Equal(t, expect, buf.String())
 		})
 	}
+}
+
+func TestErrStrDedup(t *testing.T) {
+	buf := bytes.NewBuffer(nil)
+	l := NewWriter(buf, LOG_DEBUG)
+	l.SetFlags(0)
+
+	// same message logged twice: only the first one should reach the output
+	l.Error("boom")
+	l.Error("boom")
+	assert.Equal(t, "error: boom\n", buf.String())
+
+	// different message passes through
+	l.Error("another")
+	assert.Equal(t, "error: boom\nerror: another\n", buf.String())
+
+	// ErrStr() reports the last logged message
+	assert.Equal(t, "error: another", ErrStr())
+}
+
+// TestErrorConcurrent hammers Error/Errorf from many goroutines at once;
+// run with -race to detect data races on the dedup state.
+func TestErrorConcurrent(t *testing.T) {
+	t.Parallel()
+
+	lg := NewWriter(io.Discard, LOG_DEBUG)
+	if lg == nil { // NewWriter returns nil for io.Discard
+		lg = NewWriter(new(bytes.Buffer), LOG_DEBUG)
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < 50; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			for j := 0; j < 100; j++ {
+				lg.Errorf("err %d/%d", i, j)
+				lg.Error("same message from all goroutines")
+				_ = ErrStr()
+			}
+		}(i)
+	}
+	wg.Wait()
 }
 
 func BenchmarkLog2(b *testing.B) {
