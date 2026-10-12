@@ -109,8 +109,9 @@ func TestTextSpeechEarlyReturn(t *testing.T) {
 func TestPlayStreamEarlyReturn(t *testing.T) {
 	st := snapshotSoundState()
 	t.Cleanup(func() { restoreSoundState(st) })
-	audioCtx := audio.NewContext(s.config.SampleRate)
 
+	// во время теста проверяются только ранние выходы playStream,
+	// создание реального аудио контекста здесь не нужно и не доступно в тестовой среде
 	assertNoPanic := func(t *testing.T, fn func()) {
 		t.Helper()
 		defer func() {
@@ -123,11 +124,13 @@ func TestPlayStreamEarlyReturn(t *testing.T) {
 
 	t.Run("nil config", func(t *testing.T) {
 		s.config = nil
+		s.audioContext = nil
 		assertNoPanic(t, func() { playStream(&soundStream{Stream: []byte{1}}) })
 	})
 
 	t.Run("disabled", func(t *testing.T) {
 		s.config = &sound_config.Config{Disabled: true}
+		s.audioContext = nil
 		assertNoPanic(t, func() { playStream(&soundStream{Stream: []byte{1}}) })
 	})
 
@@ -139,13 +142,13 @@ func TestPlayStreamEarlyReturn(t *testing.T) {
 
 	t.Run("nil stream pointer", func(t *testing.T) {
 		s.config = &sound_config.Config{}
-		s.audioContext = audioCtx
+		s.audioContext = nil
 		assertNoPanic(t, func() { playStream(nil) })
 	})
 
 	t.Run("empty stream", func(t *testing.T) {
 		s.config = &sound_config.Config{}
-		s.audioContext = audioCtx
+		s.audioContext = nil
 		assertNoPanic(t, func() { playStream(&soundStream{}) })
 	})
 }
