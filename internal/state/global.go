@@ -237,6 +237,14 @@ func (g *Global) RegisterCommands(ctx context.Context) {
 		},
 	)
 	g.Engine.RegisterNewFuncAgr(
+		"info.log(?)",
+		func(ctx context.Context, arg engine.Arg) error {
+			g.Log.Infof("info:%v", arg)
+			return nil
+		},
+	)
+
+	g.Engine.RegisterNewFuncAgr(
 		"wait.ok(?)",
 		func(ctx context.Context, arg engine.Arg) error {
 			// if config_global.VMC.User.KeyboardReadEnable {
