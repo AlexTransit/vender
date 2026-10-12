@@ -35,6 +35,15 @@ import (
 	"github.com/AlexTransit/vender/log2"
 )
 
+// StockState - защищаемое состояние склада (остаток).
+// Вынесено в отдельную структуру с указателем, потому что Stock копируется
+// по значению при конфигурации (HCL-декодирование, XXX_Stocks, append в Stocks):
+// sync.Mutex/atomic внутри копируемой структуры нарушил бы синхронизацию (go vet copylocks).
+type StockState struct {
+	mu    sync.Mutex
+	value float32
+}
+
 // XXX временная карта
 // при чтении когфига, все перекладывается в карту. ( перезапись значений )
 // потом из карты переноситья в рабочий масив
@@ -99,12 +108,13 @@ func (inv *Inventory) GetIngredientByName(ingredientName string) (*Ingredient, b
 }
 
 func (inv *Inventory) GetStockByingredientName(name string) (*Stock, bool) {
-	for i, v := range inv.Stocks {
+	for i := range inv.Stocks {
+		v := &inv.Stocks[i]
 		if v.Ingredient == nil {
 			continue
 		}
 		if v.Ingredient.Name == name {
-			return &inv.Stocks[i], true
+			return v, true
 		}
 	}
 	inv.log.Errorf("ingedient (%v) not included in any stock", name)
@@ -113,8 +123,6 @@ func (inv *Inventory) GetStockByingredientName(name string) (*Stock, bool) {
 
 func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, log *log2.Log) (errs error) {
 	inv.log = log
-	inv.mu.Lock()
-	defer inv.mu.Unlock()
 	inv.prepareInventory()
 	fp := filepath.Dir(inv.File)
 	if _, err := os.Stat(fp); os.IsNotExist(err) {
@@ -187,14 +195,15 @@ func (inv *Inventory) prepareInventory() {
 	inv.XXX_Ingredient = nil
 
 	for _, v := range inv.XXX_Stocks {
-		s := Stock{}
-		s = v
+		s := v
 		s.Log = inv.log
 		var ok bool
 		if s.Ingredient, ok = inv.GetIngredientByName(v.XXX_Ingredient); ok {
+			// инициализируем защищаемое состояние ПОСЛЕ всех копирований:
+			// дальше value меняется только через методы с блокировкой State.mu
+			s.State = &StockState{}
 			inv.Stocks = append(inv.Stocks, s)
 		}
-		s.XXX_Ingredient = ""
 	}
 	inv.XXX_Stocks = nil
 }
@@ -231,7 +240,8 @@ func (inv *Inventory) InventoryLoad() {
 	}
 	inv.mu.Lock()
 	defer inv.mu.Unlock()
-	for i, cl := range inv.Stocks {
+	for i := range inv.Stocks {
+		cl := &inv.Stocks[i]
 		// защита от выхода за границы: код должен быть в диапазоне [1..numInventory],
 		// иначе panic на боевом устройстве при поврежденном конфиге
 		if cl.Code <= 0 || cl.Code > numInventory {
@@ -239,7 +249,12 @@ func (inv *Inventory) InventoryLoad() {
 			continue
 		}
 		inventoryValue := td[cl.Code-1]
-		inv.Stocks[i].Set(float32(inventoryValue))
+		// ВАЖНО: value каждого склада защищён Stock.State.mu, а НЕ inv.mu —
+		// иначе прямая запись cl.State.value под inv.mu гонялась бы с Value()/Set(),
+		// которые берут только State.mu (детектируется -race).
+		// Порядок захвата здесь строго инвертирован относительно Tele/InventorySave
+		// (они отпускают inv.mu до State.mu), поэтому deadlock невозможен.
+		cl.Set(float32(inventoryValue))
 	}
 }
 
@@ -259,16 +274,24 @@ func (inv *Inventory) InventorySave() error {
 	numStocks := len(inv.Stocks)
 	bs := make([]byte, numStocks*4)
 	var errs error
-	for _, cl := range inv.Stocks {
+	stocks := make([]*Stock, numStocks)
+	for i := range inv.Stocks {
+		stocks[i] = &inv.Stocks[i]
+	}
+	inv.mu.RUnlock()
+
+	// State.mu каждого склада берём ПОСЛЕ отпускания inv.mu: обратный порядок
+	// (State.mu -> inv.mu) нигде не используется, поэтому такой порядок захвата
+	// защищает от взаимоблокировки
+	for _, cl := range stocks {
 		if cl.Code <= 0 || cl.Code > numStocks {
 			// защита от выхода за границы массива при некорректном коде бункера
 			errs = errors.Join(errs, fmt.Errorf("save inventory skip stock=%s invalid code=%d", cl.Label, cl.Code))
 			continue
 		}
 		pos := (cl.Code - 1) * 4
-		binary.BigEndian.PutUint32(bs[pos:pos+4], uint32(cl.value))
+		binary.BigEndian.PutUint32(bs[pos:pos+4], uint32(cl.Value()))
 	}
-	inv.mu.RUnlock()
 
 	if errs != nil {
 		inv.log.Errorf("%v", errs)
@@ -315,9 +338,13 @@ func (inv *Inventory) InventorySave() error {
 	return nil
 }
 
+// Iter вызывает fun для каждого склада.
+//
+// ВАЖНО: fun вызывается БЕЗ удержания inv.mu. Если fun обращается к методам
+// Inventory (GetStockByingredientName, Tele, FillAll...), это безопасно; если бы
+// мы держали inv.mu, такой повторный вход привел бы к самоблокировке.
+// Сами поля Stocks[] во время итерации не изменяются (Init выполняется до старта горут).
 func (inv *Inventory) Iter(fun func(s *Stock)) {
-	inv.mu.Lock()
-	defer inv.mu.Unlock()
 	for i := range inv.Stocks {
 		fun(&inv.Stocks[i])
 	}
