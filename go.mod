@@ -1,11 +1,12 @@
 module github.com/AlexTransit/vender
 
-go 1.26
+go 1.27
 
 require (
 	github.com/c-bata/go-prompt v0.2.6
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf
 	github.com/eclipse/paho.mqtt.golang v1.5.1
+	github.com/fogleman/gg v1.3.0
 	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0
 	github.com/hajimehoshi/ebiten/v2 v2.9.10
 	github.com/hashicorp/hcl/v2 v2.23.0
@@ -30,7 +31,6 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/ebitengine/oto/v3 v3.4.1 // indirect
 	github.com/ebitengine/purego v0.9.1 // indirect
-	github.com/fogleman/gg v1.3.0
 	github.com/golang/protobuf v1.5.0 // indirect
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
