@@ -211,7 +211,9 @@ func (inv *Inventory) InventoryLoad() {
 	defer f.Close()
 
 	stat, err := f.Stat()
+	inv.mu.RLock()
 	numInventory := len(inv.Stocks)
+	inv.mu.RUnlock()
 	size := 0
 	if err == nil && stat != nil {
 		size = int(stat.Size())
@@ -227,31 +229,90 @@ func (inv *Inventory) InventoryLoad() {
 		inv.log.Errorf("read inventory file error(%v)", err)
 		return
 	}
+	inv.mu.Lock()
+	defer inv.mu.Unlock()
 	for i, cl := range inv.Stocks {
+		// защита от выхода за границы: код должен быть в диапазоне [1..numInventory],
+		// иначе panic на боевом устройстве при поврежденном конфиге
+		if cl.Code <= 0 || cl.Code > numInventory {
+			inv.log.Errorf("load inventory skip stock=%s invalid code=%d", cl.Label, cl.Code)
+			continue
+		}
 		inventoryValue := td[cl.Code-1]
 		inv.Stocks[i].Set(float32(inventoryValue))
 	}
 }
 
+// InventorySave сохраняет остатки всех складов в файл атомарно.
+//
+// Атомарность нужна из-за работы на Orange Pi с SD-картой: обычная запись
+// через O_TRUNC оставляет файл пустым/обрезанным, если питание пропадет
+// в момент записи. Поэтому данные пишутся во временный файл рядом с целевым,
+// сбрасываются на диск (fsync), затем временный файл переименовывается поверх
+// целевого (rename атомарен в пределах одной файловой системы), и синхронизируется
+// уже каталог. После этого старый файл не может оказаться "полусостоянием".
+//
+// Также исправлена ошибка порядка defer: Close вызывается только при успешно
+// открытом файле, иначе было бы обращение к nil (panic).
 func (inv *Inventory) InventorySave() error {
-	file, err := os.OpenFile(inv.File, os.O_WRONLY|os.O_SYNC|os.O_CREATE|os.O_TRUNC, 0o644)
-	defer func() { _ = file.Close() }()
-	if err != nil {
-		inv.log.Errorf("save inventory fail. error open file(%v)", err)
-		return err
-	}
-
-	bs := make([]byte, len(inv.Stocks)*4)
+	inv.mu.RLock()
+	numStocks := len(inv.Stocks)
+	bs := make([]byte, numStocks*4)
+	var errs error
 	for _, cl := range inv.Stocks {
+		if cl.Code <= 0 || cl.Code > numStocks {
+			// защита от выхода за границы массива при некорректном коде бункера
+			errs = errors.Join(errs, fmt.Errorf("save inventory skip stock=%s invalid code=%d", cl.Label, cl.Code))
+			continue
+		}
 		pos := (cl.Code - 1) * 4
 		binary.BigEndian.PutUint32(bs[pos:pos+4], uint32(cl.value))
 	}
-	_, err = file.Write(bs)
+	inv.mu.RUnlock()
+
+	if errs != nil {
+		inv.log.Errorf("%v", errs)
+		// сохраняем то, что смогли: позиции некорректных складов останутся нулями,
+		// но прерывать сохранение нельзя — иначе потеряем все остальные остатки
+	}
+
+	dir := filepath.Dir(inv.File)
+	tmp, err := os.CreateTemp(dir, ".inventory-*.tmp")
 	if err != nil {
-		inv.log.Errorf("save inventory fail. error write file(%v)", err)
+		inv.log.Errorf("save inventory fail. error create temp file(%v)", err)
 		return err
 	}
-	return err
+	tmpName := tmp.Name()
+	// при любой ошибке до rename временный файл удаляется, целевой не тронут
+	defer func() { _ = os.Remove(tmpName) }()
+
+	if _, err := tmp.Write(bs); err != nil {
+		_ = tmp.Close()
+		inv.log.Errorf("save inventory fail. error write temp file(%v)", err)
+		return err
+	}
+	// fsync гарантирует, что данные реально легли на носитель до rename
+	if err := tmp.Sync(); err != nil {
+		_ = tmp.Close()
+		inv.log.Errorf("save inventory fail. error sync temp file(%v)", err)
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		inv.log.Errorf("save inventory fail. error close temp file(%v)", err)
+		return err
+	}
+	if err := os.Rename(tmpName, inv.File); err != nil {
+		inv.log.Errorf("save inventory fail. error rename temp file(%v)", err)
+		return err
+	}
+	// rename виден другим процессам только после синхронизации каталога
+	if d, err := os.Open(dir); err == nil {
+		_ = d.Sync() // не все FS поддерживают fsync каталога, поэтому ошибку не считаем фатальной
+		_ = d.Close()
+	} else {
+		inv.log.Errorf("save inventory warn. cannot open dir for sync(%v)", err)
+	}
+	return nil
 }
 
 func (inv *Inventory) Iter(fun func(s *Stock)) {
