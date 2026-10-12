@@ -26,12 +26,6 @@ import (
 
 // for test/ make config from ctrusture
 func WriteConfigToFile() {
-	// 	c := CT{
-	// 		Inv: InvStruct{
-	// 			Persist: false,
-	// 			Stocks:  Stocktruct{},
-	// 		},
-	// 	}
 	f := hclwrite.NewEmptyFile()
 	gohcl.EncodeIntoBody(newDefaultConfig(), f.Body())
 	file, err := os.OpenFile("defaultConfig.hcl", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
@@ -225,6 +219,15 @@ func newDefaultConfig() *Config {
 // ProcessConfig переносит данные из XXX_ полей в рабочие структуры.
 // Вызывается как в ReadConfig так и в тестах.
 func ProcessConfig(cfg *Config) {
+	processDevices(cfg)
+	processTests(cfg)
+	processStocks(cfg)
+	processIngredients(cfg)
+	processAliases(cfg)
+	processMenuItems(cfg)
+}
+
+func processDevices(cfg *Config) {
 	for _, v := range cfg.Hardware.XXX_Devices {
 		devConf := cfg.Hardware.EvendDevices[v.Name]
 		devConf.Name = v.Name
@@ -237,7 +240,9 @@ func ProcessConfig(cfg *Config) {
 		cfg.Hardware.EvendDevices[v.Name] = devConf
 	}
 	cfg.Hardware.XXX_Devices = nil
+}
 
+func processTests(cfg *Config) {
 	for _, v := range cfg.UI_config.Service.XXX_Tests {
 		cfg.UI_config.Service.Tests[v.Name] = ui_config.TestsStruct{
 			Name:     v.Name,
@@ -245,7 +250,9 @@ func ProcessConfig(cfg *Config) {
 		}
 	}
 	cfg.UI_config.Service.XXX_Tests = nil
+}
 
+func processStocks(cfg *Config) {
 	for _, v := range cfg.Inventory.Stocks {
 		confStock := cfg.Inventory.XXX_Stocks[v.Label]
 		confStock.Label = v.Label
@@ -261,7 +268,9 @@ func ProcessConfig(cfg *Config) {
 		cfg.Inventory.XXX_Stocks[v.Label] = confStock
 	}
 	cfg.Inventory.Stocks = nil
+}
 
+func processIngredients(cfg *Config) {
 	for _, v := range cfg.Inventory.Ingredient {
 		ing := cfg.Inventory.XXX_Ingredient[v.Name]
 		ing.Name = v.Name
@@ -283,7 +292,9 @@ func ProcessConfig(cfg *Config) {
 		cfg.Inventory.XXX_Ingredient[v.Name] = ing
 	}
 	cfg.Inventory.Ingredient = nil
+}
 
+func processAliases(cfg *Config) {
 	for _, v := range cfg.Engine.XXX_Aliases {
 		errActions := map[string]engine_config.ErrorAction{}
 		for _, ea := range v.XXX_OnError {
@@ -296,7 +307,9 @@ func ProcessConfig(cfg *Config) {
 		}
 	}
 	cfg.Engine.XXX_Aliases = nil
+}
 
+func processMenuItems(cfg *Config) {
 	for _, v := range cfg.Engine.XXX_Menu.XXX_Items {
 		mi := cfg.Engine.Menu.Items[v.Code]
 		mi.Code = v.Code
