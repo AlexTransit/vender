@@ -305,7 +305,7 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error
 		count--
 		time.Sleep(200 * time.Millisecond)
 		if err = gen.dev.Tx(gen.dev.PacketPoll, &response); err != nil {
-			return err
+			return &helpers.AppError{ErrorCode: int32(10), Err: fmt.Errorf("action:%v transmit poll error:%v", gen.dev.Action, err)}
 		}
 		rb := response.Bytes()
 		if len(rb) == 0 {
@@ -327,10 +327,10 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error
 	}
 	if timeOut {
 		if gen.dev.Action != "" {
-			return &helpers.AppError{ErrorCode: int32(11), Err: errors.New("time out pool")}
+			return &helpers.AppError{ErrorCode: int32(11), Err: fmt.Errorf("execute command(%s) timeout", gen.dev.Action)}
 		}
 	}
-	return &helpers.AppError{ErrorCode: int32(0), Err: errors.New("pool answer not complete")}
+	return &helpers.AppError{ErrorCode: int32(0), Err: fmt.Errorf("execute command(%s) poll error:%v", gen.dev.Action, err)}
 }
 
 func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool) (err error) {
@@ -339,7 +339,7 @@ func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool) (err error
 		count--
 		time.Sleep(200 * time.Millisecond)
 		if err = gen.dev.Tx(gen.dev.PacketPoll, &response); err != nil {
-			return err
+			return &helpers.AppError{ErrorCode: int32(10), Err: fmt.Errorf("action:%v transmit poll error:%v", gen.dev.Action, err)}
 		}
 		rb := response.Byte() << 2
 		rb = rb >> 2
@@ -351,7 +351,7 @@ func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool) (err error
 		}
 	}
 	if timeOut {
-		return &helpers.AppError{ErrorCode: int32(11), Err: errors.New("time out pool")}
+		return &helpers.AppError{ErrorCode: int32(11), Err: fmt.Errorf("execute command(%s) timeout", gen.dev.Action)}
 	}
 	return nil
 }
@@ -413,7 +413,7 @@ func (gen *Generic) ReadErrorProto2() (errb byte) {
 func (gen *Generic) ReadError() (err error) {
 	if errb := gen.ReadErrorProto2(); errb != 0 {
 		// gen.dev.Rst()
-		return &helpers.AppError{ErrorCode: int32(errb), Err: fmt.Errorf("device:%s error:%v", gen.name, errb)}
+		return &helpers.AppError{ErrorCode: int32(errb), Err: fmt.Errorf("device:%s action:%s error:%v", gen.name, gen.dev.Action, errb)}
 	}
 	return nil
 }
