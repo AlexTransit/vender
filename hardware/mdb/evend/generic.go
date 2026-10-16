@@ -321,8 +321,7 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error
 			return &helpers.AppError{ErrorCode: int32(errCode), Err: e}
 		case 0x05:
 		default:
-			err = fmt.Errorf("unknow answer(%v) on command(%s)", rb, gen.dev.Action)
-			return
+			return &helpers.AppError{ErrorCode: int32(9), Err: fmt.Errorf("unknow answer(%v) on command(%s)", rb, gen.dev.Action)}
 		}
 	}
 	if timeOut {
@@ -365,14 +364,14 @@ func (gen *Generic) WaitSuccess(count uint16, timeOut bool) error {
 
 func (gen *Generic) CommandNoWait(cmd ...byte) (err error) {
 	if err = gen.Command(cmd...); err != nil {
-		return
+		return &helpers.AppError{ErrorCode: int32(10), Err: fmt.Errorf("action:%v transmit NoWait command(%v) error:%v", gen.dev.Action, cmd, err)}
 	}
 	return gen.WaitSuccess(1, false)
 }
 
 func (gen *Generic) CommandWaitSuccess(count uint16, cmd ...byte) (err error) {
 	if err = gen.Command(cmd...); err != nil {
-		return
+		return &helpers.AppError{ErrorCode: int32(10), Err: fmt.Errorf("action:%v transmit command(%v) error:%v", gen.dev.Action, cmd, err)}
 	}
 	return gen.WaitSuccess(count, true)
 }
