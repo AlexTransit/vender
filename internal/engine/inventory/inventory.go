@@ -59,6 +59,7 @@ type Inventory struct {
 	// список бункеров. название склада и код одинаковые.
 	// название ингридиента. должно соответствовать названию в блоке ингридиентов. нужно для связи склада и ингридиента. пока движок не переделан - это уникальное значение
 	Stocks []Stock `hcl:"stock,block"`
+	pools  []*Pool
 	// список ингридиентов. название ингридиента должно быть уникальным. нужно для связи склада и ингридиента. пока движок не переделан - это уникальное значение
 	Ingredient     []Ingredient `hcl:"ingredient,block"`
 	XXX_Stocks     map[string]Stock
@@ -153,34 +154,41 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, log *log2.Log)
 	if errs != nil {
 		return errs
 	}
-	for i, s := range inv.Stocks {
+	stockDoers := make([]engine.Doer, len(inv.Stocks))
+	for i := range inv.Stocks {
+		s := &inv.Stocks[i]
 		if s.Ingredient == nil {
 			inv.log.Errorf("in stock:%s ingridient not present", s.Label)
 			continue
 		}
 		doSpendArg := engine.FuncArg{
 			Name: fmt.Sprintf("stock.%s.spend(?)", s.Ingredient.Name),
-			F:    inv.Stocks[i].spendArg,
+			F:    s.spendArg,
+		}
+		e.Register(doSpendArg.Name, doSpendArg)
+		if s.RegisterAdd == "" {
+			continue
 		}
 		addName := fmt.Sprintf("add.%s(?)", s.Ingredient.Name)
-		e.Register(doSpendArg.Name, doSpendArg)
-		if s.RegisterAdd != "" {
-			doAdd, err := e.ParseText(addName, s.RegisterAdd)
-			if err != nil {
-				errs = errors.Join(errs, fmt.Errorf("stock(%s) register_add(%s) parse error(%v)", s.Ingredient.Name, s.RegisterAdd, err))
-				continue
-			}
-			_, ok, err := engine.ArgApply(doAdd, 0)
-			switch {
-			case err == nil && !ok:
-				errs = errors.Join(errs, fmt.Errorf("stock=%s register_add=%s no free argument", s.Ingredient.Name, s.RegisterAdd))
-
-			case (err == nil && ok) || engine.IsNotResolved(err): // success path
-				e.Register(addName, inv.Stocks[i].Wrap(doAdd))
-
-			case err != nil:
-				errs = errors.Join(err, fmt.Errorf("stock=%s register_add=%s error(%v)", s.Ingredient.Name, s.RegisterAdd, err))
-			}
+		doAdd, err := e.ParseText(addName, s.RegisterAdd)
+		if err != nil {
+			errs = errors.Join(errs, fmt.Errorf("stock(%s) register_add(%s) parse error(%v)", s.Ingredient.Name, s.RegisterAdd, err))
+			continue
+		}
+		_, ok, err := engine.ArgApply(doAdd, 0)
+		switch {
+		case err == nil && !ok:
+			errs = errors.Join(errs, fmt.Errorf("stock=%s register_add=%s no free argument", s.Ingredient.Name, s.RegisterAdd))
+		case (err == nil && ok) || engine.IsNotResolved(err):
+			stockDoers[i] = doAdd
+		default:
+			errs = errors.Join(errs, fmt.Errorf("stock=%s register_add=%s error(%v)", s.Ingredient.Name, s.RegisterAdd, err))
+		}
+	}
+	inv.pools = newPools(inv.Stocks, stockDoers)
+	for _, p := range inv.pools {
+		if p.hasDoers() {
+			e.Register(fmt.Sprintf("add.%s(?)", p.Ingredient.Name), p.Doer())
 		}
 	}
 	inv.InventoryLoad()

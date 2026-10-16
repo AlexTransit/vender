@@ -305,7 +305,7 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error
 		count--
 		time.Sleep(200 * time.Millisecond)
 		if err = gen.dev.Tx(gen.dev.PacketPoll, &response); err != nil {
-			return err
+			return &helpers.AppError{ErrorCode: int32(10), Err: fmt.Errorf("action:%v transmit poll error:%v", gen.dev.Action, err)}
 		}
 		rb := response.Bytes()
 		if len(rb) == 0 {
@@ -321,16 +321,15 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error
 			return &helpers.AppError{ErrorCode: int32(errCode), Err: e}
 		case 0x05:
 		default:
-			err = fmt.Errorf("unknow answer(%v) on command(%s)", rb, gen.dev.Action)
-			return
+			return &helpers.AppError{ErrorCode: int32(9), Err: fmt.Errorf("unknow answer(%v) on command(%s)", rb, gen.dev.Action)}
 		}
 	}
 	if timeOut {
 		if gen.dev.Action != "" {
-			err = fmt.Errorf("execute command (%v) timeout", gen.dev.Action)
+			return &helpers.AppError{ErrorCode: int32(11), Err: fmt.Errorf("execute command(%s) timeout", gen.dev.Action)}
 		}
 	}
-	return err
+	return nil
 }
 
 func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool) (err error) {
@@ -339,7 +338,7 @@ func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool) (err error
 		count--
 		time.Sleep(200 * time.Millisecond)
 		if err = gen.dev.Tx(gen.dev.PacketPoll, &response); err != nil {
-			return err
+			return &helpers.AppError{ErrorCode: int32(10), Err: fmt.Errorf("action:%v transmit poll error:%v", gen.dev.Action, err)}
 		}
 		rb := response.Byte() << 2
 		rb = rb >> 2
@@ -351,7 +350,7 @@ func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool) (err error
 		}
 	}
 	if timeOut {
-		return &helpers.AppError{ErrorCode: int32(11), Err: errors.New("time out pool")}
+		return &helpers.AppError{ErrorCode: int32(11), Err: fmt.Errorf("execute command(%s) timeout", gen.dev.Action)}
 	}
 	return nil
 }
@@ -365,14 +364,14 @@ func (gen *Generic) WaitSuccess(count uint16, timeOut bool) error {
 
 func (gen *Generic) CommandNoWait(cmd ...byte) (err error) {
 	if err = gen.Command(cmd...); err != nil {
-		return
+		return &helpers.AppError{ErrorCode: int32(10), Err: fmt.Errorf("action:%v transmit NoWait command(%v) error:%v", gen.dev.Action, cmd, err)}
 	}
 	return gen.WaitSuccess(1, false)
 }
 
 func (gen *Generic) CommandWaitSuccess(count uint16, cmd ...byte) (err error) {
 	if err = gen.Command(cmd...); err != nil {
-		return
+		return &helpers.AppError{ErrorCode: int32(10), Err: fmt.Errorf("action:%v transmit command(%v) error:%v", gen.dev.Action, cmd, err)}
 	}
 	return gen.WaitSuccess(count, true)
 }
@@ -402,7 +401,7 @@ func (gen *Generic) addressArgumentsTx(address byte, args *[]byte) error {
 	return gen.tx(&bs, nil)
 }
 
-func (gen *Generic) ReadError_proto2() (errb byte) {
+func (gen *Generic) ReadErrorProto2() (errb byte) {
 	response, err := gen.ReadData(0x02)
 	if err != nil || len(response) == 0 {
 		return 255
@@ -411,9 +410,9 @@ func (gen *Generic) ReadError_proto2() (errb byte) {
 }
 
 func (gen *Generic) ReadError() (err error) {
-	if errb := gen.ReadError_proto2(); errb != 0 {
+	if errb := gen.ReadErrorProto2(); errb != 0 {
 		// gen.dev.Rst()
-		return &helpers.AppError{ErrorCode: int32(errb), Err: fmt.Errorf("device:%s error:%v", gen.name, errb)}
+		return &helpers.AppError{ErrorCode: int32(errb), Err: fmt.Errorf("device:%s action:%s error:%v", gen.name, gen.dev.Action, errb)}
 	}
 	return nil
 }

@@ -89,17 +89,10 @@ func (seq *Seq) Calculation() (summ float64) {
 
 func (seq *Seq) Do(ctx context.Context) error {
 	e := GetGlobal(ctx)
-	// var itemsList []string
-	// itemsList = append(itemsList, time.Now().Format("2006-01-02_15-04-05.00000"))
-	// itemsList = append(itemsList, seq.name)
 	for _, d := range seq.items {
-		// itemsList = append(itemsList, time.Now().Format("-> 15:04:05.00000 ")+d.String())
 		err := e.Exec(ctx, d)
-		// itemsList = append(itemsList, time.Now().Format("<- 15:04:05.00000 ")+d.String())
 		if err != nil {
 			var appErr *helpers.AppError
-			// e.Log.Errorf("error seq:%v", seq.items)
-			// e.Log.Errorf("error doer:%v", d.String())
 			if !errors.As(err, &appErr) {
 				return err
 			}
@@ -111,11 +104,7 @@ func (seq *Seq) Do(ctx context.Context) error {
 					e.Log.Info("the fix worked. try the action")
 					return nil
 				}
-				// e.Log.Error("!!! NOT FIXED " + d.String() + " error:" + errorCode)
 			}
-			// e.Log.Errorf("%v", seq.String())
-			// FIXME AlexM
-			// helpers.SaveAndShowDoError(itemsList, err, "/home/vmc/vender-db/errors/")
 			return err
 		}
 	}
@@ -127,12 +116,12 @@ func (seq *Seq) String() string {
 }
 
 func (seq *Seq) cloneEmpty() *Seq {
-	new := NewSeq(seq.name)
-	if n := len(seq.items); n > cap(new.items) {
-		new.items = make([]Doer, 0, len(seq.items))
-		new.ErrorActions = make(map[string]ErrorActionEntry)
+	newSeq := NewSeq(seq.name)
+	if n := len(seq.items); n > cap(newSeq.items) {
+		newSeq.items = make([]Doer, 0, len(seq.items))
+		newSeq.ErrorActions = make(map[string]ErrorActionEntry)
 	}
-	return new
+	return newSeq
 }
 
 func (seq *Seq) setItems(ds []Doer) {
