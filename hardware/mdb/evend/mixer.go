@@ -47,12 +47,10 @@ func (m *DeviceMixer) init(ctx context.Context) error {
 }
 
 func (m *DeviceMixer) shakeNoWait(steps uint8) (err error) {
-	if err = m.Command(0x01, byte(steps), m.shakeSpeed); err != nil {
-		return err
-	}
-	return m.WaitSuccess(1, false)
+	return m.CommandNoWait(0x01, byte(steps), m.shakeSpeed)
 }
 
+// шлет команду и не делает опрос из-за возможных шумов двигателя
 // 1step = 100ms
 func (m *DeviceMixer) shake(steps uint8) (err error) {
 	if err = m.shakeNoWait(steps); err != nil {

@@ -329,7 +329,7 @@ func (gen *Generic) Proto1PollWaitSuccess(count uint16, timeOut bool) (err error
 			return &helpers.AppError{ErrorCode: int32(11), Err: fmt.Errorf("execute command(%s) timeout", gen.dev.Action)}
 		}
 	}
-	return &helpers.AppError{ErrorCode: int32(0), Err: fmt.Errorf("execute command(%s) poll error:%v", gen.dev.Action, err)}
+	return nil
 }
 
 func (gen *Generic) Proto2PollWaitSuccess(count uint16, timeOut bool) (err error) {
