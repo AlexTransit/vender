@@ -127,7 +127,18 @@ func (s *Stock) Has(v float32) bool {
 	return st.value-v >= float32(s.Ingredient.Min)
 }
 
-func (s *Stock) Wrap(d engine.Doer) engine.Doer {
+// Unlimited - без ограничения остатка (min == 0).
+func (s *Stock) Unlimited() bool { return s.Ingredient.Min == 0 }
+
+// Free - сколько ингредиента можно списать, не опустив остаток ниже Min.
+func (s *Stock) Free() float32 {
+	st := s.state()
+	st.mu.Lock()
+	defer st.mu.Unlock()
+	return st.value - float32(s.Ingredient.Min)
+}
+
+func (s *Stock) Wrap(d engine.Doer) *custom {
 	return &custom{stock: s, before: d}
 }
 
@@ -197,18 +208,14 @@ func (c *custom) Validate() error {
 
 func (c *custom) Do(ctx context.Context) error {
 	e := engine.GetGlobal(ctx)
-	if tunedCtx, tuneRate, ok := takeTuneRate(ctx, c.stock.Ingredient.TuneKey); ok {
-		tunedArg := engine.Arg(int16(math.Round(float64(c.arg.(int16)) * float64(tuneRate))))
-		d, _, err := c.apply(tunedArg)
-		// log.Printf("stock=%s before=%#v arg=%v tuneRate=%v tunedArg=%v d=%v err=%v", c.stock.String(), c.before, c.arg, tuneRate, tunedArg, d, err)
+	if tunedCtx, tunedArg, ok := applyTune(ctx, c.stock.Ingredient.TuneKey, c.arg.(int16)); ok {
+		d, _, err := c.apply(engine.Arg(tunedArg))
 		if err != nil {
 			return errors.Annotatef(err, "stock=%s tunedArg=%v", c.stock.Label, tunedArg)
 		}
 		return e.Exec(tunedCtx, d)
 	}
 
-	// log.Printf("stock=%s value=%f arg=%v spending=%f", c.stock.Name, c.stock.Value(), c.arg, c.spend)
-	// TODO remove this redundant check when sure that Validate() is called in all proper places
 	if c.stock.Ingredient.Min != 0 && !c.stock.Has(c.spend) {
 		return errors.Errorf("stock=%s check fail", c.stock.Label)
 	}
@@ -224,6 +231,16 @@ func (c *custom) Do(ctx context.Context) error {
 	return nil
 }
 
+// applyTune снимает коэффициент тюнинга из контекста и применяет его к аргументу.
+// Возвращает контекст без тюнинга, чтобы вложенные вызовы Do не применили его повторно.
+func applyTune(ctx context.Context, key string, arg int16) (context.Context, int16, bool) {
+	tunedCtx, rate, ok := takeTuneRate(ctx, key)
+	if !ok {
+		return ctx, arg, false
+	}
+	return tunedCtx, int16(math.Round(float64(arg) * float64(rate))), true
+}
+
 func (c *custom) String() string { return fmt.Sprintf("stock.%s(%d)", c.stock.Label, c.arg) }
 
 func (c *custom) apply(arg engine.Arg) (engine.Doer, bool, error) {
@@ -235,14 +252,14 @@ func (c *custom) apply(arg engine.Arg) (engine.Doer, bool, error) {
 		err = engine.ErrArgNotApplied
 		return nil, false, errors.Annotatef(err, engine.FmtErrContext, c.stock.String())
 	}
-	new := &custom{
+	newCustom := &custom{
 		stock:  c.stock,
 		before: c.before,
 		after:  after,
 		arg:    arg,
 		spend:  c.stock.TranslateSpend(arg),
 	}
-	return new, true, nil
+	return newCustom, true, nil
 }
 
 func takeTuneRate(ctx context.Context, key string) (context.Context, float32, bool) {
