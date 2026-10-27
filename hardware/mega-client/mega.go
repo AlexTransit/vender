@@ -75,13 +75,15 @@ func NewClient(config *Config, log *log2.Log) (*Client, error) {
 		return nil, errors.Annotate(err, "mega hw.open")
 	}
 
+	// notifyLoop must run before handshake, otherwise notify edges are not consumed
+	c.alive.Add(1)
+	go c.notifyLoop()
+
 	if err := c.handshake(); err != nil {
 		c.Close()
 		return nil, errors.Annotate(err, "mega handshake")
 	}
 
-	c.alive.Add(1)
-	go c.notifyLoop()
 	if !config.DontUseRawMode {
 		c.alive.Add(1)
 		go c.ioLoop()
@@ -179,6 +181,10 @@ func (c *Client) handshake() error {
 	// - mega had command buffered
 	// - handshake sent RESET
 	for try = 1; try <= 5; try++ {
+		// Mega asserts notify only when it has data. Reading SPI before that gives 0xFF.
+		if !c.ioWait(2 * time.Second) {
+			c.Log.Debugf("%s handshake try=%d no notify, read anyway", modName, try)
+		}
 		var f Frame
 		stop, err = c.handshakeStep(&f)
 		if stop {
@@ -344,23 +350,31 @@ func (c *Client) ioWait(timeout time.Duration) bool {
 
 func (c *Client) notifyLoop() {
 	defer c.alive.Done()
+	stopch := c.alive.StopChan()
 
 	if value, err := c.hw.notifier.Read(); err != nil {
 		c.Log.Error(errors.Annotatef(err, "%s notifyLoop start Read()", modName))
 	} else if value == 1 {
 		c.Log.Debugf("%s notify=high on start", modName)
-		c.notifych <- struct{}{}
+		select {
+		case c.notifych <- struct{}{}:
+		case <-stopch:
+			return
+		}
 	}
 
 	// notifier.Wait timeout affects maximum time in Client.Close
 	const timeout = 2 * time.Second
 
-	// TODO replace with gpio.Eventer.Chan
 	for c.alive.IsRunning() {
 		edge, err := c.hw.notifier.Wait(timeout)
 		if err == nil {
 			if edge.ID == gpio.GPIOEVENT_EVENT_RISING_EDGE {
-				c.notifych <- struct{}{}
+				select {
+				case c.notifych <- struct{}{}:
+				case <-stopch:
+					return
+				}
 			}
 		} else if gpio.IsTimeout(err) {
 			continue
