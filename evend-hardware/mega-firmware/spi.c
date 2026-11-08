@@ -16,27 +16,36 @@
 #include "crc.h"
 
 static uint8_t volatile spi_last_out_crc;
+static uint8_t rx_data[BUFFER_SIZE + 1];
 
+// Rule: load the next byte right after the previous one is read.
+// Any other work goes between SPI_LOAD() and the next SPI_WAIT_OR_RETURN,
+// while a byte is being shifted.
 #define SPI_WAIT_OR_RETURN \
   if (!spi_wait()) {       \
     return;                \
   }
 
-#ifndef SPI_SEND_OR_RETURN
-#define SPI_SEND_OR_RETURN(a) \
-  SPDR = a;                   \
-  SPI_WAIT_OR_RETURN;         \
-  (void)SPDR;
-#endif
+#define SPI_LOAD(a) \
+  SPDR = (a);       \
+  DBG_TOGGLE();
+
+// wait for end of current byte, discard received value, load next byte
+#define SPI_XCHG_DISCARD(next) \
+  SPI_WAIT_OR_RETURN;          \
+  (void)SPDR;                  \
+  SPI_LOAD(next);
 
 // fwd
 
 static bool spi_selected(void) __attribute__((warn_unused_result));
-static void spi_end(uint8_t errcode, uint8_t const pad);
 static bool spi_wait(void) __attribute__((warn_unused_result));
-static inline void spi_do_send(void);
-static inline void spi_do_ack(void);
-static inline void spi_do_recv(void);
+static inline void spi_end(uint8_t const errcode, uint8_t const pad);
+static inline void spi_reply_empty(uint8_t const errcode, uint8_t const pad);
+static inline void spi_do_send(uint8_t const payload_length,
+                               uint8_t const kind);
+static inline void spi_do_recv(uint8_t const in_length);
+static inline void spi_do_ack(uint8_t const local_length);
 
 static void spi_init_slave(void) {
   bit_mask_set(SPI_MISO_DDR, _BV(SPI_MISO_PIN));
@@ -52,7 +61,129 @@ static void spi_init_slave(void) {
 }
 
 static void spi_step(void) {
-  master_notify_set(!response_empty() && !spi_selected());
+  // пин поднимаем, если есть готовый ответ или события в кольце TWI
+  bool const pending = !response_empty() || (twi_head != twi_tail && mdb.state == MDB_STATE_IDLE);
+  master_notify_set(pending && !spi_selected());
+}
+
+// Ends transaction with errcode/pad. Caller has just read a byte.
+static inline void spi_end(uint8_t const errcode, uint8_t const pad) {
+  SPI_LOAD(errcode);
+  for (;;) {
+    SPI_XCHG_DISCARD(pad);
+  }
+}
+
+// Byte 3 (payload crc = 0) is in flight. Reply with errcode.
+static inline void spi_reply_empty(uint8_t const errcode, uint8_t const pad) {
+  SPI_WAIT_OR_RETURN;
+  (void)SPDR;
+  spi_end(errcode, pad);
+}
+
+// Byte 3 (kind) is in flight. payload_length was already sent as byte 2.
+static inline void spi_do_send(uint8_t const payload_length,
+                               uint8_t const kind) {
+  uint8_t const data_length = payload_length - 1;
+  uint8_t out_crc = crc8_p93_next(0, payload_length);
+  out_crc = crc8_p93_next(out_crc, kind);
+
+  uint8_t next = (data_length > 0) ? response.b.data[0] : out_crc;
+  SPI_XCHG_DISCARD(next);
+
+  for (uint8_t i = 0; i < data_length; i++) {
+    // data[i] is in flight: crc work happens during its transfer
+    out_crc = crc8_p93_next(out_crc, response.b.data[i]);
+    next = (i + 1 < data_length) ? response.b.data[i + 1] : out_crc;
+    SPI_XCHG_DISCARD(next);
+  }
+
+  // crc is in flight
+  spi_last_out_crc = out_crc;
+  SPI_WAIT_OR_RETURN;
+  (void)SPDR;
+  spi_end(0, PROTOCOL_PAD_OK);
+}
+
+// Byte 2 (master length) was read in ISR. Byte 3 (out 0) is in flight.
+static inline void spi_do_recv(uint8_t const in_length) {
+  if (in_length == 0) {
+    spi_reply_empty(ERROR_FRAME_LENGTH, PROTOCOL_PAD_ERROR);
+    return;
+  }
+  if (in_length >= BUFFER_SIZE) {
+    spi_reply_empty(ERROR_BUFFER_OVERFLOW, PROTOCOL_PAD_ERROR);
+    return;
+  }
+
+  uint8_t crc_local = crc8_p93_next(0, in_length);
+  uint8_t payload_crc = crc8_p93_next(0, 0);  // byte 2 out
+
+  for (uint8_t i = 0; i < in_length; i++) {
+    // in flight: out 0 for data byte i
+    SPI_WAIT_OR_RETURN;
+    rx_data[i] = SPDR;
+    SPI_LOAD(0);
+    crc_local = crc8_p93_next(crc_local, rx_data[i]);
+    payload_crc = crc8_p93_next(payload_crc, 0);
+  }
+
+  // in flight: out 0, this exchange reads crc_remote
+  SPI_WAIT_OR_RETURN;
+  uint8_t const crc_remote = SPDR;
+  SPI_LOAD(0);  // send 0
+
+  // all outgoing bytes after this point are known: 0, 0, 0xff, crc_local, crc_remote
+  uint8_t pc = crc8_p93_next(payload_crc, 0);  // out byte of crc_remote exchange
+  pc = crc8_p93_next(pc, 0);
+  pc = crc8_p93_next(pc, 0xff);
+  pc = crc8_p93_next(pc, crc_local);
+  pc = crc8_p93_next(pc, crc_remote);
+
+  bool const ok = (crc_local == crc_remote);
+
+  SPI_XCHG_DISCARD(0xff);
+  SPI_XCHG_DISCARD(crc_local);
+  SPI_XCHG_DISCARD(crc_remote);
+  SPI_XCHG_DISCARD(pc);
+
+  // payload_crc is shifting out; copy request now, off the critical gap
+  if (ok) {
+    packet_clear_fast((packet_t *)&request);
+    request.h.command = rx_data[0];
+    buffer_copy((buffer_t *)&request.b, rx_data + 1, in_length - 1);
+    request.filled = true;
+  }
+
+  SPI_WAIT_OR_RETURN;
+  (void)SPDR;
+  spi_end(ok ? 0 : ERROR_INVALID_CRC, ok ? PROTOCOL_PAD_OK : PROTOCOL_PAD_ERROR);
+}
+
+// Byte 3 (local_length) is in flight.
+static inline void spi_do_ack(uint8_t const local_length) {
+  uint8_t const local_crc = spi_last_out_crc;  // anti-volatile
+  uint8_t const payload_crc = crc8_p93_next(
+      crc8_p93_next(crc8_p93_next(0, 2), local_length), local_crc);
+
+  SPI_WAIT_OR_RETURN;
+  uint8_t const remote_length = SPDR;
+  SPI_LOAD(local_crc);
+
+  SPI_WAIT_OR_RETURN;
+  uint8_t const remote_crc = SPDR;
+  SPI_LOAD(payload_crc);
+
+  bool const match =
+      (local_length == remote_length) && (local_crc == remote_crc);
+  if (match) {
+    packet_clear_fast((packet_t *)&response);
+  }
+
+  SPI_WAIT_OR_RETURN;
+  (void)SPDR;
+  spi_end(match ? 0 : ERROR_INVALID_ACK,
+          match ? PROTOCOL_PAD_OK : PROTOCOL_PAD_ERROR);
 }
 
 ISR(PCINT0_vect) {
@@ -60,8 +191,11 @@ ISR(PCINT0_vect) {
     return;
   }
 
+  // всё, что понадобится позже, считаем до первого байта
   bool const out_ready = response.filled;  // anti-volatile
   bool const req_busy = request.filled;    // anti-volatile
+  uint8_t const len1 = response.b.length + 1;
+  uint8_t const kind = response.h.response;
 
   uint8_t out_header = PROTOCOL_VERSION;
   if (out_ready) {
@@ -71,183 +205,75 @@ ISR(PCINT0_vect) {
     bit_mask_set(out_header, PROTOCOL_FLAG_REQUEST_BUSY);
   }
 
+  // байт 1: заголовок
   SPDR = out_header;
+  DBG_TOGGLE();
   SPI_WAIT_OR_RETURN;
   uint8_t const in_header = SPDR;
 
-  uint8_t const in_proto_ver = in_header & PROTOCOL_HEADER_VERSION_MASK;
-  if (in_proto_ver != PROTOCOL_VERSION) {
-    SPI_SEND_OR_RETURN(0);  // payload length
-    SPI_SEND_OR_RETURN(0);  // payload crc
-    spi_end(ERROR_FRAME_HEADER, PROTOCOL_PAD_ERROR);
+  // байт 2 в ответ: выбирается по флагам заголовка мастера
+  uint8_t b2;
+  if (bit_mask_test(in_header, PROTOCOL_FLAG_REQUEST_BUSY)) {
+    b2 = 2;
+  } else if (bit_mask_test(in_header, PROTOCOL_FLAG_PAYLOAD)) {
+    b2 = 0;
+  } else {
+    b2 = out_ready ? len1 : 0;
+  }
+  SPI_LOAD(b2);
+
+  // байт 3 в ответ: тоже из заголовка, считается пока байт 2 в линии
+  uint8_t b3;
+  if (bit_mask_test(in_header, PROTOCOL_FLAG_REQUEST_BUSY)) {
+    b3 = len1;
+  } else if (bit_mask_test(in_header, PROTOCOL_FLAG_PAYLOAD)) {
+    b3 = 0;
+  } else {
+    b3 = out_ready ? kind : 0;
+  }
+
+  // байт 2 от мастера: длина запроса
+  SPI_WAIT_OR_RETURN;
+  uint8_t const in_b2 = SPDR;
+  SPI_LOAD(b3);
+
+  // байт 3 уже в линии, дальше можно проверять
+  uint8_t const in_mode = in_header & PROTOCOL_HEADER_FLAG_MASK;
+  if ((in_header & PROTOCOL_HEADER_VERSION_MASK) != PROTOCOL_VERSION) {
+    spi_reply_empty(ERROR_FRAME_HEADER, PROTOCOL_PAD_ERROR);
     return;
   }
 
-  uint8_t const in_mode = (in_header & PROTOCOL_HEADER_FLAG_MASK);
   switch (in_mode) {
-    // master reads response
+    // мастер читает ответ
     case 0:
       if (!out_ready) {
-        SPI_SEND_OR_RETURN(0);  // payload length
-        SPI_SEND_OR_RETURN(0);  // payload crc
-        // no packet flag was already communicated
-        spi_end(0, PROTOCOL_PAD_OK);
+        spi_reply_empty(0, PROTOCOL_PAD_OK);
         return;
       }
-
-      spi_do_send();
+      spi_do_send(b2, b3);
       return;
 
-    // master sends request
+    // мастер шлёт запрос
     case PROTOCOL_FLAG_PAYLOAD:
-      // if (out_ready) {
-      //   spi_do_send();
-      //   return;
-      // }
-
       if (req_busy) {
-        SPI_SEND_OR_RETURN(0);  // payload length
-        SPI_SEND_OR_RETURN(0);  // payload crc
-        // request is busy flag was already communicated
-        spi_end(ERROR_REQUEST_OVERWRITE, PROTOCOL_PAD_ERROR);
+        spi_reply_empty(ERROR_REQUEST_OVERWRITE, PROTOCOL_PAD_ERROR);
         return;
       }
-
-      spi_do_recv();
+      spi_do_recv(in_b2);
       return;
 
-    // master confirms previous response
+    // мастер подтверждает предыдущий ответ
     case PROTOCOL_FLAG_REQUEST_BUSY:
-      spi_do_ack();
+      spi_do_ack(b3);
       return;
 
     default:
-      // safety net, should never happen
-      SPI_SEND_OR_RETURN(0);  // payload length
-      spi_end(ERROR_FRAME_HEADER, PROTOCOL_PAD_ERROR);
+      // не должно случаться
+      spi_reply_empty(ERROR_FRAME_HEADER, PROTOCOL_PAD_ERROR);
       return;
   }
 }
-
-static inline void spi_do_send(void) {
-  uint8_t const data_length = response.b.length;  // anti-volatile
-  uint8_t const payload_length = data_length + 1;
-  SPI_SEND_OR_RETURN(payload_length);
-  uint8_t out_crc = crc8_p93_next(0, payload_length);
-
-  uint8_t const tmpkind = response.h.response;  // anti-volatile
-  SPI_SEND_OR_RETURN(tmpkind);
-  out_crc = crc8_p93_next(out_crc, tmpkind);
-
-  for (uint8_t i = 0; i < data_length; i++) {
-    uint8_t const tmpdata = response.b.data[i];
-    SPI_SEND_OR_RETURN(tmpdata);
-    out_crc = crc8_p93_next(out_crc, tmpdata);
-  }
-
-  SPI_SEND_OR_RETURN(out_crc);
-  spi_last_out_crc = out_crc;  // save for ack
-
-  spi_end(0, PROTOCOL_PAD_OK);
-  return;
-}
-
-static inline void spi_do_recv(void) {
-  static uint8_t tmp_data[BUFFER_SIZE + 1];
-  SPDR = 0;
-  SPI_WAIT_OR_RETURN;
-  uint8_t const in_length = SPDR;
-  uint8_t payload_crc = crc8_p93_next(0, 0);
-
-  if (in_length == 0) {
-    // too bad we already sent length 0
-    spi_end(ERROR_FRAME_LENGTH, PROTOCOL_PAD_ERROR);
-    return;
-  }
-  if (in_length >= BUFFER_SIZE) {
-    // too bad we already sent length 0
-    spi_end(ERROR_BUFFER_OVERFLOW, PROTOCOL_PAD_ERROR);
-    return;
-  }
-
-  uint8_t crc_local = crc8_p93_next(0, in_length);
-  for (uint8_t i = 0; i < in_length; i++) {
-    uint8_t const out_data = 0;
-    SPDR = out_data;
-    SPI_WAIT_OR_RETURN;
-    tmp_data[i] = SPDR;
-    crc_local = crc8_p93_next(crc_local, tmp_data[i]);
-    payload_crc = crc8_p93_next(payload_crc, out_data);
-  }
-
-  // prevent garbage output if master pushes more bytes
-  // while request is being parsed
-  SPDR = 0;
-  SPI_WAIT_OR_RETURN;
-  uint8_t const crc_remote = SPDR;
-  payload_crc = crc8_p93_next(payload_crc, 0);
-
-  SPI_SEND_OR_RETURN(0);
-  payload_crc = crc8_p93_next(payload_crc, 0);
-  SPI_SEND_OR_RETURN(0xff);
-  payload_crc = crc8_p93_next(payload_crc, 0xff);
-  SPI_SEND_OR_RETURN(crc_local);
-  payload_crc = crc8_p93_next(payload_crc, crc_local);
-  SPI_SEND_OR_RETURN(crc_remote);
-  payload_crc = crc8_p93_next(payload_crc, crc_remote);
-
-  SPI_SEND_OR_RETURN(payload_crc);
-
-  if (crc_local != crc_remote) {
-    spi_end(ERROR_INVALID_CRC, PROTOCOL_PAD_ERROR);
-    return;
-  }
-
-  packet_clear_fast((packet_t*)&request);
-  request.h.command = tmp_data[0];
-  buffer_copy((buffer_t*)&request.b, tmp_data + 1, in_length - 1);
-  request.filled = true;
-  spi_end(0, PROTOCOL_PAD_OK);
-}
-
-// master confirms previous response
-static inline void spi_do_ack(void) {
-  uint8_t const payload_length = 2;
-  SPI_SEND_OR_RETURN(payload_length);
-  uint8_t payload_crc = crc8_p93_next(0, payload_length);
-
-  uint8_t local_length = response.b.length + 1;  // anti-volatile
-  SPDR = local_length;
-  payload_crc = crc8_p93_next(payload_crc, local_length);
-  SPI_WAIT_OR_RETURN;
-  uint8_t const remote_length = SPDR;
-
-  uint8_t local_crc = spi_last_out_crc;  // anti-volatile
-  SPDR = local_crc;
-  payload_crc = crc8_p93_next(payload_crc, local_crc);
-  SPI_WAIT_OR_RETURN;
-  uint8_t const remote_crc = SPDR;
-
-  SPI_SEND_OR_RETURN(payload_crc);
-
-  bool const match =
-      (local_length == remote_length) && (local_crc == remote_crc);
-  if (!match) {
-    spi_end(ERROR_INVALID_ACK, PROTOCOL_PAD_ERROR);
-    return;
-  }
-
-  packet_clear_fast((packet_t*)&response);
-  spi_end(0, PROTOCOL_PAD_OK);
-}
-
-static void spi_end(uint8_t const errcode, uint8_t const pad) {
-  SPI_SEND_OR_RETURN(errcode);
-  for (;;) {
-    SPI_SEND_OR_RETURN(pad);
-  }
-}
-
 static inline bool spi_selected(void) {
   return !bit_mask_test(SPI_SS_PORT, _BV(SPI_SS_PIN));
 }
