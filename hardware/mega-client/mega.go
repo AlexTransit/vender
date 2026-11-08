@@ -115,11 +115,11 @@ func (c *Client) IncRef(debug string) {
 
 func (c *Client) DecRef(debug string) error {
 	c.Log.Debugf("%s decref by %s", modName, debug)
-	new := c.refcount.Add(-1)
+	rc := c.refcount.Add(-1)
 	switch {
-	case new > 0:
+	case rc > 0:
 		return nil
-	case new == 0:
+	case rc == 0:
 		return c.Close()
 	}
 	panic(fmt.Sprintf("code error %s decref<0 debug=%s", modName, debug))
@@ -161,7 +161,7 @@ func (c *Client) Tx(command, response *Frame, timeout time.Duration) error {
 	return tx.err
 }
 
-func (c *Client) XXX_RawTx(command []byte) ([]byte, error) {
+func (c *Client) XXXRawTx(command []byte) ([]byte, error) {
 	buf := make([]byte, BUFFER_SIZE+totalOverheads)
 	if len(command) > BUFFER_SIZE {
 		return buf, errors.New("command buffer overflow")
