@@ -133,8 +133,15 @@ func (p *Pool) split(arg int16) ([]portion, error) {
 		out = append(out, portion{idx: i, arg: n})
 		rest -= n
 	}
+
 	if rest > 0 {
-		return nil, fmt.Errorf("%s low", p.Ingredient.Name)
+		err := fmt.Errorf("low-%s", p.Ingredient.Name)
+		if !p.Ingredient.ErrorSendLow {
+			p.Ingredient.log.Error(err)
+			p.Ingredient.ErrorSendLow = true
+		}
+		return nil, err
+		// return nil, nil
 	}
 	return out, nil
 }

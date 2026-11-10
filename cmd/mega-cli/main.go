@@ -73,12 +73,12 @@ func main() {
 	if !*testmode {
 		cli.MainLoop("vender-mega-cli", newExecutor(client), newCompleter())
 	} else {
-		cpu_burn := func() {
+		cpuBurn := func() {
 			var a []*flag.FlagSet
 			for {
 				a = make([]*flag.FlagSet, 0)
-				// 3 cpu_burn 10000 iterations - works
-				// 3 cpu_burn 15000 iterations - breaks mega to random errors
+				// 3 cpuBurn 10000 iterations - works
+				// 3 cpuBurn 15000 iterations - breaks mega to random errors
 				for i := 1; i <= 10000; i++ {
 					a = append(a, flag.NewFlagSet("", flag.ContinueOnError))
 				}
@@ -87,9 +87,9 @@ func main() {
 				_ = a
 			}
 		}
-		go cpu_burn()
-		go cpu_burn()
-		go cpu_burn()
+		go cpuBurn()
+		go cpuBurn()
+		go cpuBurn()
 		newExecutor(client)("autotest")
 	}
 }
@@ -242,7 +242,7 @@ func newExecutor(client *mega.Client) func(string) {
 				if send == nil {
 					return
 				}
-				recv, err := client.XXX_RawTx(send)
+				recv, err := client.XXXRawTx(send)
 				log.Errorf("send=%x recv=%x err=%v", send, recv, err)
 				if err == nil {
 					r := mega.Frame{}

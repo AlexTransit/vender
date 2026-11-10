@@ -69,6 +69,8 @@ type Inventory struct {
 // if the minimum ingredient is not specified (equal to zero), then the consumption check is disabled
 // если минимум ингридиента не указан (равен нулю), тогда проверка расхода выключена
 type Ingredient struct {
+	log          *log2.Log
+	ErrorSendLow bool
 	// name - название ингридиента ( иникальное значение)
 	Name string `hcl:"name,label"`
 	// min - минимальный остаток ( если остаток меньше минимума, то будет отказ в отгрузке.
@@ -191,20 +193,20 @@ func (inv *Inventory) Init(ctx context.Context, e *engine.Engine, log *log2.Log)
 			e.Register(fmt.Sprintf("add.%s(?)", p.Ingredient.Name), p.Doer())
 		}
 	}
-	inv.InventoryLoad()
+	// inv.InventoryLoad()
 	return errs
 }
 
 func (inv *Inventory) prepareInventory() {
 	// put overrided stock to stock
 	for _, v := range inv.XXX_Ingredient {
+		v.log = inv.log
 		inv.Ingredient = append(inv.Ingredient, v)
 	}
 	inv.XXX_Ingredient = nil
 
 	for _, v := range inv.XXX_Stocks {
 		s := v
-		s.Log = inv.log
 		var ok bool
 		if s.Ingredient, ok = inv.GetIngredientByName(v.XXX_Ingredient); ok {
 			// инициализируем защищаемое состояние ПОСЛЕ всех копирований:

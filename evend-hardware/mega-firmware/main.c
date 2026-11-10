@@ -20,8 +20,8 @@
 #include "common.h"
 #include "crc.c"
 #include "mdb.c"
-#include "spi.c"
 #include "twi.c"
+#include "spi.c"
 
 // fwd
 
@@ -79,6 +79,11 @@ int main(void) {
   // disable unused peripherals: ADC, Timer2
   bit_mask_clear(ADCSRA, _BV(ADEN));
   PRR = _BV(PRTIM2) | _BV(PRADC);
+    // debug pin PC1 output, low
+  DBG_DDR |= _BV(DBG_PIN);
+  DBG_PORT &= ~_BV(DBG_PIN);
+
+  sei();
 
   // hello after reset
   response_begin(RESPONSE_RESET);
@@ -90,31 +95,20 @@ int main(void) {
   for (;;) {
     wdt_reset();
 
-    cli();
-    twi_step();
-    sei();
-    nop();
+    twi_step();  // takes its own ATOMIC section for the buffer copy
+    spi_step();  // only reads flags and drives MASTER_NOTIFY pin
 
-    cli();
-    spi_step();
-    sei();
-    nop();
-
-    cli();
+    // DEBUG: atomic removed to test whether it delays PCINT0 entry.
+    // Not safe for production: request/mdb may race with ISRs.
     if (request.filled && response_empty()) {
       request_exec();
       if (!response_empty()) {
         response.filled = true;
       }
-      packet_clear_fast((packet_t * const) & request);
+      packet_clear_fast((packet_t * const)&request);
     }
-    sei();
-    nop();
 
-    cli();
     mdb_step();
-    sei();
-    nop();
 
     // TODO measure idle time
     _delay_us(300);
@@ -203,14 +197,13 @@ static void master_notify_init(void) {
   bit_mask_set(MASTER_NOTIFY_DDR, _BV(MASTER_NOTIFY_PIN));
   master_notify_set(false);
 }
+
+// Only touches PORTD. No read-modify-write on TWCR, no TWIE gating:
+// clearing TWIE stretched SCL and RMW of TWCR cleared TWINT.
 static void master_notify_set(bool const on) {
   if (on) {
-    if (TWCR == 0x45) {                 // FIXME magic number
-      bit_mask_clear(TWCR, _BV(TWIE));  // FIXME move to main loop
-      bit_mask_set(MASTER_NOTIFY_PORT, _BV(MASTER_NOTIFY_PIN));
-    }
+    bit_mask_set(MASTER_NOTIFY_PORT, _BV(MASTER_NOTIFY_PIN));
   } else {
-    bit_mask_set(TWCR, _BV(TWIE));  // FIXME move to main loop
     bit_mask_clear(MASTER_NOTIFY_PORT, _BV(MASTER_NOTIFY_PIN));
   }
 }

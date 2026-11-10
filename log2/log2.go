@@ -133,12 +133,12 @@ func (lg *Log) Clone(level Level) *Log {
 	if lg == nil {
 		return nil
 	}
-	new := NewWriter(os.Stderr, level)
-	new.fatalf = lg.fatalf
-	new.logWriter = lg.logWriter
-	new.storeErrorFunc(lg.loadErrorFunc())
-	new.SetFlags(lg.l.Flags())
-	return new
+	nw := NewWriter(os.Stderr, level)
+	nw.fatalf = lg.fatalf
+	nw.logWriter = lg.logWriter
+	nw.storeErrorFunc(lg.loadErrorFunc())
+	nw.SetFlags(lg.l.Flags())
+	return nw
 }
 
 func (lg *Log) SetErrorFunc(f ErrorFunc) {
@@ -360,6 +360,6 @@ func (lg *Log) loadErrorFunc() ErrorFunc {
 	}
 }
 
-func (lg *Log) storeErrorFunc(new ErrorFunc) {
-	lg.onError.Store(wrapErrorFunc{new})
+func (lg *Log) storeErrorFunc(newF ErrorFunc) {
+	lg.onError.Store(wrapErrorFunc{newF})
 }
