@@ -13,10 +13,9 @@ import (
 // const tuneKeyFormat = "run/inventory-%s-tune"
 
 type Stock struct {
-	Log       *log2.Log
-	ErrorSend bool
-	Label     string `hcl:",label"`
-	Code      int    `hcl:"code,optional"`
+	Log   *log2.Log
+	Label string `hcl:",label"`
+	Code  int    `hcl:"code,optional"`
 	// название ингридиента. должно соответствовать названию в блоке ингридиентов. нужно для связи склада и ингридиента. пока движок не переделан - это уникальное значение
 	XXX_Ingredient string `hcl:"ingredient"`
 	// дейсвия при отгрузке. создается команда: название_ингридиента.run(?) которая выполняет эти действия.
@@ -189,6 +188,7 @@ func (c *custom) Calculation() float64 {
 	return c.stock.Ingredient.Cost * float64(c.arg.(int16)) * float64(c.stock.Ingredient.SpendRate)
 }
 
+// FIXME странная функция. никогда не возврящает ошибку
 func (c *custom) Validate() error {
 	if err := c.after.Validate(); err != nil {
 		return errors.Annotatef(err, "stock=%s", c.stock.Ingredient.Name)
@@ -198,11 +198,6 @@ func (c *custom) Validate() error {
 	}
 	if c.stock.Has(c.spend) {
 		return nil
-	}
-	// FIXME сюда не попадаем.
-	if !c.stock.ErrorSend {
-		c.stock.Log.Errorf("low-%s", c.stock.Ingredient.Name)
-		c.stock.ErrorSend = true
 	}
 	return errors.Errorf("%s low", c.stock.Ingredient.Name)
 }
