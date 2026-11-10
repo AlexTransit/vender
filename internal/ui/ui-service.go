@@ -223,6 +223,7 @@ func (ui *UI) onServiceInventory() types.UiState {
 		} else {
 			ui.g.Inventory.Stocks[ui.Service.invIdx].Set(float32(x) / 100)
 		}
+		s.Ingredient.ErrorSendLow = false
 		ui.Service.askReport = true
 		// invCurrent.TeleLow = false
 
