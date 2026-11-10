@@ -12,7 +12,7 @@ import (
 )
 
 func MenuMaxPrice() (currency.Amount, error) {
-	max := currency.Amount(0)
+	maxPrice := currency.Amount(0)
 	empty := true
 	for _, item := range config_global.VMC.Engine.Menu.Items {
 		if item.Doer == nil {
@@ -21,15 +21,15 @@ func MenuMaxPrice() (currency.Amount, error) {
 		valErr := item.Doer.Validate()
 		if valErr == nil {
 			empty = false
-			if item.Price > max {
-				max = item.Price
+			if item.Price > maxPrice {
+				maxPrice = item.Price
 			}
 		}
 	}
 	if empty {
 		return 0, fmt.Errorf("menu len=%d no valid items", len(config_global.VMC.Engine.Menu.Items))
 	}
-	return max, nil
+	return maxPrice, nil
 }
 
 func Cook(ctx context.Context) error {
@@ -78,9 +78,9 @@ func Cook(ctx context.Context) error {
 	return err
 }
 
-func ScaleTuneRate(value *uint8, max uint8, center uint8) float32 {
-	if *value > max {
-		*value = max
+func ScaleTuneRate(value *uint8, maxTune uint8, center uint8) float32 {
+	if *value > maxTune {
+		*value = maxTune
 	}
 	switch {
 	case *value == center: // most common path
@@ -91,7 +91,7 @@ func ScaleTuneRate(value *uint8, max uint8, center uint8) float32 {
 	if *value > 0 && *value < center {
 		return 1 - (0.25 * float32(center-*value))
 	}
-	if *value > center && *value <= max {
+	if *value > center && *value <= maxTune {
 		return 1 + (0.25 * float32(*value-center))
 	}
 	panic("code error")
