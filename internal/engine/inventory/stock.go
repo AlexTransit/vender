@@ -199,6 +199,7 @@ func (c *custom) Validate() error {
 	if c.stock.Has(c.spend) {
 		return nil
 	}
+	// FIXME сюда не попадаем.
 	if !c.stock.ErrorSend {
 		c.stock.Log.Errorf("low-%s", c.stock.Ingredient.Name)
 		c.stock.ErrorSend = true
