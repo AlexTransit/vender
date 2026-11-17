@@ -65,20 +65,23 @@ func (ds dispenseStrategy) String() string {
 
 type CoinAcceptor struct { //nolint:maligned
 	mdb.Device
-	dispenseStrategy dispenseStrategy
-	pollmu           sync.Mutex // isolate active/idle polling
+	infoSetup          string
+	infoIdentification string
+	dispenseStrategy   dispenseStrategy
+	pollmu             sync.Mutex // isolate active/idle polling
 
 	// parsed from SETUP
-	featureLevel      uint8
 	supportedFeatures Features
 	nominals          [TypeCount]currency.Nominal // final values, including all scaling factors
-	scalingFactor     uint8
 	typeRouting       uint16
+	featureLevel      uint8
+	scalingFactor     uint8
 
 	// dynamic state useful for external code
 	tubesmu sync.Mutex
 	Tub     []Tube
 	tubes   currency.NominalGroup
+	padding [16]byte // добавлен padding для общей ширины структуры
 }
 
 type Tube struct {
@@ -135,6 +138,18 @@ func (ca *CoinAcceptor) init(ctx context.Context) error {
 			return nil
 		},
 	)
+	g.Engine.RegisterNewFunc(
+		"coin.info", func(ctx context.Context) error {
+			ca.Log.Infof(
+				"%s\n%s\nDenomination - Quantity: %s",
+				ca.infoIdentification,
+				ca.infoSetup,
+				ca.TubeStatusString(),
+			)
+			return nil
+		},
+	)
+
 	g.Engine.Register("coin.dispence(?)",
 		engine.FuncArg{Name: "coin.dispence", F: func(ctx context.Context, arg engine.Arg) (err error) {
 			err = ca.Dispense(currency.Amount(arg.(int16)))
@@ -493,12 +508,21 @@ func (ca *CoinAcceptor) setup() error {
 		ca.nominals[i] = n
 	}
 	ca.tubes.SetValid(ca.nominals[:])
-	ca.Device.Log.Debugf("%s Changer Feature Level: %d", tag, ca.featureLevel)
-	ca.Device.Log.Debugf("%s Country / Currency Code: %x", tag, bs[1:1+2])
-	ca.Device.Log.Debugf("%s Coin Scaling Factor: %d", tag, ca.scalingFactor)
-	ca.Device.Log.Debugf("%s Decimal Places: %d", tag, bs[4])
-	ca.Device.Log.Debugf("%s Coin Type Routing: %b", tag, ca.typeRouting)
-	ca.Device.Log.Debugf("%s Coin Type Credit: %x %v", tag, bs[7:], ca.nominals)
+
+	ca.infoSetup = fmt.Sprintf(
+		"Changer Feature Level: %d\n"+
+			"Country / Currency Code: %x\n"+
+			"Coin Scaling Factor: %d\n"+
+			"Decimal Places: %d\n"+
+			"Coin Type Routing: %b\n"+
+			"Coin Type Credit: %v",
+		ca.featureLevel,
+		bs[1:1+2],
+		ca.scalingFactor,
+		bs[4],
+		ca.typeRouting,
+		ca.nominals,
+	)
 	return nil
 }
 
@@ -517,11 +541,18 @@ func (ca *CoinAcceptor) CommandExpansionIdentification() error {
 		return errors.New("coin command get ExpansionIdentification return: " + response.Format())
 	}
 	ca.supportedFeatures = Features(ca.Device.ByteOrder.Uint32(bs[29 : 29+4]))
-	ca.Device.Log.Infof("%s Manufacturer Code: '%s'", tag, bs[0:0+3])
-	ca.Device.Log.Debugf("%s Serial Number: '%s'", tag, string(bs[3:3+12]))
-	ca.Device.Log.Debugf("%s Model #/Tuning Revision: '%s'", tag, string(bs[15:15+12]))
-	ca.Device.Log.Debugf("%s Software Version: %x", tag, bs[27:27+2])
-	ca.Device.Log.Debugf("%s Optional Features: %b", tag, ca.supportedFeatures)
+	ca.infoIdentification = fmt.Sprintf(
+		"Manufacturer Code: '%s'\n"+
+			"Serial Number: '%s'\n"+
+			"Model Revision: '%s'\n"+
+			"Software Version: %x\n"+
+			"Optional Features: %b",
+		bs[0:0+3],
+		string(bs[3:3+12]),
+		string(bs[15:15+12]),
+		bs[27:27+2],
+		ca.supportedFeatures,
+	)
 	return nil
 }
 
