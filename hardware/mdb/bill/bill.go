@@ -20,14 +20,14 @@ import (
 )
 
 type BillValidator struct { //nolint:maligned
+	infoSetup          string
+	infoIdentification string
+
 	reseted bool
 	mdb.Device
 	pollmu        sync.Mutex // isolate active/idle polling
 	configScaling uint16
 
-	// DoEscrowAccept engine.Func
-	// DoEscrowReject engine.Func
-	// DoStacker      engine.Func
 	billstate BllStateType
 	billCmd   chan BillCommand
 
@@ -96,6 +96,18 @@ func (bv *BillValidator) init(ctx context.Context) error {
 			return bv.BillReset()
 		},
 	)
+	g.Engine.RegisterNewFunc(
+		"bill.info",
+		func(ctx context.Context) error {
+			bv.Log.Infof(
+				"%s\n%s",
+				bv.infoIdentification,
+				bv.infoSetup,
+			)
+			return nil
+		},
+	)
+
 	return bv.BillReset()
 }
 
@@ -198,7 +210,6 @@ func (bv *BillValidator) setup() error {
 	billSecurityLevels := bv.Device.ByteOrder.Uint16(bs[8:10])
 	bv.escrowSupported = bs[10] == 0xff
 
-	bv.Log.Debugf("Bill Type Scaling Factors: %3v", bs[11:])
 	for i, sf := range bs[11:] {
 		if i >= 16 {
 			bv.Log.Errorf("CRITICAL bill SETUP type factors count=%d > expected=%d", len(bs[11:]), 16)
@@ -207,14 +218,28 @@ func (bv *BillValidator) setup() error {
 		// billFactors[i] = sf
 		bv.nominals[i] = currency.Nominal(sf) * scalingFinal
 	}
-	bv.Log.Debugf("Bill Type calc. nominals:  %3v", bv.nominals)
-	bv.Log.Debugf("Bill Validator Feature Level: %d", bv.featureLevel)
-	bv.Log.Debugf("Country / Currency Code: %x", currencyCode)
-	bv.Log.Debugf("Bill Scaling Factor: %d Decimal Places: %d final scaling: %d", scalingFactor, decimalPlaces, scalingFinal)
-	bv.Log.Debugf("Stacker Capacity: %d", stackerCap)
-	bv.Log.Debugf("Bill Security Levels: %016b", billSecurityLevels)
-	bv.Log.Debugf("Escrow/No Escrow: %t", bv.escrowSupported)
-	bv.Log.Debugf("Bill Type Credit: %x %v", bs[11:], bv.nominals)
+
+	bv.infoSetup = fmt.Sprintf(
+		"Type nominals:  %3v\n"+
+			"Feature Level: %d\n"+
+			"Country / Currency Code: %x\n"+
+			"Scaling Factor: %d\n"+
+			"Decimal Places: %d\n"+
+			"Final scaling: %d\n"+
+			"Stacker Capacity: %d\n"+
+			"Security Levels: %016b\n"+
+			"Escrow: %t",
+		bv.nominals,
+		bv.featureLevel,
+		currencyCode,
+		scalingFactor,
+		decimalPlaces,
+		scalingFinal,
+		stackerCap,
+		billSecurityLevels,
+		bv.escrowSupported,
+	)
+
 	return nil
 }
 
@@ -232,21 +257,22 @@ func (bv *BillValidator) commandExpansionIdentification() error {
 		return fmt.Errorf("%s response=%x length=%d expected=%d", tag, bs, len(bs), expectLength)
 	}
 	bv.manafacturer = string(bs[0 : 0+3])
-	bv.Log.Infof("%s Manufacturer Code: '%s'", tag, bs[0:0+3])
-	bv.Log.Debugf("%s Serial Number: '%s'", tag, string(bs[3:3+12]))
-	bv.Log.Debugf("%s Model #/Tuning Revision: '%s'", tag, string(bs[15:15+12]))
-	bv.Log.Debugf("%s Software Version: %x", tag, bs[27:27+2])
+	bv.setManfactureInfo(bs)
 	return nil
 }
 
-// func (bv *BillValidator) commandFeatureEnable(requested Features) error {
-// 	f := requested & bv.supportedFeatures
-// 	buf := [6]byte{0x37, 0x01}
-// 	bv.Device.ByteOrder.PutUint32(buf[2:], uint32(f))
-// 	request := mdb.MustPacketFromBytes(buf[:], true)
-// 	err := bv.Device.TxMaybe(request, nil)
-// 	return errors.Annotate(err, deviceName+".FeatureEnable")
-// }
+func (bv *BillValidator) setManfactureInfo(bs []byte) {
+	bv.infoIdentification = fmt.Sprintf(
+		"Manufacturer Code: '%s'\n"+
+			"Serial Number: '%s'\n"+
+			"Model Revision: '%s'\n"+
+			"Software Version: %x",
+		bs[0:0+3],
+		string(bs[3:3+12]),
+		string(bs[15:15+12]),
+		bs[27:27+2],
+	)
+}
 
 func (bv *BillValidator) commandExpansionIdentificationOptions() error {
 	const tag = deviceName + ".ExpIdOptions"
@@ -266,11 +292,13 @@ func (bv *BillValidator) commandExpansionIdentificationOptions() error {
 		return fmt.Errorf("%s response=%s expected %d bytes", tag, response.Format(), expectLength)
 	}
 	bv.supportedFeatures = bv.Device.ByteOrder.Uint32(bs[29 : 29+4])
-	bv.Log.Infof("%s Manufacturer Code: '%s'", tag, bs[0:0+3])
-	bv.Log.Infof("%s Serial Number: '%s'", tag, string(bs[3:3+12]))
-	bv.Log.Infof("%s Model #/Tuning Revision: '%s'", tag, string(bs[15:15+12]))
-	bv.Log.Infof("%s Software Version: %x", tag, bs[27:27+2])
-	bv.Log.Infof("%s Optional Features: %b", tag, bv.supportedFeatures)
+	bv.setManfactureInfo(bs)
+	bv.infoIdentification += fmt.Sprintf("Optional Features: %b", bv.supportedFeatures)
+	// bv.Log.Infof("%s Manufacturer Code: '%s'", tag, bs[0:0+3])
+	// bv.Log.Infof("%s Serial Number: '%s'", tag, string(bs[3:3+12]))
+	// bv.Log.Infof("%s Model #/Tuning Revision: '%s'", tag, string(bs[15:15+12]))
+	// bv.Log.Infof("%s Software Version: %x", tag, bs[27:27+2])
+	// bv.Log.Infof("%s Optional Features: %b", tag, bv.supportedFeatures)
 	return nil
 }
 
@@ -396,7 +424,7 @@ func (bv *BillValidator) decodeByte(b byte) (e money.ValidatorEvent) {
 		return bv.setBroken(fmt.Errorf("defective motor"))
 	case StatusSensorProblem:
 		return bv.setBroken(fmt.Errorf("sensor problem"))
-	case StatusValidatorBusy:
+	case StatusValidatorBusy, StatusValidatorDisabled:
 		bv.setState(notReady)
 		return
 	case StatusROMChecksumError:
@@ -411,10 +439,6 @@ func (bv *BillValidator) decodeByte(b byte) (e money.ValidatorEvent) {
 	case StatusCashboxOutOfPosition:
 		// return bv.setBroken(fmt.Errorf("cashbox out"))
 		return bv.setBroken(fmt.Errorf("cashbox out"))
-	case StatusValidatorDisabled:
-		bv.setState(notReady)
-		// bv.setState(notReady)
-		return
 	case StatusInvalidEscrowRequest:
 		// return bv.escrowOutEvent(fmt.Errorf("bill invalid escrow request "), bv.EscrowBill)
 		return
@@ -594,29 +618,6 @@ const (
 	StatusRoutingTransferredFromRecyclerToCashbox
 )
 
-// ------------------------------------------------------------------------------------------------------------
-
-// func (bv *BillValidator) AcceptMax(max currency.Amount) engine.Doer {
-// 	// config := state.GetConfig(ctx)
-// 	enableBitset := uint16(0)
-// 	escrowBitset := uint16(0)
-// 	if max != 0 {
-// 		for i, n := range bv.nominals {
-// 			if n == 0 {
-// 				continue
-// 			}
-// 			if currency.Amount(n) <= max {
-// 				// TODO consult config
-// 				// _ = config
-// 				enableBitset |= 1 << uint(i)
-// 				// TODO consult config
-// 				escrowBitset |= 1 << uint(i)
-// 			}
-// 		}
-// 	}
-// 	return bv.NewBillType(enableBitset, escrowBitset)
-// }
-
 func (bv *BillValidator) SupportedNominals() []currency.Nominal {
 	ns := make([]currency.Nominal, 0, 16) // TypeCount = 16
 	for _, n := range bv.nominals {
@@ -626,20 +627,6 @@ func (bv *BillValidator) SupportedNominals() []currency.Nominal {
 	}
 	return ns
 }
-
-// func (bv *BillValidator) NewBillType(accept, escrow uint16) engine.Doer {
-// 	buf := [5]byte{0x34}
-// 	bv.Device.ByteOrder.PutUint16(buf[1:], accept)
-// 	bv.Device.ByteOrder.PutUint16(buf[3:], escrow)
-// 	request := mdb.MustPacketFromBytes(buf[:], true)
-// 	return engine.Func0{Name: deviceName + ".BillType", F: func() error {
-// 		return bv.Device.TxKnown(request, nil)
-// 	}}
-// }
-
-// func (bv *BillValidator) setEscrowBill(n currency.Nominal) {
-// 	atomic.StoreUint32((*uint32)(&bv.escrowBill), uint32(n))
-// }
 
 func (bv *BillValidator) EscrowAmount() currency.Amount {
 	u32 := atomic.LoadUint32((*uint32)(&bv.EscrowBill))
